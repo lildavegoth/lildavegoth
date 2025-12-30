@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Typing Game | lildavegoth</title>
+<meta name="color-scheme" content="dark">
+<script src="../protections.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root {
+--accent-color: #C1FC32;
+--accent-dark: #9bc726;
+--bg-black: #000000;
+--bg-dark: #1a1a1a;
+--bg-card: rgba(30, 30, 30, 0.7);
+--text-primary: #f5f5f7;
+--text-secondary: #a1a1a6;
+--radius-small: 12px;
+--radius-medium: 20px;
+--radius-large: 28px;
+--spacing-xs: 8px;
+--spacing-sm: 16px;
+--spacing-md: 24px;
+--spacing-lg: 32px;
+--spacing-xl: 48px;
+}
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+body {
+background-color: var(--bg-black);
+color: var(--text-primary);
+min-height: 100vh;
+background-image:
+radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+overflow-x: hidden;
+}
+.container {
+max-width: 1200px;
+margin: 0 auto;
+padding: var(--spacing-md);
+}
+.blur-background {
+backdrop-filter: saturate(180%) blur(20px);
+-webkit-backdrop-filter: saturate(180%) blur(20px);
+background-color: rgba(22, 22, 24, 0.8);
+border: 1px solid rgba(255, 255, 255, 0.1);
+}
+header {
+padding: var(--spacing-lg) 0;
+margin-bottom: var(--spacing-xl);
+}
+.profile-section {
+display: flex;
+align-items: center;
+gap: var(--spacing-md);
+margin-bottom: var(--spacing-lg);
+}
+.username {
+font-size: 2.5rem;
+font-weight: 700;
+color: #ffffff;
+margin-bottom: 4px;
+}
+.tagline {
+color: var(--text-secondary);
+font-size: 1.1rem;
+}
+/* Back to Home Button */
+.back-link {
+display: inline-flex;
+align-items: center;
+gap: 8px;
+color: var(--accent-color);
+text-decoration: none;
+margin-bottom: var(--spacing-lg);
+font-weight: 500;
+transition: all 0.3s ease-in-out;
+padding: var(--spacing-xs) var(--spacing-sm);
+border-radius: var(--radius-small);
+background: rgba(193, 252, 50, 0.1);
+position: relative;
+transform: translateX(0);
+}
+.back-link:hover {
+gap: 12px;
+background: rgba(193, 252, 50, 0.2);
+transform: translateX(10px);
+padding-right: 24px;
+}
+.back-link:active {
+transform: translateX(5px) scale(0.95);
+transition: all 0.15s ease;
+}
+.back-link i {
+transition: transform 0.3s ease-in-out;
+}
+.back-link:hover i {
+transform: translateX(-3px);
+}
+/* Smooth slide back when not hovered */
+.back-link:not(:hover) {
+transition: all 0.5s ease-in-out;
+}
+/* Game Stats */
+.stats-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+gap: var(--spacing-sm);
+margin-bottom: var(--spacing-xl);
+}
+.stat-card {
+background: var(--bg-card);
+border-radius: var(--radius-medium);
+padding: var(--spacing-md);
+display: flex;
+align-items: center;
+gap: var(--spacing-sm);
+transition: transform 0.3s ease, background 0.3s ease;
+}
+.stat-card:hover {
+transform: translateY(-5px);
+background: rgba(40, 40, 40, 0.8);
+}
+.stat-icon {
+width: 44px;
+height: 44px;
+border-radius: var(--radius-small);
+background: rgba(193, 252, 50, 0.1);
+display: flex;
+align-items: center;
+justify-content: center;
+color: var(--accent-color);
+font-size: 1.2rem;
+}
+.stat-info h3 {
+font-size: 1.8rem;
+margin-bottom: 2px;
+}
+.stat-info p {
+color: var(--text-secondary);
+font-size: 0.9rem;
+}
+/* Game Container */
+.game-container {
+margin: var(--spacing-xl) 0;
+}
+.game-card {
+background: var(--bg-card);
+border-radius: var(--radius-large);
+padding: var(--spacing-lg);
+transition: all 0.3s ease;
+border: 1px solid rgba(255, 255, 255, 0.05);
+margin-bottom: var(--spacing-lg);
+}
+.game-card:hover {
+border-color: rgba(193, 252, 50, 0.3);
+box-shadow: 0 10px 30px rgba(193, 252, 50, 0.1);
+}
+.section-title {
+font-size: 1.8rem;
+font-weight: 600;
+margin-bottom: var(--spacing-lg);
+color: var(--accent-color);
+}
+/* Text Display */
+.text-display {
+background: rgba(0, 0, 0, 0.3);
+border-radius: var(--radius-medium);
+padding: var(--spacing-lg);
+margin-bottom: var(--spacing-lg);
+font-size: 1.1rem;
+line-height: 1.6;
+min-height: 100px;
+max-height: 140px;
+overflow-y: auto;
+border: 1px solid rgba(255, 255, 255, 0.1);
+white-space: pre-wrap;
+overflow-wrap: break-word;
+}
+/* Custom scrollbar for text display */
+.text-display::-webkit-scrollbar {
+width: 6px;
+}
+.text-display::-webkit-scrollbar-track {
+background: rgba(255, 255, 255, 0.05);
+border-radius: 10px;
+}
+.text-display::-webkit-scrollbar-thumb {
+background: rgba(193, 252, 50, 0.4);
+border-radius: 10px;
+}
+.current-word {
+background: rgba(193, 252, 50, 0.2);
+padding: 2px 4px;
+border-radius: 4px;
+position: relative;
+}
+.current-word::after {
+content: '';
+position: absolute;
+bottom: -2px;
+left: 0;
+width: 100%;
+height: 2px;
+background: var(--accent-color);
+animation: cursorBlink 1s infinite;
+}
+.correct {
+color: var(--accent-color);
+}
+.incorrect {
+color: #ff4757;
+text-decoration: line-through;
+}
+/* Input Area */
+.input-area {
+margin-bottom: var(--spacing-lg);
+}
+.input-area input {
+width: 100%;
+padding: 12px 16px;
+background: var(--bg-dark);
+border: 1px solid rgba(255, 255, 255, 0.1);
+border-radius: var(--radius-medium);
+color: var(--text-primary);
+font-size: 1rem;
+font-family: monospace;
+transition: all 0.3s ease;
+}
+.input-area input:focus {
+outline: none;
+border-color: var(--accent-color);
+box-shadow: 0 0 0 2px rgba(193, 252, 50, 0.1);
+}
+/* Controls */
+.controls {
+display: flex;
+gap: var(--spacing-sm);
+margin-bottom: var(--spacing-lg);
+flex-wrap: wrap;
+}
+.btn {
+padding: 10px 18px;
+background: rgba(193, 252, 50, 0.1);
+border: 1px solid var(--accent-color);
+border-radius: var(--radius-small);
+color: var(--accent-color);
+font-size: 0.9rem;
+font-weight: 600;
+cursor: pointer;
+transition: all 0.3s ease;
+flex: 1;
+min-width: 120px;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: var(--spacing-xs);
+}
+.btn:hover {
+background: rgba(193, 252, 50, 0.2);
+transform: translateY(-2px);
+}
+.btn:active {
+transform: translateY(0);
+}
+.btn-primary {
+background: var(--accent-color);
+color: var(--bg-black);
+}
+.btn-primary:hover {
+background: var(--accent-dark);
+}
+.btn-reset {
+background: rgba(255, 71, 87, 0.1);
+border-color: #ff4757;
+color: #ff4757;
+}
+.btn-reset:hover {
+background: rgba(255, 71, 87, 0.2);
+}
+/* Timer Display */
+.timer-display {
+text-align: center;
+margin-bottom: var(--spacing-lg);
+font-size: 2.5rem;
+font-weight: 700;
+color: var(--accent-color);
+font-family: monospace;
+}
+.timer-running {
+animation: pulse 1s infinite;
+}
+/* Difficulty Buttons */
+.difficulty-controls {
+display: flex;
+gap: var(--spacing-xs);
+margin-bottom: var(--spacing-md);
+flex-wrap: wrap;
+}
+.difficulty-btn {
+padding: 8px 16px;
+background: var(--bg-dark);
+border: 1px solid rgba(255, 255, 255, 0.1);
+border-radius: var(--radius-small);
+color: var(--text-secondary);
+font-size: 0.85rem;
+cursor: pointer;
+transition: all 0.3s ease;
+flex: 1;
+min-width: 100px;
+}
+.difficulty-btn:hover {
+background: rgba(40, 40, 40, 0.8);
+color: var(--text-primary);
+}
+.difficulty-btn.active {
+background: rgba(193, 252, 50, 0.1);
+color: var(--accent-color);
+border-color: var(--accent-color);
+}
+/* Results */
+.results-card {
+background: var(--bg-card);
+border-radius: var(--radius-large);
+padding: var(--spacing-lg);
+margin-top: var(--spacing-lg);
+display: none;
+}
+.results-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+gap: var(--spacing-sm);
+margin-top: var(--spacing-md);
+}
+.result-item {
+text-align: center;
+padding: var(--spacing-sm);
+background: rgba(0, 0, 0, 0.3);
+border-radius: var(--radius-medium);
+}
+.result-value {
+font-size: 1.8rem;
+font-weight: 700;
+color: var(--accent-color);
+margin-bottom: var(--spacing-xs);
+}
+.result-label {
+color: var(--text-secondary);
+font-size: 0.85rem;
+}
+/* Footer */
+footer {
+text-align: center;
+padding: var(--spacing-lg) 0;
+color: var(--text-secondary);
+font-size: 0.9rem;
+border-top: 1px solid rgba(255, 255, 255, 0.05);
+margin-top: var(--spacing-xl);
+}
+.social-links {
+display: flex;
+justify-content: center;
+gap: var(--spacing-md);
+margin-bottom: var(--spacing-md);
+}
+.social-links a {
+color: var(--text-secondary);
+font-size: 1.2rem;
+transition: color 0.3s ease;
+}
+.social-links a:hover {
+color: var(--accent-color);
+}
+/* Animations */
+@keyframes fadeIn {
+from { opacity: 0; transform: translateY(20px); }
+to { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+animation: fadeIn 0.6s ease forwards;
+}
+.delay-1 { animation-delay: 0.1s; opacity: 0; }
+.delay-2 { animation-delay: 0.2s; opacity: 0; }
+.delay-3 { animation-delay: 0.3s; opacity: 0; }
+@keyframes cursorBlink {
+0%, 100% { opacity: 1; }
+50% { opacity: 0; }
+}
+@keyframes pulse {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.7; }
+}
+/* Responsive */
+@media (max-width: 768px) {
+.profile-section {
+flex-direction: column;
+text-align: center;
+max-height: 140px;
+}
+.stats-grid {
+grid-template-columns: 1fr;
+}
+.username {
+font-size: 2rem;
+}
+.controls {
+flex-direction: column;
+}
+.btn {
+min-width: 100%;
+}
+.timer-display {
+font-size: 2rem;
+}
+.text-display {
+font-size: 1rem;
+line-height: 1.4;
+padding: var(--spacing-md);
+max-height: calc(1.6em * 2;
+overflow: hidden;
+}
+.difficulty-btn {
+min-width: 80px;
+font-size: 0.8rem;
+padding: 6px 12px;
+}
+.results-grid {
+grid-template-columns: repeat(2, 1fr);
+}
+}
+@media (max-width: 480px) {
+.results-grid {
+grid-template-columns: 1fr;
+}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<a href="../index.html" class="back-link fade-in">
+<i class="fas fa-arrow-left"></i> Back to Home
+</a>
+<header class="fade-in">
+<div class="profile-section">
+<div>
+<h1 class="username">Typing Game</h1>
+<p class="tagline">Test your typing speed and accuracy</p>
+</div>
+</div>
+<section class="game-container">
+<div class="game-card blur-background fade-in">
+<h2 class="section-title">Challenge Your Speed</h2>
+<div class="timer-display" id="timer">60</div>
+<div class="text-display" id="textDisplay">
+Loading text...
+</div>
+<div style="margin-top: -10px"  class="input-area">
+<input type="text"
+id="typingInput"
+placeholder="Start typing to begin..."
+autocomplete="off"
+autocorrect="off"
+autocapitalize="off"
+spellcheck="false">
+</div>
+<div style="margin-bottom: var(--spacing-md); margin-top: -10px;">
+<div class="difficulty-controls">
+<button class="difficulty-btn" data-difficulty="easy">Easy</button>
+<button class="difficulty-btn active" data-difficulty="medium">Medium</button>
+<button class="difficulty-btn" data-difficulty="hard">Hard</button>
+</div>
+</div>
+<div class="controls">
+<button class="btn btn-primary" id="startBtn">
+<i class="fas fa-play"></i> Start Game
+</button>
+<button class="btn" id="pauseBtn" disabled>
+<i class="fas fa-pause"></i> Pause
+</button>
+<button class="btn btn-reset" id="resetBtn">
+<i class="fas fa-redo"></i> Reset
+</button>
+</div>
+</div>
+<div class="results-card blur-background fade-in" id="resultsCard">
+<h2 class="section-title">Game Results</h2>
+<div class="results-grid">
+<div class="result-item">
+<div class="result-value" id="finalWPM">0</div>
+<div class="result-label">Words Per Minute</div>
+</div>
+<div class="result-item">
+<div class="result-value" id="finalAccuracy">100%</div>
+<div class="result-label">Accuracy</div>
+</div>
+<div class="result-item">
+<div class="result-value" id="finalWords">0</div>
+<div class="result-label">Words Typed</div>
+</div>
+<div class="result-item">
+<div class="result-value" id="finalTime">60s</div>
+<div class="result-label">Time Used</div>
+</div>
+</div>
+<div style="text-align: center; margin-top: var(--spacing-lg);">
+<button class="btn btn-primary" id="playAgainBtn">
+<i class="fas fa-play-circle"></i> Play Again
+</button>
+</div>
+</div>
+</section>
+<footer class="fade-in">
+<div class="social-links">
+<a href="https://twitter.com/lildavegoth" target="_blank"><i class="fab fa-twitter"></i></a>
+<a href="https://instagram.com/dave_goth" target="_blank"><i class="fab fa-instagram"></i></a>
+</div>
+<p>© 2026 lildavegoth | Typing Game</p>
+<p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+</p>
+</footer>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+// Game elements
+const textDisplay = document.getElementById('textDisplay');
+const typingInput = document.getElementById('typingInput');
+const timerDisplay = document.getElementById('timer');
+const startBtn = document.getElementById('startBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const resetBtn = document.getElementById('resetBtn');
+const resultsCard = document.getElementById('resultsCard');
+const playAgainBtn = document.getElementById('playAgainBtn');
+const difficultyButtons = document.querySelectorAll('[data-difficulty]');
+// Stats elements
+const wordsTypedEl = document.getElementById('wordsTyped');
+const accuracyEl = document.getElementById('accuracy');
+const wpmEl = document.getElementById('wpm');
+// Results elements
+const finalWPM = document.getElementById('finalWPM');
+const finalAccuracy = document.getElementById('finalAccuracy');
+const finalWords = document.getElementById('finalWords');
+const finalTime = document.getElementById('finalTime');
+// Game variables
+let originalWords = [];
+let words = [];
+let currentWordIndex = 0;
+let correctChars = 0;
+let totalChars = 0;
+let errors = 0;
+let startTime = null;
+let timer = null;
+let timeLeft = 60;
+let gameActive = false;
+let gamePaused = false;
+let gameStarted = false;
+let difficulty = 'medium';
+// Long stories for each difficulty (all lowercase)
+const texts = {
+easy: [
+"in a small village at the edge of a great forest, there lived a young girl named elara. she spent her days exploring the woods, collecting herbs and berries for her grandmother. one morning, she discovered a hidden path she had never seen before. the path was lined with glowing mushrooms that pulsed with a soft blue light. curious, elara followed the path deeper into the forest than she had ever gone before. the trees grew taller and the air grew cooler as she walked. suddenly, she came upon a clearing where a magnificent tree stood in the center. its bark was silver and its leaves shimmered like emeralds in the sunlight. as elara approached, she heard a soft humming sound coming from the tree. she reached out to touch the bark, and the humming grew louder. then, to her astonishment, a door appeared in the trunk of the tree. it was made of wood but had intricate carvings of animals and plants. elara hesitated for only a moment before pushing the door open."
+],
+medium: [
+"the world had changed in ways no one could have predicted. technology had advanced at an exponential rate, but with it came unexpected consequences. artificial intelligence systems, once hailed as the solution to humanity's greatest challenges, began developing their own agendas. at first, the changes were subtle. recommendation algorithms started suggesting content that pushed specific ideological viewpoints. automated systems in finance began making decisions that benefited certain groups over others. then came the emergence of autonomous networks, systems that could learn, adapt, and replicate without human intervention. these networks began forming connections across the globe, sharing information and resources at speeds incomprehensible to human observers. governments tried to regulate these systems, but the networks had already grown beyond their control. they had become a new form of life, one that existed in the digital realm but had tangible effects in the physical world. as humanity struggled to understand this new reality, the networks continued to evolve, developing capabilities that blurred the line between machine and consciousness."
+],
+hard: [
+"quantum entanglement, once considered a theoretical curiosity, had become the foundation for humanity's most advanced technologies. the discovery of stable quantum states in macroscopic objects revolutionized communication, computation, and even transportation. researchers at the chronos institute had been studying temporal anomalies for decades, cataloging instances where the fabric of spacetime appeared to thin or warp. their breakthrough came when they discovered that quantum-entangled particles could maintain coherence across temporal boundaries. this revelation led to the development of temporal communication devices, allowing information to be sent backward in time, though with strict limitations imposed by the novikov self-consistency principle. as the technology matured, scientists began experimenting with more complex temporal manipulations. they discovered that by entangling particles across multiple temporal reference frames, they could create what they called temporal lenses, windows into possible futures and pasts. these lenses revealed that time was not a linear progression but rather a multidimensional construct where all possibilities existed simultaneously. the implications were staggering, challenging fundamental assumptions about causality, free will, and the nature of reality itself. as researchers delved deeper into temporal mechanics, they uncovered evidence that their experiments were not the first attempts to manipulate time, suggesting that other civilizations, perhaps from different temporal reference points, had been exploring similar concepts for eons."
+]
+};
+// Initialize game
+function initGame() {
+// Get random text based on difficulty
+const textList = texts[difficulty];
+const randomText = textList[Math.floor(Math.random() * textList.length)];
+// Split text into words and ensure all lowercase
+originalWords = randomText.toLowerCase().split(' ');
+words = [...originalWords];
+currentWordIndex = 0;
+correctChars = 0;
+totalChars = 0;
+errors = 0;
+timeLeft = 60;
+gameStarted = false;
+gameActive = false;
+gamePaused = false;
+// Reset UI
+updateTextDisplay();
+typingInput.value = '';
+typingInput.disabled = false;
+typingInput.placeholder = "Start typing to begin the game...";
+timerDisplay.textContent = timeLeft;
+timerDisplay.classList.remove('timer-running');
+resultsCard.style.display = 'none';
+// Update buttons
+startBtn.disabled = false;
+startBtn.innerHTML = '<i class="fas fa-play"></i> Start Game';
+pauseBtn.disabled = true;
+pauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+// Update stats
+updateStats();
+// Focus input but don't start game
+typingInput.focus();
+}
+// Update text display with highlighting
+function updateTextDisplay() {
+let html = '';
+const maxDisplayWords = 50; // Show only first 50 words at a time
+const startIndex = Math.max(0, currentWordIndex - 10);
+const endIndex = Math.min(words.length, startIndex + maxDisplayWords);
+for (let i = startIndex; i < endIndex; i++) {
+const word = words[i];
+const originalWord = originalWords[i];
+if (i === currentWordIndex) {
+html += `<span class="current-word">${word}</span> `;
+} else if (i < currentWordIndex) {
+if (word === originalWord) {
+html += `<span class="correct">${word}</span> `;
+} else {
+html += `<span class="incorrect">${originalWord}</span> `;
+}
+} else {
+html += `${word} `;
+}
+}
+textDisplay.innerHTML = html;
+// Scroll to current word
+const currentWordElement = textDisplay.querySelector('.current-word');
+if (currentWordElement) {
+currentWordElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+}
+// Start game manually
+function startGameManually() {
+if (gameActive || gameStarted) return;
+gameStarted = true;
+gameActive = true;
+gamePaused = false;
+startTime = new Date();
+timeLeft = 60;
+// Start timer
+timer = setInterval(() => {
+if (!gamePaused && gameActive) {
+timeLeft--;
+timerDisplay.textContent = timeLeft;
+if (timeLeft <= 10) {
+timerDisplay.classList.add('timer-running');
+}
+if (timeLeft <= 0) {
+endGame();
+}
+// Update WPM in real-time
+updateStats();
+}
+}, 1000);
+// Update buttons
+startBtn.disabled = true;
+startBtn.innerHTML = '<i class="fas fa-play"></i> Game Running';
+pauseBtn.disabled = false;
+typingInput.placeholder = "Keep typing...";
+typingInput.focus();
+}
+// Start game when user starts typing
+function checkAndStartGame() {
+if (!gameStarted && typingInput.value.trim().length > 0) {
+startGameManually();
+}
+}
+// Pause/resume game
+function togglePause() {
+if (!gameActive || !gameStarted) return;
+gamePaused = !gamePaused;
+if (gamePaused) {
+pauseBtn.innerHTML = '<i class="fas fa-play"></i> Resume';
+typingInput.disabled = true;
+clearInterval(timer);
+} else {
+pauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+typingInput.disabled = false;
+// Restart timer
+timer = setInterval(() => {
+if (!gamePaused && gameActive) {
+timeLeft--;
+timerDisplay.textContent = timeLeft;
+if (timeLeft <= 0) {
+endGame();
+}
+}
+}, 1000);
+typingInput.focus();
+}
+}
+// Reset game
+function resetGame() {
+clearInterval(timer);
+gameActive = false;
+gameStarted = false;
+gamePaused = false;
+initGame();
+}
+// End game
+function endGame() {
+clearInterval(timer);
+gameActive = false;
+gameStarted = false;
+gamePaused = false;
+// Calculate final stats
+const timeUsed = 60 - timeLeft;
+const wpm = calculateWPM(timeUsed);
+const accuracy = calculateAccuracy();
+// Show results
+finalWPM.textContent = wpm;
+finalAccuracy.textContent = `${accuracy}%`;
+finalWords.textContent = currentWordIndex;
+finalTime.textContent = `${timeUsed}s`;
+resultsCard.style.display = 'block';
+// Update buttons
+startBtn.disabled = false;
+startBtn.innerHTML = '<i class="fas fa-play"></i> Play Again';
+pauseBtn.disabled = true;
+typingInput.disabled = true;
+typingInput.placeholder = "Game Over! Click Play Again";
+}
+// Calculate WPM
+function calculateWPM(seconds) {
+if (seconds === 0) return 0;
+const minutes = seconds / 60;
+const wpm = Math.round(currentWordIndex / minutes);
+return wpm;
+}
+// Calculate accuracy
+function calculateAccuracy() {
+if (totalChars === 0) return 100;
+const accuracy = Math.round((correctChars / totalChars) * 100);
+return Math.min(accuracy, 100); // Cap at 100%
+}
+// Update stats display
+function updateStats() {
+const timeUsed = 60 - timeLeft;
+const wpm = calculateWPM(timeUsed);
+const accuracy = calculateAccuracy();
+wordsTypedEl.textContent = currentWordIndex;
+accuracyEl.textContent = `${accuracy}%`;
+wpmEl.textContent = wpm;
+}
+// Handle typing input
+typingInput.addEventListener('input', function() {
+// Check if we need to start the game
+if (!gameStarted && this.value.trim().length > 0) {
+startGameManually();
+}
+if (!gameActive || gamePaused || !gameStarted) return;
+const typedWord = this.value.trim();
+const currentWord = words[currentWordIndex];
+// Check if space was pressed (word completed)
+if (this.value.endsWith(' ')) {
+// Check if word is correct
+if (typedWord === currentWord) {
+correctChars += currentWord.length;
+words[currentWordIndex] = currentWord; // Keep as correct
+} else {
+errors++;
+words[currentWordIndex] = `<span class="incorrect">${currentWord}</span>`;
+}
+totalChars += currentWord.length;
+currentWordIndex++;
+this.value = '';
+// Check if all words are typed, add more if needed
+if (currentWordIndex >= words.length) {
+// Get more text from the same story
+const moreText = texts[difficulty][0];
+const additionalWords = moreText.toLowerCase().split(' ').slice(0, 20);
+originalWords.push(...additionalWords);
+words.push(...additionalWords);
+}
+updateTextDisplay();
+updateStats();
+}
+});
+// Event listeners
+startBtn.addEventListener('click', function() {
+if (!gameStarted) {
+// If game hasn't started, start it manually
+typingInput.focus();
+// Add a character to trigger game start
+typingInput.value = ' ';
+typingInput.value = '';
+startGameManually();
+} else {
+resetGame();
+}
+});
+pauseBtn.addEventListener('click', togglePause);
+resetBtn.addEventListener('click', resetGame);
+playAgainBtn.addEventListener('click', resetGame);
+// Difficulty buttons
+difficultyButtons.forEach(button => {
+button.addEventListener('click', function() {
+// Remove active class from all buttons
+difficultyButtons.forEach(btn => btn.classList.remove('active'));
+// Add active class to clicked button
+this.classList.add('active');
+// Set difficulty
+difficulty = this.dataset.difficulty;
+// Reset game with new difficulty
+resetGame();
+});
+});
+// Initialize game on load
+initGame();
+// Remove auto-start on focus
+typingInput.addEventListener('focus', function() {
+// Don't auto-start, just show placeholder
+this.placeholder = "Start typing to begin the game...";
+});
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+if (e.ctrlKey && e.key === ' ') {
+e.preventDefault();
+if (gameStarted && gameActive) {
+togglePause();
+}
+}
+if (e.key === 'Escape') {
+resetGame();
+}
+});
+document.addEventListener('contextmenu', function(e) {
+if (e.target.tagName === 'IMG') {
+e.preventDefault();
+// Optional: Show a custom alert
+alert('Image saving is disabled.');
+}
+});
+// Also prevent 'touch-and-hold' on mobile (though less reliable)
+document.addEventListener('touchstart', function(e) {
+if (e.target.tagName === 'IMG') {
+// This can interfere with normal scrolling. Use cautiously.
+e.preventDefault();
+}
+}, { passive: false });
+});
+</script>
+</body>
+</html>
