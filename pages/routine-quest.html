@@ -3325,16 +3325,15 @@ streak: this.streak,
 username: this.username,
 nameTags: this.nameTags,
 exportDate: new Date().toISOString(),
-version: '1.0',
-checksum: this.generateChecksum()
+version: '1.0'
 };
 const jsonStr = JSON.stringify(data, null, 2);
-const encryptedData = this.encryptData(jsonStr);
-const blob = new Blob([encryptedData], { type: 'text/plain' });
+const encodedData = this.encryptData(jsonStr);
+const blob = new Blob([encodedData], { type: 'text/plain' });
 const url = URL.createObjectURL(blob);
 const a = document.createElement('a');
 a.href = url;
-a.download = `routine-quest-backup-${new Date().toISOString().split('T')[0]}.rqsave`;
+a.download = `routine-quest-backup-${Date.now()}.rqsave`;
 document.body.appendChild(a);
 a.click();
 document.body.removeChild(a);
@@ -3342,18 +3341,28 @@ URL.revokeObjectURL(url);
 this.showNotification('Data exported successfully!', 'success');
 return true;
 } catch (error) {
-console.error('Export error:', error);
-this.showNotification('Export failed: ' + error.message, 'error');
+this.showNotification('Export failed', 'error');
 return false;
 }
 }
 importData(fileContent) {
 try {
-const decryptedData = this.decryptData(fileContent);
-const data = JSON.parse(decryptedData);
-if (!this.validateData(data)) {
-throw new Error('Invalid or tampered data!');
+// First try to decrypt
+let decryptedData = this.decryptData(fileContent);
+// Try to parse as JSON
+let data;
+try {
+data = JSON.parse(decryptedData);
+} catch (parseError) {
+// If decrypted data isn't valid JSON, maybe it wasn't encoded
+// Try parsing the original file content directly
+data = JSON.parse(fileContent);
 }
+// Validate the data
+if (!this.validateData(data)) {
+throw new Error('Invalid data format');
+}
+// Import the data
 this.coins = data.coins ?? 1000;
 this.gems = data.gems ?? 50;
 this.level = data.level ?? 1;
@@ -3366,52 +3375,23 @@ this.achievements = data.achievements ?? {};
 this.streak = data.streak ?? 0;
 this.username = data.username ?? 'Player';
 this.nameTags = data.nameTags ?? 0;
+this.mythicalPityCounter = data.mythicalPityCounter ?? 0;
 this.saveGameData();
 this.updateUI();
 this.renderTasks();
+this.renderCollection();
 this.showNotification('Data imported successfully!', 'success');
 this.closeModal('importModal');
 return true;
 } catch (e) {
-try {
-const data = JSON.parse(fileContent);
-if (this.validateData(data)) {
-this.coins = data.coins ?? 1000;
-this.gems = data.gems ?? 50;
-this.level = data.level ?? 1;
-this.xp = data.xp ?? 0;
-this.xpToNextLevel = data.xpToNextLevel ?? 100;
-this.tasks = data.tasks ?? [];
-this.checkinData = data.checkinData ?? {};
-this.collection = data.collection ?? {};
-this.achievements = data.achievements ?? {};
-this.streak = data.streak ?? 0;
-this.username = data.username ?? 'Player';
-this.nameTags = data.nameTags ?? 0;
-this.saveGameData();
-this.updateUI();
-this.renderTasks();
-this.showNotification('Data imported (legacy format)', 'success');
-this.closeModal('importModal');
-return true;
-}
-} catch (jsonError) {
 this.showNotification('Invalid or corrupted save file!', 'error');
 return false;
-}
 }
 }
 readImportFile(file) {
 return new Promise((resolve, reject) => {
 if (!file) {
 reject('No file selected');
-return;
-}
-const fileName = file.name.toLowerCase();
-const allowedExtensions = ['.rqsave', '.json', '.txt'];
-const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
-if (!hasValidExtension) {
-reject('Please select a valid save file (.rqsave, .json, or .txt)');
 return;
 }
 if (file.size > 10 * 1024 * 1024) {
@@ -3422,55 +3402,49 @@ const reader = new FileReader();
 reader.onload = (event) => {
 resolve(event.target.result);
 };
-reader.onerror = (error) => {
-reject('Error reading file: ' + error);
-};
-reader.onabort = () => {
-reject('File reading was aborted');
+reader.onerror = () => {
+reject('Error reading file');
 };
 reader.readAsText(file);
 });
 }
 encryptData(plainText) {
 try {
-return btoa(unescape(encodeURIComponent(plainText)));
-} catch (e) {
+// Simple Base64 encoding
 return btoa(plainText);
+} catch (e) {
+return plainText; // Fallback to plain text if encoding fails
 }
 }
 decryptData(encryptedBase64) {
 try {
-return decodeURIComponent(escape(atob(encryptedBase64)));
-} catch (e) {
-try {
+// Try to decode as Base64
 return atob(encryptedBase64);
-} catch (e2) {
-throw new Error('Cannot decrypt data');
-}
+} catch (e) {
+// If it fails, return the original data (might already be plain JSON)
+return encryptedBase64;
 }
 }
 generateChecksum() {
-const dataToCheck = {
-coins: this.coins,
-gems: this.gems,
-level: this.level
-};
-const str = JSON.stringify(dataToCheck);
+// Simple checksum based on key values
+const str = `${this.coins}${this.gems}${this.level}`;
 let hash = 0;
 for (let i = 0; i < str.length; i++) {
 const char = str.charCodeAt(i);
 hash = ((hash << 5) - hash) + char;
 hash = hash & hash;
 }
-return Math.abs(hash).toString(16);
+return Math.abs(hash).toString(16).substring(0, 8);
 }
 validateData(data) {
 if (!data || typeof data !== 'object') return false;
-if (typeof data.coins !== 'number' || typeof data.gems !== 'number') return false;
-if (data.version && data.version !== '1.0') return false;
-if (data.coins < 0 || data.coins > 1000000) return false;
-if (data.gems < 0 || data.gems > 10000) return false;
-if (data.level < 1 || data.level > 100) return false;
+// Check for required fields
+if (typeof data.coins !== 'number') return false;
+if (typeof data.gems !== 'number') return false;
+// Allow some flexibility in values
+if (data.coins < 0) return false;
+if (data.gems < 0) return false;
+if (data.level < 1) return false;
 return true;
 }
 // Helper methods
