@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to Base64 | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        .main-title {
+            font-size: clamp(1.8rem, 5vw, 2.2rem);
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: clamp(0.9rem, 3vw, 1rem);
+            line-height: 1.4;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+
+        .tool-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-md);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            width: 100%;
+        }
+
+        .io-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        @media (min-width: 768px) {
+            .io-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .io-section {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+            padding: 0 4px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .character-count {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px;
+            border-radius: 20px;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .code-textarea {
+            width: 100%;
+            height: 280px;
+            min-height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-medium);
+            color: var(--text-primary);
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            padding: var(--spacing-md);
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .code-textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(193, 252, 50, 0.1);
+        }
+
+        .code-textarea:read-only {
+            background: rgba(0, 0, 0, 0.4);
+            cursor: default;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin-top: var(--spacing-md);
+            width: 100%;
+        }
+
+        .icon-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 12px;
+            border: none;
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 48px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .icon-btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: var(--bg-black);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-accent {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border: 2px solid var(--accent-color);
+        }
+
+        .btn-accent:hover {
+            background: rgba(193, 252, 50, 0.2);
+        }
+
+        .preview-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: var(--spacing-sm);
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .preview-content {
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-md);
+            position: relative;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 150px;
+            width: auto;
+            height: auto;
+            border-radius: var(--radius-small);
+        }
+
+        .preview-placeholder {
+            color: var(--text-secondary);
+            text-align: center;
+            padding: var(--spacing-md);
+            font-size: 0.9rem;
+        }
+
+        .preview-error {
+            color: #ff6b6b;
+            text-align: center;
+            padding: var(--spacing-md);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .copy-btn {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border: 1px solid rgba(193, 252, 50, 0.3);
+            padding: 10px 16px;
+            border-radius: var(--radius-small);
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: rgba(193, 252, 50, 0.2);
+        }
+
+        .copy-btn.success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border-color: rgba(76, 175, 80, 0.3);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .tool-card {
+                padding: 16px;
+                border-radius: 20px;
+            }
+            
+            .code-textarea {
+                height: 220px;
+                font-size: 13px;
+                padding: 16px;
+            }
+        }
+
+        .icon-btn, .copy-btn {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <div class="header">
+            <h1 class="main-title">Image to Base64</h1>
+            <p class="subtitle">Convert image files to Base64 strings for embedding in CSS, HTML, and JavaScript.</p>
+        </div>
+
+        <div class="tool-card">
+            <div class="io-grid">
+                <div class="io-section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            Image Upload
+                        </div>
+                        <div class="character-count" id="fileInfo">No file</div>
+                    </div>
+                    <div class="preview-container">
+                        <div class="preview-header">
+                            Image Preview
+                        </div>
+                        <div class="preview-content" id="previewContent">
+                            <div class="preview-placeholder" id="previewPlaceholder">
+                                <div>Image preview will appear here</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="button-row">
+                        <label class="icon-btn btn-secondary">
+                            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                            Upload Image
+                        </label>
+                        <button class="icon-btn btn-secondary" id="clearBtn">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <div class="io-section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            Base64 String
+                        </div>
+                        <div class="character-count" id="outputCount">0 chars</div>
+                    </div>
+                    <textarea class="code-textarea" id="base64String" readonly placeholder="Base64 string will appear here..."></textarea>
+                    <div class="button-row">
+                        <button class="icon-btn btn-primary" id="copyBase64Btn">
+                            Copy Base64
+                        </button>
+                    </div>
+
+                    <div style="margin-top: var(--spacing-md);">
+                        <div class="section-header">
+                            <div class="section-title">
+                                HTML &lt;img&gt; Tag
+                            </div>
+                            <div class="character-count" id="htmlCount">0 chars</div>
+                        </div>
+                        <textarea class="code-textarea" id="htmlTag" readonly placeholder="HTML image tag will appear here..." style="height: 120px;"></textarea>
+                        <div class="button-row">
+                            <button class="icon-btn btn-accent" id="copyHtmlBtn">
+                                Copy HTML
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: var(--spacing-md);">
+                        <div class="section-header">
+                            <div class="section-title">
+                                CSS Background
+                            </div>
+                            <div class="character-count" id="cssCount">0 chars</div>
+                        </div>
+                        <textarea class="code-textarea" id="cssBg" readonly placeholder="CSS background will appear here..." style="height: 120px;"></textarea>
+                        <div class="button-row">
+                            <button class="icon-btn btn-accent" id="copyCssBtn">
+                                Copy CSS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2025 lildavegoth | Movies Gallery</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const base64String = document.getElementById('base64String');
+        const htmlTag = document.getElementById('htmlTag');
+        const cssBg = document.getElementById('cssBg');
+        const previewContent = document.getElementById('previewContent');
+        const previewPlaceholder = document.getElementById('previewPlaceholder');
+        const fileInfo = document.getElementById('fileInfo');
+        const outputCount = document.getElementById('outputCount');
+        const htmlCount = document.getElementById('htmlCount');
+        const cssCount = document.getElementById('cssCount');
+        const copyBase64Btn = document.getElementById('copyBase64Btn');
+        const copyHtmlBtn = document.getElementById('copyHtmlBtn');
+        const copyCssBtn = document.getElementById('copyCssBtn');
+        const clearBtn = document.getElementById('clearBtn');
+
+        imageInput.addEventListener('change', handleImageUpload);
+        copyBase64Btn.addEventListener('click', () => copyToClipboard(base64String.value, copyBase64Btn));
+        copyHtmlBtn.addEventListener('click', () => copyToClipboard(htmlTag.value, copyHtmlBtn));
+        copyCssBtn.addEventListener('click', () => copyToClipboard(cssBg.value, copyCssBtn));
+        clearBtn.addEventListener('click', clearAll);
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > 2 * 1024 * 1024) {
+                showError('File size exceeds 2 MB limit');
+                return;
+            }
+
+            fileInfo.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64 = e.target.result;
+                base64String.value = base64;
+                outputCount.textContent = `${base64.length} chars`;
+                
+                const html = `<img src="${base64}" alt="Image">`;
+                htmlTag.value = html;
+                htmlCount.textContent = `${html.length} chars`;
+                
+                const css = `background-image: url("${base64}");`;
+                cssBg.value = css;
+                cssCount.textContent = `${css.length} chars`;
+                
+                updatePreview(base64);
+            };
+            reader.onerror = function() {
+                showError('Failed to read file');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updatePreview(base64) {
+            previewContent.innerHTML = '';
+            
+            if (!base64) {
+                previewPlaceholder.classList.remove('hidden');
+                return;
+            }
+
+            previewPlaceholder.classList.add('hidden');
+
+            const img = document.createElement('img');
+            img.src = base64;
+            img.className = 'preview-image';
+            img.onload = function() {
+                previewContent.appendChild(img);
+            };
+            img.onerror = function() {
+                previewContent.innerHTML = '<div class="preview-error">Failed to load image</div>';
+            };
+        }
+
+        function copyToClipboard(text, button) {
+            if (!text) return;
+
+            const originalHTML = button.innerHTML;
+            
+            if (navigator.clipboard && window.isSecureContext) {
+                const blob = new Blob([text], {type: 'text/plain'});
+                const data = [new ClipboardItem({'text/plain': blob})];
+                
+                navigator.clipboard.write(data).then(() => {
+                    showCopySuccess(button);
+                }).catch(() => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+
+            function fallbackCopy(textToCopy) {
+                const textArea = document.createElement('textarea');
+                textArea.value = textToCopy;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    showCopySuccess(button);
+                } catch (err) {
+                    alert('Copy failed. Please select and copy manually.');
+                }
+                
+                document.body.removeChild(textArea);
+            }
+
+            function showCopySuccess(btn) {
+                btn.innerHTML = 'Copied!';
+                btn.classList.add('success');
+                
+                setTimeout(() => {
+                    btn.innerHTML = btn === copyBase64Btn ? 'Copy Base64' : 
+                                  btn === copyHtmlBtn ? 'Copy HTML' : 'Copy CSS';
+                    btn.classList.remove('success');
+                }, 2000);
+            }
+        }
+
+        function clearAll() {
+            imageInput.value = '';
+            base64String.value = '';
+            htmlTag.value = '';
+            cssBg.value = '';
+            fileInfo.textContent = 'No file';
+            outputCount.textContent = '0 chars';
+            htmlCount.textContent = '0 chars';
+            cssCount.textContent = '0 chars';
+            updatePreview('');
+        }
+
+        function showError(message) {
+            previewContent.innerHTML = '<div class="preview-error">' + message + '</div>';
+            previewPlaceholder.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

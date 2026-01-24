@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Color Changer | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        .blur-background {
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            background-color: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .username {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 50px;
+        }
+
+        /* Main Tool Card */
+        .tool-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Input Methods */
+        .input-methods {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .method-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .method-card:hover {
+            border-color: var(--accent-color);
+            background: rgba(193, 252, 50, 0.05);
+        }
+
+        .method-card.active {
+            border-color: var(--accent-color);
+            background: rgba(193, 252, 50, 0.1);
+        }
+
+        .method-icon {
+            font-size: 2rem;
+            color: var(--accent-color);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .method-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .method-desc {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Textarea Input */
+        .textarea-container {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .code-input {
+            width: 100%;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-medium);
+            color: var(--text-primary);
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            padding: var(--spacing-md);
+            resize: vertical;
+        }
+
+        .code-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        /* Preview Area */
+        .preview-section {
+            margin: var(--spacing-lg) 0;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .svg-preview {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .svg-preview svg {
+            max-width: 100%;
+            max-height: 300px;
+        }
+
+        /* Color Controls */
+        .color-controls {
+            margin: var(--spacing-lg) 0;
+        }
+
+        .color-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-small);
+            padding: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .color-label {
+            min-width: 100px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .color-preview {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .hex-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .hex-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        /* Buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-lg);
+        }
+
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: var(--bg-black);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Code Output */
+        .code-output {
+            margin-top: var(--spacing-lg);
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .copy-btn {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border: 1px solid rgba(193, 252, 50, 0.3);
+            padding: 8px 16px;
+            border-radius: var(--radius-small);
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: rgba(193, 252, 50, 0.2);
+        }
+
+        .copy-btn.success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border-color: rgba(76, 175, 80, 0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .input-methods {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: var(--spacing-sm);
+            }
+            
+            .color-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-xs);
+            }
+            
+            .hex-input {
+                width: 100%;
+            }
+        }
+
+        /* Hidden elements */
+        .hidden {
+            display: none !important;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+        
+        .btn-accent {
+            background: rgba(193, 252, 50, 0.2);
+            color: var(--accent-color);
+            border: 2px solid var(--accent-color);
+        }
+        
+        .btn-accent:hover {
+            background: rgba(193, 252, 50, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        /* Tool Navigation */
+        .tool-navigation {
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .tool-navigation p {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border: 2px solid var(--accent-color);
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(193, 252, 50, 0.2);
+            transform: translateY(-2px);
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+
+        <header>
+            <h1 class="username">SVG Color Changer</h1>
+            <p class="tagline">Change colors in SVG files and XMLNS codes locally in your browser</p>
+        </header>
+
+        <div class="tool-card">
+            <!-- Paste Input -->
+            <div class="textarea-container" id="pasteInput">
+                <label class="section-title">
+                    <i class="fas fa-code"></i> Paste SVG Codes
+                </label>
+                <textarea class="code-input" id="svgInput" placeholder="Paste your SVG or XMLNS code here..."></textarea>
+                <div style="margin-top: var(--spacing-sm); text-align: center; display: flex; gap: var(--spacing-sm); justify-content: center;">
+                    <button class="btn btn-secondary" id="loadFromPasteBtn">
+                        <i class="fas fa-check"></i> Load SVG
+                    </button>
+                    <button class="btn btn-secondary" id="resetButton">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="preview-section hidden" id="previewSection">
+                <label class="section-title">
+                    <i class="fas fa-eye"></i> Preview
+                </label>
+                <div class="svg-preview" id="svgPreview">
+                    <p style="color: var(--text-secondary);">SVG preview will appear here</p>
+                </div>
+            </div>
+
+            <!-- Color Controls -->
+            <div class="color-controls hidden" id="colorControls">
+                <!-- Color controls will be generated here -->
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="applyColorsBtn" disabled>
+                    <i class="fas fa-paint-brush"></i> Apply Colors
+                </button>
+                <button class="btn btn-accent" id="changeToAccentBtn" disabled>
+                    <i class="fas fa-bolt"></i> Change to Accent
+                </button>
+                <button class="btn btn-secondary" id="exportFileBtn" disabled>
+                    <i class="fas fa-download"></i> Export File
+                </button>
+            </div>
+
+            <!-- Code Output -->
+            <div class="code-output hidden" id="codeOutput">
+                <div class="output-header">
+                    <label class="section-title">
+                        <i class="fas fa-code"></i> Modified SVG Code
+                    </label>
+                    <button class="copy-btn" id="copyCodeBtn">
+                        <i class="fas fa-copy"></i> Copy Code
+                    </button>
+                </div>
+                <textarea class="code-input" id="svgOutput" readonly placeholder="Modified SVG code will appear here..."></textarea>
+            </div>
+        </div>
+        
+        <!-- Tool Navigation -->
+        <div class="tool-navigation" style="margin-top: var(--spacing-lg); padding-top: var(--spacing-md); border-top: 1px solid rgba(255, 255, 255, 0.1);">
+            <div style="text-align: center;">
+                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-sm); font-size: 0.9rem;">
+                    Explore other SVG tools
+                </p>
+                <div style="display: flex; justify-content: center; gap: var(--spacing-sm); flex-wrap: wrap;">
+                    <a href="svg-optimizer.html" class="nav-btn">
+                        SVG Optimizer
+                    </a>
+                    <a href="svg-rasterizer.html" class="nav-btn">
+                        SVG Rasterizer
+                    </a>
+                    <a href="svg-to-datauri.html" class="nav-btn">
+                        SVG to Data URI
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | SVG Color Changer</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // DOM Elements
+        const fileMethod = document.getElementById('fileMethod');
+        const pasteInput = document.getElementById('pasteInput');
+        const svgInput = document.getElementById('svgInput');
+        const loadFromPasteBtn = document.getElementById('loadFromPasteBtn');
+        const fileInput = document.getElementById('fileInput');
+        const previewSection = document.getElementById('previewSection');
+        const svgPreview = document.getElementById('svgPreview');
+        const colorControls = document.getElementById('colorControls');
+        const applyColorsBtn = document.getElementById('applyColorsBtn');
+        const resetButton = document.getElementById('resetButton');
+        const exportFileBtn = document.getElementById('exportFileBtn');
+        const changeToAccentBtn = document.getElementById('changeToAccentBtn');
+        const codeOutput = document.getElementById('codeOutput');
+        const svgOutput = document.getElementById('svgOutput');
+        const copyCodeBtn = document.getElementById('copyCodeBtn');
+
+        // State
+        let originalSvg = '';
+        let currentSvg = '';
+        let colors = [];
+
+        // Load from paste
+        loadFromPasteBtn.addEventListener('click', () => {
+            const code = svgInput.value.trim();
+            if (code) loadSvgFromCode(code);
+        });
+
+        // Read SVG file
+        function readSvgFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                loadSvgFromCode(e.target.result);
+            };
+            reader.readAsText(file);
+        }
+
+        // Load SVG from code
+        function loadSvgFromCode(svgCode) {
+            originalSvg = svgCode;
+            currentSvg = svgCode;
+            
+            // Display preview
+            updatePreview(svgCode);
+            
+            // Extract colors
+            extractColors(svgCode);
+            
+            // Enable buttons
+            applyColorsBtn.disabled = false;
+            resetButton.disabled = false;
+            exportFileBtn.disabled = false;
+            changeToAccentBtn.disabled = false;
+            
+            // Update output
+            updateOutput(svgCode);
+        }
+
+        // Update preview
+        function updatePreview(svgCode) {
+            svgPreview.innerHTML = svgCode;
+            previewSection.classList.remove('hidden');
+            
+            // Style SVG for preview
+            const svgElement = svgPreview.querySelector('svg');
+            if (svgElement) {
+                svgElement.style.maxWidth = '100%';
+                svgElement.style.maxHeight = '300px';
+            }
+        }
+
+        // Extract colors from SVG
+        function extractColors(svgCode) {
+            colors = [];
+            
+            // Find all fill and stroke attributes with BOTH single and double quotes
+            const fillMatches = svgCode.match(/fill=(["'])([^"']+)\1/g) || [];
+            const strokeMatches = svgCode.match(/stroke=(["'])([^"']+)\1/g) || [];
+            
+            // Process fills
+            fillMatches.forEach(match => {
+                const colorMatch = match.match(/fill=(["'])([^"']+)\1/);
+                if (colorMatch) {
+                    const color = colorMatch[2];
+                    if (isValidColor(color)) {
+                        addColor('fill', color);
+                    }
+                }
+            });
+            
+            // Process strokes
+            strokeMatches.forEach(match => {
+                const colorMatch = match.match(/stroke=(["'])([^"']+)\1/);
+                if (colorMatch) {
+                    const color = colorMatch[2];
+                    if (isValidColor(color)) {
+                        addColor('stroke', color);
+                    }
+                }
+            });
+            
+            // Create color controls
+            createColorControls();
+        }
+
+        // Check if valid color
+        function isValidColor(color) {
+            if (!color) return false;
+            if (color === 'none') return false;
+            if (color === 'transparent') return false;
+            if (color.startsWith('url(')) return false;
+            return true;
+        }
+
+        // Add color to list
+        function addColor(type, value) {
+            // Check if color already exists
+            const exists = colors.find(c => c.type === type && c.value === value);
+            if (!exists) {
+                colors.push({
+                    type: type,
+                    value: value,
+                    originalValue: value
+                });
+            }
+        }
+        
+        // Change all colors to accent color
+        function changeToAccentColor() {
+            colors.forEach(color => {
+                color.value = '#C1FC32';
+                
+                // Update the hex input field
+                const hexInput = document.querySelector(`.hex-input[data-index="${colors.indexOf(color)}"]`);
+                if (hexInput) {
+                    hexInput.value = '#C1FC32';
+                    
+                    // Update color preview
+                    const preview = hexInput.previousElementSibling.querySelector('.color-preview');
+                    if (preview) {
+                        preview.style.backgroundColor = '#C1FC32';
+                    }
+                }
+            });
+            
+            // Apply the changes
+            applyColors();
+        }
+
+        // Create color controls
+        function createColorControls() {
+            colorControls.innerHTML = '';
+            
+            if (colors.length === 0) {
+                const msg = document.createElement('div');
+                msg.style.textAlign = 'center';
+                msg.style.color = 'var(--text-secondary)';
+                msg.style.padding = 'var(--spacing-md)';
+                msg.innerHTML = `
+                    <i class="fas fa-palette" style="font-size: 2rem; margin-bottom: 8px; opacity: 0.5;"></i>
+                    <p>No colors found to edit</p>
+                    <p style="font-size: 0.8rem; margin-top: 8px;">
+                        SVG needs fill="#..." or stroke="#..." attributes
+                    </p>
+                `;
+                colorControls.appendChild(msg);
+            } else {
+                colors.forEach((color, index) => {
+                    const colorItem = document.createElement('div');
+                    colorItem.className = 'color-item';
+                    
+                    // Label
+                    const label = document.createElement('div');
+                    label.className = 'color-label';
+                    label.innerHTML = `
+                        <div class="color-preview" style="background-color: ${getHexColor(color.value)}"></div>
+                        ${color.type}
+                    `;
+                    
+                    // Hex input
+                    const hexInput = document.createElement('input');
+                    hexInput.type = 'text';
+                    hexInput.className = 'hex-input';
+                    hexInput.value = getHexColor(color.value);
+                    hexInput.placeholder = '#000000';
+                    hexInput.dataset.index = index;
+                    
+                    // Update color when input changes
+                    hexInput.addEventListener('input', function() {
+                        let value = this.value.trim();
+                        if (value.startsWith('#')) {
+                            value = value;
+                        } else if (value) {
+                            value = '#' + value;
+                        }
+                        
+                        // Update color preview
+                        const preview = this.previousElementSibling.querySelector('.color-preview');
+                        if (preview) {
+                            preview.style.backgroundColor = value || '#000000';
+                        }
+                        
+                        // Update color in array
+                        colors[index].value = value;
+                    });
+                    
+                    colorItem.appendChild(label);
+                    colorItem.appendChild(hexInput);
+                    colorControls.appendChild(colorItem);
+                });
+                
+                colorControls.classList.remove('hidden');
+            }
+        }
+
+        // Get hex color
+        function getHexColor(color) {
+            if (color.startsWith('#')) return color;
+            if (color.startsWith('rgb')) return rgbToHex(color);
+            return color;
+        }
+
+        // RGB to Hex
+        function rgbToHex(rgb) {
+            const match = rgb.match(/\d+/g);
+            if (!match) return '#000000';
+            const [r, g, b] = match.map(n => parseInt(n));
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        // Apply colors
+        function applyColors() {
+            let newSvg = originalSvg;
+            
+            colors.forEach(color => {
+                if (color.value !== color.originalValue) {
+                    // Replace BOTH single and double quote versions
+                    // Double quotes
+                    let regex = new RegExp(`${color.type}=["']${escapeRegExp(color.originalValue)}["']`, 'g');
+                    newSvg = newSvg.replace(regex, `${color.type}="${color.value}"`);
+                    
+                    // Single quotes  
+                    regex = new RegExp(`${color.type}=['"]${escapeRegExp(color.originalValue)}['"]`, 'g');
+                    newSvg = newSvg.replace(regex, `${color.type}="${color.value}"`);
+                }
+            });
+            
+            currentSvg = newSvg;
+            updatePreview(newSvg);
+            updateOutput(newSvg);
+        }
+        
+        // Helper function to escape regex special characters
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // Reset colors
+        function resetColors() {
+            // Reset color values in array
+            colors.forEach(color => {
+                color.value = color.originalValue;
+            });
+            
+            // Reset inputs
+            const hexInputs = document.querySelectorAll('.hex-input');
+            hexInputs.forEach((input, index) => {
+                input.value = getHexColor(colors[index].originalValue);
+                
+                // Reset preview
+                const preview = input.previousElementSibling.querySelector('.color-preview');
+                if (preview) {
+                    preview.style.backgroundColor = getHexColor(colors[index].originalValue);
+                }
+            });
+            
+            // Reset SVG
+            currentSvg = originalSvg;
+            updatePreview(originalSvg);
+            updateOutput(originalSvg);
+        }
+
+        // Update output
+        function updateOutput(svgCode) {
+            svgOutput.value = svgCode;
+            codeOutput.classList.remove('hidden');
+        }
+
+        // Copy code with mobile support
+        function copyCode() {
+            svgOutput.select();
+            svgOutput.setSelectionRange(0, 99999); // For mobile
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    copyCodeBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    copyCodeBtn.classList.add('success');
+                    
+                    setTimeout(() => {
+                        copyCodeBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Code';
+                        copyCodeBtn.classList.remove('success');
+                    }, 2000);
+                }
+            } catch (err) {
+                // Fallback for older browsers
+                navigator.clipboard.writeText(svgOutput.value).then(() => {
+                    copyCodeBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    copyCodeBtn.classList.add('success');
+                    
+                    setTimeout(() => {
+                        copyCodeBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Code';
+                        copyCodeBtn.classList.remove('success');
+                    }, 2000);
+                });
+            }
+        }
+
+        // Export file
+        function exportFile() {
+            const blob = new Blob([currentSvg], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'colored-svg.svg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Event Listeners
+        applyColorsBtn.addEventListener('click', applyColors);
+        resetButton.addEventListener('click', resetColors);
+        exportFileBtn.addEventListener('click', exportFile);
+        copyCodeBtn.addEventListener('click', copyCode);
+        changeToAccentBtn.addEventListener('click', changeToAccentColor);
+    </script>
+</body>
+</html>

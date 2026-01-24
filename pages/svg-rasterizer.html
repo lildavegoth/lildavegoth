@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Rasterizer | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="../navigation.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        .blur-background {
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            background-color: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .username {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 50px;
+        }
+
+        /* Main Tool Card */
+        .tool-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* File Drop Area */
+        .drop-area {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-xl);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .drop-area:hover,
+        .drop-area.drag-over {
+            border-color: var(--accent-color);
+            background: rgba(193, 252, 50, 0.05);
+        }
+
+        .drop-icon {
+            font-size: 3rem;
+            color: var(--accent-color);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .drop-text {
+            font-size: 1.1rem;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .drop-subtext {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        /* File List */
+        .file-list {
+            margin: var(--spacing-lg) 0;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .files-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-icon {
+            color: var(--accent-color);
+            font-size: 1.2rem;
+            margin-right: var(--spacing-sm);
+            min-width: 24px;
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-size {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .file-status {
+            margin-left: var(--spacing-sm);
+            font-size: 0.9rem;
+            padding: 4px 8px;
+            border-radius: var(--radius-small);
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .status-pending {
+            background: rgba(255, 193, 7, 0.1);
+            color: #FFC107;
+        }
+
+        .status-processing {
+            background: rgba(33, 150, 243, 0.1);
+            color: #2196F3;
+        }
+
+        .status-completed {
+            background: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+        }
+
+        /* Settings */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+            margin: var(--spacing-lg) 0;
+        }
+        
+        @media (max-width: 768px) {
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .combined-dimensions {
+                grid-column: span 1;
+            }
+        }
+        
+        /* Combined Dimensions */
+        .combined-dimensions {
+            grid-column: span 2;
+        }
+        
+        .dimensions-container {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .dimension-input {
+            flex: 1;
+        }
+        
+        .dimension-separator {
+            color: var(--text-secondary);
+            padding: 0 var(--spacing-xs);
+            opacity: 0.5;
+        }
+        
+        .dimension-separator i {
+            font-size: 0.9rem;
+        }
+
+        .setting-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+        }
+
+        .setting-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+            color: var(--text-secondary);
+        }
+
+        .setting-control {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            padding: 10px;
+            font-size: 1rem;
+        }
+
+        .setting-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+        
+        /* Output Format Styles */
+        .output-format-full {
+            grid-column: span 2;
+            width: 110%;
+        }
+        
+        .format-options {
+            display: flex;
+            gap: var(--spacing-sm);
+            justify-content: center;
+        }
+        
+        .format-option {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+        
+        .format-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .format-label {
+            display: block;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-secondary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .format-option input[type="radio"]:checked + .format-label {
+            background: rgba(193, 252, 50, 0.2);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+        
+        .format-option input[type="radio"]:hover + .format-label {
+            border-color: rgba(193, 252, 50, 0.5);
+            color: var(--accent-color);
+        }
+        
+        /* Responsive for format options */
+        @media (max-width: 768px) {
+            .output-format-full {
+                grid-column: span 1;
+                width: 110%;
+            }
+            
+            .format-options {
+                flex-direction: column;
+            }
+        }
+
+        /* Buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-lg);
+        }
+
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: var(--bg-black);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Progress */
+        .progress-container {
+            margin-top: var(--spacing-lg);
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        /* Preview */
+        .preview-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+        }
+
+        .preview-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .preview-box h3 {
+            margin-bottom: var(--spacing-sm);
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .preview-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+            color: var(--text-secondary);
+        }
+
+        .preview-img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: var(--radius-small);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .preview-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: var(--spacing-sm);
+            }
+        }
+
+        /* Hidden elements */
+        .hidden {
+            display: none !important;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .tool-navigation {
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border: 2px solid var(--accent-color);
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(193, 252, 50, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        /* ZIP Loading State */
+        .zip-loading {
+            position: relative;
+            color: transparent !important;
+        }
+        
+        .zip-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid var(--accent-color);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: zip-spin 1s linear infinite;
+        }
+        
+        @keyframes zip-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+
+        <header>
+            <h1 class="username">SVG Rasterizer</h1>
+            <p class="tagline">Convert SVG files to PNG images with batch processing</p>
+        </header>
+
+        <div class="tool-card">
+            <!-- File Drop Area -->
+            <div class="drop-area" id="dropArea">
+                <i style="margin-top: 20px;" class="fas fa-cloud-upload-alt drop-icon"></i>
+                <h3 class="drop-text">Drop SVG files here</h3>
+                <p class="drop-subtext">Or click to select files (Supports batch processing)</p>
+                <input type="file" id="fileInput" multiple accept=".svg,image/svg+xml">
+            </div>
+
+            <!-- File List -->
+            <div class="file-list" id="fileListSection">
+                <h3 class="section-title">
+                    <i class="fas fa-file"></i> Selected Files
+                    <span id="fileCount" style="margin-left: auto; font-size: 0.9rem; color: var(--text-secondary);">0 files</span>
+                </h3>
+                <div class="files-container" id="filesContainer">
+                    <p style="text-align: center; padding: var(--spacing-lg); color: var(--text-secondary);">
+                        No files selected yet
+                    </p>
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="settings-grid" id="settingsSection">
+                <!-- Combined Width & Height Row -->
+                <div class="setting-item combined-dimensions">
+                    <label class="setting-label">
+                        <i class="fas fa-expand-alt"></i> Width & Height (px)
+                    </label>
+                    <div class="dimensions-container">
+                        <div class="dimension-input">
+                            <input type="number" class="setting-control" id="widthInput" value="512" min="1" max="4096" placeholder="Width">
+                        </div>
+                        <div class="dimension-separator">
+                            <i class="fas fa-times"></i>
+                        </div>
+                        <div class="dimension-input">
+                            <input type="number" class="setting-control" id="heightInput" value="512" min="1" max="4096" placeholder="Height">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Output Format -->
+                <div class="setting-item output-format-full">
+                    <label class="setting-label">
+                        <i style="margin-bottom: 10px;" class="fas fa-download"></i> Output Format
+                    </label>
+                    <div class="format-options">
+                        <label class="format-option">
+                            <input type="radio" name="format" value="png" checked>
+                            <span class="format-label">PNG</span>
+                        </label>
+                        <label class="format-option">
+                            <input type="radio" name="format" value="jpeg">
+                            <span class="format-label">JPEG</span>
+                        </label>
+                        <label class="format-option">
+                            <input type="radio" name="format" value="webp">
+                            <span class="format-label">WebP</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="convertAllBtn" disabled>
+                    <i class="fas fa-bolt"></i> Convert All
+                </button>
+                <button class="btn btn-secondary" id="clearFilesBtn">
+                    <i class="fas fa-trash"></i> Clear Files
+                </button>
+                <button class="btn btn-secondary" id="downloadAllBtn" disabled>
+                    <i class="fas fa-download"></i> Download All
+                </button>
+            </div>
+
+            <!-- Progress -->
+            <div class="progress-container hidden" id="progressSection">
+                <div class="progress-header">
+                    <h3 class="section-title">
+                        Processing
+                    </h3>
+                    <span id="progressText">0/0</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="progress-text" id="progressMessage">Starting conversion...</p>
+            </div>
+
+            <!-- Preview -->
+            <div class="preview-container hidden" id="previewSection">
+                <div class="preview-box">
+                    <h3>Original SVG</h3>
+                    <div class="preview-content" id="svgPreview">
+                        <p>No preview available</p>
+                    </div>
+                </div>
+                <div class="preview-box">
+                    <h3>Rasterized Result</h3>
+                    <div class="preview-content" id="pngPreview">
+                        <p>No preview available</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tool Navigation -->
+        <div class="tool-navigation">
+            <div style="text-align: center;">
+                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-sm); font-size: 0.9rem;">
+                    Explore other SVG tools
+                </p>
+                <div style="display: flex; justify-content: center; gap: var(--spacing-sm); flex-wrap: wrap;">
+                    <a href="svg-color-changer.html" class="nav-btn">
+                        SVG Color Changer
+                    </a>
+                    <a href="svg-optimizer.html" class="nav-btn">
+                        SVG Optimizer
+                    </a>
+                    <a href="svg-to-datauri.html" class="nav-btn">
+                        SVG to Data URI
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | SVG Rasterizer</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // DOM Elements
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const filesContainer = document.getElementById('filesContainer');
+        const fileCount = document.getElementById('fileCount');
+        const convertAllBtn = document.getElementById('convertAllBtn');
+        const clearFilesBtn = document.getElementById('clearFilesBtn');
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
+        const widthInput = document.getElementById('widthInput');
+        const heightInput = document.getElementById('heightInput');
+        const formatSelect = document.getElementById('formatSelect');
+        const progressSection = document.getElementById('progressSection');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const progressMessage = document.getElementById('progressMessage');
+        const previewSection = document.getElementById('previewSection');
+        const svgPreview = document.getElementById('svgPreview');
+        const pngPreview = document.getElementById('pngPreview');
+
+        // State
+        let files = [];
+        let convertedFiles = [];
+
+        // Initialize
+        function init() {
+            updateUI();
+        }
+        
+        // Get selected format from radio buttons
+        function getSelectedFormat() {
+            const selectedRadio = document.querySelector('input[name="format"]:checked');
+            return selectedRadio ? selectedRadio.value : 'png';
+        }
+
+        // File handling
+        function handleFiles(selectedFiles) {
+            for (const file of selectedFiles) {
+                if (file.type === 'image/svg+xml' || file.name.endsWith('.svg')) {
+                    files.push({
+                        file: file,
+                        id: Date.now() + Math.random(),
+                        name: file.name,
+                        originalName: file.name.replace(/\.svg$/i, ''), // Store name without .svg
+                        size: formatFileSize(file.size),
+                        status: 'pending'
+                    });
+                }
+            }
+            updateUI();
+        }
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Update UI
+        function updateUI() {
+            // Update file list
+            if (files.length === 0) {
+                filesContainer.innerHTML = `
+                    <p style="text-align: center; padding: var(--spacing-lg); color: var(--text-secondary);">
+                        No files selected yet
+                    </p>
+                `;
+                fileListSection.classList.add('hidden');
+            } else {
+                fileListSection.classList.remove('hidden');
+                filesContainer.innerHTML = files.map((file, index) => `
+                    <div class="file-item" data-id="${file.id}">
+                        <i class="fas fa-file-image file-icon"></i>
+                        <div class="file-info">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-size">${file.size}</div>
+                        </div>
+                        <div class="file-status status-${file.status}">
+                            ${file.status.charAt(0).toUpperCase() + file.status.slice(1)}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Update counters
+            fileCount.textContent = `${files.length} file${files.length !== 1 ? 's' : ''}`;
+            
+            // Update button states
+            convertAllBtn.disabled = files.length === 0;
+            downloadAllBtn.disabled = convertedFiles.length === 0;
+        }
+
+        // Convert single SVG to PNG
+        async function convertSvgToPng(svgContent, fileData, index) {
+            return new Promise((resolve) => {
+                const width = parseInt(widthInput.value) || 512;
+                const height = parseInt(heightInput.value) || 512;
+                const format = getSelectedFormat();
+                
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Clear canvas with transparent background
+                    ctx.clearRect(0, 0, width, height);
+                    
+                    // Draw SVG
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Convert to data URL
+                    const dataUrl = canvas.toDataURL(`image/${format}`);
+                    
+                    // Update preview for first file
+                    if (index === 0) {
+                        updatePreview(svgContent, dataUrl);
+                    }
+                    
+                    resolve({
+                        dataUrl: dataUrl,
+                        fileName: `${fileData.originalName || 'rasterized'}.${format}`,
+                        format: format
+                    });
+                };
+                
+                img.onerror = function() {
+                    resolve(null);
+                };
+                
+                const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                img.src = url;
+            });
+        }
+
+        // Update preview
+        function updatePreview(svgContent, pngDataUrl) {
+            previewSection.classList.remove('hidden');
+            
+            // Show SVG preview
+            svgPreview.innerHTML = svgContent;
+            const svgElement = svgPreview.querySelector('svg');
+            if (svgElement) {
+                svgElement.style.maxWidth = '100%';
+                svgElement.style.maxHeight = '150px';
+            }
+            
+            // Show PNG preview
+            if (pngDataUrl) {
+                pngPreview.innerHTML = `<img src="${pngDataUrl}" class="preview-img" alt="Rasterized">`;
+            }
+        }
+
+        // Convert all files
+        async function convertAllFiles() {
+            if (files.length === 0) return;
+            
+            convertedFiles = [];
+            progressSection.classList.remove('hidden');
+            convertAllBtn.disabled = true;
+            
+            for (let i = 0; i < files.length; i++) {
+                // Update progress
+                updateProgress(i + 1, files.length, `Processing ${files[i].name}`);
+                
+                // Read SVG file
+                const reader = new FileReader();
+                const svgContent = await new Promise((resolve) => {
+                    reader.onload = function(e) {
+                        resolve(e.target.result);
+                    };
+                    reader.readAsText(files[i].file);
+                });
+                
+                // Convert to PNG
+                const result = await convertSvgToPng(svgContent, files[i], i);
+                if (result) {
+                    convertedFiles.push(result);
+                    files[i].status = 'completed';
+                } else {
+                    files[i].status = 'error';
+                }
+                
+                updateUI();
+            }
+            
+            // Complete progress
+            updateProgress(files.length, files.length, 'Conversion complete!');
+            convertAllBtn.disabled = false;
+            downloadAllBtn.disabled = false;
+        }
+
+        // Update progress bar
+        function updateProgress(current, total, message) {
+            const percentage = (current / total) * 100;
+            progressFill.style.width = `${percentage}%`;
+            progressText.textContent = `${current}/${total}`;
+            progressMessage.textContent = message;
+        }
+
+        // Download all converted files
+        // Download all converted files (with ZIP for multiple files)
+        async function downloadAllFiles() {
+            if (convertedFiles.length === 0) return;
+            
+            // If only one file, download directly
+            if (convertedFiles.length === 1) {
+                const file = convertedFiles[0];
+                const link = document.createElement('a');
+                link.href = file.dataUrl;
+                link.download = file.fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                return;
+            }
+            
+            // If multiple files, create ZIP
+            await downloadAsZip();
+        }
+        
+        // Download all files as ZIP
+        async function downloadAsZip() {
+            try {
+                // Show loading state on button
+                downloadAllBtn.classList.add('zip-loading');
+                downloadAllBtn.disabled = true;
+                
+                // Show progress
+                progressSection.classList.remove('hidden');
+                updateProgress(0, convertedFiles.length, 'Creating ZIP file...');
+                
+                const zip = new JSZip();
+                
+                // Add each file to the ZIP
+                for (let i = 0; i < convertedFiles.length; i++) {
+                    const file = convertedFiles[i];
+                    
+                    // Update progress
+                    updateProgress(i + 1, convertedFiles.length, `Adding ${file.fileName} to ZIP...`);
+                    
+                    // Convert data URL to blob
+                    const dataUrl = file.dataUrl;
+                    const base64Data = dataUrl.split(',')[1];
+                    const mimeType = dataUrl.split(':')[1].split(';')[0];
+                    
+                    // Add to ZIP
+                    zip.file(file.fileName, base64Data, { base64: true });
+                }
+                
+                // Generate ZIP file
+                updateProgress(convertedFiles.length, convertedFiles.length, 'Generating ZIP file...');
+                
+                const content = await zip.generateAsync({ type: 'blob' });
+                
+                // Create download link
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'rasterized_files.zip';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                // Clean up
+                URL.revokeObjectURL(url);
+                
+                // Reset button state
+                downloadAllBtn.classList.remove('zip-loading');
+                downloadAllBtn.disabled = false;
+                
+                // Hide progress after a delay
+                setTimeout(() => {
+                    progressSection.classList.add('hidden');
+                }, 1000);
+                
+            } catch (error) {
+                // Reset button state
+                downloadAllBtn.classList.remove('zip-loading');
+                downloadAllBtn.disabled = false;
+                
+                // Fallback to individual downloads
+                downloadFilesIndividually();
+            }
+        }
+        
+        // Fallback: download files individually
+        function downloadFilesIndividually() {
+            convertedFiles.forEach((file, index) => {
+                // Stagger downloads to avoid browser issues
+                setTimeout(() => {
+                    const link = document.createElement('a');
+                    link.href = file.dataUrl;
+                    link.download = file.fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }, index * 100); // 100ms delay between each download
+            });
+        }
+
+        // Clear all files
+        function clearAllFiles() {
+            files = [];
+            convertedFiles = [];
+            progressSection.classList.add('hidden');
+            previewSection.classList.add('hidden');
+            updateUI();
+        }
+
+        // Event Listeners
+        dropArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(Array.from(e.target.files));
+        });
+
+        // Drag and drop
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('drag-over');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('drag-over');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('drag-over');
+            handleFiles(Array.from(e.dataTransfer.files));
+        });
+
+        // Button events
+        convertAllBtn.addEventListener('click', convertAllFiles);
+        clearFilesBtn.addEventListener('click', clearAllFiles);
+        downloadAllBtn.addEventListener('click', downloadAllFiles);
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>

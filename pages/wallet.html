@@ -1,2272 +1,2537 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wallet Money Tracker | lildavegoth</title>
-<meta name="color-scheme" content="dark">
-<script src="../protections.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-:root {
---accent-color: #C1FC32;
---accent-dark: #9bc726;
---bg-black: #000000;
---bg-dark: #1a1a1a;
---bg-card: rgba(30, 30, 30, 0.7);
---text-primary: #f5f5f7;
---text-secondary: #a1a1a6;
---radius-small: 12px;
---radius-medium: 20px;
---radius-large: 28px;
---spacing-xs: 8px;
---spacing-sm: 16px;
---spacing-md: 24px;
---spacing-lg: 32px;
---spacing-xl: 48px;
-}
-* {
-margin: 0;
-padding: 0;
-box-sizing: border-box;
-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-}
-body {
-background-color: var(--bg-black);
-color: var(--text-primary);
-min-height: 100vh;
-background-image:
-radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
-radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
-overflow-x: hidden;
-}
-.container {
-max-width: 1200px;
-margin: 0 auto;
-padding: var(--spacing-md);
-}
-.blur-background {
-backdrop-filter: saturate(180%) blur(20px);
--webkit-backdrop-filter: saturate(180%) blur(20px);
-background-color: rgba(22, 22, 24, 0.8);
-border: 1px solid rgba(255, 255, 255, 0.1);
-}
-header {
-padding: var(--spacing-lg) 0;
-margin-bottom: var(--spacing-md);
-}
-.username {
-font-size: 2.5rem;
-font-weight: 700;
-color: #ffffff;
-margin-bottom: 4px;
-}
-.tagline {
-color: var(--text-secondary);
-font-size: 1.1rem;
-}
-/* Compact Stats */
-.compact-stats {
-display: flex;
-flex-direction: column;
-gap: var(--spacing-xs);
-margin: var(--spacing-lg) 0;
-background: var(--bg-card);
-border-radius: var(--radius-medium);
-padding: var(--spacing-md);
-border: 1px solid rgba(255, 255, 255, 0.05);
-}
-.compact-stat {
-display: flex;
-justify-content: space-between;
-align-items: center;
-padding: var(--spacing-sm);
-border-radius: var(--radius-small);
-transition: all 0.3s ease;
-}
-.compact-stat:hover {
-background: rgba(193, 252, 50, 0.05);
-}
-.compact-stat-label {
-font-size: 1rem;
-font-weight: 500;
-color: var(--text-secondary);
-display: flex;
-align-items: center;
-gap: 8px;
-}
-.compact-stat-label {
-font-size: 0.8rem;
-color: var(--text-secondary);
-text-transform: uppercase;
-letter-spacing: 0.5px;
-}
-.compact-stat-value {
-font-size: 1.3rem;
-font-weight: bold;
-}
-.stat-income .compact-stat-label {
-color: #20c997;
-}
-.stat-income .compact-stat-value {
-color: #20c997;
-}
-.stat-expense .compact-stat-label {
-color: #ff6b6b;
-}
-.stat-expense .compact-stat-value {
-color: #ff6b6b;
-}
-.stat-balance .compact-stat-label {
-color: var(--accent-color);
-}
-.stat-balance .compact-stat-value {
-color: var(--accent-color);
-}
-/* Bank Card Styles */
-.cards-section {
-margin: var(--spacing-xl) 0;
-}
-.cards-header {
-display: flex;
-justify-content: space-between;
-align-items: center;
-margin-bottom: var(--spacing-lg);
-}
-.section-title {
-font-size: 1.8rem;
-font-weight: 600;
-}
-.btn {
-padding: 10px 20px;
-background: var(--bg-dark);
-border: 1px solid rgba(255, 255, 255, 0.1);
-border-radius: var(--radius-small);
-color: var(--text-primary);
-font-weight: 500;
-cursor: pointer;
-transition: all 0.3s ease;
-display: flex;
-align-items: center;
-gap: 8px;
-font-size: 0.9rem;
-}
-.btn:hover {
-background: rgba(193, 252, 50, 0.1);
-border-color: var(--accent-color);
-transform: translateY(-2px);
-}
-.btn:active {
-transform: translateY(0);
-}
-.btn.primary {
-background: var(--accent-color);
-color: #000;
-font-weight: bold;
-}
-.cards-container {
-display: grid;
-grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-gap: var(--spacing-md);
-margin-bottom: var(--spacing-xl);
-}
-/* Bank Card Styles */
-.bank-card {
-position: relative;
-overflow: hidden;
-border-radius: var(--radius-large);
-height: 220px; /* Add this line */
-}
-.bank-card .card-bg {
-position: absolute;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-z-index: 1;
-}
-.bank-card .card-bg img {
-width: 100%;
-height: 100%;
-object-fit: cover;
-pointer-events: none !important;
--webkit-user-select: none !important;
--moz-user-select: none !important;
--ms-user-select: none !important;
-user-select: none !important;
-}
-.bank-card .card-content {
-position: relative;
-z-index: 2;
-height: 100%;
-padding: var(--spacing-md);
-display: flex;
-flex-direction: column;
-justify-content: space-between;
-}
-.card-design img {
-pointer-events: auto !important;
-cursor: pointer;
-}
-.card-header,
-.card-balance,
-.card-settings-btn {
-cursor: pointer;
-}
-/* Add clicking state for cards */
-.bank-card.clicking {
-transform: scale(0.96) !important;
-opacity: 0.9;
-}
-/* Disable hover during click */
-.bank-card.clicking:hover {
-transform: scale(0.96) !important;
-}
-/* Ripple effect for buttons */
-.btn {
-position: relative;
-overflow: hidden;
-}
-.btn::after {
-content: '';
-position: absolute;
-top: 50%;
-left: 50%;
-width: 5px;
-height: 5px;
-background: rgba(255, 255, 255, 0.5);
-opacity: 0;
-border-radius: 100%;
-transform: scale(1, 1) translate(-50%);
-transform-origin: 50% 50%;
-}
-.btn:focus:not(:active)::after {
-animation: ripple 1s ease-out;
-}
-@keyframes ripple {
-0% {
-transform: scale(0, 0);
-opacity: 0.5;
-}
-20% {
-transform: scale(25, 25);
-opacity: 0.3;
-}
-100% {
-opacity: 0;
-transform: scale(40, 40);
-}
-}
-.bank-card {
-cursor: default;
-}
-.card-header {
-display: flex;
-justify-content: space-between;
-align-items: flex-start;
-}
-.card-holder {
-font-size: 1.2rem;
-font-weight: 600;
-margin-bottom: 4px;
-}
-.card-number {
-font-size: 0.9rem;
-color: rgba(255, 255, 255, 0.8);
-letter-spacing: 1px;
-font-family: 'Courier New', monospace;
-}
-/* Moved balance to left bottom */
-.card-balance {
-position: absolute;
-bottom: var(--spacing-md);
-left: var(--spacing-md);
-text-align: left;
-}
-.balance-label {
-font-size: 0.9rem;
-color: rgba(255, 255, 255, 0.8);
-margin-bottom: 4px;
-display: block;
-}
-.balance-amount {
-font-size: 2rem;
-font-weight: bold;
-color: var(--accent-color);
-display: block;
-}
-.card-footer {
-position: absolute;
-top: var(--spacing-md);
-right: var(--spacing-md);
-}
-.card-settings-btn {
-background: rgba(255, 255, 255, 0.1);
-border: 1px solid rgba(255, 255, 255, 0.2);
-color: var(--text-primary);
-width: 36px;
-height: 36px;
-border-radius: var(--radius-small);
-display: flex;
-align-items: center;
-justify-content: center;
-cursor: pointer;
-transition: all 0.3s ease;
-}
-.card-settings-btn:hover {
-background: rgba(193, 252, 50, 0.2);
-border-color: var(--accent-color);
-color: var(--accent-color);
-}
-/* Add to your CSS section */
-.card-bg img {
-width: 100%;
-height: 100%;
-object-fit: cover;
-transition: opacity 0.3s ease;
-}
-.card-bg img:hover {
-opacity: 0.9;
-}
-/* Image preview styles */
-#imagePreview img {
-transition: transform 0.3s ease;
-}
-#imagePreview img:hover {
-transform: scale(1.02);
-}
-/* Privacy Container Styles */
-.privacy-container {
-background: var(--bg-card);
-border-radius: var(--radius-medium);
-padding: var(--spacing-lg);
-border: 1px solid rgba(255, 255, 255, 0.05);
-transition: all 0.3s ease;
-}
-.privacy-container:hover {
-border-color: rgba(193, 252, 50, 0.2);
-transform: translateY(-2px);
-}
-.privacy-content p {
-margin-bottom: var(--spacing-sm);
-}
-.privacy-tips {
-margin-top: var(--spacing-md);
-padding: var(--spacing-sm);
-background: rgba(193, 252, 50, 0.05);
-border-radius: var(--radius-small);
-border-left: 3px solid var(--accent-color);
-}
-.privacy-icons {
-display: flex;
-gap: var(--spacing-md);
-margin-top: var(--spacing-lg);
-flex-wrap: wrap;
-}
-.privacy-icons div {
-display: flex;
-align-items: center;
-gap: 6px;
-font-size: 0.8rem;
-color: var(--text-secondary);
-padding: 6px 12px;
-background: rgba(255, 255, 255, 0.03);
-border-radius: var(--radius-small);
-transition: all 0.3s ease;
-}
-.privacy-icons div:hover {
-background: rgba(193, 252, 50, 0.1);
-color: var(--text-primary);
-}
-/* Responsive */
-@media (max-width: 768px) {
-.privacy-container {
-padding: var(--spacing-md);
-}
-.privacy-icons {
-gap: var(--spacing-sm);
-}
-.privacy-icons div {
-flex: 1;
-min-width: 140px;
-justify-content: center;
-}
-}
-/* Transactions Section - Horizontal Scroll */
-.transactions-section {
-margin: var(--spacing-xl) 0;
-}
-.transactions-header {
-display: flex;
-justify-content: space-between;
-align-items: center;
-margin-bottom: var(--spacing-lg);
-}
-.transactions-container {
-position: relative;
-overflow-x: auto;
-border-radius: var(--radius-medium);
-margin-bottom: var(--spacing-xl);
-}
-.transactions-table {
-width: 100%;
-min-width: 800px; /* Minimum width for mobile scrolling */
-border-collapse: collapse;
-}
-.transactions-table th {
-text-align: left;
-padding: var(--spacing-sm);
-color: var(--text-secondary);
-font-weight: 500;
-font-size: 0.9rem;
-border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-position: sticky;
-top: 0;
-background: var(--bg-card);
-z-index: 10;
-}
-.transactions-table td {
-padding: var(--spacing-sm);
-border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-white-space: nowrap;
-overflow: hidden;
-text-overflow: ellipsis;
-max-width: 200px;
-}
-/* Wider columns for title and details */
-.transactions-table td:nth-child(1) { /* Title column */
-min-width: 180px;
-max-width: 250px;
-}
-.transactions-table td:nth-child(2) { /* Details column */
-min-width: 200px;
-max-width: 300px;
-}
-.transactions-table td:nth-child(3) { /* Type column */
-min-width: 100px;
-}
-.transactions-table td:nth-child(4) { /* Amount column */
-min-width: 120px;
-}
-.transactions-table td:nth-child(5) { /* Date column */
-min-width: 120px;
-}
-.transactions-table td:nth-child(6) { /* Actions column */
-min-width: 100px;
-}
-.transaction-row {
-cursor: pointer;
-transition: background 0.3s ease;
-}
-.transaction-row:hover {
-background: rgba(193, 252, 50, 0.05);
-}
-.transaction-type {
-display: inline-block;
-padding: 4px 10px;
-border-radius: 20px;
-font-size: 0.8rem;
-font-weight: 500;
-}
-.type-income {
-background: rgba(25, 135, 84, 0.2);
-color: #20c997;
-}
-.type-expense {
-background: rgba(220, 53, 69, 0.2);
-color: #ff6b6b;
-}
-.transaction-amount {
-font-weight: 600;
-}
-.amount-income {
-color: #20c997;
-}
-.amount-expense {
-color: #ff6b6b;
-}
-.transaction-date {
-color: var(--text-secondary);
-font-size: 0.9rem;
-}
-.transaction-actions {
-display: flex;
-gap: var(--spacing-xs);
-}
-.action-btn {
-background: transparent;
-border: 1px solid rgba(255, 255, 255, 0.1);
-color: var(--text-secondary);
-width: 32px;
-height: 32px;
-border-radius: var(--radius-small);
-display: flex;
-align-items: center;
-justify-content: center;
-cursor: pointer;
-transition: all 0.3s ease;
-}
-.action-btn:hover {
-background: rgba(255, 255, 255, 0.1);
-color: var(--text-primary);
-}
-.action-btn.delete:hover {
-background: rgba(220, 53, 69, 0.2);
-color: #ff6b6b;
-border-color: rgba(220, 53, 69, 0.3);
-}
-/* Modal Styles - Mobile Friendly */
-.modal-overlay {
-position: fixed;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-background: rgba(0, 0, 0, 0.8);
-display: flex;
-align-items: center;
-justify-content: center;
-z-index: 1000;
-opacity: 0;
-pointer-events: none;
-transition: opacity 0.3s ease;
-backdrop-filter: blur(10px);
-padding: var(--spacing-sm);
-}
-.modal-overlay.active {
-opacity: 1;
-pointer-events: all;
-}
-.modal {
-background: var(--bg-dark);
-border-radius: var(--radius-large);
-padding: var(--spacing-lg);
-width: 100%;
-max-width: 500px;
-max-height: 90vh;
-overflow-y: auto;
-border: 2px solid var(--accent-color);
-box-shadow: 0 0 50px rgba(193, 252, 50, 0.3);
-animation: modalAppear 0.3s ease-out;
-}
-@media (max-width: 768px) {
-.modal {
-padding: var(--spacing-md);
-margin: var(--spacing-sm);
-}
-}
-@keyframes modalAppear {
-from {
-opacity: 0;
-transform: scale(0.9) translateY(20px);
-}
-to {
-opacity: 1;
-transform: scale(1) translateY(0);
-}
-}
-.modal-header {
-margin-bottom: var(--spacing-lg);
-display: flex;
-justify-content: space-between;
-align-items: center;
-}
-.modal-title {
-font-size: 1.5rem;
-color: var(--accent-color);
-display: flex;
-align-items: center;
-gap: 10px;
-}
-.form-group {
-margin-bottom: var(--spacing-md);
-}
-.form-label {
-display: block;
-margin-bottom: 8px;
-color: var(--text-primary);
-font-weight: 500;
-}
-/* Add this missing form-input style */
-.form-input {
-width: 100%;
-padding: 12px;
-background: rgba(0, 0, 0, 0.3);
-border: 1px solid rgba(255, 255, 255, 0.1);
-border-radius: var(--radius-small);
-color: var(--text-primary);
-font-size: 1rem;
-transition: all 0.3s ease;
-}
-/* File input styling */
-.form-input[type="file"] {
-padding: 8px;
-cursor: pointer;
-}
-.form-input[type="file"]::-webkit-file-upload-button {
-background: var(--bg-dark);
-border: 1px solid rgba(255, 255, 255, 0.1);
-color: var(--text-primary);
-padding: 6px 12px;
-border-radius: var(--radius-small);
-margin-right: 12px;
-cursor: pointer;
-transition: all 0.3s ease;
-}
-.form-input[type="file"]::-webkit-file-upload-button:hover {
-background: rgba(193, 252, 50, 0.1);
-border-color: var(--accent-color);
-}
-.form-input:focus {
-outline: none;
-border-color: var(--accent-color);
-box-shadow: 0 0 0 2px rgba(193, 252, 50, 0.1);
-}
-.form-select {
-width: 100%;
-padding: 12px;
-background: rgba(0, 0, 0, 0.3);
-border: 1px solid rgba(255, 255, 255, 0.1);
-border-radius: var(--radius-small);
-color: var(--text-primary);
-font-size: 1rem;
-cursor: pointer;
-}
-.form-row {
-display: grid;
-grid-template-columns: 1fr 1fr;
-gap: var(--spacing-sm);
-}
-@media (max-width: 768px) {
-.form-row {
-grid-template-columns: 1fr;
-}
-}
-.modal-actions {
-display: flex;
-gap: var(--spacing-sm);
-margin-top: var(--spacing-lg);
-flex-wrap: wrap;
-}
-.modal-actions .btn {
-flex: 1;
-min-width: 120px;
-}
-.btn.danger {
-background: rgba(220, 53, 69, 0.2);
-border-color: rgba(220, 53, 69, 0.3);
-color: #ff6b6b;
-}
-.btn.danger:hover {
-background: rgba(220, 53, 69, 0.3);
-border-color: #dc3545;
-}
-/* Card Settings Menu */
-.card-settings-menu {
-position: absolute;
-bottom: 50px;
-right: 10px;
-background: var(--bg-dark);
-border-radius: var(--radius-medium);
-padding: var(--spacing-sm);
-border: 1px solid rgba(255, 255, 255, 0.1);
-box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-z-index: 100;
-min-width: 150px;
-display: none;
-}
-.card-settings-menu.active {
-display: block;
-}
-.card-settings-item {
-padding: 10px 12px;
-border-radius: var(--radius-small);
-cursor: pointer;
-transition: all 0.3s ease;
-display: flex;
-align-items: center;
-gap: 8px;
-font-size: 0.9rem;
-}
-.card-settings-item:hover {
-background: rgba(193, 252, 50, 0.1);
-color: var(--accent-color);
-}
-.card-settings-item.delete:hover {
-background: rgba(220, 53, 69, 0.2);
-color: #ff6b6b;
-}
-/* Add to your CSS section */
-#dataStatus {
-transition: all 0.3s ease;
-font-size: 0.8rem;
-display: inline-flex;
-align-items: center;
-gap: 4px;
-}
-#dataStatus:before {
-content: '●';
-font-size: 0.6rem;
-animation: pulse 2s infinite;
-}
-@keyframes pulse {
-0% { opacity: 0.5; }
-50% { opacity: 1; }
-100% { opacity: 0.5; }
-}
-.bank-card:active::before {
-opacity: 1;
-}
-}
-/* Footer */
-footer {
-text-align: center;
-padding: var(--spacing-lg) 0;
-color: var(--text-secondary);
-font-size: 0.9rem;
-border-top: 1px solid rgba(255, 255, 255, 0.05);
-margin-top: var(--spacing-xl);
-width: 100%;
-}
-.social-links {
-display: flex;
-justify-content: center;
-gap: var(--spacing-md);
-margin-bottom: var(--spacing-md);
-}
-.social-links a {
-color: var(--text-secondary);
-font-size: 1.2rem;
-transition: color 0.3s ease;
-}
-.social-links a:hover {
-color: var(--accent-color);
-}
-footer p {
-margin: 0;
-padding: 0;
-line-height: 1.5;
-color: var(--text-secondary);
-text-align: center;
-width: 100%;
-}
-/* Specific style for the small text */
-footer p:last-child {
-margin-top: 8px;
-font-size: 0.8rem;
-color: #666 !important;
-}
-/* Back to Home Button */
-.back-link {
-display: inline-flex;
-align-items: center;
-gap: 8px;
-color: var(--accent-color);
-text-decoration: none;
-margin-bottom: var(--spacing-lg);
-font-weight: 500;
-transition: all 0.3s ease-in-out;
-padding: var(--spacing-xs) var(--spacing-sm);
-border-radius: var(--radius-small);
-background: rgba(193, 252, 50, 0.1);
-position: relative;
-transform: translateX(0);
-}
-.back-link:hover {
-gap: 12px;
-background: rgba(193, 252, 50, 0.2);
-transform: translateX(10px);
-padding-right: 24px;
-}
-.back-link:active {
-transform: translateX(5px) scale(0.95);
-transition: all 0.15s ease;
-}
-.back-link i {
-transition: transform 0.3s ease-in-out;
-}
-.back-link:hover i {
-transform: translateX(-3px);
-}
-/* Smooth slide back when not hovered */
-.back-link:not(:hover) {
-transition: all 0.5s ease-in-out;
-}
-/* Fade-in animation */
-@keyframes fadeIn {
-from { opacity: 0; transform: translateY(20px); }
-to { opacity: 1; transform: translateY(0); }
-}
-.fade-in {
-animation: fadeIn 0.6s ease forwards;
-}
-.delay-1 { animation-delay: 0.1s; opacity: 0; }
-.delay-2 { animation-delay: 0.2s; opacity: 0; }
-.delay-3 { animation-delay: 0.3s; opacity: 0; }
-.delay-4 { animation-delay: 0.4s; opacity: 0; }
-/* Add to your existing CSS section */
-/* Card click animation */
-.bank-card {
-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-transform-origin: center;
-will-change: transform, box-shadow;
-}
-.bank-card:active {
-transform: scale(0.98);
-}
-.bank-card:hover {
-transform: translateY(-4px);
-box-shadow: 0 10px 25px rgba(193, 252, 50, 0.15);
-}
-/* Active card styling */
-.bank-card.active {
-border: 2px solid var(--accent-color);
-box-shadow: 0 0 20px rgba(193, 252, 50, 0.2);
-}
-.bank-card.active:hover {
-box-shadow: 0 15px 30px rgba(193, 252, 50, 0.25);
-transform: translateY(-6px);
-}
-/* Button press animation */
-.btn:active {
-transform: scale(0.95);
-}
-/* Transaction row click animation */
-.transaction-row {
-transition: all 0.2s ease;
-}
-.transaction-row:active {
-background: rgba(193, 252, 50, 0.1);
-transform: scale(0.99);
-}
-/* Card background image hover effect */
-.card-bg img {
-transition: transform 0.5s ease;
-}
-.bank-card:hover .card-bg img {
-transform: scale(1.05);
-}
-/* Settings menu animation */
-.card-settings-menu {
-animation: slideUpFade 0.2s ease-out;
-transform-origin: top right;
-}
-@keyframes slideUpFade {
-from {
-opacity: 0;
-transform: translateY(10px) scale(0.95);
-}
-to {
-opacity: 1;
-transform: translateY(0) scale(1);
-}
-}
-/* Pulse animation for active card */
-@keyframes pulseGlow {
-0% {
-box-shadow: 0 0 0 0 rgba(193, 252, 50, 0.4);
-}
-70% {
-box-shadow: 0 0 0 10px rgba(193, 252, 50, 0);
-}
-100% {
-box-shadow: 0 0 0 0 rgba(193, 252, 50, 0);
-}
-}
-.bank-card.active {
-animation: pulseGlow 2s infinite;
-}
-/* Smooth scroll for transactions */
-.transactions-container {
-scroll-behavior: smooth;
-}
-/* Modal enter/exit animations */
-.modal {
-animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-@keyframes modalSlideIn {
-from {
-opacity: 0;
-transform: translateY(-20px) scale(0.95);
-}
-to {
-opacity: 1;
-transform: translateY(0) scale(1);
-}
-}
-/* Fade out animation for modal overlay */
-.modal-overlay {
-transition: opacity 0.3s ease;
-}
-.modal-overlay:not(.active) {
-opacity: 0;
-pointer-events: none;
-}
-/* Add this for smoother overlay fade */
-.modal-overlay.active {
-animation: fadeInOverlay 0.3s ease;
-}
-@keyframes fadeInOverlay {
-from { opacity: 0; }
-to { opacity: 1; }
-}
-/* Image protection overlay */
-.image-protection-overlay {
-position: absolute;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-z-index: 1;
-}
-.image-protection-overlay img.card-bg {
-width: 100%;
-height: 100%;
-object-fit: cover;
-pointer-events: none !important;
-}
-.image-protection-shield {
-position: absolute;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-background: transparent;
-z-index: 2;
-pointer-events: auto; /* This will catch all clicks */
-cursor: default;
-}
-/* Make sure card content is above the protection */
-.card-content {
-position: relative;
-z-index: 3;
-}
-/* Import/Export Styles */
-.btn-group {
-display: flex;
-gap: var(--spacing-sm);
-flex-wrap: wrap;
-}
-.btn.success {
-background: rgba(25, 135, 84, 0.2);
-border-color: rgba(25, 135, 84, 0.3);
-color: #20c997;
-}
-.btn.success:hover {
-background: rgba(25, 135, 84, 0.3);
-border-color: #20c997;
-}
-.form-hint {
-font-size: 0.8rem;
-color: var(--text-secondary);
-margin-top: 4px;
-display: flex;
-align-items: center;
-gap: 6px;
-}
-textarea.form-input {
-resize: vertical;
-min-height: 100px;
-font-family: 'Courier New', monospace;
-font-size: 0.85rem;
-line-height: 1.4;
-}
-/* Import mode buttons */
-#importMergeBtn.active {
-background: rgba(25, 135, 84, 0.2);
-border-color: #20c997;
-color: #20c997;
-}
-#importReplaceBtn.active {
-background: rgba(220, 53, 69, 0.2);
-border-color: #ff6b6b;
-color: #ff6b6b;
-}
-/* Double-click hint */
-.export-hint {
-font-size: 0.75rem;
-color: var(--text-secondary);
-text-align: center;
-margin-top: var(--spacing-sm);
-}
-.export-hint i {
-color: var(--accent-color);
-margin-right: 4px;
-}
-/* Empty State */
-.empty-state {
-text-align: center;
-padding: var(--spacing-xl);
-color: var(--text-secondary);
-}
-.empty-state i {
-font-size: 3rem;
-margin-bottom: var(--spacing-md);
-color: var(--accent-color);
-opacity: 0.5;
-}
-/* Scrollbar Styling */
-.transactions-container::-webkit-scrollbar {
-height: 8px;
-}
-.transactions-container::-webkit-scrollbar-track {
-background: rgba(255, 255, 255, 0.05);
-border-radius: 10px;
-}
-.transactions-container::-webkit-scrollbar-thumb {
-background: rgba(193, 252, 50, 0.3);
-border-radius: 10px;
-}
-.transactions-container::-webkit-scrollbar-thumb:hover {
-background: rgba(193, 252, 50, 0.5);
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Money Tracker | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        .blur-background {
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            background-color: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        header {
+            padding: var(--spacing-lg) 0;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .username {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Compact Stats */
+		.compact-stats {
+		    display: flex;
+		    flex-direction: column;
+		    gap: var(--spacing-xs);
+		    margin: var(--spacing-lg) 0;
+		    background: var(--bg-card);
+		    border-radius: var(--radius-medium);
+		    padding: var(--spacing-md);
+		    border: 1px solid rgba(255, 255, 255, 0.05);
+		}
+		
+		.compact-stat {
+		    display: flex;
+		    justify-content: space-between;
+		    align-items: center;
+		    padding: var(--spacing-sm);
+		    border-radius: var(--radius-small);
+		    transition: all 0.3s ease;
+		}
+		
+		.compact-stat:hover {
+		    background: rgba(193, 252, 50, 0.05);
+		}
+		
+		.compact-stat-label {
+		    font-size: 1rem;
+		    font-weight: 500;
+		    color: var(--text-secondary);
+		    display: flex;
+		    align-items: center;
+		    gap: 8px;
+		}
+		
+		.compact-stat-label {
+		    font-size: 0.8rem;
+		    color: var(--text-secondary);
+		    text-transform: uppercase;
+		    letter-spacing: 0.5px;
+		}
+		
+		.compact-stat-value {
+		    font-size: 1.3rem;
+		    font-weight: bold;
+		}
+		
+		.stat-income .compact-stat-label {
+		    color: #20c997;
+		}
+		
+		.stat-income .compact-stat-value {
+		    color: #20c997;
+		}
+		
+		.stat-expense .compact-stat-label {
+		    color: #ff6b6b;
+		}
+		
+		.stat-expense .compact-stat-value {
+		    color: #ff6b6b;
+		}
+		
+		.stat-balance .compact-stat-label {
+		    color: var(--accent-color);
+		}
+		
+		.stat-balance .compact-stat-value {
+		    color: var(--accent-color);
+		}
+		
+        /* Bank Card Styles */
+        .cards-section {
+            margin: var(--spacing-xl) 0;
+        }
+
+        .cards-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.primary {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: bold;
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        /* Bank Card Styles */        
+		.bank-card {
+		    position: relative;
+		    overflow: hidden;
+		    border-radius: var(--radius-large);
+		    height: 220px; /* Add this line */
+		}
+		
+		.bank-card .card-bg {
+		    position: absolute;
+		    top: 0;
+		    left: 0;
+		    width: 100%;
+		    height: 100%;
+		    z-index: 1;
+		}
+		
+		.bank-card .card-bg img {
+		    width: 100%;
+		    height: 100%;
+		    object-fit: cover;
+		    pointer-events: none !important;
+		    -webkit-user-select: none !important;
+		    -moz-user-select: none !important;
+		    -ms-user-select: none !important;
+		    user-select: none !important;
+		}
+		
+		.bank-card .card-content {
+		    position: relative;
+		    z-index: 2;
+		    height: 100%;
+		    padding: var(--spacing-md);
+		    display: flex;
+		    flex-direction: column;
+		    justify-content: space-between;
+		}
+		
+		.card-design img {
+		    pointer-events: auto !important;
+		    cursor: pointer;
+		}
+		
+		.card-header,
+		.card-balance,
+		.card-settings-btn {
+		    cursor: pointer;
+		}
+		
+		/* Add clicking state for cards */
+		.bank-card.clicking {
+		    transform: scale(0.96) !important;
+		    opacity: 0.9;
+		}
+		
+		/* Disable hover during click */
+		.bank-card.clicking:hover {
+		    transform: scale(0.96) !important;
+		}
+		
+		/* Ripple effect for buttons */
+		.btn {
+		    position: relative;
+		    overflow: hidden;
+		}
+		
+		.btn::after {
+		    content: '';
+		    position: absolute;
+		    top: 50%;
+		    left: 50%;
+		    width: 5px;
+		    height: 5px;
+		    background: rgba(255, 255, 255, 0.5);
+		    opacity: 0;
+		    border-radius: 100%;
+		    transform: scale(1, 1) translate(-50%);
+		    transform-origin: 50% 50%;
+		}
+		
+		.btn:focus:not(:active)::after {
+		    animation: ripple 1s ease-out;
+		}
+		
+		@keyframes ripple {
+		    0% {
+		        transform: scale(0, 0);
+		        opacity: 0.5;
+		    }
+		    20% {
+		        transform: scale(25, 25);
+		        opacity: 0.3;
+		    }
+		    100% {
+		        opacity: 0;
+		        transform: scale(40, 40);
+		    }
+		}
+		
+		.bank-card {
+		    cursor: default;
+		}
+		
+		.card-header {
+		    display: flex;
+		    justify-content: space-between;
+		    align-items: flex-start;
+		}
+		
+		.card-holder {
+		    font-size: 1.2rem;
+		    font-weight: 600;
+		    margin-bottom: 4px;
+		}
+		
+		.card-number {
+		    font-size: 0.9rem;
+		    color: rgba(255, 255, 255, 0.8);
+		    letter-spacing: 1px;
+		    font-family: 'Courier New', monospace;
+		}
+		
+		/* Moved balance to left bottom */
+		.card-balance {
+		    position: absolute;
+		    bottom: var(--spacing-md);
+		    left: var(--spacing-md);
+		    text-align: left;
+		}
+		
+		.balance-label {
+		    font-size: 0.9rem;
+		    color: rgba(255, 255, 255, 0.8);
+		    margin-bottom: 4px;
+		    display: block;
+		}
+		
+		.balance-amount {
+		    font-size: 2rem;
+		    font-weight: bold;
+		    color: var(--accent-color);
+		    display: block;
+		}
+		
+		.card-footer {
+		    position: absolute;
+		    top: var(--spacing-md);
+		    right: var(--spacing-md);
+		}
+		
+		.card-settings-btn {
+		    background: rgba(255, 255, 255, 0.1);
+		    border: 1px solid rgba(255, 255, 255, 0.2);
+		    color: var(--text-primary);
+		    width: 36px;
+		    height: 36px;
+		    border-radius: var(--radius-small);
+		    display: flex;
+		    align-items: center;
+		    justify-content: center;
+		    cursor: pointer;
+		    transition: all 0.3s ease;
+		}
+		
+		.card-settings-btn:hover {
+		    background: rgba(193, 252, 50, 0.2);
+		    border-color: var(--accent-color);
+		    color: var(--accent-color);
+		}
+		
+		/* Add to your CSS section */
+		.card-bg img {
+		    width: 100%;
+		    height: 100%;
+		    object-fit: cover;
+		    transition: opacity 0.3s ease;
+		}
+		
+		.card-bg img:hover {
+		    opacity: 0.9;
+		}
+		
+		/* Image preview styles */
+		#imagePreview img {
+		    transition: transform 0.3s ease;
+		}
+		
+		#imagePreview img:hover {
+		    transform: scale(1.02);
+		}
+        
+        /* Privacy Container Styles */
+		.privacy-container {
+		    background: var(--bg-card);
+		    border-radius: var(--radius-medium);
+		    padding: var(--spacing-lg);
+		    border: 1px solid rgba(255, 255, 255, 0.05);
+		    transition: all 0.3s ease;
+		}
+		
+		.privacy-container:hover {
+		    border-color: rgba(193, 252, 50, 0.2);
+		    transform: translateY(-2px);
+		}
+		
+		.privacy-content p {
+		    margin-bottom: var(--spacing-sm);
+		}
+		
+		.privacy-tips {
+		    margin-top: var(--spacing-md);
+		    padding: var(--spacing-sm);
+		    background: rgba(193, 252, 50, 0.05);
+		    border-radius: var(--radius-small);
+		    border-left: 3px solid var(--accent-color);
+		}
+		
+		.privacy-icons {
+		    display: flex;
+		    gap: var(--spacing-md);
+		    margin-top: var(--spacing-lg);
+		    flex-wrap: wrap;
+		}
+		
+		.privacy-icons div {
+		    display: flex;
+		    align-items: center;
+		    gap: 6px;
+		    font-size: 0.8rem;
+		    color: var(--text-secondary);
+		    padding: 6px 12px;
+		    background: rgba(255, 255, 255, 0.03);
+		    border-radius: var(--radius-small);
+		    transition: all 0.3s ease;
+		}
+		
+		.privacy-icons div:hover {
+		    background: rgba(193, 252, 50, 0.1);
+		    color: var(--text-primary);
+		}
+		
+		/* Responsive */
+		@media (max-width: 768px) {
+		    .privacy-container {
+		        padding: var(--spacing-md);
+		    }
+		    
+		    .privacy-icons {
+		        gap: var(--spacing-sm);
+		    }
+		    
+		    .privacy-icons div {
+		        flex: 1;
+		        min-width: 140px;
+		        justify-content: center;
+		    }
+		}
+
+        /* Transactions Section - Horizontal Scroll */
+        .transactions-section {
+            margin: var(--spacing-xl) 0;
+        }
+
+        .transactions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .transactions-container {
+            position: relative;
+            overflow-x: auto;
+            border-radius: var(--radius-medium);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .transactions-table {
+            width: 100%;
+            min-width: 800px; /* Minimum width for mobile scrolling */
+            border-collapse: collapse;
+        }
+
+        .transactions-table th {
+            text-align: left;
+            padding: var(--spacing-sm);
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.9rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+            z-index: 10;
+        }
+
+        .transactions-table td {
+            padding: var(--spacing-sm);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        /* Wider columns for title and details */
+        .transactions-table td:nth-child(1) { /* Title column */
+            min-width: 180px;
+            max-width: 250px;
+        }
+
+        .transactions-table td:nth-child(2) { /* Details column */
+            min-width: 200px;
+            max-width: 300px;
+        }
+
+        .transactions-table td:nth-child(3) { /* Type column */
+            min-width: 100px;
+        }
+
+        .transactions-table td:nth-child(4) { /* Amount column */
+            min-width: 120px;
+        }
+
+        .transactions-table td:nth-child(5) { /* Date column */
+            min-width: 120px;
+        }
+
+        .transactions-table td:nth-child(6) { /* Actions column */
+            min-width: 100px;
+        }
+
+        .transaction-row {
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .transaction-row:hover {
+            background: rgba(193, 252, 50, 0.05);
+        }
+
+        .transaction-type {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .type-income {
+            background: rgba(25, 135, 84, 0.2);
+            color: #20c997;
+        }
+
+        .type-expense {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+        }
+
+        .transaction-amount {
+            font-weight: 600;
+        }
+
+        .amount-income {
+            color: #20c997;
+        }
+
+        .amount-expense {
+            color: #ff6b6b;
+        }
+
+        .transaction-date {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .transaction-actions {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+
+        .action-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-small);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .action-btn.delete:hover {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+            border-color: rgba(220, 53, 69, 0.3);
+        }
+
+        /* Modal Styles - Mobile Friendly */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(10px);
+            padding: var(--spacing-sm);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: var(--bg-dark);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 0 50px rgba(193, 252, 50, 0.3);
+            animation: modalAppear 0.3s ease-out;
+        }
+
+        @media (max-width: 768px) {
+            .modal {
+                padding: var(--spacing-md);
+                margin: var(--spacing-sm);
+            }
+        }
+
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+		    display: block;
+		    margin-bottom: 8px;
+		    color: var(--text-primary);
+		    font-weight: 500;
+		}
+		
+		/* Add this missing form-input style */
+		.form-input {
+		    width: 100%;
+		    padding: 12px;
+		    background: rgba(0, 0, 0, 0.3);
+		    border: 1px solid rgba(255, 255, 255, 0.1);
+		    border-radius: var(--radius-small);
+		    color: var(--text-primary);
+		    font-size: 1rem;
+		    transition: all 0.3s ease;
+		}
+		
+		/* File input styling */
+		.form-input[type="file"] {
+		    padding: 8px;
+		    cursor: pointer;
+		}
+		
+		.form-input[type="file"]::-webkit-file-upload-button {
+		    background: var(--bg-dark);
+		    border: 1px solid rgba(255, 255, 255, 0.1);
+		    color: var(--text-primary);
+		    padding: 6px 12px;
+		    border-radius: var(--radius-small);
+		    margin-right: 12px;
+		    cursor: pointer;
+		    transition: all 0.3s ease;
+		}
+		
+		.form-input[type="file"]::-webkit-file-upload-button:hover {
+		    background: rgba(193, 252, 50, 0.1);
+		    border-color: var(--accent-color);
+		}
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(193, 252, 50, 0.1);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-sm);
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        .modal-actions .btn {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .btn.danger {
+            background: rgba(220, 53, 69, 0.2);
+            border-color: rgba(220, 53, 69, 0.3);
+            color: #ff6b6b;
+        }
+
+        .btn.danger:hover {
+            background: rgba(220, 53, 69, 0.3);
+            border-color: #dc3545;
+        }
+
+        /* Card Settings Menu */
+        .card-settings-menu {
+            position: absolute;
+            bottom: 50px;
+            right: 10px;
+            background: var(--bg-dark);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            min-width: 150px;
+            display: none;
+        }
+
+        .card-settings-menu.active {
+            display: block;
+        }
+
+        .card-settings-item {
+            padding: 10px 12px;
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .card-settings-item:hover {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+
+        .card-settings-item.delete:hover {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+        }
+        
+        /* Add to your CSS section */
+		#dataStatus {
+		    transition: all 0.3s ease;
+		    font-size: 0.8rem;
+		    display: inline-flex;
+		    align-items: center;
+		    gap: 4px;
+		}
+		
+		#dataStatus:before {
+		    content: '●';
+		    font-size: 0.6rem;
+		    animation: pulse 2s infinite;
+		}
+		
+		@keyframes pulse {
+		    0% { opacity: 0.5; }
+		    50% { opacity: 1; }
+		    100% { opacity: 0.5; }
+		}
+		    
+		    .bank-card:active::before {
+		        opacity: 1;
+		    }
+		}
+		
+		/* Card click animation */
+		.bank-card {
+		    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		    transform-origin: center;
+		    will-change: transform, box-shadow;
+		}
+		
+		.bank-card:active {
+		    transform: scale(0.98);
+		}
+		
+		.bank-card:hover {
+		    transform: translateY(-4px);
+		    box-shadow: 0 10px 25px rgba(193, 252, 50, 0.15);
+		}
+		
+		/* Active card styling */
+		.bank-card.active {
+		    border: 2px solid var(--accent-color);
+		    box-shadow: 0 0 20px rgba(193, 252, 50, 0.2);
+		}
+		
+		.bank-card.active:hover {
+		    box-shadow: 0 15px 30px rgba(193, 252, 50, 0.25);
+		    transform: translateY(-6px);
+		}
+		
+		/* Button press animation */
+		.btn:active {
+		    transform: scale(0.95);
+		}
+		
+		/* Transaction row click animation */
+		.transaction-row {
+		    transition: all 0.2s ease;
+		}
+		
+		.transaction-row:active {
+		    background: rgba(193, 252, 50, 0.1);
+		    transform: scale(0.99);
+		}
+		
+		/* Card background image hover effect */
+		.card-bg img {
+		    transition: transform 0.5s ease;
+		}
+		
+		.bank-card:hover .card-bg img {
+		    transform: scale(1.05);
+		}
+		
+		/* Settings menu animation */
+		.card-settings-menu {
+		    animation: slideUpFade 0.2s ease-out;
+		    transform-origin: top right;
+		}
+		
+		@keyframes slideUpFade {
+		    from {
+		        opacity: 0;
+		        transform: translateY(10px) scale(0.95);
+		    }
+		    to {
+		        opacity: 1;
+		        transform: translateY(0) scale(1);
+		    }
+		}
+		
+		/* Pulse animation for active card */
+		@keyframes pulseGlow {
+		    0% {
+		        box-shadow: 0 0 0 0 rgba(193, 252, 50, 0.4);
+		    }
+		    70% {
+		        box-shadow: 0 0 0 10px rgba(193, 252, 50, 0);
+		    }
+		    100% {
+		        box-shadow: 0 0 0 0 rgba(193, 252, 50, 0);
+		    }
+		}
+		
+		.bank-card.active {
+		    animation: pulseGlow 2s infinite;
+		}
+		
+		/* Smooth scroll for transactions */
+		.transactions-container {
+		    scroll-behavior: smooth;
+		}
+		
+		/* Modal enter/exit animations */
+		.modal {
+		    animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+		
+		@keyframes modalSlideIn {
+		    from {
+		        opacity: 0;
+		        transform: translateY(-20px) scale(0.95);
+		    }
+		    to {
+		        opacity: 1;
+		        transform: translateY(0) scale(1);
+		    }
+		}
+		
+		/* Fade out animation for modal overlay */
+		.modal-overlay {
+		    transition: opacity 0.3s ease;
+		}
+		
+		.modal-overlay:not(.active) {
+		    opacity: 0;
+		    pointer-events: none;
+		}
+		
+		/* Add this for smoother overlay fade */
+		.modal-overlay.active {
+		    animation: fadeInOverlay 0.3s ease;
+		}
+		
+		@keyframes fadeInOverlay {
+		    from { opacity: 0; }
+		    to { opacity: 1; }
+		}
+		
+        /* Image protection overlay */
+		.image-protection-overlay {
+		    position: absolute;
+		    top: 0;
+		    left: 0;
+		    width: 100%;
+		    height: 100%;
+		    z-index: 1;
+		}
+		
+		.image-protection-overlay img.card-bg {
+		    width: 100%;
+		    height: 100%;
+		    object-fit: cover;
+		    pointer-events: none !important;
+		}
+		
+		.image-protection-shield {
+		    position: absolute;
+		    top: 0;
+		    left: 0;
+		    width: 100%;
+		    height: 100%;
+		    background: transparent;
+		    z-index: 2;
+		    pointer-events: auto; /* This will catch all clicks */
+		    cursor: default;
+		}
+		
+		/* Make sure card content is above the protection */
+		.card-content {
+		    position: relative;
+		    z-index: 3;
+		}
+        
+        /* Import/Export Styles */
+		.btn-group {
+		    display: flex;
+		    gap: var(--spacing-sm);
+		    flex-wrap: wrap;
+		}
+		
+		.btn.success {
+		    background: rgba(25, 135, 84, 0.2);
+		    border-color: rgba(25, 135, 84, 0.3);
+		    color: #20c997;
+		}
+		
+		.btn.success:hover {
+		    background: rgba(25, 135, 84, 0.3);
+		    border-color: #20c997;
+		}
+		
+		.form-hint {
+		    font-size: 0.8rem;
+		    color: var(--text-secondary);
+		    margin-top: 4px;
+		    display: flex;
+		    align-items: center;
+		    gap: 6px;
+		}
+		
+		textarea.form-input {
+		    resize: vertical;
+		    min-height: 100px;
+		    font-family: 'Courier New', monospace;
+		    font-size: 0.85rem;
+		    line-height: 1.4;
+		}
+		
+		/* Import mode buttons */
+		#importMergeBtn.active {
+		    background: rgba(25, 135, 84, 0.2);
+		    border-color: #20c997;
+		    color: #20c997;
+		}
+		
+		#importReplaceBtn.active {
+		    background: rgba(220, 53, 69, 0.2);
+		    border-color: #ff6b6b;
+		    color: #ff6b6b;
+		}
+		
+		/* Double-click hint */
+		.export-hint {
+		    font-size: 0.75rem;
+		    color: var(--text-secondary);
+		    text-align: center;
+		    margin-top: var(--spacing-sm);
+		}
+		
+		.export-hint i {
+		    color: var(--accent-color);
+		    margin-right: 4px;
+		}
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+            color: var(--accent-color);
+            opacity: 0.5;
+        }
+
+        /* Scrollbar Styling */
+        .transactions-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .transactions-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .transactions-container::-webkit-scrollbar-thumb {
+            background: rgba(193, 252, 50, 0.3);
+            border-radius: 10px;
+        }
+
+        .transactions-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(193, 252, 50, 0.5);
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-<a href="../index.html" class="back-link fade-in">
-<i class="fas fa-arrow-left"></i> Back to Home
-</a>
-<header class="fade-in">
-<h1 class="username">Wallet Money Tracker</h1>
-<p class="tagline">Track your expenses and income like a banking app.</p>
-<div style="margin-top: var(--spacing-sm); display: flex; align-items: center; gap: var(--spacing-sm); flex-wrap: wrap;">
-<button class="btn" id="refreshDataBtn" style="font-size: 0.85rem; padding: 8px 16px;">
-<i class="fas fa-sync-alt"></i> Refresh
-</button>
-<button class="btn" id="importDataBtn" title="Import encrypted backup" style="font-size: 0.85rem; padding: 8px 16px;">
-<i class="fas fa-file-import"></i> Import
-</button>
-<button class="btn success" id="exportDataBtn" title="Export encrypted backup" style="font-size: 0.85rem; padding: 8px 16px;">
-<i class="fas fa-file-export"></i> Export
-</button>
-<button class="btn" id="changeCardImageBtn" style="font-size: 0.85rem; padding: 8px 16px;">
-<i class="fas fa-image"></i> Change Card Image
-</button>
-<span id="dataStatus" style="color: var(--text-secondary); font-size: 0.8rem; margin-left: var(--spacing-sm);">
-Auto-saved
-</span>
-</div>
-</header>
-<div class="compact-stats blur-background fade-in">
-<div class="compact-stat stat-income">
-<div class="compact-stat-label">
-<i class="fas fa-arrow-up"></i> Incomes
-</div>
-<div class="compact-stat-value" id="totalIncome">0</div>
-</div>
-<div class="compact-stat stat-expense">
-<div class="compact-stat-label">
-<i class="fas fa-arrow-down"></i> Expenses
-</div>
-<div class="compact-stat-value" id="totalExpense">0</div>
-</div>
-<div class="compact-stat stat-balance">
-<div class="compact-stat-label">
-<i class="fas fa-balance-scale"></i> Net
-</div>
-<div class="compact-stat-value" id="netBalance">0</div>
-</div>
-</div>
-<section class="cards-section">
-<div class="cards-header">
-<h2 class="section-title fade-in">Cards</h2>
-<button class="btn primary fade-in" id="addCardBtn">
-<i class="fas fa-plus"></i> New Card
-</button>
-</div>
-<div class="cards-container" id="cardsContainer">
-</div>
-</section>
-<section class="transactions-section">
-<div class="transactions-header">
-<h2 class="section-title fade-in">Transactions</h2>
-<div class="btn-group" style="display: flex; gap: var(--spacing-sm);">
-<button class="btn primary" id="addTransactionBtn">
-<i class="fas fa-plus"></i> Transaction
-</button>
-</div>
-</div>
-<div class="transactions-container blur-background fade-in">
-<table class="transactions-table">
-<thead>
-<tr>
-<th>Title</th>
-<th>Details</th>
-<th>Type</th>
-<th>Amount</th>
-<th>Date</th>
-<th>Actions</th>
-</tr>
-</thead>
-<tbody id="transactionsTable">
-</tbody>
-</table>
-</div>
-</section>
-<div class="modal-overlay" id="exportModal">
-<div class="modal">
-<div class="modal-header">
-<h2 class="modal-title">
-<i class="fas fa-download"></i> Export Data
-</h2>
-</div>
-<div class="form-group">
-<label class="form-label">Export Format</label>
-<div style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
-<button class="btn primary" id="exportJsonBtn" style="flex: 1;">
-<i class="fas fa-code"></i> JSON Only
-</button>
-</div>
-<div class="form-hint">
-<i class="fas fa-info-circle"></i> Only JSON format is supported for data export/import
-</div>
-</div>
-<div class="form-group">
-<label class="form-label">Export Preview</label>
-<textarea class="form-input" id="exportPreview" rows="8" readonly style="font-family: 'Courier New', monospace; font-size: 0.85rem;"></textarea>
-<div class="export-hint">
-<i class="fas fa-mouse-pointer"></i> Double-click the JSON button to download directly
-</div>
-</div>
-<div class="modal-actions">
-<button class="btn" id="closeExportBtn">
-<i class="fas fa-times"></i> Close
-</button>
-<button class="btn primary" id="copyExportBtn">
-<i class="fas fa-copy"></i> Copy
-</button>
-</div>
-</div>
-</div>
-<div class="modal-overlay" id="importModal">
-<div class="modal">
-<div class="form-group">
-<label class="form-label">Import Mode</label>
-<div style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
-<button class="btn active" id="importMergeBtn" style="flex: 1;">
-<i class="fas fa-plus-circle"></i> Merge
-</button>
-<button class="btn danger" id="importReplaceBtn" style="flex: 1;">
-<i class="fas fa-redo"></i> Replace
-</button>
-</div>
-<div class="form-hint">
-<i class="fas fa-info-circle"></i> Merge: Add imported data to existing. Replace: Clear all data first.
-</div>
-</div>
-<div class="form-group">
-<label class="form-label">JSON Preview</label>
-<textarea class="form-input" id="importPreview" rows="6" readonly style="font-family: 'Courier New', monospace; font-size: 0.85rem;"></textarea>
-</div>
-<div class="modal-actions">
-<button class="btn" id="closeImportBtn">
-<i class="fas fa-times"></i> Cancel
-</button>
-<button class="btn primary" id="confirmImportBtn">
-<i class="fas fa-file-import"></i> Import JSON
-</button>
-</div>
-</div>
-</div>
-<div class="privacy-container blur-background fade-in" style="margin: var(--spacing-xl) 0;">
-<div class="privacy-header" style="display: flex; align-items: center; gap: 10px; margin-bottom: var(--spacing-md);">
-<i class="fas fa-shield-alt" style="color: var(--accent-color); font-size: 1.5rem;"></i>
-<h3 style="color: var(--text-primary); font-size: 1.2rem;">Privacy & Data Security</h3>
-</div>
-<div class="privacy-content" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
-<p style="margin-bottom: var(--spacing-sm);">
-<strong>Local-Only Storage:</strong> All your financial data (cards, transactions, balances) is stored
-<strong>exclusively in your Browser's Local Storage</strong>. Nothing is sent to any server or external database.
-<strong>No Data Collection</strong>.
-</p>
-<p style="margin-bottom: var(--spacing-sm);">
-<strong>Complete Privacy:</strong> Your financial information never leaves your device. Not even the developer
-(<strong>lildavegoth</strong>) can access your data.
-</p>
-<p style="margin-bottom: var(--spacing-sm);">
-<strong>Browser-Based:</strong> Data persists only in this browser on this device. Clearing browser data
-will delete all tracked information. Use the <strong>Export</strong> feature to backup your data.
-</p>
-<p style="margin-bottom: var(--spacing-sm);">
-<strong>No Tracking:</strong> This application uses no cookies, analytics, or tracking scripts. Your usage
-is completely private.
-</p>
-</div>
-<div class="privacy-icons" style="display: flex; gap: var(--spacing-md); margin-top: var(--spacing-lg); flex-wrap: wrap;">
-<div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-secondary);margin-top: -10px;">
-<i class="fas fa-code" style="color: #ff6b6b;"></i>
-<span>Open Source Code</span>
-</div>
-</div>
-</div>
-<footer class="fade-in">
-<div class="social-links">
-<a href="https://twitter.com/lildavegoth" target="_blank"><i class="fab fa-twitter"></i></a>
-<a href="https://instagram.com/dave_goth" target="_blank"><i class="fab fa-instagram"></i></a>
-</div>
-<p>© 2026 lildavegoth | Wallet Money Tracker</p>
-<p style="margin-top: 8px; font-size: 0.8rem; color: #666; text-align: center;">
-Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
-</p>
-</footer>
-</div>
-<div class="modal-overlay" id="cardModal">
-<div class="modal">
-<div class="modal-header">
-<h2 class="modal-title">
-<i class="fas fa-credit-card"></i> <span id="modalCardTitle">Add New Card</span>
-</h2>
-</div>
-<div class="form-group">
-<label class="form-label" for="cardHolderName">Card Holder Name</label>
-<input type="text" class="form-input" id="cardHolderName" placeholder="Enter your name">
-</div>
-<div class="form-group">
-<label class="form-label" for="cardBalance">Initial Balance</label>
-<input type="number" class="form-input" id="cardBalance" placeholder="0.00" step="0.01" min="0">
-</div>
-<div class="modal-actions">
-<button class="btn" id="cancelCardBtn">
-<i class="fas fa-times"></i> Cancel
-</button>
-<button class="btn primary" id="saveCardBtn">
-<i class="fas fa-save"></i> Save Card
-</button>
-</div>
-</div>
-</div>
-<div class="modal-overlay" id="transactionModal">
-<div class="modal">
-<div class="modal-header">
-<h2 class="modal-title">
-<i class="fas fa-exchange-alt"></i> <span id="modalTransactionTitle">Add Transaction</span>
-</h2>
-</div>
-<div class="form-group">
-<label class="form-label" for="transactionTitle">Title</label>
-<input type="text" class="form-input" id="transactionTitle" placeholder="Enter transaction title">
-</div>
-<div class="form-group">
-<label class="form-label" for="transactionDetails">Details</label>
-<input type="text" class="form-input" id="transactionDetails" placeholder="Enter transaction details">
-</div>
-<div class="form-row">
-<div class="form-group">
-<label class="form-label" for="transactionType">Type</label>
-<select class="form-select" id="transactionType">
-<option value="income">Income</option>
-<option value="expense">Expense</option>
-</select>
-</div>
-<div class="form-group">
-<label class="form-label" for="transactionAmount">Amount</label>
-<input type="number" class="form-input" id="transactionAmount" placeholder="0.00" step="0.01" min="0">
-</div>
-</div>
-<div class="form-group">
-<label class="form-label" for="transactionDate">Date</label>
-<input type="date" class="form-input" id="transactionDate">
-</div>
-<div class="modal-actions">
-<button class="btn danger" id="deleteTransactionBtn" style="display: none;">
-<i class="fas fa-trash"></i> Delete
-</button>
-<div style="flex: 1; display: flex; gap: var(--spacing-sm);">
-<button class="btn" id="cancelTransactionBtn">
-<i class="fas fa-times"></i> Cancel
-</button>
-<button class="btn primary" id="saveTransactionBtn">
-<i class="fas fa-save"></i> Save
-</button>
-</div>
-</div>
-</div>
-</div>
-<script>
-class MoneyTracker {
-constructor() {
-this.cards = [];
-this.transactions = [];
-this.currentCardId = null;
-this.editingCardId = null;
-this.editingTransactionId = null;
-this.defaultCardImage = "../images/card.webp";
-this.cardDesigns = [this.defaultCardImage];
-this.initialize();
-}
-initialize() {
-this.loadData();
-if (this.cards.length === 0) {
-this.createDefaultCard();
-} else {
-if (!this.currentCardId && this.cards.length > 0) {
-this.currentCardId = this.cards[0].id;
-this.cards[0].isActive = true;
-this.saveData();
-}
-}
-this.setupEventListeners();
-this.loadCardDesigns();
-this.renderCards();
-this.renderTransactions();
-this.updateStats();
-}
-// === DATA STORAGE ===
-loadData() {
-try {
-const savedCards = localStorage.getItem('moneyTrackerCards');
-if (savedCards && savedCards.trim() !== '') {
-this.cards = JSON.parse(savedCards);
-} else {
-this.cards = [];
-}
-} catch {
-this.cards = [];
-}
-try {
-const savedTransactions = localStorage.getItem('moneyTrackerTransactions');
-if (savedTransactions && savedTransactions.trim() !== '') {
-this.transactions = JSON.parse(savedTransactions);
-} else {
-this.transactions = [];
-}
-} catch {
-this.transactions = [];
-}
-try {
-const savedCurrentCard = localStorage.getItem('moneyTrackerCurrentCardId');
-if (savedCurrentCard) {
-this.currentCardId = parseFloat(savedCurrentCard);
-}
-} catch {}
-}
-saveData() {
-try {
-localStorage.setItem('moneyTrackerCards', JSON.stringify(this.cards));
-localStorage.setItem('moneyTrackerTransactions', JSON.stringify(this.transactions));
-localStorage.setItem('moneyTrackerCurrentCardId', this.currentCardId);
-const statusEl = document.getElementById('dataStatus');
-if (statusEl) {
-statusEl.textContent = 'Saved just now';
-statusEl.style.color = '#20c997';
-setTimeout(() => {
-statusEl.textContent = 'Auto-saved';
-statusEl.style.color = 'var(--text-secondary)';
-}, 2000);
-}
-return true;
-} catch {
-const statusEl = document.getElementById('dataStatus');
-if (statusEl) {
-statusEl.textContent = 'Save failed!';
-statusEl.style.color = '#ff6b6b';
-}
-return false;
-}
-}
-// === CARD OPERATIONS ===
-createDefaultCard() {
-const defaultCard = {
-id: Date.now() + 1,
-holderName: 'lildavegoth',
-cardNumber: this.generateCardNumber(),
-balance: 1500.00,
-design: this.cardDesigns[0],
-isActive: true
-};
-this.cards.push(defaultCard);
-this.currentCardId = defaultCard.id;
-this.saveData();
-return defaultCard;
-}
-addCard(holderName, balance) {
-const newCard = {
-id: Date.now() + Math.random(),
-holderName: holderName.trim(),
-cardNumber: this.generateCardNumber(),
-balance: parseFloat(balance) || 0,
-design: this.defaultCardImage,
-isActive: false
-};
-this.cards.push(newCard);
-this.saveData();
-this.renderCards();
-this.updateStats();
-return newCard;
-}
-editCard(cardId, holderName, balance) {
-const cardIndex = this.cards.findIndex(card => card.id === cardId);
-if (cardIndex === -1) return false;
-this.cards[cardIndex] = {
-...this.cards[cardIndex],
-holderName: holderName.trim(),
-balance: parseFloat(balance) || 0
-};
-this.saveData();
-this.renderCards();
-this.updateStats();
-return true;
-}
-deleteCard(cardId) {
-const cardIndex = this.cards.findIndex(card => card.id === cardId);
-if (cardIndex === -1) return false;
-this.transactions = this.transactions.filter(transaction => transaction.cardId !== cardId);
-this.cards.splice(cardIndex, 1);
-if (this.currentCardId === cardId) {
-if (this.cards.length > 0) {
-this.currentCardId = this.cards[0].id;
-this.cards[0].isActive = true;
-} else {
-this.currentCardId = null;
-}
-}
-this.saveData();
-this.renderCards();
-this.renderTransactions();
-this.updateStats();
-return true;
-}
-setActiveCard(cardId) {
-this.currentCardId = cardId;
-this.cards.forEach(card => {
-card.isActive = card.id === cardId;
-});
-this.saveData();
-this.renderCards();
-this.renderTransactions();
-this.updateStats();
-}
-generateCardNumber() {
-return '**** **** **** ' + Math.floor(1000 + Math.random() * 9000);
-}
-// === TRANSACTION OPERATIONS ===
-addTransaction(title, details, type, amount, date) {
-if (!this.currentCardId) {
-alert('Please select a card first');
-return null;
-}
-const newTransaction = {
-id: Date.now() + Math.random(),
-cardId: this.currentCardId,
-title: title.trim(),
-details: details.trim(),
-type: type,
-amount: parseFloat(amount) || 0,
-date: date || new Date().toISOString().split('T')[0]
-};
-const cardIndex = this.cards.findIndex(card => card.id === this.currentCardId);
-if (cardIndex !== -1) {
-if (type === 'income') {
-this.cards[cardIndex].balance += newTransaction.amount;
-} else {
-this.cards[cardIndex].balance -= newTransaction.amount;
-}
-}
-this.transactions.push(newTransaction);
-this.saveData();
-this.renderTransactions();
-this.renderCards();
-this.updateStats();
-return newTransaction;
-}
-editTransaction(transactionId, title, details, type, amount, date) {
-const transactionIndex = this.transactions.findIndex(t => t.id === transactionId);
-if (transactionIndex === -1) return false;
-const oldTransaction = this.transactions[transactionIndex];
-const oldAmount = oldTransaction.amount;
-const oldType = oldTransaction.type;
-const cardIndex = this.cards.findIndex(card => card.id === oldTransaction.cardId);
-if (cardIndex !== -1) {
-if (oldType === 'income') {
-this.cards[cardIndex].balance -= oldAmount;
-} else {
-this.cards[cardIndex].balance += oldAmount;
-}
-}
-this.transactions[transactionIndex] = {
-...oldTransaction,
-title: title.trim(),
-details: details.trim(),
-type: type,
-amount: parseFloat(amount) || 0,
-date: date
-};
-if (cardIndex !== -1) {
-if (type === 'income') {
-this.cards[cardIndex].balance += this.transactions[transactionIndex].amount;
-} else {
-this.cards[cardIndex].balance -= this.transactions[transactionIndex].amount;
-}
-}
-this.saveData();
-this.renderTransactions();
-this.renderCards();
-this.updateStats();
-return true;
-}
-deleteTransaction(transactionId) {
-const transactionIndex = this.transactions.findIndex(t => t.id === transactionId);
-if (transactionIndex === -1) return false;
-const transaction = this.transactions[transactionIndex];
-const cardIndex = this.cards.findIndex(card => card.id === transaction.cardId);
-if (cardIndex !== -1) {
-if (transaction.type === 'income') {
-this.cards[cardIndex].balance -= transaction.amount;
-} else {
-this.cards[cardIndex].balance += transaction.amount;
-}
-}
-this.transactions.splice(transactionIndex, 1);
-this.saveData();
-this.renderTransactions();
-this.renderCards();
-this.updateStats();
-return true;
-}
-getCardTransactions(cardId) {
-return this.transactions.filter(transaction => transaction.cardId === cardId);
-}
-// === STATS ===
-updateStats() {
-const stats = this.calculateStats();
-const incomeEl = document.getElementById('totalIncome');
-const expenseEl = document.getElementById('totalExpense');
-const balanceEl = document.getElementById('netBalance');
-if (incomeEl) incomeEl.textContent = stats.totalIncome.toFixed(2);
-if (expenseEl) expenseEl.textContent = stats.totalExpense.toFixed(2);
-if (balanceEl) balanceEl.textContent = stats.netBalance.toFixed(2);
-}
-calculateStats() {
-let totalIncome = 0;
-let totalExpense = 0;
-if (this.currentCardId) {
-const cardTransactions = this.getCardTransactions(this.currentCardId);
-cardTransactions.forEach(transaction => {
-if (transaction.type === 'income') {
-totalIncome += transaction.amount;
-} else {
-totalExpense += transaction.amount;
-}
-});
-}
-const netBalance = totalIncome - totalExpense;
-return { totalIncome, totalExpense, netBalance };
-}
-// === IMAGE UPLOAD ===
-openImageUploadModal() {
-if (this.cards.length === 0) {
-alert('No cards available. Please add a card first.');
-return;
-}
-const modal = document.createElement('div');
-modal.className = 'modal-overlay active';
-modal.innerHTML = `
-<div class="modal">
-<div class="modal-header">
-<h2 class="modal-title">
-<i class="fas fa-image"></i> Change Card Background
-</h2>
-</div>
-<div class="form-group">
-<label class="form-label">Select Card to Update</label>
-<select class="form-select" id="selectCardForImage">
-${this.cards.map(card => `
-<option value="${card.id}" ${card.isActive ? 'selected' : ''}>
-${this.escapeHtml(card.holderName)} (${card.cardNumber})
-</option>
-`).join('')}
-</select>
-</div>
-<div class="form-group">
-<label class="form-label">Upload New Background</label>
-<input type="file" class="form-input" id="cardImageInput" accept="image/*">
-<div class="form-hint">
-<i class="fas fa-info-circle"></i> Supported: JPG, PNG, WebP (max 2MB)
-</div>
-</div>
-<div class="form-group">
-<label class="form-label">Preview</label>
-<div id="imagePreview" style="
-width: 100%;
-height: 120px;
-background: var(--bg-dark);
-border-radius: var(--radius-small);
-border: 2px dashed rgba(255, 255, 255, 0.1);
-display: flex;
-align-items: center;
-justify-content: center;
-overflow: hidden;
-margin-top: 8px;
-">
-<span style="color: var(--text-secondary);">No image selected</span>
-</div>
-</div>
-<div class="modal-actions">
-<button class="btn" id="cancelImageBtn">
-<i class="fas fa-times"></i> Cancel
-</button>
-<button class="btn primary" id="saveImageBtn">
-<i class="fas fa-save"></i> Update Card
-</button>
-</div>
-</div>
-`;
-document.body.appendChild(modal);
-// Setup file preview
-const imageInput = modal.querySelector('#cardImageInput');
-const preview = modal.querySelector('#imagePreview');
-imageInput.addEventListener('change', (e) => {
-const file = e.target.files[0];
-if (file) {
-if (file.size > 2 * 1024 * 1024) {
-alert('Image too large. Max 2MB allowed.');
-imageInput.value = '';
-return;
-}
-if (!file.type.startsWith('image/')) {
-alert('Please select an image file.');
-imageInput.value = '';
-return;
-}
-const reader = new FileReader();
-reader.onload = (event) => {
-preview.innerHTML = `<img src="${event.target.result}" style="width: 100%; height: 100%; object-fit: cover;" alt="Preview">`;
-};
-reader.readAsDataURL(file);
-}
-});
-// Save image button
-modal.querySelector('#saveImageBtn').addEventListener('click', () => {
-const cardId = parseFloat(modal.querySelector('#selectCardForImage').value);
-const fileInput = modal.querySelector('#cardImageInput');
-if (fileInput.files && fileInput.files[0]) {
-const file = fileInput.files[0];
-if (file.size > 2 * 1024 * 1024) {
-alert('Image too large. Max 2MB allowed.');
-return;
-}
-if (!file.type.startsWith('image/')) {
-alert('Please select an image file.');
-return;
-}
-const reader = new FileReader();
-reader.onload = (event) => {
-const success = this.updateCardImage(cardId, event.target.result);
-if (success) {
-modal.remove();
-this.showNotification('Card image updated!', 'success');
-}
-};
-reader.readAsDataURL(file);
-} else {
-alert('Please select an image file first.');
-}
-});
-// Cancel button
-modal.querySelector('#cancelImageBtn').addEventListener('click', () => {
-modal.remove();
-});
-// Close modal when clicking outside
-modal.addEventListener('click', (e) => {
-if (e.target === modal) {
-modal.remove();
-}
-});
-// Close with Escape key
-const escapeHandler = (e) => {
-if (e.key === 'Escape') {
-modal.remove();
-document.removeEventListener('keydown', escapeHandler);
-}
-};
-document.addEventListener('keydown', escapeHandler);
-}
-updateCardImage(cardId, imageUrl) {
-const cardIndex = this.cards.findIndex(c => c.id === cardId);
-if (cardIndex !== -1) {
-this.cards[cardIndex].design = imageUrl;
-this.saveData();
-this.renderCards();
-return true;
-}
-return false;
-}
-// === ENCRYPTION/DECRYPTION ===
-encryptData(data) {
-try {
-const jsonString = JSON.stringify(data);
-return btoa(unescape(encodeURIComponent(jsonString)));
-} catch {
-return null;
-}
-}
-decryptData(encryptedString) {
-try {
-const jsonString = decodeURIComponent(escape(atob(encryptedString)));
-return JSON.parse(jsonString);
-} catch {
-return null;
-}
-}
-// === SIMPLE EXPORT ===
-exportData() {
-const data = {
-version: '1.0',
-exportedAt: new Date().toISOString(),
-cards: this.cards,
-transactions: this.transactions,
-currentCardId: this.currentCardId
-};
-const encryptedData = this.encryptData(data);
-if (!encryptedData) {
-this.showNotification('Export failed', 'error');
-return;
-}
-const timestamp = new Date().toISOString().split('T')[0];
-const filename = `wallet-backup-${timestamp}.json`;
-const blob = new Blob([encryptedData], { type: 'application/json' });
-const url = URL.createObjectURL(blob);
-const a = document.createElement('a');
-a.href = url;
-a.download = filename;
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
-URL.revokeObjectURL(url);
-this.showNotification('Data exported successfully!', 'success');
-}
-// === SIMPLE IMPORT ===
-importData() {
-const fileInput = document.createElement('input');
-fileInput.type = 'file';
-fileInput.accept = '.json';
-fileInput.onchange = (e) => {
-const file = e.target.files[0];
-if (!file) return;
-const reader = new FileReader();
-reader.onload = (e) => {
-try {
-const encryptedContent = e.target.result;
-const decryptedData = this.decryptData(encryptedContent);
-if (decryptedData && decryptedData.cards) {
-this.showImportOptions(decryptedData);
-} else {
-this.showNotification('Invalid backup file', 'error');
-}
-} catch {
-this.showNotification('Failed to read file', 'error');
-}
-};
-reader.readAsText(file);
-};
-fileInput.click();
-}
-showImportOptions(importedData) {
-const confirmed = confirm(
-'Found backup data.\n\n' +
-'Click OK to REPLACE all current data.\n' +
-'Click Cancel to MERGE with existing data.'
-);
-if (confirmed) {
-// Replace all data
-this.cards = importedData.cards || [];
-this.transactions = importedData.transactions || [];
-this.currentCardId = importedData.currentCardId || null;
-if (this.cards.length > 0 && !this.currentCardId) {
-this.currentCardId = this.cards[0].id;
-this.cards[0].isActive = true;
-}
-this.saveData();
-this.renderCards();
-this.renderTransactions();
-this.updateStats();
-this.showNotification('Data replaced successfully!', 'success');
-} else {
-// Merge data
-const existingCardIds = new Set(this.cards.map(card => card.id));
-const existingTransactionIds = new Set(this.transactions.map(trans => trans.id));
-// Merge cards
-if (importedData.cards) {
-importedData.cards.forEach(card => {
-if (!existingCardIds.has(card.id)) {
-this.cards.push(card);
-}
-});
-}
-// Merge transactions
-if (importedData.transactions) {
-importedData.transactions.forEach(transaction => {
-if (!existingTransactionIds.has(transaction.id)) {
-this.transactions.push(transaction);
-}
-});
-}
-this.saveData();
-this.renderCards();
-this.renderTransactions();
-this.updateStats();
-this.showNotification('Data merged successfully!', 'success');
-}
-}
-// === UI RENDERING ===
-loadCardDesigns() {
-const designsContainer = document.getElementById('cardDesigns');
-if (!designsContainer) return;
-let html = '';
-this.cardDesigns.forEach((design, index) => {
-html += `
-<div class="card-design" data-index="${index}">
-<img src="${design}" alt="Card Design ${index + 1}">
-</div>
-`;
-});
-designsContainer.innerHTML = html;
-}
-renderCards() {
-const container = document.getElementById('cardsContainer');
-if (!container) return;
-if (this.cards.length === 0) {
-container.innerHTML = `
-<div class="empty-state blur-background">
-<i class="fas fa-credit-card"></i>
-<h3>No cards yet</h3>
-<p>Add your first bank card to get started</p>
-</div>
-`;
-return;
-}
-let html = '';
-this.cards.forEach(card => {
-html += `
-<div class="bank-card ${card.isActive ? 'active' : ''}" data-id="${card.id}">
-<div class="card-bg">
-<img src="${card.design || this.defaultCardImage}" alt="Card Background">
-</div>
-<div class="card-content">
-<div class="card-header">
-<div>
-<div class="card-holder">${this.escapeHtml(card.holderName)}</div>
-<div class="card-number">${card.cardNumber}</div>
-</div>
-<div class="card-footer">
-<div class="card-settings-btn" data-id="${card.id}" title="Card Settings">
-<i class="fas fa-ellipsis-v"></i>
-</div>
-</div>
-</div>
-<div class="card-balance">
-<div class="balance-label">Balance</div>
-<div class="balance-amount">${card.balance.toFixed(2)}</div>
-</div>
-<div class="card-settings-menu" id="settings-menu-${card.id}">
-<div class="card-settings-item edit-card-item" data-id="${card.id}">
-<i class="fas fa-edit"></i> Edit Card
-</div>
-<div class="card-settings-item delete delete-card-item" data-id="${card.id}">
-<i class="fas fa-trash"></i> Delete Card
-</div>
-</div>
-</div>
-</div>
-`;
-});
-container.innerHTML = html;
-// Add card click handlers
-container.querySelectorAll('.bank-card').forEach(card => {
-const cardId = parseFloat(card.dataset.id);
-this.setupCardClick(card, cardId);
-});
-// Card settings buttons
-container.querySelectorAll('.card-settings-btn').forEach(btn => {
-btn.addEventListener('click', (e) => {
-e.stopPropagation();
-const cardId = parseFloat(btn.dataset.id);
-this.toggleSettingsMenu(cardId);
-});
-});
-// Edit card
-container.querySelectorAll('.edit-card-item').forEach(item => {
-item.addEventListener('click', (e) => {
-e.stopPropagation();
-const cardId = parseFloat(item.dataset.id);
-this.closeAllSettingsMenus();
-this.openCardModal(cardId);
-});
-});
-// Delete card
-container.querySelectorAll('.delete-card-item').forEach(item => {
-item.addEventListener('click', (e) => {
-e.stopPropagation();
-const cardId = parseFloat(item.dataset.id);
-if (confirm('Delete this card and all its transactions?')) {
-this.closeAllSettingsMenus();
-this.deleteCard(cardId);
-this.showNotification('Card deleted', 'success');
-}
-});
-});
-document.addEventListener('click', () => {
-this.closeAllSettingsMenus();
-});
-}
-renderTransactions() {
-const table = document.getElementById('transactionsTable');
-if (!table) return;
-if (this.transactions.length === 0 || !this.currentCardId) {
-table.innerHTML = `
-<tr>
-<td colspan="6" class="empty-state" style="text-align: center; padding: var(--spacing-xl);">
-<i class="fas fa-exchange-alt"></i>
-<h3>No transactions yet</h3>
-<p>Add your first transaction to start tracking</p>
-</td>
-</tr>
-`;
-return;
-}
-const cardTransactions = this.getCardTransactions(this.currentCardId);
-if (cardTransactions.length === 0) {
-table.innerHTML = `
-<tr>
-<td colspan="6" class="empty-state" style="text-align: center; padding: var(--spacing-xl);">
-<i class="fas fa-exchange-alt"></i>
-<h3>No transactions for this card</h3>
-<p>Add transactions to the selected card</p>
-</td>
-</tr>
-`;
-return;
-}
-let html = '';
-cardTransactions.forEach(transaction => {
-const date = new Date(transaction.date);
-const formattedDate = date.toLocaleDateString('en-US', {
-year: 'numeric',
-month: 'short',
-day: 'numeric'
-});
-html += `
-<tr class="transaction-row" data-id="${transaction.id}">
-<td title="${this.escapeHtml(transaction.title)}">${this.escapeHtml(transaction.title)}</td>
-<td title="${this.escapeHtml(transaction.details)}">${this.escapeHtml(transaction.details)}</td>
-<td>
-<span class="transaction-type type-${transaction.type}">
-${transaction.type === 'income' ? 'Income' : 'Expense'}
-</span>
-</td>
-<td>
-<span class="transaction-amount amount-${transaction.type}">
-${transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
-</span>
-</td>
-<td class="transaction-date">${formattedDate}</td>
-<td>
-<div class="transaction-actions">
-<button class="action-btn edit-transaction-btn" data-id="${transaction.id}" title="Edit">
-<i class="fas fa-edit"></i>
-</button>
-<button class="action-btn delete delete-transaction-btn" data-id="${transaction.id}" title="Delete">
-<i class="fas fa-trash"></i>
-</button>
-</div>
-</td>
-</tr>
-`;
-});
-table.innerHTML = html;
-// Edit transaction buttons
-table.querySelectorAll('.edit-transaction-btn').forEach(btn => {
-btn.addEventListener('click', (e) => {
-e.stopPropagation();
-const transactionId = parseFloat(btn.dataset.id);
-this.openTransactionModal(transactionId);
-});
-});
-// Delete transaction buttons
-table.querySelectorAll('.delete-transaction-btn').forEach(btn => {
-btn.addEventListener('click', (e) => {
-e.stopPropagation();
-const transactionId = parseFloat(btn.dataset.id);
-if (confirm('Delete this transaction?')) {
-this.deleteTransaction(transactionId);
-this.showNotification('Transaction deleted', 'success');
-}
-});
-});
-}
-// === UI HELPERS ===
-setupCardClick(cardElement, cardId) {
-cardElement.addEventListener('click', (e) => {
-if (e.target.closest('.card-settings-btn') ||
-e.target.closest('.card-settings-menu') ||
-e.target.closest('.card-settings-item')) {
-return;
-}
-this.setActiveCard(cardId);
-this.closeAllSettingsMenus();
-});
-}
-toggleSettingsMenu(cardId) {
-this.closeAllSettingsMenus();
-const menu = document.getElementById(`settings-menu-${cardId}`);
-if (menu) {
-menu.classList.toggle('active');
-}
-}
-closeAllSettingsMenus() {
-document.querySelectorAll('.card-settings-menu').forEach(menu => {
-menu.classList.remove('active');
-});
-}
-// === MODAL CONTROLS ===
-openCardModal(cardId = null) {
-this.editingCardId = cardId;
-const modal = document.getElementById('cardModal');
-const title = document.getElementById('modalCardTitle');
-if (cardId) {
-const card = this.cards.find(c => c.id === cardId);
-if (card) {
-title.textContent = 'Edit Card';
-document.getElementById('cardHolderName').value = card.holderName;
-document.getElementById('cardBalance').value = card.balance;
-}
-} else {
-title.textContent = 'Add New Card';
-document.getElementById('cardHolderName').value = '';
-document.getElementById('cardBalance').value = '';
-}
-modal.classList.add('active');
-}
-closeCardModal() {
-document.getElementById('cardModal').classList.remove('active');
-document.getElementById('cardHolderName').value = '';
-document.getElementById('cardBalance').value = '';
-this.editingCardId = null;
-}
-openTransactionModal(transactionId = null) {
-this.editingTransactionId = transactionId;
-const modal = document.getElementById('transactionModal');
-const title = document.getElementById('modalTransactionTitle');
-const deleteBtn = document.getElementById('deleteTransactionBtn');
-document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
-if (transactionId) {
-const transaction = this.transactions.find(t => t.id === transactionId);
-if (transaction) {
-title.textContent = 'Edit Transaction';
-deleteBtn.style.display = 'block';
-document.getElementById('transactionTitle').value = transaction.title;
-document.getElementById('transactionDetails').value = transaction.details;
-document.getElementById('transactionType').value = transaction.type;
-document.getElementById('transactionAmount').value = transaction.amount;
-document.getElementById('transactionDate').value = transaction.date;
-}
-} else {
-title.textContent = 'Add Transaction';
-deleteBtn.style.display = 'none';
-document.getElementById('transactionTitle').value = '';
-document.getElementById('transactionDetails').value = '';
-document.getElementById('transactionType').value = 'expense';
-document.getElementById('transactionAmount').value = '';
-}
-modal.classList.add('active');
-}
-closeTransactionModal() {
-document.getElementById('transactionModal').classList.remove('active');
-document.getElementById('transactionTitle').value = '';
-document.getElementById('transactionDetails').value = '';
-document.getElementById('transactionType').value = 'expense';
-document.getElementById('transactionAmount').value = '';
-this.editingTransactionId = null;
-}
-// === EVENT LISTENERS ===
-setupEventListeners() {
-// Add Card Button
-document.getElementById('addCardBtn').addEventListener('click', () => {
-this.openCardModal();
-});
-// Save Card Button
-document.getElementById('saveCardBtn').addEventListener('click', () => {
-this.saveCard();
-});
-// Cancel Card Button
-document.getElementById('cancelCardBtn').addEventListener('click', () => {
-this.closeCardModal();
-});
-// Add Transaction Button
-document.getElementById('addTransactionBtn').addEventListener('click', () => {
-this.openTransactionModal();
-});
-// Save Transaction Button
-document.getElementById('saveTransactionBtn').addEventListener('click', () => {
-this.saveTransaction();
-});
-// Cancel Transaction Button
-document.getElementById('cancelTransactionBtn').addEventListener('click', () => {
-this.closeTransactionModal();
-});
-// Delete Transaction Button
-document.getElementById('deleteTransactionBtn').addEventListener('click', () => {
-this.deleteCurrentTransaction();
-});
-// Change card image button
-document.getElementById('changeCardImageBtn').addEventListener('click', () => {
-this.openImageUploadModal();
-});
-// Refresh button
-document.getElementById('refreshDataBtn').addEventListener('click', () => {
-this.refreshData();
-});
-// Export button
-document.getElementById('exportDataBtn').addEventListener('click', () => {
-this.exportData();
-});
-// Import button
-document.getElementById('importDataBtn').addEventListener('click', () => {
-this.importData();
-});
-// Change card image button - ADD THIS LINE
-document.getElementById('changeCardImageBtn').addEventListener('click', () => {
-this.openImageUploadModal();
-});
-// Close modals when clicking outside
-document.querySelectorAll('.modal-overlay').forEach(modal => {
-modal.addEventListener('click', (e) => {
-if (e.target === modal) {
-modal.classList.remove('active');
-if (modal.id === 'cardModal') this.closeCardModal();
-if (modal.id === 'transactionModal') this.closeTransactionModal();
-}
-});
-});
-// Escape key to close modals
-document.addEventListener('keydown', (e) => {
-if (e.key === 'Escape') {
-document.querySelectorAll('.modal-overlay').forEach(modal => {
-modal.classList.remove('active');
-});
-this.closeCardModal();
-this.closeTransactionModal();
-}
-});
-}
-saveCard() {
-const holderName = document.getElementById('cardHolderName').value.trim();
-const balance = document.getElementById('cardBalance').value;
-if (!holderName) {
-alert('Please enter card holder name');
-return;
-}
-if (this.editingCardId) {
-this.editCard(this.editingCardId, holderName, balance);
-this.closeCardModal();
-this.showNotification('Card updated', 'success');
-} else {
-this.addCard(holderName, balance);
-this.closeCardModal();
-this.showNotification('Card added', 'success');
-}
-}
-saveTransaction() {
-const title = document.getElementById('transactionTitle').value.trim();
-const details = document.getElementById('transactionDetails').value.trim();
-const type = document.getElementById('transactionType').value;
-const amount = document.getElementById('transactionAmount').value;
-const date = document.getElementById('transactionDate').value;
-if (!title) {
-alert('Please enter transaction title');
-return;
-}
-if (!amount || parseFloat(amount) <= 0) {
-alert('Please enter a valid amount');
-return;
-}
-if (!date) {
-alert('Please select a date');
-return;
-}
-if (this.editingTransactionId) {
-this.editTransaction(this.editingTransactionId, title, details, type, amount, date);
-this.closeTransactionModal();
-this.showNotification('Transaction updated', 'success');
-} else {
-this.addTransaction(title, details, type, amount, date);
-this.closeTransactionModal();
-this.showNotification('Transaction added', 'success');
-}
-}
-deleteCurrentTransaction() {
-if (this.editingTransactionId) {
-if (confirm('Delete this transaction?')) {
-this.deleteTransaction(this.editingTransactionId);
-this.closeTransactionModal();
-this.showNotification('Transaction deleted', 'success');
-}
-}
-}
-refreshData() {
-const refreshBtn = document.getElementById('refreshDataBtn');
-const originalHtml = refreshBtn.innerHTML;
-refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
-refreshBtn.disabled = true;
-this.loadData();
-if (this.cards.length === 0) {
-this.createDefaultCard();
-}
-this.renderCards();
-this.renderTransactions();
-this.updateStats();
-document.getElementById('dataStatus').textContent = 'Refreshed';
-document.getElementById('dataStatus').style.color = '#20c997';
-setTimeout(() => {
-refreshBtn.innerHTML = originalHtml;
-refreshBtn.disabled = false;
-}, 1000);
-setTimeout(() => {
-document.getElementById('dataStatus').textContent = 'Auto-saved';
-document.getElementById('dataStatus').style.color = 'var(--text-secondary)';
-}, 3000);
-}
-// === HELPER FUNCTIONS ===
-escapeHtml(text) {
-const div = document.createElement('div');
-div.textContent = text;
-return div.innerHTML;
-}
-showNotification(message, type = 'info') {
-const notification = document.createElement('div');
-notification.style.cssText = `
-position: fixed;
-top: 20px;
-right: 20px;
-background: ${type === 'success' ? 'rgba(25, 135, 84, 0.9)' : 'rgba(220, 53, 69, 0.9)'};
-color: white;
-padding: 12px 20px;
-border-radius: var(--radius-small);
-z-index: 2000;
-animation: slideIn 0.3s ease-out;
-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-`;
-notification.innerHTML = `
-<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-${message}
-`;
-document.body.appendChild(notification);
-setTimeout(() => {
-notification.style.opacity = '0';
-notification.style.transform = 'translateX(20px)';
-setTimeout(() => {
-if (notification.parentNode) {
-notification.parentNode.removeChild(notification);
-}
-}, 300);
-}, 3000);
-}
-}
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', () => {
-window.moneyTracker = new MoneyTracker();
-});
-</script>
+    <div class="container">
+        <!-- Back to main portfolio -->
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <!-- Header -->
+		<header class="fade-in">
+		    <h1 class="username">Wallet Money Tracker</h1>
+		    <p class="tagline">Track your expenses and income like a banking app.</p>
+		    
+		    <!-- Button Container -->
+		    <div style="margin-top: var(--spacing-sm); display: flex; align-items: center; gap: var(--spacing-sm); flex-wrap: wrap;">
+                <button class="btn" id="refreshDataBtn" style="font-size: 0.85rem; padding: 8px 16px;">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                
+                <!-- Simplified Import/Export buttons -->
+                <button class="btn" id="importDataBtn" title="Import encrypted backup" style="font-size: 0.85rem; padding: 8px 16px;">
+                    <i class="fas fa-file-import"></i> Import
+                </button>
+                <button class="btn success" id="exportDataBtn" title="Export encrypted backup" style="font-size: 0.85rem; padding: 8px 16px;">
+                    <i class="fas fa-file-export"></i> Export
+                </button>
+                
+                <button class="btn" id="changeCardImageBtn" style="font-size: 0.85rem; padding: 8px 16px;">
+                    <i class="fas fa-image"></i> Change Card Image
+                </button>
+                
+                <span id="dataStatus" style="color: var(--text-secondary); font-size: 0.8rem; margin-left: var(--spacing-sm);">
+                    Auto-saved
+                </span>
+		        
+		    </div>
+		</header>
+        
+        <!-- Compact Stats -->
+		<div class="compact-stats fade-in">
+		    <div class="compact-stat stat-income">
+		        <div class="compact-stat-label">
+		            <i class="fas fa-arrow-up"></i> Incomes
+		        </div>
+		        <div class="compact-stat-value" id="totalIncome">0</div>
+		    </div>
+		    <div class="compact-stat stat-expense">
+		        <div class="compact-stat-label">
+		            <i class="fas fa-arrow-down"></i> Expenses
+		        </div>
+		        <div class="compact-stat-value" id="totalExpense">0</div>
+		    </div>
+		    <div class="compact-stat stat-balance">
+		        <div class="compact-stat-label">
+		            <i class="fas fa-balance-scale"></i> Net
+		        </div>
+		        <div class="compact-stat-value" id="netBalance">0</div>
+		    </div>
+		</div>
+        
+        <!-- Bank Cards Section -->
+        <section class="cards-section">
+            <div class="cards-header">
+                <h2 class="section-title fade-in">Cards</h2>
+                <button class="btn primary fade-in" id="addCardBtn">
+                    <i class="fas fa-plus"></i> New Card
+                </button>
+            </div>
+            
+            <div class="cards-container" id="cardsContainer">
+                <!-- Cards will be generated here -->
+            </div>
+        </section>
+        
+        <!-- Transactions Section -->
+        <section class="transactions-section">
+            <div class="transactions-header">
+			    <h2 class="section-title fade-in">Transactions</h2>
+			    <div class="btn-group" style="display: flex; gap: var(--spacing-sm);">
+			        <button class="btn primary" id="addTransactionBtn">
+			            <i class="fas fa-plus"></i> Transaction
+			        </button>
+			    </div>
+			</div>
+            
+            <div class="transactions-container fade-in">
+                <table class="transactions-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Details</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsTable">
+                        <!-- Transactions will be generated here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        
+        <!-- Replace the entire Export Modal section (lines ~408-456) with this simplified version: -->
+		<div class="modal-overlay" id="exportModal">
+		    <div class="modal">
+		        <div class="modal-header">
+		            <h2 class="modal-title">
+		                <i class="fas fa-download"></i> Export Data
+		            </h2>
+		        </div>
+		        
+		        <div class="form-group">
+		            <label class="form-label">Export Format</label>
+		            <div style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+		                <button class="btn primary" id="exportJsonBtn" style="flex: 1;">
+		                    <i class="fas fa-code"></i> JSON Only
+		                </button>
+		            </div>
+		            <div class="form-hint">
+		                <i class="fas fa-info-circle"></i> Only JSON format is supported for data export/import
+		            </div>
+		        </div>
+		        
+		        <div class="form-group">
+		            <label class="form-label">Export Preview</label>
+		            <textarea class="form-input" id="exportPreview" rows="8" readonly style="font-family: 'Courier New', monospace; font-size: 0.85rem;"></textarea>
+		            <div class="export-hint">
+		                <i class="fas fa-mouse-pointer"></i> Double-click the JSON button to download directly
+		            </div>
+		        </div>
+		        
+		        <div class="modal-actions">
+		            <button class="btn" id="closeExportBtn">
+		                <i class="fas fa-times"></i> Close
+		            </button>
+		            <button class="btn primary" id="copyExportBtn">
+		                <i class="fas fa-copy"></i> Copy
+		            </button>
+		        </div>
+		    </div>
+		</div>
+		
+		<!-- Replace the entire Import Modal section (lines ~458-526) with this: -->
+		<div class="modal-overlay" id="importModal">
+		    <div class="modal">
+		        <div class="form-group">
+		            <label class="form-label">Import Mode</label>
+		            <div style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+		                <button class="btn active" id="importMergeBtn" style="flex: 1;">
+		                    <i class="fas fa-plus-circle"></i> Merge
+		                </button>
+		                <button class="btn danger" id="importReplaceBtn" style="flex: 1;">
+		                    <i class="fas fa-redo"></i> Replace
+		                </button>
+		            </div>
+		            <div class="form-hint">
+		                <i class="fas fa-info-circle"></i> Merge: Add imported data to existing. Replace: Clear all data first.
+		            </div>
+		        </div>
+		        
+		        <div class="form-group">
+		            <label class="form-label">JSON Preview</label>
+		            <textarea class="form-input" id="importPreview" rows="6" readonly style="font-family: 'Courier New', monospace; font-size: 0.85rem;"></textarea>
+		        </div>
+		        
+		        <div class="modal-actions">
+		            <button class="btn" id="closeImportBtn">
+		                <i class="fas fa-times"></i> Cancel
+		            </button>
+		            <button class="btn primary" id="confirmImportBtn">
+		                <i class="fas fa-file-import"></i> Import JSON
+		            </button>
+		        </div>
+		    </div>
+		</div>
+        
+        <!-- Privacy Information -->
+		<div class="privacy-container fade-in" style="margin: var(--spacing-xl) 0;">
+		    <div class="privacy-header" style="display: flex; align-items: center; gap: 10px; margin-bottom: var(--spacing-md);">
+		        <i class="fas fa-shield-alt" style="color: var(--accent-color); font-size: 1.5rem;"></i>
+		        <h3 style="color: var(--text-primary); font-size: 1.2rem;">Privacy & Data Security</h3>
+		    </div>
+		    
+		    <div class="privacy-content" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
+		        <p style="margin-bottom: var(--spacing-sm);">
+		            <strong>Local-Only Storage:</strong> All your financial data (cards, transactions, balances) is stored 
+		            <strong>exclusively in your Browser's Local Storage</strong>. Nothing is sent to any server or external database. 
+		            <strong>No Data Collection</strong>.
+		        </p>
+		        
+		        <p style="margin-bottom: var(--spacing-sm);">
+		            <strong>Complete Privacy:</strong> Your financial information never leaves your device. Not even the developer 
+		            (<strong>lildavegoth</strong>) can access your data.
+		        </p>
+		        
+		        <p style="margin-bottom: var(--spacing-sm);">
+		            <strong>Browser-Based:</strong> Data persists only in this browser on this device. Clearing browser data 
+		            will delete all tracked information. Use the <strong>Export</strong> feature to backup your data.
+		        </p>
+		        
+		        <p style="margin-bottom: var(--spacing-sm);">
+		            <strong>No Tracking:</strong> This application uses no cookies, analytics, or tracking scripts. Your usage 
+		            is completely private.
+		        </p>
+		    </div>
+		    
+		    <div class="privacy-icons" style="display: flex; gap: var(--spacing-md); margin-top: var(--spacing-lg); flex-wrap: wrap;">
+		        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-secondary);margin-top: -10px;">
+		            <i class="fas fa-code" style="color: #ff6b6b;"></i>
+		            <span>Open Source Code</span>
+		        </div>
+		    </div>
+		</div>
+        
+        <!-- Footer -->
+        <footer class="fade-in">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Wallet Money Tracker</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666; text-align: center;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+	</div>
+    
+    <!-- Add/Edit Card Modal -->
+    <div class="modal-overlay" id="cardModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <i class="fas fa-credit-card"></i> <span id="modalCardTitle">Add New Card</span>
+                </h2>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="cardHolderName">Card Holder Name</label>
+                <input type="text" class="form-input" id="cardHolderName" placeholder="Enter your name">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="cardBalance">Initial Balance</label>
+                <input type="number" class="form-input" id="cardBalance" placeholder="0.00" step="0.01" min="0">
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn" id="cancelCardBtn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn primary" id="saveCardBtn">
+                    <i class="fas fa-save"></i> Save Card
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Transaction Modal -->
+    <div class="modal-overlay" id="transactionModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <i class="fas fa-exchange-alt"></i> <span id="modalTransactionTitle">Add Transaction</span>
+                </h2>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="transactionTitle">Title</label>
+                <input type="text" class="form-input" id="transactionTitle" placeholder="Enter transaction title">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="transactionDetails">Details</label>
+                <input type="text" class="form-input" id="transactionDetails" placeholder="Enter transaction details">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="transactionType">Type</label>
+                    <select class="form-select" id="transactionType">
+                        <option value="income">Income</option>
+                        <option value="expense">Expense</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="transactionAmount">Amount</label>
+                    <input type="number" class="form-input" id="transactionAmount" placeholder="0.00" step="0.01" min="0">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="transactionDate">Date</label>
+                <input type="date" class="form-input" id="transactionDate">
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn danger" id="deleteTransactionBtn" style="display: none;">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+                <div style="flex: 1; display: flex; gap: var(--spacing-sm);">
+                    <button class="btn" id="cancelTransactionBtn">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button class="btn primary" id="saveTransactionBtn">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+	    class MoneyTracker {
+	        constructor() {
+	            this.cards = [];
+	            this.transactions = [];
+	            this.currentCardId = null;
+	            this.editingCardId = null;
+	            this.editingTransactionId = null;
+	            
+	            this.defaultCardImage = "../images/card.webp";
+	            this.cardDesigns = [this.defaultCardImage];
+	            
+	            this.initialize();
+	        }
+	        
+	        initialize() {
+	            this.loadData();
+	            
+	            if (this.cards.length === 0) {
+	                this.createDefaultCard();
+	            } else {
+	                if (!this.currentCardId && this.cards.length > 0) {
+	                    this.currentCardId = this.cards[0].id;
+	                    this.cards[0].isActive = true;
+	                    this.saveData();
+	                }
+	            }
+	            
+	            this.setupEventListeners();
+	            this.loadCardDesigns();
+	            this.renderCards();
+	            this.renderTransactions();
+	            this.updateStats();
+	        }
+	        
+	        // === DATA STORAGE ===
+	        loadData() {
+	            try {
+	                const savedCards = localStorage.getItem('moneyTrackerCards');
+	                if (savedCards && savedCards.trim() !== '') {
+	                    this.cards = JSON.parse(savedCards);
+	                } else {
+	                    this.cards = [];
+	                }
+	            } catch {
+	                this.cards = [];
+	            }
+	            
+	            try {
+	                const savedTransactions = localStorage.getItem('moneyTrackerTransactions');
+	                if (savedTransactions && savedTransactions.trim() !== '') {
+	                    this.transactions = JSON.parse(savedTransactions);
+	                } else {
+	                    this.transactions = [];
+	                }
+	            } catch {
+	                this.transactions = [];
+	            }
+	            
+	            try {
+	                const savedCurrentCard = localStorage.getItem('moneyTrackerCurrentCardId');
+	                if (savedCurrentCard) {
+	                    this.currentCardId = parseFloat(savedCurrentCard);
+	                }
+	            } catch {}
+	        }
+	        
+	        saveData() {
+	            try {
+	                localStorage.setItem('moneyTrackerCards', JSON.stringify(this.cards));
+	                localStorage.setItem('moneyTrackerTransactions', JSON.stringify(this.transactions));
+	                localStorage.setItem('moneyTrackerCurrentCardId', this.currentCardId);
+	                
+	                const statusEl = document.getElementById('dataStatus');
+	                if (statusEl) {
+	                    statusEl.textContent = 'Saved just now';
+	                    statusEl.style.color = '#20c997';
+	                    
+	                    setTimeout(() => {
+	                        statusEl.textContent = 'Auto-saved';
+	                        statusEl.style.color = 'var(--text-secondary)';
+	                    }, 2000);
+	                }
+	                
+	                return true;
+	            } catch {
+	                const statusEl = document.getElementById('dataStatus');
+	                if (statusEl) {
+	                    statusEl.textContent = 'Save failed!';
+	                    statusEl.style.color = '#ff6b6b';
+	                }
+	                return false;
+	            }
+	        }
+	        
+	        // === CARD OPERATIONS ===
+	        createDefaultCard() {
+	            const defaultCard = {
+	                id: Date.now() + 1,
+	                holderName: 'lildavegoth',
+	                cardNumber: this.generateCardNumber(),
+	                balance: 1500.00,
+	                design: this.cardDesigns[0],
+	                isActive: true
+	            };
+	            
+	            this.cards.push(defaultCard);
+	            this.currentCardId = defaultCard.id;
+	            this.saveData();
+	            return defaultCard;
+	        }
+	        
+	        addCard(holderName, balance) {
+	            const newCard = {
+	                id: Date.now() + Math.random(),
+	                holderName: holderName.trim(),
+	                cardNumber: this.generateCardNumber(),
+	                balance: parseFloat(balance) || 0,
+	                design: this.defaultCardImage,
+	                isActive: false
+	            };
+	            
+	            this.cards.push(newCard);
+	            this.saveData();
+	            this.renderCards();
+	            this.updateStats();
+	            
+	            return newCard;
+	        }
+	        
+	        editCard(cardId, holderName, balance) {
+	            const cardIndex = this.cards.findIndex(card => card.id === cardId);
+	            if (cardIndex === -1) return false;
+	            
+	            this.cards[cardIndex] = {
+	                ...this.cards[cardIndex],
+	                holderName: holderName.trim(),
+	                balance: parseFloat(balance) || 0
+	            };
+	            
+	            this.saveData();
+	            this.renderCards();
+	            this.updateStats();
+	            
+	            return true;
+	        }
+	        
+	        deleteCard(cardId) {
+	            const cardIndex = this.cards.findIndex(card => card.id === cardId);
+	            if (cardIndex === -1) return false;
+	            
+	            this.transactions = this.transactions.filter(transaction => transaction.cardId !== cardId);
+	            this.cards.splice(cardIndex, 1);
+	            
+	            if (this.currentCardId === cardId) {
+	                if (this.cards.length > 0) {
+	                    this.currentCardId = this.cards[0].id;
+	                    this.cards[0].isActive = true;
+	                } else {
+	                    this.currentCardId = null;
+	                }
+	            }
+	            
+	            this.saveData();
+	            this.renderCards();
+	            this.renderTransactions();
+	            this.updateStats();
+	            
+	            return true;
+	        }
+	        
+	        setActiveCard(cardId) {
+	            this.currentCardId = cardId;
+	            this.cards.forEach(card => {
+	                card.isActive = card.id === cardId;
+	            });
+	            
+	            this.saveData();
+	            this.renderCards();
+	            this.renderTransactions();
+	            this.updateStats();
+	        }
+	        
+	        generateCardNumber() {
+	            return '**** **** **** ' + Math.floor(1000 + Math.random() * 9000);
+	        }
+	        
+	        // === TRANSACTION OPERATIONS ===
+	        addTransaction(title, details, type, amount, date) {
+	            if (!this.currentCardId) {
+	                alert('Please select a card first');
+	                return null;
+	            }
+	            
+	            const newTransaction = {
+	                id: Date.now() + Math.random(),
+	                cardId: this.currentCardId,
+	                title: title.trim(),
+	                details: details.trim(),
+	                type: type,
+	                amount: parseFloat(amount) || 0,
+	                date: date || new Date().toISOString().split('T')[0]
+	            };
+	            
+	            const cardIndex = this.cards.findIndex(card => card.id === this.currentCardId);
+	            if (cardIndex !== -1) {
+	                if (type === 'income') {
+	                    this.cards[cardIndex].balance += newTransaction.amount;
+	                } else {
+	                    this.cards[cardIndex].balance -= newTransaction.amount;
+	                }
+	            }
+	            
+	            this.transactions.push(newTransaction);
+	            this.saveData();
+	            this.renderTransactions();
+	            this.renderCards();
+	            this.updateStats();
+	            
+	            return newTransaction;
+	        }
+	        
+	        editTransaction(transactionId, title, details, type, amount, date) {
+	            const transactionIndex = this.transactions.findIndex(t => t.id === transactionId);
+	            if (transactionIndex === -1) return false;
+	            
+	            const oldTransaction = this.transactions[transactionIndex];
+	            const oldAmount = oldTransaction.amount;
+	            const oldType = oldTransaction.type;
+	            
+	            const cardIndex = this.cards.findIndex(card => card.id === oldTransaction.cardId);
+	            if (cardIndex !== -1) {
+	                if (oldType === 'income') {
+	                    this.cards[cardIndex].balance -= oldAmount;
+	                } else {
+	                    this.cards[cardIndex].balance += oldAmount;
+	                }
+	            }
+	            
+	            this.transactions[transactionIndex] = {
+	                ...oldTransaction,
+	                title: title.trim(),
+	                details: details.trim(),
+	                type: type,
+	                amount: parseFloat(amount) || 0,
+	                date: date
+	            };
+	            
+	            if (cardIndex !== -1) {
+	                if (type === 'income') {
+	                    this.cards[cardIndex].balance += this.transactions[transactionIndex].amount;
+	                } else {
+	                    this.cards[cardIndex].balance -= this.transactions[transactionIndex].amount;
+	                }
+	            }
+	            
+	            this.saveData();
+	            this.renderTransactions();
+	            this.renderCards();
+	            this.updateStats();
+	            
+	            return true;
+	        }
+	        
+	        deleteTransaction(transactionId) {
+	            const transactionIndex = this.transactions.findIndex(t => t.id === transactionId);
+	            if (transactionIndex === -1) return false;
+	            
+	            const transaction = this.transactions[transactionIndex];
+	            const cardIndex = this.cards.findIndex(card => card.id === transaction.cardId);
+	            
+	            if (cardIndex !== -1) {
+	                if (transaction.type === 'income') {
+	                    this.cards[cardIndex].balance -= transaction.amount;
+	                } else {
+	                    this.cards[cardIndex].balance += transaction.amount;
+	                }
+	            }
+	            
+	            this.transactions.splice(transactionIndex, 1);
+	            this.saveData();
+	            this.renderTransactions();
+	            this.renderCards();
+	            this.updateStats();
+	            
+	            return true;
+	        }
+	        
+	        getCardTransactions(cardId) {
+	            return this.transactions.filter(transaction => transaction.cardId === cardId);
+	        }
+	        
+	        // === STATS ===
+	        updateStats() {
+	            const stats = this.calculateStats();
+	            
+	            const incomeEl = document.getElementById('totalIncome');
+	            const expenseEl = document.getElementById('totalExpense');
+	            const balanceEl = document.getElementById('netBalance');
+	            
+	            if (incomeEl) incomeEl.textContent = stats.totalIncome.toFixed(2);
+	            if (expenseEl) expenseEl.textContent = stats.totalExpense.toFixed(2);
+	            if (balanceEl) balanceEl.textContent = stats.netBalance.toFixed(2);
+	        }
+	        
+	        calculateStats() {
+	            let totalIncome = 0;
+	            let totalExpense = 0;
+	            
+	            if (this.currentCardId) {
+	                const cardTransactions = this.getCardTransactions(this.currentCardId);
+	                
+	                cardTransactions.forEach(transaction => {
+	                    if (transaction.type === 'income') {
+	                        totalIncome += transaction.amount;
+	                    } else {
+	                        totalExpense += transaction.amount;
+	                    }
+	                });
+	            }
+	            
+	            const netBalance = totalIncome - totalExpense;
+	            return { totalIncome, totalExpense, netBalance };
+	        }
+	        
+	        // === IMAGE UPLOAD ===
+            openImageUploadModal() {
+                if (this.cards.length === 0) {
+                    alert('No cards available. Please add a card first.');
+                    return;
+                }
+                
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay active';
+                modal.innerHTML = `
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2 class="modal-title">
+                                <i class="fas fa-image"></i> Change Card Background
+                            </h2>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Select Card to Update</label>
+                            <select class="form-select" id="selectCardForImage">
+                                ${this.cards.map(card => `
+                                    <option value="${card.id}" ${card.isActive ? 'selected' : ''}>
+                                        ${this.escapeHtml(card.holderName)} (${card.cardNumber})
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Upload New Background</label>
+                            <input type="file" class="form-input" id="cardImageInput" accept="image/*">
+                            <div class="form-hint">
+                                <i class="fas fa-info-circle"></i> Supported: JPG, PNG, WebP (max 2MB)
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Preview</label>
+                            <div id="imagePreview" style="
+                                width: 100%;
+                                height: 120px;
+                                background: var(--bg-dark);
+                                border-radius: var(--radius-small);
+                                border: 2px dashed rgba(255, 255, 255, 0.1);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                overflow: hidden;
+                                margin-top: 8px;
+                            ">
+                                <span style="color: var(--text-secondary);">No image selected</span>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button class="btn" id="cancelImageBtn">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                            <button class="btn primary" id="saveImageBtn">
+                                <i class="fas fa-save"></i> Update Card
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // Setup file preview
+                const imageInput = modal.querySelector('#cardImageInput');
+                const preview = modal.querySelector('#imagePreview');
+                
+                imageInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        if (file.size > 2 * 1024 * 1024) {
+                            alert('Image too large. Max 2MB allowed.');
+                            imageInput.value = '';
+                            return;
+                        }
+                        
+                        if (!file.type.startsWith('image/')) {
+                            alert('Please select an image file.');
+                            imageInput.value = '';
+                            return;
+                        }
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            preview.innerHTML = `<img src="${event.target.result}" style="width: 100%; height: 100%; object-fit: cover;" alt="Preview">`;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+                
+                // Save image button
+                modal.querySelector('#saveImageBtn').addEventListener('click', () => {
+                    const cardId = parseFloat(modal.querySelector('#selectCardForImage').value);
+                    const fileInput = modal.querySelector('#cardImageInput');
+                    
+                    if (fileInput.files && fileInput.files[0]) {
+                        const file = fileInput.files[0];
+                        
+                        if (file.size > 2 * 1024 * 1024) {
+                            alert('Image too large. Max 2MB allowed.');
+                            return;
+                        }
+                        
+                        if (!file.type.startsWith('image/')) {
+                            alert('Please select an image file.');
+                            return;
+                        }
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const success = this.updateCardImage(cardId, event.target.result);
+                            if (success) {
+                                modal.remove();
+                                window.showMessage('Card image updated!', 'success');
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        alert('Please select an image file first.');
+                    }
+                });
+                
+                // Cancel button
+                modal.querySelector('#cancelImageBtn').addEventListener('click', () => {
+                    modal.remove();
+                });
+                
+                // Close modal when clicking outside
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+                
+                // Close with Escape key
+                const escapeHandler = (e) => {
+                    if (e.key === 'Escape') {
+                        modal.remove();
+                        document.removeEventListener('keydown', escapeHandler);
+                    }
+                };
+                document.addEventListener('keydown', escapeHandler);
+            }
+            
+            updateCardImage(cardId, imageUrl) {
+                const cardIndex = this.cards.findIndex(c => c.id === cardId);
+                if (cardIndex !== -1) {
+                    this.cards[cardIndex].design = imageUrl;
+                    this.saveData();
+                    this.renderCards();
+                    return true;
+                }
+                return false;
+            }
+	        
+	        // === ENCRYPTION/DECRYPTION ===
+	        encryptData(data) {
+	            try {
+	                const jsonString = JSON.stringify(data);
+	                return btoa(unescape(encodeURIComponent(jsonString)));
+	            } catch {
+	                return null;
+	            }
+	        }
+	        
+	        decryptData(encryptedString) {
+	            try {
+	                const jsonString = decodeURIComponent(escape(atob(encryptedString)));
+	                return JSON.parse(jsonString);
+	            } catch {
+	                return null;
+	            }
+	        }
+	        
+	        // === SIMPLE EXPORT ===
+	        exportData() {
+	            const data = {
+	                version: '1.0',
+	                exportedAt: new Date().toISOString(),
+	                cards: this.cards,
+	                transactions: this.transactions,
+	                currentCardId: this.currentCardId
+	            };
+	            
+	            const encryptedData = this.encryptData(data);
+	            if (!encryptedData) {
+	                window.showMessage('Export failed', 'error');
+	                return;
+	            }
+	            
+	            const timestamp = new Date().toISOString().split('T')[0];
+	            const filename = `wallet-backup-${timestamp}.json`;
+	            
+	            const blob = new Blob([encryptedData], { type: 'application/json' });
+	            const url = URL.createObjectURL(blob);
+	            const a = document.createElement('a');
+	            a.href = url;
+	            a.download = filename;
+	            document.body.appendChild(a);
+	            a.click();
+	            document.body.removeChild(a);
+	            URL.revokeObjectURL(url);
+	            
+	            window.showMessage('Data exported successfully!', 'success');
+	        }
+	        
+	        // === SIMPLE IMPORT ===
+	        importData() {
+	            const fileInput = document.createElement('input');
+	            fileInput.type = 'file';
+	            fileInput.accept = '.json';
+	            
+	            fileInput.onchange = (e) => {
+	                const file = e.target.files[0];
+	                if (!file) return;
+	                
+	                const reader = new FileReader();
+	                
+	                reader.onload = (e) => {
+	                    try {
+	                        const encryptedContent = e.target.result;
+	                        const decryptedData = this.decryptData(encryptedContent);
+	                        
+	                        if (decryptedData && decryptedData.cards) {
+	                            this.showImportOptions(decryptedData);
+	                        } else {
+	                            window.showMessage('Invalid backup file', 'error');
+	                        }
+	                    } catch {
+	                        window.showMessage('Failed to read file', 'error');
+	                    }
+	                };
+	                
+	                reader.readAsText(file);
+	            };
+	            
+	            fileInput.click();
+	        }
+	        
+	        showImportOptions(importedData) {
+	            const confirmed = confirm(
+	                'Found backup data.\n\n' +
+	                'Click OK to REPLACE all current data.\n' +
+	                'Click Cancel to MERGE with existing data.'
+	            );
+	            
+	            if (confirmed) {
+	                // Replace all data
+	                this.cards = importedData.cards || [];
+	                this.transactions = importedData.transactions || [];
+	                this.currentCardId = importedData.currentCardId || null;
+	                
+	                if (this.cards.length > 0 && !this.currentCardId) {
+	                    this.currentCardId = this.cards[0].id;
+	                    this.cards[0].isActive = true;
+	                }
+	                
+	                this.saveData();
+	                this.renderCards();
+	                this.renderTransactions();
+	                this.updateStats();
+	                
+	                window.showMessage('Data replaced successfully!', 'success');
+	            } else {
+	                // Merge data
+	                const existingCardIds = new Set(this.cards.map(card => card.id));
+	                const existingTransactionIds = new Set(this.transactions.map(trans => trans.id));
+	                
+	                // Merge cards
+	                if (importedData.cards) {
+	                    importedData.cards.forEach(card => {
+	                        if (!existingCardIds.has(card.id)) {
+	                            this.cards.push(card);
+	                        }
+	                    });
+	                }
+	                
+	                // Merge transactions
+	                if (importedData.transactions) {
+	                    importedData.transactions.forEach(transaction => {
+	                        if (!existingTransactionIds.has(transaction.id)) {
+	                            this.transactions.push(transaction);
+	                        }
+	                    });
+	                }
+	                
+	                this.saveData();
+	                this.renderCards();
+	                this.renderTransactions();
+	                this.updateStats();
+	                
+	                window.showMessage('Data merged successfully!', 'success');
+	            }
+	        }
+	        
+	        // === UI RENDERING ===
+	        loadCardDesigns() {
+	            const designsContainer = document.getElementById('cardDesigns');
+	            if (!designsContainer) return;
+	            
+	            let html = '';
+	            this.cardDesigns.forEach((design, index) => {
+	                html += `
+	                    <div class="card-design" data-index="${index}">
+	                        <img src="${design}" alt="Card Design ${index + 1}">
+	                    </div>
+	                `;
+	            });
+	            
+	            designsContainer.innerHTML = html;
+	        }
+	        
+	        renderCards() {
+	            const container = document.getElementById('cardsContainer');
+	            if (!container) return;
+	            
+	            if (this.cards.length === 0) {
+	                container.innerHTML = `
+	                    <div class="empty-state">
+	                        <i class="fas fa-credit-card"></i>
+	                        <h3>No cards yet</h3>
+	                        <p>Add your first bank card to get started</p>
+	                    </div>
+	                `;
+	                return;
+	            }
+	            
+	            let html = '';
+	            this.cards.forEach(card => {
+	                html += `
+	                    <div class="bank-card ${card.isActive ? 'active' : ''}" data-id="${card.id}">
+	                        <div class="card-bg">
+	                            <img src="${card.design || this.defaultCardImage}" alt="Card Background">
+	                        </div>
+	                        
+	                        <div class="card-content">
+	                            <div class="card-header">
+	                                <div>
+	                                    <div class="card-holder">${this.escapeHtml(card.holderName)}</div>
+	                                    <div class="card-number">${card.cardNumber}</div>
+	                                </div>
+	                                <div class="card-footer">
+	                                    <div class="card-settings-btn" data-id="${card.id}" title="Card Settings">
+	                                        <i class="fas fa-ellipsis-v"></i>
+	                                    </div>
+	                                </div>
+	                            </div>
+	                            <div class="card-balance">
+	                                <div class="balance-label">Balance</div>
+	                                <div class="balance-amount">${card.balance.toFixed(2)}</div>
+	                            </div>
+	                            
+	                            <div class="card-settings-menu" id="settings-menu-${card.id}">
+	                                <div class="card-settings-item edit-card-item" data-id="${card.id}">
+	                                    <i class="fas fa-edit"></i> Edit Card
+	                                </div>
+	                                <div class="card-settings-item delete delete-card-item" data-id="${card.id}">
+	                                    <i class="fas fa-trash"></i> Delete Card
+	                                </div>
+	                            </div>
+	                        </div>
+	                    </div>
+	                `;
+	            });
+	            
+	            container.innerHTML = html;
+	            
+	            // Add card click handlers
+	            container.querySelectorAll('.bank-card').forEach(card => {
+	                const cardId = parseFloat(card.dataset.id);
+	                this.setupCardClick(card, cardId);
+	            });
+	            
+	            // Card settings buttons
+	            container.querySelectorAll('.card-settings-btn').forEach(btn => {
+	                btn.addEventListener('click', (e) => {
+	                    e.stopPropagation();
+	                    const cardId = parseFloat(btn.dataset.id);
+	                    this.toggleSettingsMenu(cardId);
+	                });
+	            });
+	            
+	            // Edit card
+	            container.querySelectorAll('.edit-card-item').forEach(item => {
+	                item.addEventListener('click', (e) => {
+	                    e.stopPropagation();
+	                    const cardId = parseFloat(item.dataset.id);
+	                    this.closeAllSettingsMenus();
+	                    this.openCardModal(cardId);
+	                });
+	            });
+	            
+	            // Delete card
+	            container.querySelectorAll('.delete-card-item').forEach(item => {
+	                item.addEventListener('click', (e) => {
+	                    e.stopPropagation();
+	                    const cardId = parseFloat(item.dataset.id);
+	                    if (confirm('Delete this card and all its transactions?')) {
+	                        this.closeAllSettingsMenus();
+	                        this.deleteCard(cardId);
+	                        window.showMessage('Card deleted', 'success');
+	                    }
+	                });
+	            });
+	            
+	            document.addEventListener('click', () => {
+	                this.closeAllSettingsMenus();
+	            });
+	        }
+	        
+	        renderTransactions() {
+	            const table = document.getElementById('transactionsTable');
+	            if (!table) return;
+	            
+	            if (this.transactions.length === 0 || !this.currentCardId) {
+	                table.innerHTML = `
+	                    <tr>
+	                        <td colspan="6" class="empty-state" style="text-align: center; padding: var(--spacing-xl);">
+	                            <i class="fas fa-exchange-alt"></i>
+	                            <h3>No transactions yet</h3>
+	                            <p>Add your first transaction to start tracking</p>
+	                        </td>
+	                    </tr>
+	                `;
+	                return;
+	            }
+	            
+	            const cardTransactions = this.getCardTransactions(this.currentCardId);
+	            
+	            if (cardTransactions.length === 0) {
+	                table.innerHTML = `
+	                    <tr>
+	                        <td colspan="6" class="empty-state" style="text-align: center; padding: var(--spacing-xl);">
+	                            <i class="fas fa-exchange-alt"></i>
+	                            <h3>No transactions for this card</h3>
+	                            <p>Add transactions to the selected card</p>
+	                        </td>
+	                    </tr>
+	                `;
+	                return;
+	            }
+	            
+	            let html = '';
+	            cardTransactions.forEach(transaction => {
+	                const date = new Date(transaction.date);
+	                const formattedDate = date.toLocaleDateString('en-US', {
+	                    year: 'numeric',
+	                    month: 'short',
+	                    day: 'numeric'
+	                });
+	                
+	                html += `
+	                    <tr class="transaction-row" data-id="${transaction.id}">
+	                        <td title="${this.escapeHtml(transaction.title)}">${this.escapeHtml(transaction.title)}</td>
+	                        <td title="${this.escapeHtml(transaction.details)}">${this.escapeHtml(transaction.details)}</td>
+	                        <td>
+	                            <span class="transaction-type type-${transaction.type}">
+	                                ${transaction.type === 'income' ? 'Income' : 'Expense'}
+	                            </span>
+	                        </td>
+	                        <td>
+	                            <span class="transaction-amount amount-${transaction.type}">
+	                                ${transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
+	                            </span>
+	                        </td>
+	                        <td class="transaction-date">${formattedDate}</td>
+	                        <td>
+	                            <div class="transaction-actions">
+	                                <button class="action-btn edit-transaction-btn" data-id="${transaction.id}" title="Edit">
+	                                    <i class="fas fa-edit"></i>
+	                                </button>
+	                                <button class="action-btn delete delete-transaction-btn" data-id="${transaction.id}" title="Delete">
+	                                    <i class="fas fa-trash"></i>
+	                                </button>
+	                            </div>
+	                        </td>
+	                    </tr>
+	                `;
+	            });
+	            
+	            table.innerHTML = html;
+	            
+	            // Edit transaction buttons
+	            table.querySelectorAll('.edit-transaction-btn').forEach(btn => {
+	                btn.addEventListener('click', (e) => {
+	                    e.stopPropagation();
+	                    const transactionId = parseFloat(btn.dataset.id);
+	                    this.openTransactionModal(transactionId);
+	                });
+	            });
+	            
+	            // Delete transaction buttons
+	            table.querySelectorAll('.delete-transaction-btn').forEach(btn => {
+	                btn.addEventListener('click', (e) => {
+	                    e.stopPropagation();
+	                    const transactionId = parseFloat(btn.dataset.id);
+	                    if (confirm('Delete this transaction?')) {
+	                        this.deleteTransaction(transactionId);
+	                        window.showMessage('Transaction deleted', 'success');
+	                    }
+	                });
+	            });
+	        }
+	        
+	        // === UI HELPERS ===
+	        setupCardClick(cardElement, cardId) {
+	            cardElement.addEventListener('click', (e) => {
+	                if (e.target.closest('.card-settings-btn') || 
+	                    e.target.closest('.card-settings-menu') ||
+	                    e.target.closest('.card-settings-item')) {
+	                    return;
+	                }
+	                
+	                this.setActiveCard(cardId);
+	                this.closeAllSettingsMenus();
+	            });
+	        }
+	        
+	        toggleSettingsMenu(cardId) {
+	            this.closeAllSettingsMenus();
+	            const menu = document.getElementById(`settings-menu-${cardId}`);
+	            if (menu) {
+	                menu.classList.toggle('active');
+	            }
+	        }
+	        
+	        closeAllSettingsMenus() {
+	            document.querySelectorAll('.card-settings-menu').forEach(menu => {
+	                menu.classList.remove('active');
+	            });
+	        }
+	        
+	        // === MODAL CONTROLS ===
+	        openCardModal(cardId = null) {
+	            this.editingCardId = cardId;
+	            const modal = document.getElementById('cardModal');
+	            const title = document.getElementById('modalCardTitle');
+	            
+	            if (cardId) {
+	                const card = this.cards.find(c => c.id === cardId);
+	                if (card) {
+	                    title.textContent = 'Edit Card';
+	                    document.getElementById('cardHolderName').value = card.holderName;
+	                    document.getElementById('cardBalance').value = card.balance;
+	                }
+	            } else {
+	                title.textContent = 'Add New Card';
+	                document.getElementById('cardHolderName').value = '';
+	                document.getElementById('cardBalance').value = '';
+	            }
+	            
+	            modal.classList.add('active');
+	        }
+	        
+	        closeCardModal() {
+	            document.getElementById('cardModal').classList.remove('active');
+	            document.getElementById('cardHolderName').value = '';
+	            document.getElementById('cardBalance').value = '';
+	            this.editingCardId = null;
+	        }
+	        
+	        openTransactionModal(transactionId = null) {
+	            this.editingTransactionId = transactionId;
+	            const modal = document.getElementById('transactionModal');
+	            const title = document.getElementById('modalTransactionTitle');
+	            const deleteBtn = document.getElementById('deleteTransactionBtn');
+	            
+	            document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
+	            
+	            if (transactionId) {
+	                const transaction = this.transactions.find(t => t.id === transactionId);
+	                if (transaction) {
+	                    title.textContent = 'Edit Transaction';
+	                    deleteBtn.style.display = 'block';
+	                    
+	                    document.getElementById('transactionTitle').value = transaction.title;
+	                    document.getElementById('transactionDetails').value = transaction.details;
+	                    document.getElementById('transactionType').value = transaction.type;
+	                    document.getElementById('transactionAmount').value = transaction.amount;
+	                    document.getElementById('transactionDate').value = transaction.date;
+	                }
+	            } else {
+	                title.textContent = 'Add Transaction';
+	                deleteBtn.style.display = 'none';
+	                
+	                document.getElementById('transactionTitle').value = '';
+	                document.getElementById('transactionDetails').value = '';
+	                document.getElementById('transactionType').value = 'expense';
+	                document.getElementById('transactionAmount').value = '';
+	            }
+	            
+	            modal.classList.add('active');
+	        }
+	        
+	        closeTransactionModal() {
+	            document.getElementById('transactionModal').classList.remove('active');
+	            document.getElementById('transactionTitle').value = '';
+	            document.getElementById('transactionDetails').value = '';
+	            document.getElementById('transactionType').value = 'expense';
+	            document.getElementById('transactionAmount').value = '';
+	            this.editingTransactionId = null;
+	        }
+	        
+	        // === EVENT LISTENERS ===
+	        setupEventListeners() {
+	            // Add Card Button
+	            document.getElementById('addCardBtn').addEventListener('click', () => {
+	                this.openCardModal();
+	            });
+	            
+	            // Save Card Button
+	            document.getElementById('saveCardBtn').addEventListener('click', () => {
+	                this.saveCard();
+	            });
+	            
+	            // Cancel Card Button
+	            document.getElementById('cancelCardBtn').addEventListener('click', () => {
+	                this.closeCardModal();
+	            });
+	            
+	            // Add Transaction Button
+	            document.getElementById('addTransactionBtn').addEventListener('click', () => {
+	                this.openTransactionModal();
+	            });
+	            
+	            // Save Transaction Button
+	            document.getElementById('saveTransactionBtn').addEventListener('click', () => {
+	                this.saveTransaction();
+	            });
+	            
+	            // Cancel Transaction Button
+	            document.getElementById('cancelTransactionBtn').addEventListener('click', () => {
+	                this.closeTransactionModal();
+	            });
+	            
+	            // Delete Transaction Button
+	            document.getElementById('deleteTransactionBtn').addEventListener('click', () => {
+	                this.deleteCurrentTransaction();
+	            });
+	            
+	            // Change card image button
+                document.getElementById('changeCardImageBtn').addEventListener('click', () => {
+                    this.openImageUploadModal();
+                });
+	            
+	            // Refresh button
+	            document.getElementById('refreshDataBtn').addEventListener('click', () => {
+	                this.refreshData();
+	            });
+	            
+	            // Export button
+	            document.getElementById('exportDataBtn').addEventListener('click', () => {
+	                this.exportData();
+	            });
+	            
+	            // Import button
+	            document.getElementById('importDataBtn').addEventListener('click', () => {
+	                this.importData();
+	            });
+	            
+	            // Change card image button - ADD THIS LINE
+                document.getElementById('changeCardImageBtn').addEventListener('click', () => {
+                    this.openImageUploadModal();
+                });
+	            
+	            // Close modals when clicking outside
+	            document.querySelectorAll('.modal-overlay').forEach(modal => {
+	                modal.addEventListener('click', (e) => {
+	                    if (e.target === modal) {
+	                        modal.classList.remove('active');
+	                        if (modal.id === 'cardModal') this.closeCardModal();
+	                        if (modal.id === 'transactionModal') this.closeTransactionModal();
+	                    }
+	                });
+	            });
+	            
+	            // Escape key to close modals
+	            document.addEventListener('keydown', (e) => {
+	                if (e.key === 'Escape') {
+	                    document.querySelectorAll('.modal-overlay').forEach(modal => {
+	                        modal.classList.remove('active');
+	                    });
+	                    this.closeCardModal();
+	                    this.closeTransactionModal();
+	                }
+	            });
+	        }
+	        
+	        saveCard() {
+	            const holderName = document.getElementById('cardHolderName').value.trim();
+	            const balance = document.getElementById('cardBalance').value;
+	            
+	            if (!holderName) {
+	                alert('Please enter card holder name');
+	                return;
+	            }
+	            
+	            if (this.editingCardId) {
+	                this.editCard(this.editingCardId, holderName, balance);
+	                this.closeCardModal();
+	                window.showMessage('Card updated', 'success');
+	            } else {
+	                this.addCard(holderName, balance);
+	                this.closeCardModal();
+	                window.showMessage('Card added', 'success');
+	            }
+	        }
+	        
+	        saveTransaction() {
+	            const title = document.getElementById('transactionTitle').value.trim();
+	            const details = document.getElementById('transactionDetails').value.trim();
+	            const type = document.getElementById('transactionType').value;
+	            const amount = document.getElementById('transactionAmount').value;
+	            const date = document.getElementById('transactionDate').value;
+	            
+	            if (!title) {
+	                alert('Please enter transaction title');
+	                return;
+	            }
+	            
+	            if (!amount || parseFloat(amount) <= 0) {
+	                alert('Please enter a valid amount');
+	                return;
+	            }
+	            
+	            if (!date) {
+	                alert('Please select a date');
+	                return;
+	            }
+	            
+	            if (this.editingTransactionId) {
+	                this.editTransaction(this.editingTransactionId, title, details, type, amount, date);
+	                this.closeTransactionModal();
+	                window.showMessage('Transaction updated', 'success');
+	            } else {
+	                this.addTransaction(title, details, type, amount, date);
+	                this.closeTransactionModal();
+	                window.showMessage('Transaction added', 'success');
+	            }
+	        }
+	        
+	        deleteCurrentTransaction() {
+	            if (this.editingTransactionId) {
+	                if (confirm('Delete this transaction?')) {
+	                    this.deleteTransaction(this.editingTransactionId);
+	                    this.closeTransactionModal();
+	                    window.showMessage('Transaction deleted', 'success');
+	                }
+	            }
+	        }
+	        
+	        refreshData() {
+	            const refreshBtn = document.getElementById('refreshDataBtn');
+	            const originalHtml = refreshBtn.innerHTML;
+	            
+	            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+	            refreshBtn.disabled = true;
+	            
+	            this.loadData();
+	            
+	            if (this.cards.length === 0) {
+	                this.createDefaultCard();
+	            }
+	            
+	            this.renderCards();
+	            this.renderTransactions();
+	            this.updateStats();
+	            
+	            document.getElementById('dataStatus').textContent = 'Refreshed';
+	            document.getElementById('dataStatus').style.color = '#20c997';
+	            
+	            setTimeout(() => {
+	                refreshBtn.innerHTML = originalHtml;
+	                refreshBtn.disabled = false;
+	            }, 1000);
+	            
+	            setTimeout(() => {
+	                document.getElementById('dataStatus').textContent = 'Auto-saved';
+	                document.getElementById('dataStatus').style.color = 'var(--text-secondary)';
+	            }, 3000);
+	        }
+	        
+	        // === HELPER FUNCTIONS ===
+	        escapeHtml(text) {
+	            const div = document.createElement('div');
+	            div.textContent = text;
+	            return div.innerHTML;
+	        }
+	    }
+	    
+	    // Initialize when page loads
+	    document.addEventListener('DOMContentLoaded', () => {
+	        window.moneyTracker = new MoneyTracker();
+	    });
+	</script>
 </body>
 </html>

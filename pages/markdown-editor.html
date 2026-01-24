@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Editor | Dual Mode</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="../media.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+            --reading-mode-bg: #0a0a0a;
+            --editing-mode-bg: #1a1a1a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        .blur-background {
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            background-color: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        header {
+            padding: var(--spacing-lg) 0;
+        }
+
+        .username {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Mode Toggle */
+        .mode-toggle {
+            display: flex;
+            background: var(--bg-dark);
+            border-radius: var(--radius-medium);
+            padding: 4px;
+            margin-bottom: var(--spacing-md);
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mode-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: calc(var(--radius-medium) - 4px);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            flex: 1;
+            justify-content: center;
+        }
+
+        .mode-btn.active {
+            background: var(--accent-color);
+            color: var(--bg-black);
+        }
+
+        .mode-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        /* Editor Container */
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm);
+            background: var(--bg-dark);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .tool-btn {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            min-width: 50px;
+            justify-content: center;
+        }
+
+        .tool-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .tool-btn i {
+            color: var(--accent-color);
+        }
+
+        .tool-btn-group {
+            display: flex;
+            gap: var(--spacing-xs);
+            flex: 1;
+        }
+
+        /* Text Areas */
+        .text-input, .preview-area {
+            width: 100%;
+            flex: 1;
+            min-height: 300px;
+            max-height: 600px;
+            padding: var(--spacing-md);
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-medium);
+            color: var(--text-primary);
+            font-size: 1rem;
+            line-height: 1.6;
+            resize: vertical;
+            transition: all 0.3s ease;
+            font-family: 'Courier New', monospace;
+            overflow-y: auto;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(193, 252, 50, 0.1);
+        }
+
+        /* Reading Mode Specific */
+        .reading-mode .preview-area {
+            background: var(--reading-mode-bg);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            border-color: rgba(193, 252, 50, 0.2);
+        }
+
+        .editing-mode .text-input {
+            background: var(--editing-mode-bg);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Preview Styling for Reading Mode */
+        .preview-area h1, .preview-area h2, .preview-area h3, .preview-area h4, .preview-area h5, .preview-area h6 {
+            margin-top: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .preview-area h1 { font-size: 2rem; }
+        .preview-area h2 { font-size: 1.75rem; }
+        .preview-area h3 { font-size: 1.5rem; }
+        .preview-area h4 { font-size: 1.25rem; }
+        .preview-area h5 { font-size: 1.1rem; }
+        .preview-area h6 { font-size: 1rem; color: var(--text-secondary); }
+
+        .preview-area p {
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .preview-area strong {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .preview-area em {
+            font-style: italic;
+            color: #f5f5f7;
+        }
+
+        .preview-area ul, .preview-area ol {
+            margin-left: var(--spacing-lg);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .preview-area li {
+            margin-bottom: 4px;
+        }
+
+        .preview-area blockquote {
+            border-left: 3px solid var(--accent-color);
+            padding-left: var(--spacing-md);
+            margin: var(--spacing-md) 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .preview-area code {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .preview-area pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-small);
+            margin: var(--spacing-md) 0;
+            overflow-x: auto;
+        }
+
+        .preview-area pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        .preview-area a {
+            color: var(--accent-color);
+            text-decoration: none;
+            border-bottom: 1px dotted var(--accent-color);
+        }
+
+        .preview-area a:hover {
+            border-bottom: 1px solid var(--accent-color);
+        }
+
+        .preview-area table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .preview-area th, .preview-area td {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: var(--spacing-xs);
+            text-align: left;
+        }
+
+        .preview-area th {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+
+        .preview-area hr {
+            border: none;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: var(--spacing-lg) 0;
+        }
+
+        .preview-area input[type="checkbox"] {
+            margin-right: 8px;
+            accent-color: var(--accent-color);
+        }
+
+        /* Stats */
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: var(--spacing-md);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            padding: var(--spacing-sm) 0;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: var(--spacing-sm);
+            border: none;
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .action-btn.primary {
+            background: var(--accent-color);
+            color: var(--bg-black);
+        }
+
+        .action-btn.secondary {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(193, 252, 50, 0.2);
+        }
+
+        .action-btn.secondary:hover {
+            border-color: var(--accent-color);
+        }
+
+        /* Hidden elements for reading mode */
+        .hidden-symbol {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+            pointer-events: none;
+        }
+
+        /* Copy notification */
+        .copy-notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--accent-color);
+            color: var(--bg-black);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .copy-notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .tool-btn span {
+                display: none;
+            }
+            
+            .tool-btn {
+                padding: 6px 8px;
+            }
+        }
+    </style>
+</head>
+<body class="reading-mode">
+    <div class="container">
+        <!-- Back to main portfolio -->
+        <a href="../index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <!-- Header -->
+        <header>
+            <div>
+                <h1 class="username">Markdown Editor</h1>
+                <p class="tagline">Seamless editing with Reading & Writing modes</p>
+            </div>
+            
+            <!-- Tool Description -->
+            <div class="blur-background" style="margin-top: var(--spacing-md); padding: var(--spacing-md); border-radius: var(--radius-medium);">
+                <p>
+                    In <strong>Reading Mode</strong>, markdown symbols are hidden for a clean reading experience. 
+                    In <strong>Editing Mode</strong>, all markdown symbols are visible for editing.
+                    When copying text in Reading Mode, the markdown formatting is preserved (invisible symbols included).
+                </p>
+            </div>
+        </header>
+        
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+            <button class="mode-btn active" id="readingModeBtn" onclick="switchMode('reading')">
+                <i class="fas fa-eye"></i> Reading Mode
+            </button>
+            <button class="mode-btn" id="editingModeBtn" onclick="switchMode('editing')">
+                <i class="fas fa-edit"></i> Editing Mode
+            </button>
+        </div>
+        
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="tool-btn-group">
+                    <button class="tool-btn" onclick="insertText('**', '**')">
+                        <i class="fas fa-bold"></i>
+                    </button>
+                    <button class="tool-btn" onclick="insertText('*', '*')">
+                        <i class="fas fa-italic"></i>
+                    </button>
+                    <button class="tool-btn" onclick="insertText('~~', '~~')">
+                        <i class="fas fa-strikethrough"></i>
+                    </button>
+                </div>
+                
+                <div class="tool-btn-group">
+                    <button class="tool-btn" onclick="insertHeading(1)">
+                        <i class="fas fa-heading"></i>
+                    </button>
+                    <button class="tool-btn" onclick="insertHeading(2)">
+                        <i class="fas fa-heading"></i>
+                    </button>
+                    <button class="tool-btn" onclick="insertHeading(3)">
+                        <i class="fas fa-heading"></i>
+                    </button>
+                </div>
+                
+                <div class="tool-btn-group">
+                    <button class="tool-btn" onclick="insertText('- ', '')">
+                        <i class="fas fa-list-ul"></i>
+                    </button>
+                    <button class="tool-btn" onclick="insertText('1. ', '')">
+                        <i class="fas fa-list-ol"></i>
+                    </button>
+                    <button class="tool-btn" onclick="insertText('[ ] ', '')">
+                        <i class="fas fa-check-square"></i>
+                    </button>
+                </div>
+                
+                <div class="tool-btn-group">
+                    <button class="tool-btn" onclick="insertText('> ', '')">
+                        <i class="fas fa-quote-right"></i>
+                    </button>
+                    <button class="tool-btn" onclick="insertText('`', '`')">
+                        <i class="fas fa-code"></i>
+                    </button>
+                    <button class="tool-btn" onclick="insertText('[', '](https://)')">
+                        <i class="fas fa-link"></i>
+                    </button>
+                </div>
+                
+                <div class="tool-btn-group">
+                    <button class="tool-btn" onclick="insertText('---\n', '')">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button class="tool-btn" onclick="copyWithHiddenSymbols()">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="tool-btn" onclick="clearEditor()">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                
+                <div class="tool-btn-group">
+                    <button class="tool-btn" onclick="undo()">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button class="tool-btn" onclick="redo()">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Editor Container -->
+            <div class="editor-container">
+                <!-- Preview Area (Reading Mode) -->
+                <div class="preview-area" id="previewArea">
+                    <!-- Preview will be generated here -->
+                </div>
+                <!-- Text Input (Editing Mode) -->
+                <textarea style="margin-top: 10px;" class="text-input" id="markdownInput" placeholder="# Start writing your markdown here...
+
+## Features
+- **Bold text** and *italic text*
+- Lists and checkboxes
+- [Links](https://example.com)
+- `Inline code` and code blocks
+
+> Blockquotes look great too!
+
+---
+Just switch between Reading and Editing modes using the buttons above!"># Welcome to Markdown Editor
+
+## Key Features
+- **Reading Mode**: Clean view without markdown symbols
+- **Editing Mode**: Full markdown syntax visible
+- **Smart Copy**: Preserves markdown when copying in Reading Mode
+
+### Try These
+1. Write some **bold text**
+2. Add *italic emphasis*
+3. Create [a link](https://example.com)
+4. Make a checklist:
+   - [x] Completed task
+   - [ ] Pending task
+
+> This is a blockquote example
+
+`Inline code` looks like this
+
+---
+
+Switch to **Editing Mode** to see the markdown symbols!</textarea>
+            </div>
+            
+            <!-- Stats -->
+            <div class="stats">
+                <div>
+                    <span id="charCount">0</span> characters • 
+                    <span id="wordCount">0</span> words • 
+                    <span id="lineCount">0</span> lines
+                </div>
+                <div>
+                    <span id="currentMode">Reading Mode</span>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="action-btn primary" onclick="exportMarkdown()">
+                    <i class="fas fa-download"></i> Export Markdown
+                </button>
+                <button class="action-btn secondary" onclick="importMarkdown()">
+                    <i class="fas fa-upload"></i> Import File
+                </button>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Markdown Editor</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+    
+    <!-- Copy Notification -->
+    <div class="copy-notification" id="copyNotification">
+        <i class="fas fa-check"></i> Copied with hidden markdown!
+    </div>
+    
+    <!-- Hidden container for reading mode symbols -->
+    <div id="hiddenSymbolsContainer" class="hidden-symbol"></div>
+
+    <script>
+        // Font Awesome for icons
+        const faScript = document.createElement('script');
+        faScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js';
+        document.head.appendChild(faScript);
+        
+        // DOM Elements
+        const markdownInput = document.getElementById('markdownInput');
+        const previewArea = document.getElementById('previewArea');
+        const readingModeBtn = document.getElementById('readingModeBtn');
+        const editingModeBtn = document.getElementById('editingModeBtn');
+        const copyNotification = document.getElementById('copyNotification');
+        const charCount = document.getElementById('charCount');
+        const wordCount = document.getElementById('wordCount');
+        const lineCount = document.getElementById('lineCount');
+        const currentMode = document.getElementById('currentMode');
+        
+        // History management
+        let history = [];
+        let currentIndex = -1;
+        let isUndoRedo = false;
+        let isReadingMode = true;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePreview();
+            updateStats();
+            initHistory();
+            
+            markdownInput.addEventListener('input', function() {
+                if (!isUndoRedo) {
+                    saveToHistory();
+                }
+                updatePreview();
+                updateStats();
+            });
+            
+            previewArea.addEventListener('copy', handlePreviewCopy);
+            markdownInput.focus();
+            
+            // Keyboard shortcuts for undo/redo
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    undo();
+                }
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                    e.preventDefault();
+                    redo();
+                }
+            });
+        });
+        
+        // Initialize history
+        function initHistory() {
+            history = [markdownInput.value];
+            currentIndex = 0;
+        }
+        
+        // Save to history
+        function saveToHistory() {
+            const currentText = markdownInput.value;
+            
+            if (currentIndex < history.length - 1) {
+                history = history.slice(0, currentIndex + 1);
+            }
+            
+            if (history[currentIndex] === currentText) {
+                return;
+            }
+            
+            history.push(currentText);
+            currentIndex++;
+            
+            if (history.length > 50) {
+                history.shift();
+                currentIndex--;
+            }
+        }
+        
+        // Undo
+        function undo() {
+            if (currentIndex > 0) {
+                isUndoRedo = true;
+                currentIndex--;
+                markdownInput.value = history[currentIndex];
+                updatePreview();
+                updateStats();
+                markdownInput.focus();
+                
+                setTimeout(() => {
+                    isUndoRedo = false;
+                }, 100);
+            }
+        }
+        
+        // Redo
+        function redo() {
+            if (currentIndex < history.length - 1) {
+                isUndoRedo = true;
+                currentIndex++;
+                markdownInput.value = history[currentIndex];
+                updatePreview();
+                updateStats();
+                markdownInput.focus();
+                
+                setTimeout(() => {
+                    isUndoRedo = false;
+                }, 100);
+            }
+        }
+        
+        // Switch modes
+        function switchMode(mode) {
+            if (mode === 'reading') {
+                isReadingMode = true;
+                document.body.className = 'reading-mode';
+                readingModeBtn.classList.add('active');
+                editingModeBtn.classList.remove('active');
+                markdownInput.style.display = 'none';
+                previewArea.style.display = 'block';
+                currentMode.textContent = 'Reading Mode';
+                updatePreview();
+            } else {
+                isReadingMode = false;
+                document.body.className = 'editing-mode';
+                editingModeBtn.classList.add('active');
+                readingModeBtn.classList.remove('active');
+                markdownInput.style.display = 'block';
+                previewArea.style.display = 'none';
+                currentMode.textContent = 'Editing Mode';
+                markdownInput.focus();
+            }
+            updateStats();
+        }
+        
+        // Update preview
+        function updatePreview() {
+            if (!isReadingMode) return;
+            
+            const markdown = markdownInput.value;
+            let html = '';
+            
+            // Convert markdown to HTML
+            html = markdownToHtml(markdown);
+            
+            previewArea.innerHTML = html;
+            previewArea.setAttribute('data-markdown', markdown);
+        }
+        
+        // Simple markdown to HTML converter
+        function markdownToHtml(markdown) {
+            let html = markdown;
+            
+            // Headers
+            html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+            html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+            html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+            
+            // Bold
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Italic
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Links
+            html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
+            
+            // Code
+            html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+            
+            // Lists
+            let lines = html.split('\n');
+            let inList = false;
+            let inOrderedList = false;
+            
+            for (let i = 0; i < lines.length; i++) {
+                // Unordered lists
+                if (lines[i].match(/^[\*\+\-] /)) {
+                    if (!inList) {
+                        lines[i] = '<ul>\n<li>' + lines[i].substring(2) + '</li>';
+                        inList = true;
+                    } else {
+                        lines[i] = '<li>' + lines[i].substring(2) + '</li>';
+                    }
+                }
+                // Ordered lists
+                else if (lines[i].match(/^\d+\. /)) {
+                    if (!inOrderedList) {
+                        lines[i] = '<ol>\n<li>' + lines[i].replace(/^\d+\. /, '') + '</li>';
+                        inOrderedList = true;
+                    } else {
+                        lines[i] = '<li>' + lines[i].replace(/^\d+\. /, '') + '</li>';
+                    }
+                }
+                // Close lists
+                else if (inList && !lines[i].match(/^[\*\+\-] /) && lines[i].trim() !== '') {
+                    if (i > 0 && lines[i-1].includes('</li>')) {
+                        lines[i-1] = lines[i-1] + '\n</ul>';
+                    }
+                    inList = false;
+                }
+                else if (inOrderedList && !lines[i].match(/^\d+\. /) && lines[i].trim() !== '') {
+                    if (i > 0 && lines[i-1].includes('</li>')) {
+                        lines[i-1] = lines[i-1] + '\n</ol>';
+                    }
+                    inOrderedList = false;
+                }
+                
+                // Paragraphs
+                if (!lines[i].match(/^<(\/)?(h|ul|ol|li|blockquote|pre|code|hr)/) && 
+                    lines[i].trim() !== '' && 
+                    !lines[i].match(/^<div>/) &&
+                    !lines[i].match(/^<a/) &&
+                    !lines[i].match(/^<img/) &&
+                    !lines[i].match(/^<strong>/) &&
+                    !lines[i].match(/^<em>/) &&
+                    !lines[i].match(/^<code>/)) {
+                    lines[i] = '<p>' + lines[i] + '</p>';
+                }
+            }
+            
+            if (inList) {
+                lines[lines.length - 1] = lines[lines.length - 1] + '\n</ul>';
+            }
+            if (inOrderedList) {
+                lines[lines.length - 1] = lines[lines.length - 1] + '\n</ol>';
+            }
+            
+            html = lines.join('\n');
+            return html;
+        }
+        
+        // Handle copy in reading mode
+        function handlePreviewCopy(e) {
+            if (!isReadingMode) return;
+            
+            const originalMarkdown = previewArea.getAttribute('data-markdown') || '';
+            const selection = window.getSelection();
+            
+            if (selection.toString().length > 0) {
+                e.clipboardData.setData('text/plain', selection.toString());
+                e.clipboardData.setData('text/markdown', originalMarkdown);
+            } else {
+                e.clipboardData.setData('text/plain', originalMarkdown);
+                e.clipboardData.setData('text/markdown', originalMarkdown);
+            }
+            
+            e.preventDefault();
+            showCopyNotification();
+        }
+        
+        // Copy with hidden symbols
+        function copyWithHiddenSymbols() {
+            const markdown = markdownInput.value;
+            const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = markdown;
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextarea);
+            showCopyNotification();
+        }
+        
+        // Show notification
+        function showCopyNotification() {
+            copyNotification.classList.add('show');
+            setTimeout(() => {
+                copyNotification.classList.remove('show');
+            }, 2000);
+        }
+        
+        // Insert text
+        function insertText(before, after) {
+            const start = markdownInput.selectionStart;
+            const end = markdownInput.selectionEnd;
+            const selectedText = markdownInput.value.substring(start, end);
+            
+            markdownInput.value = markdownInput.value.substring(0, start) + 
+                                  before + selectedText + after + 
+                                  markdownInput.value.substring(end);
+            
+            const newCursorPos = start + before.length + selectedText.length + after.length;
+            markdownInput.setSelectionRange(newCursorPos, newCursorPos);
+            markdownInput.focus();
+            
+            saveToHistory();
+            updatePreview();
+            updateStats();
+        }
+        
+        // Insert heading
+        function insertHeading(level) {
+            const start = markdownInput.selectionStart;
+            const selectedText = markdownInput.value.substring(start, markdownInput.selectionEnd);
+            let heading = '';
+            
+            for (let i = 0; i < level; i++) heading += '#';
+            
+            if (selectedText) {
+                markdownInput.value = markdownInput.value.substring(0, start) + heading + ' ' + selectedText + markdownInput.value.substring(markdownInput.selectionEnd);
+                markdownInput.setSelectionRange(start + heading.length + 1 + selectedText.length, start + heading.length + 1 + selectedText.length);
+            } else {
+                markdownInput.value = markdownInput.value.substring(0, start) + heading + ' ' + markdownInput.value.substring(start);
+                markdownInput.setSelectionRange(start + heading.length + 1, start + heading.length + 1);
+            }
+            
+            markdownInput.focus();
+            saveToHistory();
+            updatePreview();
+            updateStats();
+        }
+        
+        // Update stats
+        function updateStats() {
+            const text = markdownInput.value;
+            const chars = text.length;
+            const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+            const lines = text.split('\n').length;
+            
+            charCount.textContent = chars;
+            wordCount.textContent = words;
+            lineCount.textContent = lines;
+        }
+        
+        // Clear editor
+        function clearEditor() {
+            if (confirm('Are you sure you want to clear the editor? All content will be lost.')) {
+                markdownInput.value = '';
+                saveToHistory();
+                updatePreview();
+                updateStats();
+                markdownInput.focus();
+            }
+        }
+        
+        // Export markdown
+        function exportMarkdown() {
+            const markdown = markdownInput.value;
+            const blob = new Blob([markdown], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'markdown-document.md';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Import markdown
+        function importMarkdown() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.md,.markdown,.txt';
+            
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    markdownInput.value = e.target.result;
+                    saveToHistory();
+                    updatePreview();
+                    updateStats();
+                    switchMode('editing');
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+    </script>
+</body>
+</html>

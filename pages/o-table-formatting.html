@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>List Generator for Obsidian | lildavegoth</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: var(--spacing-md);
+            touch-action: manipulation;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-sm);
+            position: relative;
+        }
+
+        header {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .username {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .editor-panel {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-title i {
+            color: var(--accent-color);
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .tool-btn {
+            background: rgba(30, 30, 30, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 120px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: rgba(193, 252, 50, 0.1);
+        }
+
+        .tool-btn:hover, .tool-btn:active {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .tool-btn i {
+            color: var(--accent-color);
+        }
+
+        .text-input {
+            width: 100%;
+            min-height: 300px;
+            padding: var(--spacing-md);
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-medium);
+            color: var(--text-primary);
+            font-size: 1rem;
+            line-height: 1.6;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+            margin-bottom: var(--spacing-md);
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+            justify-content: flex-end;
+            margin-top: var(--spacing-sm);
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            touch-action: manipulation;
+            min-height: 44px;
+            -webkit-tap-highlight-color: rgba(193, 252, 50, 0.1);
+        }
+
+        .control-btn.clear {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-btn.copy {
+            background: var(--accent-color);
+            color: var(--bg-black);
+        }
+
+        .control-btn:hover, .control-btn:active {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(193, 252, 50, 0.2);
+        }
+
+        .control-btn.clear:hover, .control-btn.clear:active {
+            border-color: var(--accent-color);
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border: 2px solid var(--accent-color);
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+            min-height: 44px;
+            -webkit-tap-highlight-color: rgba(193, 252, 50, 0.1);
+        }
+
+        .nav-btn:hover, .nav-btn:active {
+            background: rgba(193, 252, 50, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .info-text {
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            margin-bottom: var(--spacing-sm);
+            text-align: center;
+            padding: 0 var(--spacing-sm);
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: var(--spacing-sm);
+            }
+            
+            .username {
+                font-size: 1.7rem;
+            }
+            
+            .tagline {
+                font-size: 0.9rem;
+            }
+            
+            .tool-btn {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+                min-width: calc(50% - 8px);
+            }
+            
+            .control-buttons {
+                flex-direction: column;
+            }
+            
+            .control-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        .color-palette {
+            position: absolute;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+            z-index: 100;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+        
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        
+        .color-option:hover {
+            transform: scale(1.1);
+            border-color: var(--accent-color);
+        }
+        
+        .guide-background {
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            background-color: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-medium);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        /* Tool Navigation */
+        .tool-navigation {
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .tool-navigation p {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border: 2px solid var(--accent-color);
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(193, 252, 50, 0.2);
+            transform: translateY(-2px);
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <header>
+            <h1 class="username">Table Formatting Generator</h1>
+            <p class="tagline">Auto generate HTML codes for Obsidian Table formatting</p>
+        </header>
+
+        <div class="editor-panel">
+            <div class="panel-title">
+                <i class="fas fa-edit"></i>
+                <span>Input Text</span>
+            </div>
+            
+            <div class="toolbar">
+                <button class="tool-btn" onclick="formatText('bullet')">
+                    <i class="fas fa-list-ul"></i> Bulleted List
+                </button>
+                <button class="tool-btn" onclick="formatText('checkbox')">
+                    <i class="fas fa-check-square"></i> Checkbox List
+                </button>
+                <button class="tool-btn" onclick="formatText('number')">
+                    <i class="fas fa-list-ol"></i> Numbered List
+                </button>
+                <button class="tool-btn" onclick="toggleColorPalette()">
+                    <i class="fas fa-palette"></i> Text Color
+                </button>
+                <button class="tool-btn" onclick="formatText('space')">
+                    <i class="fas fa-magic"></i> Reduce Spacing
+                </button>
+            </div>
+            
+            <div class="color-palette" id="colorPalette" style="display: none;">
+                <div class="color-option" onclick="applyColor('#C42833')" style="background-color: #C42833;"></div>
+                <div class="color-option" onclick="applyColor('#C1FC32')" style="background-color: #C1FC32;"></div>
+                <div class="color-option" onclick="applyColor('#4A90E2')" style="background-color: #4A90E2;"></div>
+                <div class="color-option" onclick="applyColor('#FF6B6B')" style="background-color: #FF6B6B;"></div>
+                <div class="color-option" onclick="applyColor('#9B59B6')" style="background-color: #9B59B6;"></div>
+                <div class="color-option" onclick="applyColor('#FF9F43')" style="background-color: #FF9F43;"></div>
+            </div>
+            
+            <p class="info-text">Select text in the input area, then click a formatting buttons above</p>
+            
+            <textarea 
+    class="text-input" 
+    id="textInput" 
+    placeholder="How:
+Select any text and click 'Bulleted List', 'Checkbox List', 'Numbered List' or 'Text Color' above
+
+Notes:
+Each selected line will be formatted individually."
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="off"
+    spellcheck="false"
+    data-lpignore="true"
+    data-form-type="other"
+    name="text-content"
+    inputmode="text">
+</textarea>
+            
+            <div style="margin-top: -10px;" class="control-buttons">
+                <button class="control-btn clear" onclick="clearAll()">
+                    <i class="fas fa-trash"></i> Clear All
+                </button>
+                <button class="control-btn copy" onclick="copyFormattedText()">
+                    <i class="fas fa-copy"></i> Copy Formatted Text
+                </button>
+            </div>
+        </div>
+        
+        <!-- Info Section -->
+        <div style="margin-top: -15px;" class="guide-background")>
+            <h2 style="margin-top: 0; margin-bottom: 15px;">How to Use</h2>
+            <ol style="margin-left: 20px; margin-bottom: 20px;">
+                <li><strong>Select</strong> any text in input text area</li>
+                <li>Click the <strong>Formatting</strong> above text area</li>
+                <li>Click <strong>Copy Formatted Text</strong> button</li>
+                <li><strong>Paste</strong> copied Formatted Text <strong>in Obsidian Table input</strong></li>
+            </ol>
+            
+            <h2 style="margin-top: 0; margin-bottom: 15px;">Notes</h2>
+            <ul style="margin-left: 20px; margin-bottom: 20px;">
+                <li><strong>Checkboxes</strong> will only perfectly works if <a href="https://github.com/anareaty/html-checkboxes" target="_blank" style="color: #C1FC32; text-decoration: underline;">HTML Checkboxes</a> plugin is installed</li>
+            </ul>
+        </div>
+        
+        <!-- Tool Navigation -->
+        <div class="tool-navigation" style="margin-top: var(--spacing-lg); padding-top: var(--spacing-md); border-top: 1px solid rgba(255, 255, 255, 0.1);">
+            <div style="text-align: center;">
+                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-sm); font-size: 0.9rem;">
+                    Explore other Obsidian tools
+                </p>
+                <div style="display: flex; justify-content: center; gap: var(--spacing-sm); flex-wrap: wrap;">
+                    <a href="o-css-snippets-gallery.html" class="nav-btn">
+                        CSS Snippets Gallery
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Table Formatting Generator</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        let copyButton = null;
+        let lastSelection = {
+            start: 0,
+            end: 0,
+            text: '',
+            hasSelection: false
+        };
+        
+        function saveSelection() {
+            const input = document.getElementById('textInput');
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            
+            if (start !== end) { // Only save if there's actual selection
+                lastSelection.start = start;
+                lastSelection.end = end;
+                lastSelection.text = input.value.substring(start, end);
+                lastSelection.hasSelection = true;
+            }
+        }
+        
+        function formatText(type) {
+            const input = document.getElementById('textInput');
+            let start, end, selectedText;
+            
+            // Try to get current selection
+            start = input.selectionStart;
+            end = input.selectionEnd;
+            selectedText = input.value.substring(start, end);
+            
+            // If no current selection, try to use saved selection
+            if (selectedText.trim() === '' && lastSelection.hasSelection) {
+                start = lastSelection.start;
+                end = lastSelection.end;
+                selectedText = lastSelection.text;
+            }
+            
+            if (selectedText.trim() === '') {
+                window.showMessage('Please select some text first!');
+                input.focus();
+                return;
+            }
+            
+            // Update the saved selection to current position
+            lastSelection.start = start;
+            lastSelection.end = end;
+            lastSelection.text = selectedText;
+            lastSelection.hasSelection = true;
+            
+            // Rest of your existing code...
+            let formattedText = '';
+            const lines = selectedText.split('\n').filter(line => line.trim() !== '');
+            
+            switch(type) {
+                case 'bullet':
+                    formattedText = formatBulletList(lines);
+                    break;
+                case 'checkbox':
+                    formattedText = formatCheckboxList(lines);
+                    break;
+                case 'number':
+                    formattedText = formatNumberedList(lines);
+                    break;
+                case 'space':
+                    formattedText = formatSpacing(lines);
+                    break;
+            }
+            
+            input.value = input.value.substring(0, start) + formattedText + input.value.substring(end);
+            input.focus();
+            input.setSelectionRange(start, start + formattedText.length);
+            
+            if (copyButton) {
+                copyButton.innerHTML = '<i class="fas fa-copy"></i> Copy Formatted Text';
+                copyButton.style.background = 'var(--accent-color)';
+            }
+        }
+
+        function formatBulletList(lines) {
+            let html = '<ul style="margin: 0; padding: 0; line-height: 1.2;">\n';
+            for (let i = 0; i < lines.length; i++) {
+                html += `<li style="margin-top: ${i === 0 ? '0' : '-10px'}; margin-bottom: -10px;">${lines[i]}</li>\n`;
+            }
+            html += '</ul>';
+            return html;
+        }
+
+        function formatCheckboxList(lines) {
+            let html = '';
+            // Generate a unique base ID to avoid duplicates
+            const baseId = 'hc-' + (Math.floor(Math.random() * 9000) + 1000);
+            
+            for (let i = 0; i < lines.length; i++) {
+                const checkboxId = baseId + '-' + (i + 1);
+                html += `<div style="margin-top: ${i === 0 ? '0' : '-10px'}; margin-bottom: -10px; line-height: 1.2;">`;
+                html += `<input id="${checkboxId}" type="checkbox"> ${lines[i]}`;
+                html += '</div>\n';
+            }
+            return html;
+        }
+
+        function formatNumberedList(lines) {
+            let html = '<ol style="margin: 0; padding: 0; line-height: 1.2;">\n';
+            for (let i = 0; i < lines.length; i++) {
+                html += `<li style="margin-top: ${i === 0 ? '0' : '-10px'}; margin-bottom: -10px;">${lines[i]}</li>\n`;
+            }
+            html += '</ol>';
+            return html;
+        }
+        
+        function applyColor(colorCode) {
+            const input = document.getElementById('textInput');
+            let start, end, selectedText;
+            
+            // Try to get current selection
+            start = input.selectionStart;
+            end = input.selectionEnd;
+            selectedText = input.value.substring(start, end);
+            
+            // If no current selection, try to use saved selection
+            if (selectedText.trim() === '' && lastSelection.hasSelection) {
+                start = lastSelection.start;
+                end = lastSelection.end;
+                selectedText = lastSelection.text;
+            }
+            
+            if (selectedText.trim() === '') {
+                window.showMessage('Please select some text first!');
+                input.focus();
+                return;
+            }
+            
+            // Update saved selection
+            lastSelection.start = start;
+            lastSelection.end = end;
+            lastSelection.text = selectedText;
+            lastSelection.hasSelection = true;
+            
+            // Rest of your existing code...
+            const lines = selectedText.split('\n').filter(line => line.trim() !== '');
+            let formattedText = '';
+            
+            for (let i = 0; i < lines.length; i++) {
+                if (i > 0) {
+                    formattedText += '<br>\n';
+                }
+                formattedText += `<div style="color: ${colorCode}; margin-top: ${i === 0 ? '0' : '-10px'}; margin-bottom: -10px; line-height: 1.2;">${lines[i]}</div>`;
+            }
+            
+            input.value = input.value.substring(0, start) + formattedText + input.value.substring(end);
+            input.focus();
+            input.setSelectionRange(start, start + formattedText.length);
+            
+            // Hide palette after selection
+            document.getElementById('colorPalette').style.display = 'none';
+            
+            if (copyButton) {
+                copyButton.innerHTML = '<i class="fas fa-copy"></i> Copy Formatted Text';
+                copyButton.style.background = 'var(--accent-color)';
+            }
+        }
+        
+        function toggleColorPalette() {
+            const palette = document.getElementById('colorPalette');
+            if (palette.style.display === 'none' || palette.style.display === '') {
+                palette.style.display = 'grid';
+            } else {
+                palette.style.display = 'none';
+            }
+        }
+        
+        function formatSpacing(lines) {
+            const input = document.getElementById('textInput');
+            const cursorPosition = input.selectionStart;
+            const textBeforeCursor = input.value.substring(0, cursorPosition);
+            
+            // Check if selection starts at first line (no text before or only whitespace/newlines)
+            const linesBefore = textBeforeCursor.split('\n');
+            const isFirstLine = linesBefore.filter(line => line.trim() !== '').length === 0;
+            
+            let html = '';
+            for (let i = 0; i < lines.length; i++) {
+                if (isFirstLine && i === 0) {
+                    // First line of document: use -40px
+                    html += `<div style="margin-top: 0; margin-bottom: -40px; line-height: 1.2;">${lines[i]}</div>\n`;
+                } else {
+                    // Not first line: use -60px for ALL items
+                    html += `<div style="margin-top: ${i === 0 ? '-20px' : '-20px'}; margin-bottom: -60px; line-height: 1.2;">${lines[i]}</div>\n`;
+                }
+            }
+            return html;
+        }
+        
+        function copyFormattedText() {
+            const input = document.getElementById('textInput');
+            
+            if (!input.value.trim()) {
+                window.showMessage('No text to copy! Add some text first', true);
+                return;
+            }
+            
+            copyToClipboard(input.value);
+        }
+
+        function copyToClipboard(text) {
+            copyButton = document.querySelector('.control-btn.copy');
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopySuccess();
+                }).catch(() => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showCopySuccess();
+                } else {
+                    alert('Failed to copy text. Please try again.');
+                }
+            } catch (err) {
+                alert('Failed to copy text. Please try again.');
+            }
+            
+            document.body.removeChild(textarea);
+        }
+
+        function showCopySuccess() {
+            copyButton = document.querySelector('.control-btn.copy');
+            const originalHtml = copyButton.innerHTML;
+            copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            copyButton.style.background= 'rgba(193, 252, 50)';
+            
+            setTimeout(() => {
+                if (copyButton) {
+                    copyButton.innerHTML = originalHtml;
+                    copyButton.style.background = 'var(--accent-color)';
+                }
+            }, 2000);
+        }
+
+        function clearAll() {
+            if (confirm('Are you sure you want to clear everything?')) {
+                document.getElementById('textInput').value = '';
+                document.getElementById('textInput').focus();
+                
+                if (copyButton) {
+                    copyButton.innerHTML = '<i class="fas fa-copy"></i> Copy Formatted Text';
+                    copyButton.style.background = 'var(--accent-color)';
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const input = document.getElementById('textInput');
+            input.focus();
+            copyButton = document.querySelector('.control-btn.copy');
+            
+            // Save selection when textarea loses focus
+            input.addEventListener('blur', saveSelection);
+            
+            // Also save on selection change (for good measure)
+            input.addEventListener('mouseup', saveSelection);
+            input.addEventListener('keyup', saveSelection);
+            
+            // Existing contextmenu listener...
+            document.addEventListener('contextmenu', function(event) {
+                if (event.target.type === 'checkbox' && event.target.id.startsWith('hc-')) {
+                    handleCheckboxClick(event);
+                }
+            });
+            
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.addEventListener('touchstart', function() {
+                    this.style.transform = 'translateY(-1px)';
+                });
+                
+                button.addEventListener('touchend', function() {
+                    this.style.transform = '';
+                });
+            });
+            
+            // Existing palette click handler...
+            document.addEventListener('click', function(event) {
+                const palette = document.getElementById('colorPalette');
+                const colorBtn = document.querySelector('[onclick="toggleColorPalette()"]');
+                
+                if (palette.style.display === 'grid' && 
+                    !palette.contains(event.target) && 
+                    !colorBtn.contains(event.target)) {
+                    palette.style.display = 'none';
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>

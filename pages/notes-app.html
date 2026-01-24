@@ -1,0 +1,2377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Notes App | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+            padding-bottom: 90px;
+        }
+
+        .blur-background {
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            background-color: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+            min-height: calc(100vh - 90px);
+            padding-bottom: 90px;
+        }
+        
+        .app-header {
+            padding: var(--spacing-md) 0;
+            margin-bottom: var(--spacing-lg);
+            text-align: center;
+        }
+
+        .app-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .app-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .page-section {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 0;
+            overflow: hidden;
+        }
+        
+        .page-section.active {
+            opacity: 1;
+            visibility: visible;
+            position: relative;
+            height: auto;
+            overflow: visible;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+            gap: var(--spacing-sm);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* Notes Grid */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .note-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .note-card:hover {
+            border-color: rgba(193, 252, 50, 0.3);
+            box-shadow: 0 5px 15px rgba(193, 252, 50, 0.1);
+            transform: translateY(-4px);
+        }
+
+        .note-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .note-date {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .note-preview {
+            color: var(--text-secondary);
+            line-height: 1.4;
+            font-size: 0.9rem;
+            flex: 1;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .note-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .note-tag {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        /* Folders Grid */
+        .folders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .folder-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-lg);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            min-height: 180px;
+            justify-content: center;
+        }
+
+        .folder-card:hover {
+            border-color: rgba(193, 252, 50, 0.3);
+            box-shadow: 0 5px 15px rgba(193, 252, 50, 0.1);
+            transform: translateY(-4px);
+        }
+
+        .folder-icon {
+            color: var(--accent-color);
+            font-size: 2.5rem;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .folder-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .folder-count {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Enhanced Editor Header with better spacing and sticky behavior */
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            gap: var(--spacing-md);
+            border-radius: 25px;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .editor-title-section {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            flex: 1;
+        }
+        
+        .editor-actions {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+        
+        .back-button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        
+        .back-button:hover {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .editor-title-input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.3rem;
+            font-weight: 600;
+            flex: 1;
+            outline: none;
+            padding: 8px 0;
+        }
+        
+        .editor-title-input::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        /* Editor Action Buttons */
+        .editor-action-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--accent-color);
+            cursor: pointer;
+            font-size: 1rem;
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-small);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .editor-action-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: rgba(193, 252, 50, 0.3);
+        }
+        
+        .editor-action-btn.delete {
+            color: #ff3b30;
+            border-color: rgba(255, 59, 48, 0.2);
+        }
+        
+        .editor-action-btn.delete:hover {
+            background: rgba(255, 59, 48, 0.1);
+            border-color: rgba(255, 59, 48, 0.3);
+        }
+        
+        /* Improved editor content layout with better spacing */
+        .editor-content {
+            padding: var(--spacing-md);
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: calc(120vh - 500px);
+        }
+        
+        .editor-textarea {
+            width: 100%;
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            line-height: 1.8;
+            font-family: inherit;
+            outline: none;
+            resize: none;
+            padding: var(--spacing-md);
+        }
+        
+        .editor-textarea::placeholder {
+            color: var(--text-secondary);
+        }
+
+        /* Rich-text toolbar with horizontal scroll */
+        .rich-toolbar {
+            display: flex;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm);
+            background: var(--bg-card);
+            border-radius: var(--radius-small);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-x: auto;
+            overflow-y: hidden;
+            min-height: 50px;
+            max-width: 350px;
+            left: 5%;
+            align-items: center;
+            scroll-behavior: smooth;
+            position: relative;
+            bottom: 70px;
+            z-index: 100;
+        }
+
+        .rich-toolbar::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .rich-toolbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+        }
+
+        .rich-toolbar::-webkit-scrollbar-thumb {
+            background: rgba(193, 252, 50, 0.2);
+            border-radius: 2px;
+        }
+
+        .rich-toolbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(193, 252, 50, 0.4);
+        }
+
+        .toolbar-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-small);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            font-size: 0.9rem;
+        }
+
+        .toolbar-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: rgba(193, 252, 50, 0.3);
+            color: var(--accent-color);
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+        
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm);
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-small);
+            min-height: 50px;
+            align-content: flex-start;
+        }
+        
+        /* Folder Selector */
+        .folder-selector {
+            padding: var(--spacing-md);
+            background: var(--bg-card);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            margin-top: var(--spacing-md);
+        }
+        
+        .folder-selector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .folder-selector-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .folders-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm);
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-small);
+            min-height: 50px;
+            align-content: flex-start;
+        }
+        
+        .folder-selector-item {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .folder-selector-item:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: rgba(193, 252, 50, 0.3);
+        }
+        
+        .folder-selector-item.selected {
+            background: rgba(193, 252, 50, 0.15);
+            color: var(--accent-color);
+            border-color: rgba(193, 252, 50, 0.4);
+        }
+        
+        /* Small Button */
+        .small-btn {
+            background: var(--accent-color);
+            color: var(--bg-black);
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius-small);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        
+        .small-btn:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+        }
+        
+        /* Note Editor Page */
+        .note-editor-page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: var(--bg-black);
+            z-index: 999999;
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        
+        .note-editor-page.active {
+            display: flex;
+        }
+        
+        /* Folder Page */
+        .folder-page-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .back-to-folders {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .back-to-folders:hover {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+        
+        @media (max-width: 768px) {
+            .editor-header {
+                padding: var(--spacing-sm);
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .editor-title-section {
+                width: 100%;
+            }
+            
+            .editor-title-input {
+                font-size: 1.1rem;
+            }
+            
+            .editor-content {
+                padding: var(--spacing-sm);
+            }
+
+            .editor-textarea {
+                font-size: 1rem;
+                padding: var(--spacing-sm);
+            }
+
+            .rich-toolbar {
+                padding: var(--spacing-xs);
+            }
+
+            .toolbar-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 0.8rem;
+            }
+            
+            .editor-action-btn {
+                width: 36px;
+                height: 36px;
+            }
+        }
+
+        /* Settings */
+        .settings-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--accent-color);
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .settings-button:hover {
+            background: rgba(193, 252, 50, 0.15);
+            transform: rotate(120deg);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 20px rgba(193, 252, 50, 0.3);
+        }
+        
+        .settings-menu {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 300px;
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            z-index: 1001;
+            display: none;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .settings-menu.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .settings-header h3 {
+            color: var(--text-primary);
+            font-size: 1.3rem;
+        }
+        
+        .close-settings {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .close-settings:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .settings-content {
+            padding: var(--spacing-md);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .setting-item {
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .settings-action-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent-color);
+            color: var(--bg-black);
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .settings-action-btn:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+        }
+        
+        .settings-action-btn.reset-btn {
+            background: rgba(255, 59, 48, 0.2);
+            color: #ff3b30;
+            border: 1px solid rgba(255, 59, 48, 0.3);
+        }
+        
+        .settings-action-btn.reset-btn:hover {
+            background: rgba(255, 59, 48, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 999;
+            display: none;
+        }
+        
+        .settings-overlay.active {
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+            opacity: 0.5;
+        }
+
+        /* Floating Bottom Navigation Bar */
+        .bottom-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(22, 22, 24, 0.1);
+            backdrop-filter: blur(10px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            z-index: 99999;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            width: auto;
+        }
+        
+        .nav-button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            white-space: nowrap;
+            min-width: 60px;
+        }
+        
+        .nav-button.active {
+            color: var(--accent-color);
+            padding: 10px 25px;
+            background: rgba(193, 252, 50, 0.1);
+        }
+        
+        .nav-button:hover {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .nav-button:active {
+            transform: scale(0.95); /* This is the squished animation when clicking */
+            transition: transform 0.1s ease;
+        }
+        
+        .nav-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+        }
+        
+        /* Floating New Menu - Similar to vertical more bar */
+        .floating-new-menu {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            display: flex;
+            gap: var(--spacing-sm);
+            background: rgba(22, 22, 24, 0.7);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-medium);
+            padding: 10px;
+            z-index: 99999;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            visibility: hidden;
+            color: var(--accent-color);
+        }
+        
+        .floating-new-menu.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .floating-new-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-small);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--accent-color);
+            padding: 0;
+        }
+        
+        .floating-new-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: rgba(193, 252, 50, 0.3);
+            transform: translateY(-3px);
+            color: var(--accent-color);
+        }
+        
+        .floating-new-btn i {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+        
+        .floating-new-btn::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: var(--bg-black);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: var(--radius-small);
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+        }
+        
+        .floating-new-btn:hover::after {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        /* Overlay for floating menu */
+        .floating-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 99998;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .floating-menu-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+        
+        /* Active state for New button */
+        #newButton.active,
+        #newFolderButton.active {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border-color: rgba(193, 252, 50, 0.3);
+            transform: rotate(45deg);
+        }
+        
+        .new-notes-btn,
+        .new-folder-btn {
+            background: var(--accent-color);
+            color: var(--accent-color);
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius-small);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 40px;
+        }
+        
+        .new-notes-btn:hover,
+        .new-folder-btn:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+        }
+        
+        /* Active state for bottom nav New button */
+        #bottomNewButton,
+        #bottomNewButton.active,
+        #bottomNewButton:hover,
+        #bottomNewButton.active:hover {
+            background: transparent !important;
+            border-color: transparent !important;
+        }
+        
+        #bottomNewButton .nav-icon .icon {
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        #bottomNewButton.active .nav-icon .icon {
+            transform: rotate(180deg);
+        }
+        
+        #bottomNewButton:not(.active) .nav-icon .icon {
+            transform: rotate(0deg);
+        }
+        
+        /* Move button style */
+        .editor-action-btn.move {
+            color: var(--accent-color);
+            border-color: rgba(193, 252, 50, 0.1);
+        }
+        
+        .editor-action-btn.move:hover {
+            background: rgba(90, 200, 250, 0.1);
+            border-color: rgba(90, 200, 250, 0.3);
+        }
+        
+        /* Floating Folder Window Styles */
+        .folder-window {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 350px;
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            z-index: 1000000;
+            display: none;
+            opacity: 0;
+            transform: translate(-50%, -50%) translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .folder-window.active {
+            display: block;
+            opacity: 1;
+            transform: translate(-50%, -50%) translateY(0);
+        }
+        
+        .folder-window-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .folder-window-header h3 {
+            color: var(--text-primary);
+            font-size: 1.3rem;
+            margin: 0;
+        }
+        
+        .folder-window-content {
+            padding: var(--spacing-md);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .folder-window-actions {
+            display: flex;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            justify-content: flex-end;
+        }
+        
+        .folder-window-btn {
+            padding: 10px 20px;
+            border-radius: var(--radius-small);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 0.9rem;
+        }
+        
+        .folder-window-btn.primary {
+            background: var(--accent-color);
+            color: var(--bg-black);
+        }
+        
+        .folder-window-btn.primary:hover {
+            background: var(--accent-dark);
+        }
+        
+        .folder-window-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+        
+        .folder-window-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .folder-window-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 999999;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .folder-window-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+        
+        /* Folder item in window */
+        .folder-window-item {
+            padding: 12px;
+            border-radius: var(--radius-small);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .folder-window-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .folder-window-item.selected {
+            background: rgba(193, 252, 50, 0.15);
+            border-color: rgba(193, 252, 50, 0.4);
+        }
+        
+        .folder-window-item i {
+            color: var(--accent-color);
+            font-size: 1.2rem;
+        }
+        
+        .folder-window-item span {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        
+        .folder-window-item .note-count {
+            margin-left: auto;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+        
+        /* Reading Mode Styles */
+        .reading-mode {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: var(--bg-black);
+            z-index: 1000000;
+            display: none;
+            overflow-y: auto;
+            padding: var(--spacing-md);
+        }
+        
+        .reading-mode.active {
+            display: block;
+        }
+        
+        .reading-mode-header {
+            max-width: 800px;
+            margin: 0 auto 40px;
+            padding-top: 20px;
+        }
+        
+        .back-to-edit {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border: 1px solid rgba(193, 252, 50, 0.3);
+            padding: 10px 20px;
+            border-radius: var(--radius-small);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-to-edit:hover {
+            background: rgba(193, 252, 50, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .reading-mode-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .reading-date {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 40px;
+        }
+        
+        .reading-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding-bottom: 100px;
+            line-height: 1.8;
+            font-size: 1.1rem;
+        }
+        
+        /* Markdown styling for reading mode */
+        .reading-content h1,
+        .reading-content h2,
+        .reading-content h3 {
+            color: var(--text-primary);
+            margin: 30px 0 15px;
+        }
+        
+        .reading-content h1 { font-size: 2rem; }
+        .reading-content h2 { font-size: 1.7rem; }
+        .reading-content h3 { font-size: 1.4rem; }
+        
+        .reading-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .reading-content ul,
+        .reading-content ol {
+            margin-bottom: 20px;
+            padding-left: 20px;
+        }
+        
+        .reading-content li {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        
+        .reading-content strong {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        
+        .reading-content em {
+            font-style: italic;
+        }
+        
+        .reading-content code {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: var(--accent-color);
+        }
+        
+        .reading-content pre {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        
+        .reading-content blockquote {
+            border-left: 3px solid var(--accent-color);
+            padding-left: 20px;
+            margin: 20px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .reading-content a {
+            color: var(--accent-color);
+            text-decoration: none;
+            border-bottom: 1px solid rgba(193, 252, 50, 0.3);
+        }
+        
+        .reading-content a:hover {
+            border-bottom-color: var(--accent-color);
+        }
+        
+        /* Mobile adjustments for reading mode */
+        @media (max-width: 768px) {
+            .reading-mode-header h1 {
+                font-size: 2rem;
+            }
+            
+            .reading-content {
+                font-size: 1rem;
+            }
+            
+            .reading-content h1 { font-size: 1.7rem; }
+            .reading-content h2 { font-size: 1.5rem; }
+            .reading-content h3 { font-size: 1.3rem; }
+        }
+        
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: var(--spacing-lg) 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: var(--spacing-xl);
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .social-links a {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+        }
+
+        .social-links a:hover {
+            color: var(--accent-color);
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        <!-- Settings Button -->
+        <button class="settings-button" id="settingsButton">
+            <i class="fas fa-cog"></i>
+        </button>
+
+        <!-- Settings Menu -->
+        <div class="settings-menu" id="settingsMenu">
+            <div class="settings-header">
+                <h3>Settings</h3>
+                <button class="close-settings" id="closeSettings">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="settings-content">
+                <div class="setting-item">
+                    <button id="exportNotes" class="settings-action-btn">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+                <div class="setting-item">
+                    <button id="importNotes" class="settings-action-btn">
+                        <i class="fas fa-upload"></i> Import
+                    </button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;">
+                </div>
+                <div class="setting-item">
+                    <button id="resetNotes" class="settings-action-btn reset-btn">
+                        <i class="fas fa-trash"></i> Reset All
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Overlay -->
+        <div class="settings-overlay" id="settingsOverlay"></div>
+
+        <!-- Home Page -->
+        <section id="home-page" class="page-section active">
+            <div class="app-header">
+                <h1 class="app-title">Notes</h1>
+                <p class="app-subtitle">Your thoughts, organized</p>
+            </div>
+
+            <div class="section-header">
+                <h2 class="section-title">All Notes</h2>
+            </div>
+
+            <div class="notes-grid" id="notesGrid">
+                <!-- Notes will be generated here -->
+            </div>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <i class="fas fa-sticky-note"></i>
+                <p>No notes yet. Create one to get started!</p>
+            </div>
+            <!-- Footer -->
+            <footer style="margin-top: 200px;">
+                <div class="social-links">
+                    <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                    <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+                </div>
+                <p>© 2026 lildavegoth — Jakarta</p>
+                <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                    Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+                </p>
+            </footer>
+        </section>
+
+        <!-- Folders Page -->
+        <section id="folders-page" class="page-section">
+            <div class="app-header">
+                <h1 class="app-title">Folders</h1>
+                <p class="app-subtitle">Organize your notes</p>
+            </div>
+
+            <div class="section-header">
+                <h2 class="section-title">All Folders</h2>
+            </div>
+
+            <div class="folders-grid" id="foldersGrid">
+                <!-- Folders will be generated here -->
+            </div>
+
+            <div class="empty-state" id="foldersEmptyState" style="display: none;">
+                <i class="fas fa-folder-open"></i>
+                <p>No folders yet. Create one to organize your notes!</p>
+            </div>
+            
+            <!-- Footer -->
+            <footer style="margin-top: -10px;">
+                <div class="social-links">
+                    <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                    <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+                </div>
+                <p>© 2026 lildavegoth — Jakarta</p>
+                <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                    Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+                </p>
+            </footer>
+        </section>
+
+        <!-- Folder Notes Page -->
+        <section id="folder-notes-page" class="page-section">
+            <div class="folder-page-header">
+                <button class="back-to-folders" onclick="switchPage('folders')">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div>
+                    <h1 class="app-title" id="folderPageTitle">Folder</h1>
+                    <p class="app-subtitle" id="folderPageSubtitle"></p>
+                </div>
+            </div>
+
+            <div class="notes-grid" id="folderNotesGrid">
+                <!-- Notes in folder will be generated here -->
+            </div>
+
+            <div class="empty-state" id="folderEmptyState" style="display: none;">
+                <i class="fas fa-sticky-note"></i>
+                <p>No notes in this folder yet.</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Full screen note editor page -->
+    <div class="note-editor-page" id="noteEditorPage">
+        <div class="editor-header">
+            <div class="editor-title-section">
+                <button class="back-button" id="backToHome">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <input type="text" class="editor-title-input" id="editorTitle" placeholder="Note title...">
+            </div>
+            <div class="editor-actions">
+                <button class="editor-action-btn" id="saveNote">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button class="editor-action-btn delete" id="deleteNote">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <button class="editor-action-btn move" id="moveNote">
+                    <i class="fas fa-folder"></i>
+                </button>
+                <button class="editor-action-btn" id="readingModeBtn">
+                    <i class="fas fa-book-reader"></i>
+                </button>
+            </div>
+        </div>
+    
+        <div class="editor-content">
+            <textarea class="editor-textarea" id="editorContent" placeholder="Start typing your note here..."></textarea>
+        </div>
+        
+        <!-- Rich-text toolbar with multiple formatting options -->
+        <div class="rich-toolbar" id="richToolbar">
+            <button class="toolbar-btn" title="Bold" onclick="insertMarkdown('**', '**')">
+                <i class="fas fa-bold"></i>
+            </button>
+            <button class="toolbar-btn" title="Italic" onclick="insertMarkdown('*', '*')">
+                <i class="fas fa-italic"></i>
+            </button>
+            <button class="toolbar-btn" title="Strikethrough" onclick="insertMarkdown('~~', '~~')">
+                <i class="fas fa-strikethrough"></i>
+            </button>
+            <button class="toolbar-btn" title="Heading" onclick="insertMarkdown('# ', '')">
+                <i class="fas fa-heading"></i>
+            </button>
+            <div class="toolbar-divider"></div>
+            <button class="toolbar-btn" title="Bullet List" onclick="insertMarkdown('• ', '')">
+                <i class="fas fa-list-ul"></i>
+            </button>
+            <button class="toolbar-btn" title="Numbered List" onclick="insertMarkdown('1. ', '')">
+                <i class="fas fa-list-ol"></i>
+            </button>
+            <div class="toolbar-divider"></div>
+            <button class="toolbar-btn" title="Quote" onclick="insertMarkdown('> ', '')">
+                <i class="fas fa-quote-left"></i>
+            </button>
+            <button class="toolbar-btn" title="Link" onclick="insertLink()">
+                <i class="fas fa-link"></i>
+            </button>
+            <button class="toolbar-btn" title="Code" onclick="insertMarkdown('`', '`')">
+                <i class="fas fa-code"></i>
+            </button>
+            <div class="toolbar-divider"></div>
+            <button class="toolbar-btn" title="Undo" onclick="undo()">
+                <i class="fas fa-undo"></i>
+            </button>
+            <button class="toolbar-btn" title="Redo" onclick="redo()">
+                <i class="fas fa-redo"></i>
+            </button>
+            <button class="toolbar-btn" title="Clear" onclick="clearText()">
+                <i class="fas fa-eraser"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Floating Bottom Navigation Bar -->
+    <div class="bottom-nav">
+        <!-- Home Button -->
+        <button class="nav-button active" onclick="switchPage('home')">
+            <div class="nav-icon">
+                <span class="icon icon-home"></span>
+            </div>
+        </button>
+        
+        <!-- New Note Button -->
+        <button class="nav-button" id="bottomNewButton" onclick="toggleFloatingMenu()">
+            <div class="nav-icon">
+                <span style="height: 19px; width: 19px;" class="icon icon-plus"></span>
+            </div>
+        </button>
+        
+        <!-- Folder Button -->
+        <button class="nav-button" onclick="switchPage('folders')">
+            <div class="nav-icon">
+                <span class="icon icon-folder"></span>
+            </div>
+        </button>
+    </div>
+    
+    <!-- Floating New Menu -->
+    <div class="floating-new-menu" id="floatingNewMenu">
+        <button class="floating-new-btn" data-type="note"  onclick="createNewNote(); closeFloatingMenu();">
+            <span class="icon icon-note"></span>
+        </button>
+        <button class="floating-new-btn" data-type="folder" onclick="createNewFolder(); closeFloatingMenu();">
+            <span class="icon icon-newfolder"></span>
+        </button>
+    </div>
+    
+    <div class="floating-menu-overlay" id="floatingMenuOverlay"></div>
+    
+    <!-- Floating Folder Window -->
+    <div class="folder-window" id="folderWindow">
+        <div class="folder-window-header">
+            <h3>Move to Folder</h3>
+            <button class="close-settings" id="closeFolderWindow">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="folder-window-content" id="folderWindowContent">
+            <!-- Folders will be loaded here -->
+        </div>
+        <div class="folder-window-actions">
+            <button class="folder-window-btn secondary" onclick="createNewFolderFromWindow()">
+                <i class="fas fa-plus"></i> New Folder
+            </button>
+            <button class="folder-window-btn primary" onclick="applyFolderSelection()">
+                Move Here
+            </button>
+        </div>
+    </div>
+    
+    <div class="folder-window-overlay" id="folderWindowOverlay"></div>
+    
+    <!-- Reading Mode Display -->
+    <div class="reading-mode" id="readingMode">
+        <div class="reading-mode-header">
+            <button class="back-to-edit" id="backToEdit">
+                <i class="fas fa-edit"></i> Edit
+            </button>
+            <h1 id="readingTitle"></h1>
+            <p class="reading-date" id="readingDate"></p>
+        </div>
+        <div class="reading-content" id="readingContent">
+            <!-- Markdown content will be rendered here -->
+        </div>
+        
+    </div>
+
+    <script>
+        let notesData = [];
+        let foldersData = [];
+        let currentNoteId = null;
+        let undoStack = [];
+        let redoStack = [];
+        let currentFolderId = null;
+        let selectedFolderId = null;
+    
+        // Initialize app
+        function init() {
+            loadNotesFromStorage();
+            loadFoldersFromStorage();
+            renderNotes();
+            renderFolders();
+            setupEventListeners();
+        }
+    
+        // Load notes from localStorage
+        function loadNotesFromStorage() {
+            const stored = localStorage.getItem('notesApp');
+            notesData = stored ? JSON.parse(stored) : getDefaultNotes();
+        }
+    
+        // Load folders from localStorage
+        function loadFoldersFromStorage() {
+            const stored = localStorage.getItem('notesAppFolders');
+            foldersData = stored ? JSON.parse(stored) : getDefaultFolders();
+            updateFolderCounts();
+        }
+    
+        // Save notes to localStorage
+        function saveNotesToStorage() {
+            localStorage.setItem('notesApp', JSON.stringify(notesData));
+            renderNotes();
+            updateFolderCounts();
+        }
+    
+        // Save folders to localStorage
+        function saveFoldersToStorage() {
+            localStorage.setItem('notesAppFolders', JSON.stringify(foldersData));
+            renderFolders();
+            updateFolderCounts();
+        }
+    
+        // Update folder counts based on notes
+        function updateFolderCounts() {
+            foldersData.forEach(folder => {
+                folder.noteCount = notesData.filter(note => note.folderId === folder.id).length;
+            });
+        }
+    
+        // Get default folders
+        function getDefaultFolders() {
+            return [
+                {
+                    id: 1,
+                    name: 'Personal',
+                    icon: 'fas fa-user',
+                    noteCount: 1
+                }
+            ];
+        }
+    
+        // Render all notes
+        function renderNotes() {
+            const notesGrid = document.getElementById('notesGrid');
+            const emptyState = document.getElementById('emptyState');
+    
+            if (notesData.length === 0) {
+                notesGrid.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+    
+            emptyState.style.display = 'none';
+            notesGrid.innerHTML = notesData.map(note => `
+                <div class="note-card" onclick="openNoteEditor(${note.id})">
+                    <h3 class="note-title">${note.title || 'Untitled'}</h3>
+                    <p class="note-date">${formatDate(note.date)}</p>
+                    <p class="note-preview">${note.content || 'No content'}</p>
+                    <div class="note-tags">
+                        ${note.tags.map(tag => `<span class="note-tag">${tag}</span>`).join('')}
+                        ${note.folderId ? `<span class="note-tag" style="background: rgba(255, 255, 255, 0.1);">${getFolderName(note.folderId)}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+    
+        // Render all folders
+        function renderFolders() {
+            const foldersGrid = document.getElementById('foldersGrid');
+            const emptyState = document.getElementById('foldersEmptyState');
+    
+            if (foldersData.length === 0) {
+                foldersGrid.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+    
+            emptyState.style.display = 'none';
+            foldersGrid.innerHTML = foldersData.map(folder => `
+                <div class="folder-card" onclick="openFolder(${folder.id})">
+                    <div class="folder-icon">
+                        <i class="${folder.icon}"></i>
+                    </div>
+                    <h3 class="folder-name">${folder.name}</h3>
+                    <p class="folder-count">${folder.noteCount} note${folder.noteCount !== 1 ? 's' : ''}</p>
+                </div>
+            `).join('');
+        }
+    
+        // Open folder and show notes
+        function openFolder(folderId) {
+            const folder = foldersData.find(f => f.id === folderId);
+            if (!folder) return;
+            
+            currentFolderId = folderId;
+            const folderNotes = notesData.filter(note => note.folderId === folderId);
+            
+            document.getElementById('folderPageTitle').textContent = folder.name;
+            document.getElementById('folderPageSubtitle').textContent = `${folderNotes.length} note${folderNotes.length !== 1 ? 's' : ''}`;
+            
+            const folderNotesGrid = document.getElementById('folderNotesGrid');
+            const folderEmptyState = document.getElementById('folderEmptyState');
+            
+            if (folderNotes.length === 0) {
+                folderNotesGrid.innerHTML = '';
+                folderEmptyState.style.display = 'block';
+            } else {
+                folderEmptyState.style.display = 'none';
+                folderNotesGrid.innerHTML = folderNotes.map(note => `
+                    <div class="note-card" onclick="openNoteEditor(${note.id})">
+                        <h3 class="note-title">${note.title || 'Untitled'}</h3>
+                        <p class="note-date">${formatDate(note.date)}</p>
+                        <p class="note-preview">${note.content || 'No content'}</p>
+                        <div class="note-tags">
+                            ${note.tags.map(tag => `<span class="note-tag">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            switchPage('folder-notes');
+        }
+    
+        // Create new note
+        function createNewNote() {
+            const id = Date.now();
+            const newNote = {
+                id: id,
+                title: '',
+                content: '',
+                tags: [],
+                date: new Date().toISOString(),
+                folderId: currentFolderId || null
+            };
+            
+            notesData.unshift(newNote);
+            saveNotesToStorage();
+            openNoteEditor(id);
+            closeFloatingMenu();
+        }
+    
+        // Create new folder
+        function createNewFolder() {
+            const folderName = prompt('Enter folder name:');
+            if (!folderName || folderName.trim() === '') return;
+            
+            const newFolder = {
+                id: Date.now(),
+                name: folderName.trim(),
+                icon: 'fas fa-folder',
+                noteCount: 0
+            };
+            
+            foldersData.unshift(newFolder);
+            saveFoldersToStorage();
+            closeFloatingMenu();
+            showMessage('Folder created!', 'success');
+        }
+    
+        // Get folder name by ID
+        function getFolderName(folderId) {
+            const folder = foldersData.find(f => f.id === folderId);
+            return folder ? folder.name : 'Unknown';
+        }
+    
+        // Open note editor
+        function openNoteEditor(noteId) {
+            // Close reading mode if it's open
+            if (document.getElementById('readingMode').classList.contains('active')) {
+                document.getElementById('readingMode').classList.remove('active');
+            }
+            
+            currentNoteId = noteId;
+            const note = notesData.find(n => n.id === noteId);
+            if (!note) return;
+        
+            document.getElementById('editorTitle').value = note.title;
+            document.getElementById('editorContent').value = note.content;
+            renderEditorTags();
+        
+            document.getElementById('noteEditorPage').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            undoStack = [];
+            redoStack = [];
+        }
+    
+        // Close note editor
+        function closeNoteEditor() {
+            const note = notesData.find(n => n.id === currentNoteId);
+            if (note) {
+                note.title = document.getElementById('editorTitle').value;
+                note.content = document.getElementById('editorContent').value;
+                note.date = new Date().toISOString();
+            }
+        
+            // Exit reading mode if active
+            if (document.getElementById('readingMode').classList.contains('active')) {
+                document.getElementById('readingMode').classList.remove('active');
+            }
+            
+            document.getElementById('noteEditorPage').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            saveNotesToStorage();
+            showMessage('Note saved!', 'success');
+        }
+    
+        // Delete current note
+        function deleteCurrentNote() {
+            if (!confirm('Delete this note?')) return;
+            
+            // Exit reading mode if active
+            if (document.getElementById('readingMode').classList.contains('active')) {
+                document.getElementById('readingMode').classList.remove('active');
+            }
+            
+            notesData = notesData.filter(n => n.id !== currentNoteId);
+            document.getElementById('noteEditorPage').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            saveNotesToStorage();
+            showMessage('Note deleted!', 'error');
+        }
+    
+        // Render tags in editor
+        function renderEditorTags() {
+            const note = notesData.find(n => n.id === currentNoteId);
+            if (!note) return;
+    
+        }
+    
+        // Remove tag
+        function removeTag(tagName) {
+            const note = notesData.find(n => n.id === currentNoteId);
+            if (note) {
+                note.tags = note.tags.filter(t => t !== tagName);
+                renderEditorTags();
+            }
+        }
+    
+        // Open folder window
+        function openFolderWindow() {
+            const note = notesData.find(n => n.id === currentNoteId);
+            selectedFolderId = note ? note.folderId : null;
+            renderFolderWindow();
+            document.getElementById('folderWindow').classList.add('active');
+            document.getElementById('folderWindowOverlay').classList.add('active');
+        }
+    
+        // Close folder window
+        function closeFolderWindow() {
+            document.getElementById('folderWindow').classList.remove('active');
+            document.getElementById('folderWindowOverlay').classList.remove('active');
+        }
+    
+        // Render folders in floating window
+        function renderFolderWindow() {
+            const note = notesData.find(n => n.id === currentNoteId);
+            const folderWindowContent = document.getElementById('folderWindowContent');
+            
+            folderWindowContent.innerHTML = '';
+            
+            // Add "No Folder" option
+            const noFolderDiv = document.createElement('div');
+            noFolderDiv.className = `folder-window-item ${!note.folderId ? 'selected' : ''}`;
+            noFolderDiv.onclick = () => selectFolderInWindow(null);
+            noFolderDiv.innerHTML = `
+                <i class="fas fa-times"></i>
+                <span>No Folder</span>
+            `;
+            folderWindowContent.appendChild(noFolderDiv);
+            
+            // Add all folders
+            foldersData.forEach(folder => {
+                const folderDiv = document.createElement('div');
+                folderDiv.className = `folder-window-item ${note.folderId === folder.id ? 'selected' : ''}`;
+                folderDiv.onclick = () => selectFolderInWindow(folder.id);
+                folderDiv.innerHTML = `
+                    <i class="${folder.icon}"></i>
+                    <span>${folder.name}</span>
+                    <span class="note-count">${folder.noteCount} notes</span>
+                `;
+                folderWindowContent.appendChild(folderDiv);
+            });
+        }
+    
+        // Select folder in window
+        function selectFolderInWindow(folderId) {
+            selectedFolderId = folderId;
+            
+            // Remove selected class from all items
+            document.querySelectorAll('.folder-window-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked item
+            const items = document.querySelectorAll('.folder-window-item');
+            if (folderId === null) {
+                items[0].classList.add('selected');
+            } else {
+                const folderIndex = foldersData.findIndex(f => f.id === folderId) + 1;
+                if (items[folderIndex]) {
+                    items[folderIndex].classList.add('selected');
+                }
+            }
+        }
+    
+        // Apply folder selection
+        function applyFolderSelection() {
+            const note = notesData.find(n => n.id === currentNoteId);
+            if (note) {
+                note.folderId = selectedFolderId;
+                saveNotesToStorage();
+                closeFolderWindow();
+                showMessage('Note moved!', 'success');
+            }
+        }
+    
+        // Create new folder from window
+        function createNewFolderFromWindow() {
+            const folderName = prompt('Enter folder name:');
+            if (!folderName || folderName.trim() === '') return;
+            
+            const newFolder = {
+                id: Date.now(),
+                name: folderName.trim(),
+                icon: 'fas fa-folder',
+                noteCount: 0
+            };
+            
+            foldersData.unshift(newFolder);
+            saveFoldersToStorage();
+            renderFolderWindow();
+            showMessage('Folder created!', 'success');
+        }
+    
+        // Text formatting functions
+        function insertMarkdown(before, after) {
+            const textarea = document.getElementById('editorContent');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            const selected = text.substring(start, end);
+    
+            const newText = text.substring(0, start) + before + selected + after + text.substring(end);
+            textarea.value = newText;
+            textarea.selectionStart = start + before.length;
+            textarea.selectionEnd = start + before.length + selected.length;
+            textarea.focus();
+        }
+    
+        function insertLink() {
+            const url = prompt('Enter URL:');
+            if (!url) return;
+            const linkText = prompt('Enter link text:') || 'Link';
+            insertMarkdown('[' + linkText + '](' + url + ')', '');
+        }
+    
+        function clearText() {
+            if (confirm('Clear all content?')) {
+                document.getElementById('editorContent').value = '';
+                document.getElementById('editorContent').focus();
+            }
+        }
+    
+        function undo() {
+            const textarea = document.getElementById('editorContent');
+            if (redoStack.length === 0) {
+                redoStack.push(textarea.value);
+            }
+            if (undoStack.length > 0) {
+                textarea.value = undoStack.pop();
+            }
+        }
+    
+        function redo() {
+            const textarea = document.getElementById('editorContent');
+            if (undoStack.length === 0) {
+                undoStack.push(textarea.value);
+            }
+            if (redoStack.length > 0) {
+                textarea.value = redoStack.pop();
+            }
+        }
+    
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+    
+            if (date.toDateString() === today.toDateString()) {
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } else if (date.toDateString() === yesterday.toDateString()) {
+                return 'Yesterday';
+            } else {
+                return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            }
+        }
+    
+        // Floating menu functions
+        function toggleFloatingMenu() {
+            const floatingMenu = document.getElementById('floatingNewMenu');
+            const overlay = document.getElementById('floatingMenuOverlay');
+            const newButton = document.getElementById('bottomNewButton');
+            
+            if (floatingMenu.classList.contains('active')) {
+                // Close menu
+                floatingMenu.classList.remove('active');
+                overlay.classList.remove('active');
+                newButton.classList.remove('active');
+            } else {
+                // Open menu
+                floatingMenu.classList.add('active');
+                overlay.classList.add('active');
+                newButton.classList.add('active');
+            }
+        }
+    
+        function setActiveOnNewButtons() {
+            const buttons = [
+                document.getElementById('newButton'),
+                document.getElementById('newFolderButton'),
+                document.getElementById('bottomNewButton')
+            ];
+            
+            buttons.forEach(button => {
+                if (button) {
+                    button.classList.add('active');
+                    if (button.id === 'newButton' || button.id === 'newFolderButton') {
+                        const icon = button.querySelector('i');
+                        if (icon) {
+                            icon.style.transform = 'rotate(45deg)';
+                            icon.style.transition = 'transform 0.3s ease';
+                        }
+                    }
+                }
+            });
+        }
+    
+        function removeActiveFromNewButtons() {
+            const buttons = [
+                document.getElementById('newButton'),
+                document.getElementById('newFolderButton'),
+                document.getElementById('bottomNewButton')
+            ];
+            
+            buttons.forEach(button => {
+                if (button) {
+                    button.classList.remove('active');
+                    if (button.id === 'newButton' || button.id === 'newFolderButton') {
+                        const icon = button.querySelector('i');
+                        if (icon) {
+                            icon.style.transform = 'rotate(0deg)';
+                        }
+                    }
+                }
+            });
+        }
+    
+        function closeFloatingMenu() {
+            const floatingMenu = document.getElementById('floatingNewMenu');
+            const overlay = document.getElementById('floatingMenuOverlay');
+            const bottomNewButton = document.getElementById('bottomNewButton');
+            
+            floatingMenu.classList.remove('active');
+            overlay.classList.remove('active');
+            
+            // Also remove active class from the button
+            bottomNewButton.classList.remove('active');
+        }
+        
+        // Toggle reading mode
+        function toggleReadingMode() {
+            const note = notesData.find(n => n.id === currentNoteId);
+            if (!note) return;
+            
+            document.getElementById('readingTitle').textContent = note.title || 'Untitled';
+            document.getElementById('readingDate').textContent = `Last edited: ${formatDate(note.date)}`;
+            
+            // Convert markdown to HTML for reading mode
+            const htmlContent = convertMarkdownToHTML(note.content);
+            document.getElementById('readingContent').innerHTML = htmlContent;
+            
+            // Switch to reading mode
+            document.getElementById('noteEditorPage').classList.remove('active');
+            document.getElementById('readingMode').classList.add('active');
+        }
+        
+        // Go back to edit mode
+        function backToEditMode() {
+            document.getElementById('readingMode').classList.remove('active');
+            document.getElementById('noteEditorPage').classList.add('active');
+        }
+        
+        // Convert markdown to HTML (simple implementation)
+        function convertMarkdownToHTML(markdown) {
+            if (!markdown) return '<p>No content</p>';
+            
+            let html = markdown;
+            
+            // Headers
+            html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+            html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+            html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+            
+            // Bold
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Italic
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Strikethrough
+            html = html.replace(/~~(.*?)~~/g, '<del>$1</del>');
+            
+            // Code
+            html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+            
+            // Links
+            html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
+            
+            // Blockquotes
+            html = html.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
+            
+            // Lists
+            html = html.replace(/^• (.*$)/gm, '<li>$1</li>');
+            html = html.replace(/^1\. (.*$)/gm, '<li>$1</li>');
+            html = html.replace(/^- (.*$)/gm, '<li>$1</li>');
+            
+            // Wrap lists in ul/ol
+            html = html.replace(/(<li>.*<\/li>)/g, function(match) {
+                return '<ul>' + match + '</ul>';
+            });
+            
+            // Paragraphs
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = html.replace(/^\s*(\S+)/gm, '<p>$1');
+            
+            // Handle line breaks
+            html = html.replace(/\n/g, '<br>');
+            
+            // Ensure all content is wrapped in paragraphs if needed
+            if (!html.startsWith('<h1>') && !html.startsWith('<h2>') && !html.startsWith('<h3>') && 
+                !html.startsWith('<ul>') && !html.startsWith('<blockquote>')) {
+                html = '<p>' + html + '</p>';
+            }
+            
+            return html;
+        }
+    
+        // Switch page
+        function switchPage(page) {
+            const currentActivePage = document.querySelector('.page-section.active');
+            const targetPage = document.getElementById(page + '-page');
+            
+            if (currentActivePage === targetPage) return;
+            
+            document.querySelectorAll('.nav-button').forEach(button => {
+                button.classList.remove('active');
+                button.style.transform = 'scaleX(1)';
+                button.style.padding = '10px 20px';
+            });
+            
+            const clickedButton = event.currentTarget;
+            
+            if (currentActivePage) {
+                currentActivePage.style.opacity = '0';
+                currentActivePage.style.visibility = 'hidden';
+                
+                setTimeout(() => {
+                    currentActivePage.classList.remove('active');
+                    currentActivePage.style.height = '0';
+                    currentActivePage.style.overflow = 'hidden';
+                    
+                    targetPage.style.height = 'auto';
+                    targetPage.style.overflow = 'visible';
+                    targetPage.classList.add('active');
+                    
+                    setTimeout(() => {
+                        targetPage.style.opacity = '1';
+                        targetPage.style.visibility = 'visible';
+                        
+                        if (clickedButton) {
+                            clickedButton.classList.add('active');
+                            clickedButton.style.transform = 'scaleX(1.1)';
+                            clickedButton.style.padding = '10px 25px';
+                        }
+                        
+                        window.scrollTo(0, 0);
+                    }, 50);
+                }, 300);
+            } else {
+                targetPage.style.height = 'auto';
+                targetPage.style.overflow = 'visible';
+                targetPage.classList.add('active');
+                targetPage.style.opacity = '1';
+                targetPage.style.visibility = 'visible';
+                
+                if (clickedButton) {
+                    clickedButton.classList.add('active');
+                    clickedButton.style.transform = 'scaleX(1.1)';
+                    clickedButton.style.padding = '10px 25px';
+                }
+                
+                window.scrollTo(0, 0);
+                closeFloatingMenu();
+            }
+        }
+    
+        // Setup event listeners
+        function setupEventListeners() {
+            // Editor events
+            document.getElementById('backToHome').addEventListener('click', closeNoteEditor);
+            document.getElementById('saveNote').addEventListener('click', closeNoteEditor);
+            document.getElementById('deleteNote').addEventListener('click', deleteCurrentNote);
+            document.getElementById('moveNote').addEventListener('click', openFolderWindow);
+            document.getElementById('readingModeBtn').addEventListener('click', toggleReadingMode);
+            document.getElementById('backToEdit').addEventListener('click', backToEditMode);
+    
+            // Folder window events
+            document.getElementById('closeFolderWindow').addEventListener('click', closeFolderWindow);
+            document.getElementById('folderWindowOverlay').addEventListener('click', closeFolderWindow);
+    
+            // Settings events
+            const settingsButton = document.getElementById('settingsButton');
+            const settingsMenu = document.getElementById('settingsMenu');
+            const closeSettings = document.getElementById('closeSettings');
+            const settingsOverlay = document.getElementById('settingsOverlay');
+    
+            settingsButton.addEventListener('click', () => {
+                settingsMenu.classList.add('active');
+                settingsOverlay.classList.add('active');
+            });
+    
+            closeSettings.addEventListener('click', () => {
+                settingsMenu.classList.remove('active');
+                settingsOverlay.classList.remove('active');
+            });
+    
+            settingsOverlay.addEventListener('click', () => {
+                settingsMenu.classList.remove('active');
+                settingsOverlay.classList.remove('active');
+            });
+    
+            // Export notes
+            document.getElementById('exportNotes').addEventListener('click', () => {
+                const data = {
+                    version: '1.0',
+                    exportDate: new Date().toISOString(),
+                    notes: notesData,
+                    folders: foldersData
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `notes-export-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showMessage('Notes exported!', 'success');
+                settingsMenu.classList.remove('active');
+                settingsOverlay.classList.remove('active');
+            });
+    
+            // Import notes
+            document.getElementById('importNotes').addEventListener('click', () => {
+                document.getElementById('importFile').click();
+            });
+    
+            document.getElementById('importFile').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+    
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        if (data.notes && Array.isArray(data.notes)) {
+                            notesData = data.notes;
+                            if (data.folders && Array.isArray(data.folders)) {
+                                foldersData = data.folders;
+                            }
+                            saveNotesToStorage();
+                            saveFoldersToStorage();
+                            showMessage('Notes imported!', 'success');
+                        }
+                        e.target.value = '';
+                    } catch (error) {
+                        showMessage('Error reading file', 'error');
+                    }
+                };
+                reader.readAsText(file);
+                settingsMenu.classList.remove('active');
+                settingsOverlay.classList.remove('active');
+            });
+    
+            // Reset notes
+            document.getElementById('resetNotes').addEventListener('click', () => {
+                if (confirm('Reset all notes and folders? This cannot be undone.')) {
+                    notesData = [];
+                    foldersData = getDefaultFolders();
+                    saveNotesToStorage();
+                    saveFoldersToStorage();
+                    showMessage('All notes deleted!', 'success');
+                    settingsMenu.classList.remove('active');
+                    settingsOverlay.classList.remove('active');
+                }
+            });
+    
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.getElementById('noteEditorPage').classList.contains('active')) {
+                    closeNoteEditor();
+                }
+                if (e.key === 'Escape' && document.getElementById('folderWindow').classList.contains('active')) {
+                    closeFolderWindow();
+                }
+                if (e.key === 'Escape' && document.getElementById('readingMode').classList.contains('active')) {
+                    backToEditMode();
+                }
+            });
+            
+            // Floating menu events
+            const overlay = document.getElementById('floatingMenuOverlay');
+            if (overlay) {
+                overlay.addEventListener('click', closeFloatingMenu);
+            }
+            
+            // Close menu when clicking outside
+            document.addEventListener('click', function(event) {
+                const floatingMenu = document.getElementById('floatingNewMenu');
+                
+                if (floatingMenu && floatingMenu.classList.contains('active')) {
+                    const clickedButton = 
+                        event.target.closest('#newButton') || 
+                        event.target.closest('#newFolderButton') || 
+                        event.target.closest('#bottomNewButton');
+                    
+                    if (!floatingMenu.contains(event.target) && !clickedButton) {
+                        closeFloatingMenu();
+                    }
+                }
+            });
+    
+            const textarea = document.getElementById('editorContent');
+            if (textarea) {
+                textarea.addEventListener('input', () => {
+                    undoStack.push(textarea.value);
+                    if (undoStack.length > 50) {
+                        undoStack.shift();
+                    }
+                    redoStack = [];
+                });
+            }
+        }
+    
+        // Animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: translateX(-50%) translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(-50%) translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    
+        // Initialize app on load
+        init();
+    </script>
+</body>
+</html>

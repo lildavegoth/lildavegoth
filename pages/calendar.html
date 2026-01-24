@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        header {
+            padding: var(--spacing-lg) 0;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .username {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .project-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .calendar-grid .project-card {
+            margin-bottom: 0;
+        }
+
+        .project-card:hover {
+            border-color: rgba(193, 252, 50, 0.3);
+        }
+
+        .month-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-dark);
+            padding: 12px 20px;
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 500;
+            position: relative;
+            margin-bottom: var(--spacing-md);
+            width: 100%;
+        }
+
+        .month-btn {
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 44px;
+            width: 44px;
+        }
+        
+        .month-btn:hover {
+            border-color: var(--accent-color);
+            background: rgba(193, 252, 50, 0.1);
+        }
+
+        .date-header {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .date-picker-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            max-width: 400px;
+        }
+        
+        .date-picker-group .date-input-wrapper {
+            flex: 1 1 auto;
+            min-width: 0;
+            margin-bottom: 0;
+        }
+        
+        .date-picker-group .month-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 0;
+        }
+        
+        .date-picker-group .month-btn {
+            width: 44px;
+            padding: 12px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .date-picker-input {
+            width: 100%;
+            padding: 12px 40px 12px 12px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            text-transform: uppercase;
+            font-weight: 500;
+            min-width: 170px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .date-input-wrapper {
+            margin-bottom: 0;
+            position: relative;
+        }
+        
+        .date-input-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+        
+        .date-picker-input::-webkit-calendar-picker-indicator {
+            display: none;
+        }
+        
+        .date-picker-input::-moz-calendar-picker-indicator {
+            display: none;
+        }
+        
+        .date-picker-input::-webkit-inner-spin-button,
+        .date-picker-input::-webkit-clear-button {
+            display: none;
+            -webkit-appearance: none;
+        }
+        
+        .date-picker-input[data-display] {
+            color: transparent;
+            position: relative;
+        }
+        
+        .date-picker-input[data-display]::before {
+            content: attr(data-display);
+            color: var(--text-primary);
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .date.has-content {
+            border-radius: var(--radius-small);
+            background: var(--bg-dark);
+            border: 2px solid rgba(126, 80, 181, 0.5);
+        }
+        
+        .date.today.has-content {
+            border-radius: var(--radius-small);
+            background: var(--accent-color);
+            border: 2px solid var(--accent-color);
+        }
+        
+        .date.has-content:hover {
+            background: rgba(126, 80, 181, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .date .day-number {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .date.has-content .day-number {
+            font-weight: 600;
+        }
+        
+        .date.has-plan .day-number {
+            color: #B38BFF;
+        }
+        
+        .date.has-event .day-number {
+            color: var(--accent-color);
+        }
+        
+        .date.today.has-plan .day-number {
+            color: #000;
+        }
+        
+        .date.today.has-event .day-number {
+            color: #000;
+        }
+        
+        .date.has-event {
+            border: 2px solid rgba(193, 252, 50, 0.3);
+        }
+        
+        .date.has-event:hover {
+            background: rgba(193, 252, 50, 0.2);
+        }
+        
+        .date.has-plan {
+            border: 2px solid rgba(126, 80, 181, 0.5);
+        }
+        
+        .date.has-plan:hover {
+            background: rgba(126, 80, 181, 0.2);
+        }
+        
+        .date.has-event.has-plan {
+            border: 2px double;
+            border-color: rgba(193, 252, 50, 0.3) rgba(126, 80, 181, 0.5);
+        }
+        
+        .date.has-event.has-plan:hover {
+            background: linear-gradient(45deg, rgba(193, 252, 50, 0.1), rgba(126, 80, 181, 0.1));
+        }
+
+        .calendar {
+            margin: var(--spacing-md) 0;
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .weekday {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 8px 0;
+        }
+
+        .dates {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .date {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-weight: 500;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .date.empty {
+            background: transparent;
+            border: none;
+            cursor: default;
+        }
+
+        .date.today {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: 700;
+        }
+
+        .date:hover {
+            background: rgba(193, 252, 50, 0.2);
+            transform: scale(1.05);
+        }
+
+        .tasks-section {
+            margin-top: var(--spacing-lg);
+        }
+
+        .tasks-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .tasks-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+        
+        .import-export-btn {
+            position: absolute;
+            right: 1px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 34px;
+            height: 34px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 100px;
+        }
+        
+        .import-export-btn:hover {
+            color: var(--accent-color);
+            background: rgba(193, 252, 50, 0.1);
+        }
+        
+        .import-icon {
+            position: absolute;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        
+        .search-input {
+            width: 85%;
+            padding: 8px 70px 8px 12px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 60px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+        
+        .import-export-option {
+            width: 100%;
+            padding: 16px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .import-export-option:hover {
+            border-color: var(--accent-color);
+            background: rgba(193, 252, 50, 0.5);
+        }
+        
+        .import-export-option i {
+            font-size: 16px;
+            color: var(--accent-color);
+        }
+        
+        .plan-item {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            min-height: 140px;
+            padding-bottom: 45px;
+        }
+
+        .plan-date {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .plan-desc {
+            font-size: 15px;
+            color: var(--text-primary);
+            font-weight: 500;
+            line-height: 1.5;
+            flex: 1;
+            white-space: pre-line;
+            word-break: break-word;
+        }
+
+        .plan-content {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex: 1;
+            margin-bottom: 5px;
+        }
+        
+        .plan-edit {
+            font-size: 12px;
+            color: var(--accent-color);
+            cursor: pointer;
+            font-weight: 500;
+            padding: 3px 12px;
+            display: inline-block;
+            border: none;
+            background: rgba(193, 252, 50, 0.15);
+            border-radius: 20px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            position: absolute;
+            bottom: 11px;
+            right: 98px;
+        }
+        
+        .plan-edit:hover {
+            color: var(--accent-dark);
+            background: rgba(193, 252, 50, 0.25);
+        }
+
+        .plan-delete {
+            font-size: 12px;
+            color: #ff6b6b;
+            cursor: pointer;
+            font-weight: 500;
+            padding: 3px 12px;
+            display: inline-block;
+            border: none;
+            background: rgba(255, 107, 107, 0.15);
+            border-radius: 20px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            position: absolute;
+            bottom: 11px;
+            right: 35px;
+        }
+
+        .plan-delete:hover {
+            color: #ff8888;
+            background: rgba(255, 107, 107, 0.25);
+        }
+
+        .plan-checkbox {
+            display: none;
+        }
+        
+        .plan-checkbox-custom {
+            width: 17px;
+            height: 17px;
+            cursor: pointer;
+            flex-shrink: 0;
+            border: 2px solid var(--accent-color);
+            border-radius: 50%;
+            position: absolute;
+            bottom: 13px;
+            right: 12px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .plan-checkbox-custom.checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        
+        .plan-checkbox-custom.checked::after {
+            content: '';
+            color: transparent;
+            font-size: 0px;
+        }
+        
+        .plan-checkbox-custom:hover {
+            border-color: var(--accent-color);
+        }
+
+        .world-events-section {
+            margin-top: var(--spacing-md);
+        }
+
+        .events-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #FF6B6B;
+            margin-bottom: 8px;
+        }
+
+        .event-item {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        @keyframes blurIn {
+            from {
+                backdrop-filter: blur(0px);
+                -webkit-backdrop-filter: blur(0px);
+                background: rgba(0, 0, 0, 0);
+            }
+            to {
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                background: rgba(0, 0, 0, 0.3);
+            }
+        }
+        
+        .popup-overlay.show {
+            display: flex;
+            animation: blurIn 0.3s ease forwards;
+        }
+        
+        .popup-overlay.show {
+            display: flex;
+        }
+        
+        .popup-window {
+            background: rgba(30, 30, 30, 0.3);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+        }
+        
+        @keyframes popupIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .popup-overlay.show .popup-window {
+            animation: popupIn 0.4s ease forwards;
+        }
+        
+        .popup-header {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .popup-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .popup-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .popup-body {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .popup-textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            resize: vertical;
+            min-height: 100px;
+            line-height: 1.5;
+            overflow-y: auto;
+        }
+        
+        .popup-textarea::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+        
+        .popup-textarea {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .popup-textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+        
+        .popup-footer {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .popup-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: var(--radius-small);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .popup-btn-primary {
+            background: var(--accent-color);
+            color: #000;
+        }
+        
+        .popup-btn-secondary {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .popup-date-container {
+            margin-bottom: 16px;
+        }
+        
+        .popup-date-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .popup-date-input {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        
+        .popup-date-input:hover {
+            border-color: rgba(193, 252, 50, 0.5);
+        }
+        
+        .popup-date-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+        
+        .popup-date-input::-webkit-calendar-picker-indicator {
+            filter: invert(0.8);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+        }
+        
+        .popup-date-input::-webkit-calendar-picker-indicator:hover {
+            background-color: rgba(193, 252, 50, 0.2);
+        }
+        
+        .popup-date-input::-moz-calendar-picker-indicator {
+            filter: invert(0.8);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+        }
+        
+        .popup-date-input::-moz-calendar-picker-indicator:hover {
+            background-color: rgba(193, 252, 50, 0.2);
+        }
+        
+        .calendar-grid {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+        
+        @media (min-width: 768px) {
+            .calendar-grid {
+                display: grid;
+                grid-template-columns: 1fr 3fr;
+                gap: var(--spacing-md);
+            }
+            
+            .calendar-grid .project-card {
+                margin-bottom: 0;
+            }
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <header class="fade-in">
+            <div>
+                <h1 class="username">Calendar</h1>
+                <p class="tagline">Plan and manage your monthly schedule</p>
+            </div>
+        </header>
+        
+        <div class="calendar-grid">
+            <div class="project-card fade-in delay-1">
+                <div class="date-header">
+                    <div class="date-picker-group">
+                        <div class="date-input-wrapper">
+                            <input type="month" id="monthPicker" class="date-picker-input">
+                        </div>
+                        <div class="month-nav">
+                            <button class="month-btn" id="prevMonth"><i class="fas fa-arrow-left"></i></button>
+                            <button class="month-btn" id="nextMonth"><i class="fas fa-arrow-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+    
+                <div class="calendar">
+                    <div class="weekdays">
+                        <div style="color: var(--accent-color);" class="weekday">S</div>
+                        <div class="weekday">M</div>
+                        <div class="weekday">T</div>
+                        <div class="weekday">W</div>
+                        <div class="weekday">T</div>
+                        <div class="weekday">F</div>
+                        <div class="weekday">S</div>
+                    </div>
+                    <div class="dates" id="datesContainer"></div>
+                </div>
+    
+                <div class="world-events-section">
+                    <div class="events-title">World Events</div>
+                    <div id="worldEventsContainer"></div>
+                </div>
+            </div>
+    
+            <div class="project-card fade-in delay-2">
+                <div class="tasks-section">
+                    <div style="margin-top: -30px;" class="tasks-header">
+                        <div class="tasks-title">Your Plans</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;" class="search-container">
+                        <input type="text" id="planSearch" class="search-input" placeholder="Search plans..." />
+                        <i class="fas fa-search search-icon"></i>
+                        <button class="import-export-btn import-icon" id="importExportBtn">
+                            <i class="fas fa-file"></i>
+                        </button>
+                    </div>
+    
+                    <div id="plansContainer"></div>
+                </div>
+            </div>
+            
+            <div class="popup-overlay" id="popupOverlay">
+                <div class="popup-window">
+                    <div class="popup-header">
+                        <div class="popup-title">Add New Plan</div>
+                        <div class="popup-subtitle" id="popupDateDisplay">Select a date</div>
+                    </div>
+                    
+                    <div class="popup-body">
+                        <div class="popup-date-container">
+                            <label class="popup-date-label">Plan Date</label>
+                            <input type="date" id="popupPlanDate" class="popup-date-input" />
+                        </div>
+                        <textarea id="popupPlanDesc" class="popup-textarea" placeholder="What's your plan?" rows="4"></textarea>
+                    </div>
+                    
+                    <div class="popup-footer">
+                        <button class="popup-btn popup-btn-primary" id="popupAddBtn">Add Plan</button>
+                        <button class="popup-btn popup-btn-secondary" id="popupCancelBtn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="popup-overlay" id="editPopupOverlay">
+            <div class="popup-window">
+                <div class="popup-header">
+                    <div class="popup-title">Edit Plan</div>
+                    <div class="popup-subtitle" id="editPopupDateDisplay"></div>
+                </div>
+                
+                <div class="popup-body">
+                    <div class="popup-date-container">
+                        <label class="popup-date-label">Plan Date</label>
+                        <input type="date" id="editPopupPlanDate" class="popup-date-input" />
+                    </div>
+                    <textarea id="editPopupPlanDesc" class="popup-textarea" placeholder="Edit your plan" rows="4"></textarea>
+                </div>
+                
+                <div class="popup-footer">
+                    <button class="popup-btn popup-btn-primary" id="editPopupSaveBtn">Save Changes</button>
+                    <button class="popup-btn popup-btn-secondary" id="editPopupCancelBtn">Cancel</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="popup-overlay" id="importExportPopup">
+            <div class="popup-window">
+                <div class="popup-header">
+                    <div class="popup-title">Import / Export</div>
+                    <div class="popup-subtitle">Manage your plans data</div>
+                </div>
+                
+                <div class="popup-body">
+                    <button class="import-export-option" id="importOption">
+                        <i class="fas fa-file-import"></i>
+                        <span>Import Plans</span>
+                    </button>
+                    <button class="import-export-option" id="exportOption">
+                        <i class="fas fa-file-export"></i>
+                        <span>Export Plans</span>
+                    </button>
+                </div>
+                
+                <div class="popup-footer">
+                    <button style="margin-top: -12px;" class="popup-btn popup-btn-secondary" id="importExportCancelBtn">Close</button>
+                </div>
+            </div>
+        </div>
+        
+        <input type="file" id="importFileInput" accept=".json" style="display: none;" />
+
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Calendar</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        const worldEvents = {
+            '1-1': { name: 'New Year\'s Day', country: 'Global', id: 'GLOBAL' },
+            '1-2': { name: 'Bank Holiday (New Year\'s Day)', country: 'Indonesia', id: 'ID' },
+            '1-20': { name: 'Inauguration Day', country: 'United States', id: 'US' },
+            '1-26': { name: 'Australia Day', country: 'Australia', id: 'AU' },
+            '2-1': { name: 'National Foundry Day', country: 'Japan', id: 'JP' },
+            '2-8': { name: 'Isra Mi\'raj', country: 'Indonesia', id: 'ID' },
+            '2-10': { name: 'Chinese New Year', country: 'China', id: 'CN' },
+            '2-11': { name: 'National Foundation Day', country: 'Japan', id: 'JP' },
+            '2-14': { name: 'Valentine\'s Day', country: 'Global', id: 'GLOBAL' },
+            '3-1': { name: 'Independence Movement Day', country: 'South Korea', id: 'KR' },
+            '3-8': { name: 'International Women\'s Day', country: 'Global', id: 'GLOBAL' },
+            '3-11': { name: 'Nyepi (Balinese New Year)', country: 'Indonesia', id: 'ID' },
+            '3-17': { name: 'St. Patrick\'s Day', country: 'Ireland', id: 'IE' },
+            '3-21': { name: 'Nowruz (Persian New Year)', country: 'Iran', id: 'IR' },
+            '3-28': { name: 'Good Friday', country: 'Global', id: 'GLOBAL' },
+            '4-1': { name: 'Easter Monday', country: 'Global', id: 'GLOBAL' },
+            '4-2': { name: 'Idul Fitri Holiday', country: 'Indonesia', id: 'ID' },
+            '4-3': { name: 'Idul Fitri', country: 'Indonesia', id: 'ID' },
+            '4-4': { name: 'Idul Fitri Holiday', country: 'Indonesia', id: 'ID' },
+            '4-5': { name: 'Idul Fitri Holiday', country: 'Indonesia', id: 'ID' },
+            '4-22': { name: 'Earth Day', country: 'Global', id: 'GLOBAL' },
+            '4-25': { name: 'ANZAC Day', country: 'Australia', id: 'AU' },
+            '5-1': { name: 'Labour Day', country: 'Global', id: 'GLOBAL' },
+            '5-5': { name: 'Children\'s Day', country: 'Japan', id: 'JP' },
+            '5-7': { name: 'Waisak Day', country: 'Indonesia', id: 'ID' },
+            '5-16': { name: 'Ascension Day of Jesus Christ', country: 'Global', id: 'GLOBAL' },
+            '5-25': { name: 'Idul Adha', country: 'Indonesia', id: 'ID' },
+            '5-26': { name: 'Memorial Day', country: 'United States', id: 'US' },
+            '6-1': { name: 'Pancasila Day', country: 'Indonesia', id: 'ID' },
+            '6-11': { name: 'Queen\'s Official Birthday', country: 'United Kingdom', id: 'UK' },
+            '6-19': { name: 'Juneteenth', country: 'United States', id: 'US' },
+            '6-26': { name: 'Islamic New Year', country: 'Indonesia', id: 'ID' },
+            '7-1': { name: 'Canada Day', country: 'Canada', id: 'CA' },
+            '7-4': { name: 'Independence Day', country: 'United States', id: 'US' },
+            '7-7': { name: 'Bank Holiday (Idul Adha)', country: 'Indonesia', id: 'ID' },
+            '7-14': { name: 'Bastille Day', country: 'France', id: 'FR' },
+            '8-15': { name: 'Independence Day', country: 'India', id: 'IN' },
+            '8-17': { name: 'Independence Day', country: 'Indonesia', id: 'ID' },
+            '9-2': { name: 'National Day', country: 'Vietnam', id: 'VN' },
+            '9-5': { name: 'Prophet Muhammad\'s Birthday', country: 'Indonesia', id: 'ID' },
+            '10-5': { name: 'Constitution Day', country: 'Thailand', id: 'TH' },
+            '10-31': { name: 'Halloween', country: 'Global', id: 'GLOBAL' },
+            '11-11': { name: 'Armistice Day', country: 'Global', id: 'GLOBAL' },
+            '11-30': { name: 'Bonifacio Day', country: 'Philippines', id: 'PH' },
+            '12-1': { name: 'World AIDS Day', country: 'Global', id: 'GLOBAL' },
+            '12-24': { name: 'Christmas Eve (Bank Holiday)', country: 'Global', id: 'GLOBAL' },
+            '12-25': { name: 'Christmas Day', country: 'Global', id: 'GLOBAL' },
+            '12-26': { name: 'Boxing Day / Bank Holiday', country: 'Global', id: 'GLOBAL' },
+            '12-31': { name: 'New Year\'s Eve', country: 'Global', id: 'GLOBAL' }
+        };
+    
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+        let plans = JSON.parse(localStorage.getItem('monthPlans')) || [];
+    
+        function updateMonthPicker() {
+            const monthPicker = document.getElementById('monthPicker');
+            const year = String(currentYear).padStart(4, '0');
+            const month = String(currentMonth + 1).padStart(2, '0');
+            monthPicker.value = `${year}-${month}`;
+            
+            const monthText = monthNames[currentMonth];
+            monthPicker.setAttribute('data-display', `${monthText} ${currentYear}`);
+        }
+    
+        document.getElementById('monthPicker').addEventListener('change', (e) => {
+            const [year, month] = e.target.value.split('-');
+            currentYear = parseInt(year);
+            currentMonth = parseInt(month) - 1;
+            
+            const monthText = monthNames[currentMonth];
+            e.target.setAttribute('data-display', `${monthText} ${currentYear}`);
+            
+            renderCalendar();
+            renderWorldEvents();
+            renderPlans();
+        });
+    
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            if (currentMonth === 0) {
+                currentMonth = 11;
+                currentYear--;
+            } else {
+                currentMonth--;
+            }
+            renderCalendar();
+            renderWorldEvents();
+            updateMonthPicker();
+            
+            const monthPicker = document.getElementById('monthPicker');
+            const monthText = monthNames[currentMonth];
+            monthPicker.setAttribute('data-display', `${monthText} ${currentYear}`);
+        });
+        
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            if (currentMonth === 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else {
+                currentMonth++;
+            }
+            renderCalendar();
+            renderWorldEvents();
+            updateMonthPicker();
+            
+            const monthPicker = document.getElementById('monthPicker');
+            const monthText = monthNames[currentMonth];
+            monthPicker.setAttribute('data-display', `${monthText} ${currentYear}`);
+        });
+    
+        function renderCalendar() {
+            const datesContainer = document.getElementById('datesContainer');
+            const monthYear = document.getElementById('monthYear');
+            datesContainer.innerHTML = '';
+    
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const today = new Date();
+    
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDate = document.createElement('div');
+                emptyDate.className = 'date empty';
+                datesContainer.appendChild(emptyDate);
+            }
+    
+            for (let day = 1; day <= lastDay; day++) {
+                const dateDiv = document.createElement('div');
+                
+                const eventKey = `${currentMonth + 1}-${day}`;
+                const hasEvent = worldEvents.hasOwnProperty(eventKey);
+                
+                const hasPlan = plans.some(p => {
+                    const planDate = new Date(p.date);
+                    planDate.setHours(0, 0, 0, 0);
+                    const compareDate = new Date(currentYear, currentMonth, day);
+                    compareDate.setHours(0, 0, 0, 0);
+                    return planDate.getTime() === compareDate.getTime();
+                });
+                
+                const now = new Date();
+                const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                todayDate.setHours(0, 0, 0, 0);
+                const compareDate = new Date(currentYear, currentMonth, day);
+                compareDate.setHours(0, 0, 0, 0);
+                const isToday = todayDate.getTime() === compareDate.getTime();
+                
+                if (hasEvent && hasPlan) {
+                    dateDiv.className = 'date has-content has-event has-plan';
+                    const dayNumber = document.createElement('div');
+                    dayNumber.className = 'day-number';
+                    dayNumber.textContent = day;
+                    dateDiv.appendChild(dayNumber);
+                } else if (hasEvent) {
+                    dateDiv.className = 'date has-content has-event';
+                    const dayNumber = document.createElement('div');
+                    dayNumber.className = 'day-number';
+                    dayNumber.textContent = day;
+                    dateDiv.appendChild(dayNumber);
+                } else if (hasPlan) {
+                    dateDiv.className = 'date has-content has-plan';
+                    const dayNumber = document.createElement('div');
+                    dayNumber.className = 'day-number';
+                    dayNumber.textContent = day;
+                    dateDiv.appendChild(dayNumber);
+                } else {
+                    dateDiv.className = 'date';
+                    dateDiv.textContent = day;
+                }
+                
+                if (isToday) {
+                    dateDiv.classList.add('today');
+                }
+                
+                dateDiv.addEventListener('click', () => {
+                    const selectedDate = new Date(currentYear, currentMonth, day);
+                    selectedDate.setHours(12, 0, 0, 0);
+                    const year = selectedDate.getFullYear();
+                    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                    const dayNum = String(selectedDate.getDate()).padStart(2, '0');
+                    const dateStr = selectedDate.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        month: 'long', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                    });
+                    document.getElementById('popupPlanDate').value = `${year}-${month}-${dayNum}`;
+                    document.getElementById('popupDateDisplay').textContent = dateStr;
+                    document.getElementById('popupOverlay').classList.add('show');
+                    document.getElementById('popupPlanDesc').focus();
+                });
+                
+                datesContainer.appendChild(dateDiv);
+            }
+        }
+    
+        const countryFlags = {
+            'US': '🇺🇸', 'ID': '🇮🇩', 'CN': '🇨🇳', 'JP': '🇯🇵',
+            'AU': '🇦🇺', 'CA': '🇨🇦', 'UK': '🇬🇧', 'IE': '🇮🇪',
+            'FR': '🇫🇷', 'IR': '🇮🇷', 'KR': '🇰🇷', 'IN': '🇮🇳',
+            'VN': '🇻🇳', 'TH': '🇹🇭', 'PH': '🇵🇭', 'GLOBAL': '🌍'
+        };
+
+        function renderWorldEvents() {
+            const eventsContainer = document.getElementById('worldEventsContainer');
+            eventsContainer.innerHTML = '';
+    
+            const monthEvents = [];
+            for (let day = 1; day <= 31; day++) {
+                const eventKey = `${currentMonth + 1}-${day}`;
+                if (worldEvents[eventKey]) {
+                    monthEvents.push({
+                        day,
+                        ...worldEvents[eventKey]
+                    });
+                }
+            }
+    
+            if (monthEvents.length === 0) {
+                eventsContainer.innerHTML = '<div class="event-item">No world events this month</div>';
+                return;
+            }
+    
+            monthEvents.forEach(event => {
+                const eventDiv = document.createElement('div');
+                eventDiv.className = 'event-item';
+                const flag = countryFlags[event.id] || '🌐';
+                eventDiv.textContent = `${event.name} (${event.day}) ${flag}`;
+                eventsContainer.appendChild(eventDiv);
+            });
+        }
+    
+        function savePlans() {
+            localStorage.setItem('monthPlans', JSON.stringify(plans));
+        }
+    
+        function renderPlans() {
+            const plansContainer = document.getElementById('plansContainer');
+            plansContainer.innerHTML = '';
+            
+            let filteredPlans = [...plans];
+            
+            if (searchTerm) {
+                filteredPlans = filteredPlans.filter(plan => 
+                    plan.description.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            const sortedPlans = filteredPlans.sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                dateA.setHours(0, 0, 0, 0);
+                dateB.setHours(0, 0, 0, 0);
+                return dateA - dateB;
+            });
+            
+            if (sortedPlans.length === 0) {
+                const noResults = searchTerm 
+                    ? `No plans found for "${searchTerm}"`
+                    : 'No plans yet. Add one!';
+                plansContainer.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 13px;">${noResults}</div>`;
+                return;
+            }
+        
+            sortedPlans.forEach((plan, index) => {
+                const planItem = document.createElement('div');
+                planItem.className = 'plan-item';
+        
+                const planDate = new Date(plan.date);
+                planDate.setHours(0, 0, 0, 0);
+                const dateStr = planDate.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                });
+        
+                const editBtn = document.createElement('button');
+                editBtn.className = 'plan-edit';
+                editBtn.textContent = 'Edit';
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    openEditPopup(index, plan);
+                });
+        
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'plan-delete';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    deletePlan(index);
+                });
+        
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'plan-checkbox';
+                checkbox.checked = plan.completed || false;
+        
+                const checkboxCustom = document.createElement('div');
+                checkboxCustom.className = `plan-checkbox-custom ${checkbox.checked ? 'checked' : ''}`;
+        
+                checkboxCustom.addEventListener('click', () => {
+                    checkbox.checked = !checkbox.checked;
+                    checkboxCustom.classList.toggle('checked');
+                    plan.completed = checkbox.checked;
+                    savePlans();
+                });
+        
+                checkbox.addEventListener('change', () => {
+                    checkboxCustom.classList.toggle('checked', checkbox.checked);
+                    plan.completed = checkbox.checked;
+                    savePlans();
+                });
+        
+                planItem.innerHTML = `
+                    <div class="plan-date">${dateStr}</div>
+                    <div class="plan-content">
+                        <div class="plan-desc">${plan.description.replace(/\n/g, '<br>')}</div>
+                    </div>
+                `;
+        
+                const buttonsContainer = document.createElement('div');
+                buttonsContainer.className = 'plan-buttons';
+                buttonsContainer.appendChild(editBtn);
+                buttonsContainer.appendChild(deleteBtn);
+                buttonsContainer.appendChild(checkbox);
+                buttonsContainer.appendChild(checkboxCustom);
+        
+                planItem.appendChild(buttonsContainer);
+                plansContainer.appendChild(planItem);
+            });
+        }
+    
+        function deletePlan(index) {
+            if (editingIndex === index) {
+                editingIndex = -1;
+                document.getElementById('editPopupOverlay').classList.remove('show');
+            }
+            
+            plans.splice(index, 1);
+            savePlans();
+            renderPlans();
+            renderCalendar();
+        }
+    
+        function initializeCalendar() {
+            renderCalendar();
+            renderWorldEvents();
+            renderPlans();
+            updateMonthPicker();
+        }
+        
+        let editingIndex = -1;
+
+        function openEditPopup(index, plan) {
+            editingIndex = index;
+            
+            const planDate = new Date(plan.date);
+            const dateStr = planDate.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                month: 'long', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
+            
+            document.getElementById('editPopupDateDisplay').textContent = dateStr;
+            document.getElementById('editPopupPlanDate').value = plan.date;
+            document.getElementById('editPopupPlanDesc').value = plan.description;
+            
+            document.getElementById('editPopupOverlay').classList.add('show');
+            document.getElementById('editPopupPlanDesc').focus();
+        }
+        
+        let searchTerm = '';
+
+        function searchPlans() {
+            const searchInput = document.getElementById('planSearch');
+            searchTerm = searchInput.value.toLowerCase().trim();
+            renderPlans();
+        }
+        
+        function deletePlan(index) {
+            if (editingIndex === index) {
+                editingIndex = -1;
+                document.getElementById('editPopupOverlay').classList.remove('show');
+            }
+            
+            plans.splice(index, 1);
+            savePlans();
+            renderPlans();
+            renderCalendar();
+            
+            document.getElementById('planSearch').value = '';
+            searchTerm = '';
+        }
+    
+        initializeCalendar();
+    
+        document.getElementById('popupAddBtn').addEventListener('click', () => {
+            const dateInput = document.getElementById('popupPlanDate').value;
+            const description = document.getElementById('popupPlanDesc').value.trim();
+        
+            if (!dateInput || !description) {
+                window.showMessage('Please fill in all fields');
+                return;
+            }
+        
+            plans.push({
+                date: dateInput,
+                description: description
+            });
+        
+            savePlans();
+            renderPlans();
+            renderCalendar();
+        
+            document.getElementById('popupOverlay').classList.remove('show');
+            document.getElementById('popupPlanDesc').value = '';
+        });
+        
+        document.getElementById('popupCancelBtn').addEventListener('click', () => {
+            document.getElementById('popupOverlay').classList.remove('show');
+            document.getElementById('popupPlanDesc').value = '';
+        });
+        
+        document.getElementById('popupOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'popupOverlay') {
+                document.getElementById('popupOverlay').classList.remove('show');
+                document.getElementById('popupPlanDesc').value = '';
+            }
+        });
+        
+        document.getElementById('editPopupSaveBtn').addEventListener('click', () => {
+            const dateInput = document.getElementById('editPopupPlanDate').value;
+            const description = document.getElementById('editPopupPlanDesc').value.trim();
+        
+            if (!dateInput || !description) {
+                window.showMessage('Please fill in all fields');
+                return;
+            }
+        
+            if (editingIndex >= 0 && editingIndex < plans.length) {
+                plans[editingIndex].date = dateInput;
+                plans[editingIndex].description = description;
+                
+                savePlans();
+                renderPlans();
+                renderCalendar();
+                
+                document.getElementById('editPopupOverlay').classList.remove('show');
+                editingIndex = -1;
+            }
+        });
+        
+        document.getElementById('editPopupCancelBtn').addEventListener('click', () => {
+            document.getElementById('editPopupOverlay').classList.remove('show');
+            editingIndex = -1;
+        });
+        
+        document.getElementById('editPopupOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'editPopupOverlay') {
+                document.getElementById('editPopupOverlay').classList.remove('show');
+                editingIndex = -1;
+            }
+        });
+        
+        document.getElementById('planSearch').addEventListener('input', searchPlans);
+        
+        document.getElementById('importExportBtn').addEventListener('click', () => {
+            document.getElementById('importExportPopup').classList.add('show');
+        });
+        
+        document.getElementById('importExportCancelBtn').addEventListener('click', () => {
+            document.getElementById('importExportPopup').classList.remove('show');
+        });
+        
+        document.getElementById('importExportPopup').addEventListener('click', (e) => {
+            if (e.target.id === 'importExportPopup') {
+                document.getElementById('importExportPopup').classList.remove('show');
+            }
+        });
+        
+        document.getElementById('exportOption').addEventListener('click', () => {
+            const dataStr = JSON.stringify(plans, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `plans-${new Date().toISOString().split('T')[0]}.json`;
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            document.getElementById('importExportPopup').classList.remove('show');
+            window.showMessage('Plans exported successfully!');
+        });
+        
+        document.getElementById('importOption').addEventListener('click', () => {
+            document.getElementById('importFileInput').click();
+        });
+        
+        document.getElementById('importFileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const importedPlans = JSON.parse(event.target.result);
+                    
+                    if (!Array.isArray(importedPlans)) {
+                        window.showMessage('Invalid file format');
+                        return;
+                    }
+                    
+                    const hasValidStructure = importedPlans.every(plan => 
+                        plan.date && plan.description
+                    );
+                    
+                    if (!hasValidStructure) {
+                        window.showMessage('Invalid plans data structure');
+                        return;
+                    }
+                    
+                    plans = importedPlans;
+                    savePlans();
+                    renderPlans();
+                    renderCalendar();
+                    
+                    document.getElementById('importExportPopup').classList.remove('show');
+                    window.showMessage('Plans imported successfully!');
+                    
+                } catch (error) {
+                    window.showMessage('Error reading file');
+                }
+                
+                e.target.value = '';
+            };
+            
+            reader.readAsText(file);
+        });
+        
+    </script>
+</body>
+</html>

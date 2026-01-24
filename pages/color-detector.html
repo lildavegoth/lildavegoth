@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Color Detector | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+        }
+
+        /* Blur Effects */
+        .blur-background {
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            background-color: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .app-header {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .app-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .app-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* UI Preview Container */
+        .ui-preview {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .ui-preview:hover {
+            border-color: rgba(193, 252, 50, 0.3);
+            box-shadow: 0 10px 30px rgba(193, 252, 50, 0.1);
+        }
+
+        .search-ui {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .search-wrapper {
+            flex: 1;
+        }
+
+        .search-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            border-radius: var(--radius-large);
+            padding: var(--spacing-sm) var(--spacing-md);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .search-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                transparent 50%,
+                rgba(0, 0, 0, 0.1) 100%);
+            pointer-events: none;
+        }
+
+        .search-icon {
+            margin-right: var(--spacing-sm);
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-text {
+            flex: 1;
+            background: transparent;
+            border: none;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .search-text:focus {
+            outline: none;
+        }
+
+        .search-text::placeholder {
+            opacity: 0.8;
+        }
+
+        /* Globe Icon */
+        .globe-container {
+            width: 50px;
+            height: 50px;
+            border-radius: var(--radius-medium);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .globe-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                transparent 50%,
+                rgba(0, 0, 0, 0.1) 100%);
+            pointer-events: none;
+        }
+
+        .globe-icon {
+            font-size: 1.3rem;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .presets-container {
+            margin-top: var(--spacing-sm);
+        }
+
+        .presets-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: repeat(1, 1fr);
+            gap: 10px;
+        }
+
+        .preset-color {
+            aspect-ratio: 1;
+            border-radius: 100%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+            min-height: 0;
+            min-width: 0;
+        }
+
+        .preset-color:hover {
+            transform: scale(1.1);
+        }
+
+        .preset-color.active {
+            transform: scale(1.10);
+        }
+        
+        .text-preview-container {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            margin-top: var(--spacing-xs);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .text-preview-content {
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .input-section {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .input-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .input-label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: var(--spacing-xs);
+            font-weight: 500;
+        }
+
+        .color-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-medium);
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            padding: var(--spacing-md);
+            font-family: monospace;
+            transition: all 0.3s ease;
+        }
+
+        .color-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(193, 252, 50, 0.2);
+        }
+
+        .color-input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--spacing-sm);
+            }
+            
+            .search-ui {
+                flex-direction: row;
+                gap: var(--spacing-md);
+            }
+            
+            .search-container {
+                width: auto;
+            }
+            
+            .globe-container {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .presets-grid {
+                grid-template-columns: repeat(7, 1fr);
+                grid-template-rows: repeat(1, 1fr);
+                gap: 10px;
+            }
+            
+            .app-title {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .ui-preview, .input-section {
+                padding: var(--spacing-md);
+            }
+            
+            .presets-grid {
+                grid-template-columns: repeat(7, 1fr);
+                grid-template-rows: repeat(1, 1fr);
+                gap: 10px;
+            }
+            
+            .preset-color {
+                border-radius: 100%;
+            }
+        }
+        
+        @keyframes colorChange {
+            0% { filter: hue-rotate(0deg); }
+            50% { filter: hue-rotate(180deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        .color-change {
+            animation: colorChange 2s infinite linear;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <!-- App Header -->
+        <div class="app-header">
+            <h1 class="app-title">Color Detector</h1>
+            <p class="app-subtitle">Watch UI elements change with your colors!</p>
+        </div>
+
+        <!-- UI Preview -->
+        <div class="ui-preview">
+            <div class="search-ui">
+                <div class="search-container" id="searchBar" style="background-color: var(--accent-color);">
+                    <i class="fas fa-search search-icon" id="searchIcon" style="color: #000000;"></i>
+                    <input 
+                        type="text" 
+                        class="search-text" 
+                        id="searchText" 
+                        placeholder="Search..."
+                        value="Search"
+                        style="color: #000000;"
+                        readonly
+                    >
+                </div>
+                <div class="globe-container" id="globeIcon" style="background-color: var(--accent-color);">
+                    <i class="fas fa-globe globe-icon" id="globeIconSymbol" style="color: #000000;"></i>
+                </div>
+            </div>
+            
+            <div style="margin-top: -15px;" class="text-preview-container" id="textPreview">
+                <div class="text-preview-content" id="textPreviewContent">
+                    <strong>Kakoi Kiraku</strong> — Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+                </div>
+            </div>
+            
+            <div class="presets-container">
+                <div class="presets-grid" id="presetsGrid">
+                    <!-- 12 colors on desktop, 7 colors on mobile -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="input-section">
+            <div style="margin-bottom: 0px;" class="input-group">
+                <label  class="input-label">Enter Hex Color</label>
+                <input 
+                    type="text" 
+                    class="color-input" 
+                    id="colorInput" 
+                    placeholder="#C1FC32"
+                    value="#C1FC32"
+                    maxlength="7"
+                >
+            </div>
+        </div>
+
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Color Detector</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // DOM Elements
+        const searchBar = document.getElementById('searchBar');
+        const searchIcon = document.getElementById('searchIcon');
+        const searchText = document.getElementById('searchText');
+        const globeIcon = document.getElementById('globeIcon');
+        const globeIconSymbol = document.getElementById('globeIconSymbol');
+        const colorInput = document.getElementById('colorInput');
+        const presetsGrid = document.getElementById('presetsGrid');
+        const textPreview = document.getElementById('textPreview');
+        const textPreviewContent = document.getElementById('textPreviewContent');
+
+        // 21 Color Presets (7 columns × 3 rows)
+        const desktopColorPresets = [
+            '#C1FC32',
+            '#C42833', 
+            '#7E50B5',
+            '#FFFFFF',
+            '#007AFF',
+            '#FFC62E',
+            '#FF9500',
+            '#93D8C2',
+            '#3E729A',
+            '#FF2D55',
+            '#8D8CBB',
+            '#8E8E93'
+        ];
+        
+        const mobileColorPresets = [
+            '#C1FC32',
+            '#C42833', 
+            '#7E50B5',
+            '#FFFFFF',
+            '#007AFF',
+            '#FFC62E',
+            '#FF9500'
+        ];
+
+        let activePresetIndex = 0;
+        
+        function getCurrentColorPresets() {
+            return window.innerWidth > 768 ? desktopColorPresets : mobileColorPresets;
+        }
+
+        function initColorPresets() {
+            presetsGrid.innerHTML = '';
+            
+            const currentPresets = getCurrentColorPresets();
+            
+            currentPresets.forEach((color, index) => {
+                const colorDiv = document.createElement('div');
+                colorDiv.className = 'preset-color';
+                colorDiv.style.backgroundColor = color;
+                colorDiv.title = color;
+                
+                if (index === 0) {
+                    colorDiv.classList.add('active');
+                }
+                
+                colorDiv.addEventListener('click', () => {
+                    document.querySelectorAll('.preset-color').forEach(preset => {
+                        preset.classList.remove('active');
+                    });
+                    
+                    colorDiv.classList.add('active');
+                    activePresetIndex = index;
+                    
+                    updateColor(color);
+                    colorInput.value = color;
+                });
+                
+                presetsGrid.appendChild(colorDiv);
+            });
+        }
+
+        // Validate hex color
+        function isValidHex(color) {
+            const hexRegex = /^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+            return hexRegex.test(color);
+        }
+
+        // Format hex color
+        function formatHex(color) {
+            let hex = color.replace('#', '');
+            
+            if (hex.length === 3) {
+                hex = hex.split('').map(char => char + char).join('');
+            }
+            
+            if (hex.length === 6) {
+                return `#${hex.toUpperCase()}`;
+            }
+            
+            return '#C1FC32';
+        }
+
+        // Hex to RGB
+        function hexToRgb(hex) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return { r, g, b };
+        }
+
+        // Calculate brightness (returns 0-100%)
+        function calculateBrightness(r, g, b) {
+            return Math.round((r * 299 + g * 587 + b * 114) / 1000 / 255 * 100);
+        }
+
+        // Get contrasting text color (black or white)
+        function getContrastColor(brightness) {
+            return brightness > 50 ? '#000000' : '#FFFFFF';
+        }
+
+        // Update UI elements with color
+        function updateColor(hex) {
+            if (hex.length < 3) return;
+            
+            if (!isValidHex(hex)) {
+                return;
+            }
+            
+            const formattedHex = formatHex(hex);
+            const rgb = hexToRgb(formattedHex);
+            const brightness = calculateBrightness(rgb.r, rgb.g, rgb.b);
+            const textColor = getContrastColor(brightness);
+            
+            searchBar.style.backgroundColor = formattedHex;
+            searchIcon.style.color = textColor;
+            searchText.style.color = textColor;
+            
+            globeIcon.style.backgroundColor = formattedHex;
+            globeIconSymbol.style.color = textColor;
+            
+            textPreview.style.backgroundColor = formattedHex;
+            textPreviewContent.style.color = textColor;
+            
+            colorInput.value = formattedHex;
+            
+            if (brightness > 70) {
+                searchIcon.classList.add('color-change');
+                globeIconSymbol.classList.add('color-change');
+            } else {
+                searchIcon.classList.remove('color-change');
+                globeIconSymbol.classList.remove('color-change');
+            }
+            
+            if (brightness < 20) {
+                searchBar.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.1)';
+                globeIcon.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.1)';
+                textPreview.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.1)';
+            } else {
+                searchBar.style.boxShadow = 'none';
+                globeIcon.style.boxShadow = 'none';
+                textPreview.style.boxShadow = 'none';
+            }
+            
+            const presetIndex = desktopColorPresets.indexOf(formattedHex);
+            if (presetIndex !== -1) {
+                document.querySelectorAll('.preset-color').forEach(preset => {
+                    preset.classList.remove('active');
+                });
+                
+                const presetDivs = document.querySelectorAll('.preset-color');
+                if (presetDivs[presetIndex]) {
+                    presetDivs[presetIndex].classList.add('active');
+                    activePresetIndex = presetIndex;
+                }
+            }
+        }
+
+        // Event Listeners
+        colorInput.addEventListener('input', (e) => {
+            const value = e.target.value;
+            if (value.length >= 3) {
+                updateColor(value);
+            }
+        });
+
+        colorInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                updateColor(colorInput.value);
+            }
+        });
+        
+        textPreview.addEventListener('click', () => {
+            const currentPresets = getCurrentColorPresets();
+            activePresetIndex = (activePresetIndex + 1) % currentPresets.length;
+            const nextColor = currentPresets[activePresetIndex];
+            updateColor(nextColor);
+            colorInput.value = nextColor;
+        });
+        
+        colorInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                if (isValidHex(colorInput.value)) {
+                    updateColor(colorInput.value);
+                }
+            }
+        });
+
+        // Fun interaction: Click search bar to cycle through presets
+        searchBar.addEventListener('click', () => {
+            const currentPresets = getCurrentColorPresets();
+            activePresetIndex = (activePresetIndex + 1) % currentPresets.length;
+            const nextColor = currentPresets[activePresetIndex];
+            updateColor(nextColor);
+            colorInput.value = nextColor;
+        });
+        
+        globeIcon.addEventListener('click', () => {
+            const currentPresets = getCurrentColorPresets();
+            let randomIndex;
+            do {
+                randomIndex = Math.floor(Math.random() * currentPresets.length);
+            } while (randomIndex === activePresetIndex);
+            
+            activePresetIndex = randomIndex;
+            const randomColor = currentPresets[randomIndex];
+            updateColor(randomColor);
+            colorInput.value = randomColor;
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            const currentPresets = getCurrentColorPresets();
+            if (e.key === 'ArrowRight') {
+                activePresetIndex = (activePresetIndex + 1) % currentPresets.length;
+            } else if (e.key === 'ArrowLeft') {
+                activePresetIndex = (activePresetIndex - 1 + currentPresets.length) % currentPresets.length;
+            } else {
+                return;
+            }
+            
+            const newColor = currentPresets[activePresetIndex];
+            updateColor(newColor);
+            colorInput.value = newColor;
+        });
+        
+        textPreview.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                const currentPresets = getCurrentColorPresets();
+                activePresetIndex = (activePresetIndex + 1) % currentPresets.length;
+                const nextColor = currentPresets[activePresetIndex];
+                updateColor(nextColor);
+                colorInput.value = nextColor;
+            }
+        });
+        
+        window.addEventListener('resize', () => {
+            initColorPresets();
+            updateColor(colorInput.value);
+        });
+
+        // Initialize
+        function initApp() {
+            // Set initial color
+            updateColor('#C1FC32');
+            
+            // Initialize color presets grid (7×1)
+            initColorPresets();
+            
+            // Focus input field
+            setTimeout(() => {
+                colorInput.focus();
+                colorInput.select();
+            }, 500);
+            
+            colorInput.addEventListener('input', (e) => {
+                const value = e.target.value;
+                updateColor(value);
+            });
+            
+            // Add placeholder animation
+            let placeholderIndex = 0;
+            const placeholders = ['Search...', 'Type to search...', 'Find something...', 'Discover...'];
+            
+            setInterval(() => {
+                searchText.placeholder = placeholders[placeholderIndex];
+                placeholderIndex = (placeholderIndex + 1) % placeholders.length;
+            }, 2000);
+        }
+
+        // Start the app
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>

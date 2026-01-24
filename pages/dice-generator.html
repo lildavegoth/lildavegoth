@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dice Generator | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        .blur-background {
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            background-color: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        header {
+            padding: var(--spacing-lg) 0;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .profile-section {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .username {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .dice-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-xl);
+            margin: var(--spacing-xl) 0;
+        }
+
+        .number-display {
+            width: 300px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            transition: all 0.3s ease;
+        }
+
+        @keyframes pulse {
+            from { opacity: 0.5; }
+            to { opacity: 1; }
+        }
+
+        .throw-button {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 18px 48px;
+            border-radius: var(--radius-medium);
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .throw-button:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+        }
+
+        .throw-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: rgba(40, 40, 40, 0.8);
+        }
+
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-small);
+            background: rgba(193, 252, 50, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            font-size: 1.2rem;
+        }
+
+        .stat-info h3 {
+            font-size: 1.8rem;
+            margin-bottom: 2px;
+        }
+
+        .stat-info p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .used-numbers {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            margin-top: var(--spacing-xl);
+        }
+
+        .numbers-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: var(--spacing-md);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .number-chip {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+        }
+
+        @media (max-width: 768px) {
+            .profile-section {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .username {
+                font-size: 2rem;
+            }
+
+            .number-display {
+                width: 300px;
+                height: 300px;
+                font-size: 10rem;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease forwards;
+        }
+        
+        .toggle-switch {
+          position: relative;
+          display: inline-block;
+          width: 60px;
+          height: 30px;
+        }
+        
+        .toggle-switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        
+        .toggle-slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: var(--bg-dark);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          transition: .4s;
+          border-radius: 34px;
+        }
+        
+        .toggle-slider:before {
+          position: absolute;
+          content: "";
+          height: 22px;
+          width: 22px;
+          left: 4px;
+          bottom: 3px;
+          background-color: var(--text-secondary);
+          transition: .4s;
+          border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+          background-color: var(--accent-color);
+          border-color: var(--accent-color);
+        }
+        
+        input:checked + .toggle-slider:before {
+          background-color: #000;
+          transform: translateX(28px);
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <header class="fade-in">
+            <div class="profile-section">
+                <div>
+                    <h1 class="username">Dice Generator</h1>
+                    <p class="tagline">Auto generate random numbers app</p>
+                </div>
+            </div>
+        </header>
+
+        <div style="margin-top: -70px;" class="dice-container">
+            <div class="number-display fade-in" id="numberDisplay">
+                ?
+            </div>
+            
+            <button class="throw-button fade-in" id="throwButton">
+                <i class="fas fa-dice"></i>
+                Throw Dice
+            </button>
+        </div>
+        
+        <div class="range-controls fade-in" style="margin-bottom: var(--spacing-xl);">
+            <div style="background: var(--bg-card); border-radius: var(--radius-medium); padding: var(--spacing-md);">
+                <h2 style="margin-bottom: 10px;">Settings</h2>
+                <div style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-sm); flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 0.9rem;">
+                            <i class="fas fa-play" style="color: var(--accent-color); margin-right: 8px;"></i>
+                            Start Number
+                        </label>
+                        <input type="number" id="startInput" min="1" max="100" value="1" 
+                            style="width: 100%; padding: 12px; border-radius: var(--radius-small); 
+                                  background: var(--bg-dark); border: 1px solid rgba(255, 255, 255, 0.1); 
+                                  color: var(--text-primary); font-size: 1rem;">
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 0.9rem;">
+                            <i class="fas fa-flag-checkered" style="color: var(--accent-color); margin-right: 8px;"></i>
+                            End Number
+                        </label>
+                            <input type="number" id="endInput" min="2" max="100" value="56" 
+                                style="width: 100%; padding: 12px; border-radius: var(--radius-small); 
+                                    background: var(--bg-dark); border: 1px solid rgba(255, 255, 255, 0.1); 
+                                    color: var(--text-primary); font-size: 1rem;">
+                    </div>
+                </div>
+                <button id="saveRange" 
+                    style="background: var(--accent-color); color: #000; border: none; 
+                       padding: 12px 24px; border-radius: var(--radius-small); 
+                       font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+                       display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-save"></i>
+                    Save Range
+                </button>
+          
+                <div style="margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <label style="color: var(--text-primary); font-size: 1rem; font-weight: 500;">
+                                <i class="fas fa-repeat" style="color: var(--accent-color); margin-right: 8px;"></i>
+                                Disable Number Repeat
+                            </label>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="repeatToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Dice Generator</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const numberDisplay = document.getElementById('numberDisplay');
+        const throwButton = document.getElementById('throwButton');
+        const startInput = document.getElementById('startInput');
+        const endInput = document.getElementById('endInput');
+        const saveRange = document.getElementById('saveRange');
+        const repeatToggle = document.getElementById('repeatToggle');
+        
+        let startValue = 1;
+        let endValue = 56;
+        let availableNumbers = [];
+        let usedNumbers = [];
+        let animationInterval;
+        
+        function initializeNumbers() {
+          const count = endValue - startValue + 1;
+          availableNumbers = Array.from({length: count}, (_, i) => startValue + i);
+          usedNumbers = [];
+        }
+        
+        function getRandomNumber() {
+          if (availableNumbers.length === 0) {
+            if (repeatToggle.checked) {
+              return null;
+            } else {
+              initializeNumbers();
+            }
+          }
+          
+          const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+          const number = availableNumbers[randomIndex];
+          
+          if (repeatToggle.checked) {
+            availableNumbers.splice(randomIndex, 1);
+            usedNumbers.push(number);
+          }
+          
+          return number;
+        }
+        
+        function getRandomTempNumber() {
+          const min = parseInt(startValue);
+          const max = parseInt(endValue);
+          return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+        
+        saveRange.addEventListener('click', function() {
+          const newStart = parseInt(startInput.value);
+          const newEnd = parseInt(endInput.value);
+          
+          if (newStart >= newEnd) {
+            window.showMessage('Start number must be less than end number!');
+            return;
+          }
+          
+          if (newEnd - newStart > 100) {
+            window.showMessage('Range cannot exceed 100 numbers!');
+            return;
+          }
+          
+          startValue = newStart;
+          endValue = newEnd;
+          
+          initializeNumbers();
+          
+          window.showMessage(`Range updated to ${startValue} - ${endValue}`);
+        });
+        
+        throwButton.addEventListener('click', function() {
+          if (repeatToggle.checked && availableNumbers.length === 0) {
+            window.showMessage('All numbers have been used! Disable repeat or change range.');
+            return;
+          }
+          
+          throwButton.classList.add('clicked');
+          throwButton.disabled = true;
+          
+          setTimeout(function() {
+            throwButton.classList.remove('clicked');
+          }, 500);
+          
+          numberDisplay.classList.add('generating');
+          
+          let animationTime = 0;
+          const totalAnimationTime = 1200;
+          
+          animationInterval = setInterval(function() {
+            numberDisplay.textContent = getRandomTempNumber();
+            animationTime += 100;
+            
+            if (animationTime >= totalAnimationTime) {
+              clearInterval(animationInterval);
+              const result = getRandomNumber();
+              numberDisplay.textContent = result;
+              numberDisplay.classList.remove('generating');
+              throwButton.disabled = false;
+            }
+          }, 100);
+        });
+        
+        initializeNumbers();
+      });
+    </script>
+</body>
+</html>

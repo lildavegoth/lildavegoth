@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Movies Player | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+            padding: var(--spacing-md);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        ./* Header */
+        header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .main-title {
+            font-size: clamp(1.8rem, 5vw, 2.2rem);
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: clamp(0.9rem, 3vw, 1rem);
+            line-height: 1.4;
+            max-width: 600px;
+            margin-bottom: 30px;
+        }
+        
+        .video-player-wrapper {
+            background: var(--bg-card);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .video-player {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            background: var(--bg-black);
+            border-radius: var(--radius-medium);
+            overflow: hidden;
+            max-height: 70vh;
+            /* Add aspect ratio or specific height */
+            aspect-ratio: 16/9;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: var(--bg-black);
+            object-fit: contain;
+        }
+
+        .subtitle-display {
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            line-height: 1.4;
+            pointer-events: none;
+            z-index: 999;
+        }
+        
+        .subtitle-display span {
+            font-style: italic;
+            font-weight: 500;
+        }
+
+        video:fullscreen ~ .subtitle-display {
+            z-index: 9999;
+        }
+        
+        .title-overlay {
+            position: absolute;
+            bottom: 40px;
+            left: 15px;
+            text-align: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .title-overlay.auto-hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        /* Update the video-title to work inside overlay */
+        .video-title {
+            color: var(--text-primary);
+            font-size: 15px;
+            font-weight: 600;
+            text-align: center;
+            min-height: 24px;
+            display: inline-block;
+            max-width: 250px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .duration-slider {
+            position: absolute;
+            bottom: 8px;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 4px;
+            z-index: 500;
+            cursor: pointer;
+        }
+        
+        .time-display-overlay {
+            position: absolute;
+            bottom: 16px; /* Position above the slider */
+            left: 0;
+            right: 0;
+            bottom: 27px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 var(--spacing-sm);
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            pointer-events: none;
+            z-index: 500;
+            transition: opacity 0.3s ease;
+        }
+        
+        .time-display-overlay.auto-hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Seek buttons with fixed positioning and scale animation */
+        .seek-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%) scale(1);
+            transform-origin: center center;
+            width: 80px;
+            height: 140px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: rgba(255, 255, 255, 0);
+            transition: transform 0.2s ease, background 0.3s ease, color 0.3s ease;
+        }
+        
+        @keyframes gentleBounce {
+            0% { transform: translateY(-50%) scale(1); }
+            30% { transform: translateY(-50%) scale(1.15); }
+            70% { transform: translateY(-50%) scale(1.05); }
+            100% { transform: translateY(-50%) scale(1.1); }
+        }
+        
+        .seek-button.active {
+            background: rgba(193, 252, 50, 0.3);
+            color: var(--accent-color);
+            animation: gentleBounce 0.3s ease forwards; /* Forwards keeps final state */
+            transform-origin: center center;
+        }
+        
+        .seek-button:hover {
+            background: rgba(193, 252, 50, 0.1);
+            color: rgba(255, 255, 255, 0.6);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .seek-button.rewind {
+            left: 15px;
+        }
+
+        .seek-button.forward {
+            right: 15px;
+        }
+
+        /* Overlay controls with hide UI button */
+        .overlay-controls {
+            position: absolute;
+            top: var(--spacing-sm);
+            right: var(--spacing-sm);
+            display: flex;
+            gap: var(--spacing-xs);
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Hide button auto-hides after 5 seconds of no touch */
+        .overlay-controls.auto-hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .duration-slider.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .overlay-controls button {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: 12px;
+            min-width: auto;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(193, 252, 50, 0.15);
+            border: 1px solid rgba(193, 252, 50, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .overlay-controls button:hover {
+            background: rgba(193, 252, 50, 0.3);
+            border-color: var(--accent-color);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+            transition: opacity 0.3s ease;
+        }
+
+        .control-row {
+            display: flex;
+            flex: 1;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* File controls side by side */
+        .control-row.file-controls {
+            flex-direction: row;
+            gap: var(--spacing-sm);
+        }
+
+        .control-item {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: var(--spacing-sm);
+            border: 1px solid rgba(193, 252, 50, 0.2);
+            border-radius: var(--radius-small);
+            background: rgba(193, 252, 50, 0.05);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-secondary);
+        }
+
+        input[type="text"]:focus, input[type="file"]:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: rgba(193, 252, 50, 0.1);
+        }
+
+        input[type="file"]::file-selector-button {
+            background: var(--accent-color);
+            border: none;
+            color: var(--bg-black);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background: var(--accent-color);
+        }
+
+        button {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid rgba(193, 252, 50, 0.2);
+            border-radius: var(--radius-small);
+            background: var(--accent-color);
+            color: var(--bg-black);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+        }
+
+        button:hover {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .playback-controls {
+            display: flex;
+            gap: var(--spacing-xs);
+            justify-content: center;
+            flex-wrap: wrap;
+            transition: opacity 0.3s ease;
+        }
+
+        .playback-controls button {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: 12px;
+            min-width: 80px;
+        }
+
+        .progress-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+            transition: opacity 0.3s ease;
+        }
+
+        .subtitle-controls {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .subtitle-toggle {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        select {
+            width: 100%;
+            padding: var(--spacing-sm);
+            border: 1px solid rgba(193, 252, 50, 0.2);
+            border-radius: var(--radius-small);
+            background: rgba(193, 252, 50, 0.05);
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: none;
+            padding-right: var(--spacing-sm);
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: rgba(193, 252, 50, 0.1);
+        }
+
+        select option {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(193, 252, 50, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 32px;      /* Wider for pill */
+            height: 16px;     /* Keep same height */
+            border-radius: 8px; /* Half of height for pill shape */
+            background: var(--accent-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 32px;      /* Wider for pill */
+            height: 16px;     /* Keep same height */
+            border-radius: 8px; /* Half of height for pill shape */
+            background: var(--accent-color);
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            background: var(--accent-color);
+            transform: scale(1.2);
+        }
+
+        .info-section {
+            background: rgba(193, 252, 50, 0.08);
+            border: 1px solid rgba(193, 252, 50, 0.2);
+            border-radius: var(--radius-small);
+            padding: var(--spacing-sm);
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .video-player-wrapper {
+                padding: var(--spacing-md);
+            }
+
+            .control-item {
+                min-width: 100%;
+            }
+
+            .playback-controls button {
+                padding: var(--spacing-xs) var(--spacing-sm);
+                font-size: 11px;
+                min-width: 70px;
+            }
+
+            .subtitle-display {
+                font-size: 14px;
+                bottom: 40px;
+            }
+
+            .overlay-controls {
+                gap: var(--spacing-xs);
+            }
+
+            .overlay-controls button {
+                width: 36px;
+                height: 36px;
+            }
+
+            .seek-button {
+                width: 60px;
+                height: 120px;
+                font-size: 24px;
+            }
+        }
+        
+        /* Tool Navigation */
+        .tool-navigation {
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .tool-navigation p {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border: 2px solid var(--accent-color);
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(193, 252, 50, 0.2);
+            transform: translateY(-2px);
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <div class="header">
+            <h1 class="main-title">Movies Player</h1>
+            <p class="subtitle">A local video player that focused on & for Movies with srt Subtitle supports.</p>
+        </div>
+        
+        <div class="video-player-wrapper">
+            <div class="video-player">
+                <!-- Video Container -->
+                <div class="video-container" id="videoContainer">
+                    <video id="video"></video>
+                    <!-- Hidden file inputs -->
+                    <input type="file" id="videoFileInput" accept="video/*" style="display: none;">
+                    <input type="file" id="subtitleFileInput" accept=".srt" style="display: none;">
+                    
+                    <div class="title-overlay" id="titleOverlay">
+                        <div class="video-title" id="videoTitle">No video loaded</div>
+                    </div>
+                    
+                    <div class="time-display-overlay" id="timeDisplayOverlay">
+                        <span id="currentTime">0:00</span>
+                        <span id="duration">0:00</span>
+                    </div>
+                    
+                    <!-- Duration slider for seeking -->
+                    <input type="range" class="duration-slider" id="durationSlider" min="0" max="100" value="0">
+                    
+                    <!-- Tap-to-seek buttons -->
+                    <button class="seek-button rewind" id="rewindButton" title="Rewind 5 seconds">
+                        <i class="fas fa-backward"></i>
+                    </button>
+                    <button class="seek-button forward" id="forwardButton" title="Skip 5 seconds">
+                        <i class="fas fa-forward"></i>
+                    </button>
+
+                    <div class="overlay-controls" id="overlayControls">
+                        <button id="playPauseButton" title="Play/Pause">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button id="stopOverlay" title="Stop">
+                            <i class="fas fa-stop"></i>
+                        </button>
+                        <button id="fullscreenOverlay" title="Fullscreen">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                        <!-- File input buttons -->
+                        <button id="videoFileButton" title="Load Video">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <button id="subtitleFileButton" title="Load Subtitles">
+                            <i class="fas fa-closed-captioning"></i>
+                        </button>
+                        <!-- Hide UI button -->
+                        <button id="hideUiButton" title="Hide Buttons">
+                            <i class="fas fa-unlock"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Subtitle display inside video container for fullscreen visibility -->
+                    <div class="subtitle-display" id="subtitleDisplay"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tool Navigation -->
+        <div class="tool-navigation" style="margin-top: var(--spacing-lg); padding-top: var(--spacing-md); border-top: 1px solid rgba(255, 255, 255, 0.1);">
+            <div style="text-align: center;">
+                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-sm); font-size: 0.9rem;">
+                    Explore other Movies apps
+                </p>
+                <div style="display: flex; justify-content: center; gap: var(--spacing-sm); flex-wrap: wrap;">
+                    <a href="movies-gallery.html" class="nav-btn">
+                        Movies Gallery
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Movies Player</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+        
+    </div>
+
+    <script>
+    const video = document.getElementById('video');
+    const videoTitle = document.getElementById('videoTitle');
+    const playPauseButton = document.getElementById('playPauseButton');
+    const stopOverlay = document.getElementById('stopOverlay');
+    const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+    const durationDisplay = document.getElementById('duration');
+    const titleOverlay = document.getElementById('titleOverlay');
+    const subtitleDisplay = document.getElementById('subtitleDisplay');
+    const videoContainer = document.getElementById('videoContainer');
+    const currentTimeDisplay = document.getElementById('currentTime');
+    const timeDisplayOverlay = document.getElementById('timeDisplayOverlay');
+    const durationSlider = document.getElementById('durationSlider');
+    const rewindButton = document.getElementById('rewindButton');
+    const forwardButton = document.getElementById('forwardButton');
+    const hideUiButton = document.getElementById('hideUiButton');
+    const overlayControls = document.getElementById('overlayControls');
+    const videoFileButton = document.getElementById('videoFileButton');
+    const subtitleFileButton = document.getElementById('subtitleFileButton');
+    const videoFileInput = document.getElementById('videoFileInput');
+    const subtitleFileInput = document.getElementById('subtitleFileInput');
+
+    let subtitles = [];
+    let subtitlesEnabled = true;
+    let uiHidden = false;
+    let hideTimeout;
+
+    function saveVideoState(fileName, currentTime, duration) {
+        localStorage.setItem('lastVideo', JSON.stringify({
+            fileName: fileName,
+            currentTime: currentTime,
+            duration: duration,
+            timestamp: Date.now()
+        }));
+    }
+    
+    function loadVideoState() {
+        const saved = localStorage.getItem('lastVideo');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+        return null;
+    }
+
+    function getVideoFileName(file) {
+        return file.name.replace(/\.[^/.]+$/, "");
+    }
+
+    function resetAutoHideTimer() {
+        clearTimeout(hideTimeout);
+        
+        if (!uiHidden) {
+            showUI();
+            
+            hideTimeout = setTimeout(() => {
+                if (!uiHidden) {
+                    hideUI();
+                }
+            }, 5000);
+        }
+    }
+
+    function showUI() {
+        overlayControls.style.opacity = '1';
+        overlayControls.style.pointerEvents = 'auto';
+        durationSlider.style.opacity = '1';
+        durationSlider.style.pointerEvents = 'auto';
+        timeDisplayOverlay.style.opacity = '1';
+        timeDisplayOverlay.style.pointerEvents = 'auto';
+        titleOverlay.style.opacity = '1';
+        titleOverlay.style.pointerEvents = 'auto';
+        hideUiButton.style.opacity = '1';
+        hideUiButton.style.pointerEvents = 'auto';
+    }
+
+    function hideUI() {
+        overlayControls.style.opacity = '0';
+        overlayControls.style.pointerEvents = 'none';
+        durationSlider.style.opacity = '0';
+        durationSlider.style.pointerEvents = 'none';
+        timeDisplayOverlay.style.opacity = '0';
+        timeDisplayOverlay.style.pointerEvents = 'none';
+        titleOverlay.style.opacity = '0';
+        titleOverlay.style.pointerEvents = 'none';
+    }
+
+    videoContainer.addEventListener('mousemove', function() {
+        if (!uiHidden) {
+            showUI();
+            resetAutoHideTimer();
+        }
+    });
+
+    videoContainer.addEventListener('click', function() {
+        if (!uiHidden) {
+            showUI();
+            resetAutoHideTimer();
+        }
+    });
+
+    videoContainer.addEventListener('touchstart', function() {
+        if (!uiHidden) {
+            showUI();
+            resetAutoHideTimer();
+        }
+    });
+
+    function parseSRT(content) {
+        const lines = content.split('\n');
+        const subs = [];
+        let current = {};
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+
+            if (line === '') {
+                if (current.text) {
+                    subs.push(current);
+                    current = {};
+                }
+            } else if (line.includes('-->')) {
+                const times = line.split('-->');
+                current.start = timeToSeconds(times[0].trim());
+                current.end = timeToSeconds(times[1].trim());
+            } else if (current.start !== undefined) {
+                current.text = (current.text ? current.text + ' ' : '') + line;
+            }
+        }
+        
+        if (current.text) {
+            subs.push(current);
+        }
+        
+        return subs;
+    }
+
+    function timeToSeconds(timeStr) {
+        const parts = timeStr.split(':');
+        const hours = parseInt(parts[0]);
+        const minutes = parseInt(parts[1]);
+        const seconds = parseFloat(parts[2].replace(',', '.'));
+        return hours * 3600 + minutes * 60 + seconds;
+    }
+
+    function getCurrentSubtitle() {
+        const currentTime = video.currentTime;
+        
+        for (let sub of subtitles) {
+            if (currentTime >= sub.start && currentTime <= sub.end) {
+                return sub.text;
+            }
+        }
+        return '';
+    }
+
+    function updatePlayPauseButton() {
+        if (video.paused) {
+            playPauseButton.innerHTML = '<i class="fas fa-play"></i>';
+        } else {
+            playPauseButton.innerHTML = '<i class="fas fa-pause"></i>';
+        }
+    }
+
+    function updateSubtitles() {
+        if (subtitlesEnabled && subtitles.length > 0) {
+            subtitleDisplay.textContent = getCurrentSubtitle();
+        } else {
+            subtitleDisplay.textContent = '';
+        }
+    }
+
+    function formatTime(seconds) {
+        if (isNaN(seconds)) return '0:00';
+        
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    videoFileInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            videoTitle.textContent = getVideoFileName(file);
+            video.src = URL.createObjectURL(file);
+            video.play();
+            updatePlayPauseButton();
+        }
+        resetAutoHideTimer();
+    });
+
+    subtitleFileInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                subtitles = parseSRT(e.target.result);
+                subtitlesEnabled = true;
+            };
+            reader.readAsText(file);
+        }
+        resetAutoHideTimer();
+    });
+
+    videoFileButton.addEventListener('click', function() {
+        videoFileInput.click();
+        resetAutoHideTimer();
+    });
+
+    subtitleFileButton.addEventListener('click', function() {
+        subtitleFileInput.click();
+        resetAutoHideTimer();
+    });
+
+    playPauseButton.addEventListener('click', () => {
+        if (video.paused) {
+            video.play();
+        } else {
+            video.pause();
+        }
+        updatePlayPauseButton();
+        resetAutoHideTimer();
+    });
+
+    stopOverlay.addEventListener('click', () => {
+        video.pause();
+        video.currentTime = 0;
+        updatePlayPauseButton();
+        resetAutoHideTimer();
+    });
+
+    fullscreenOverlay.addEventListener('click', () => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        } else {
+            videoContainer.requestFullscreen();
+        }
+        resetAutoHideTimer();
+    });
+
+    durationSlider.addEventListener('input', function() {
+        if (!isNaN(video.duration)) {
+            video.currentTime = (this.value / 100) * video.duration;
+        }
+    });
+
+    rewindButton.addEventListener('click', function() {
+        video.currentTime = Math.max(0, video.currentTime - 5);
+        this.classList.add('active');
+        setTimeout(() => this.classList.remove('active'), 200);
+        resetAutoHideTimer();
+    });
+
+    forwardButton.addEventListener('click', function() {
+        video.currentTime = Math.min(video.duration, video.currentTime + 5);
+        this.classList.add('active');
+        setTimeout(() => this.classList.remove('active'), 200);
+        resetAutoHideTimer();
+    });
+
+    hideUiButton.addEventListener('click', function() {
+        uiHidden = !uiHidden;
+        
+        if (uiHidden) {
+            hideUI();
+            hideUiButton.innerHTML = '<i class="fas fa-lock"></i>';
+            hideUiButton.title = 'Show UI';
+        } else {
+            showUI();
+            hideUiButton.innerHTML = '<i class="fas fa-unlock"></i>';
+            hideUiButton.title = 'Hide UI';
+            resetAutoHideTimer();
+        }
+    });
+
+    video.addEventListener('timeupdate', function() {
+        const percent = (video.currentTime / video.duration) * 100;
+        durationSlider.value = percent;
+        currentTimeDisplay.textContent = formatTime(video.currentTime);
+        updateSubtitles();
+    });
+
+    video.addEventListener('loadedmetadata', function() {
+        durationDisplay.textContent = formatTime(video.duration);
+    });
+
+    video.addEventListener('play', updatePlayPauseButton);
+    video.addEventListener('pause', updatePlayPauseButton);
+    video.addEventListener('ended', updatePlayPauseButton);
+
+    video.volume = 1;
+    showUI();
+    updatePlayPauseButton();
+    resetAutoHideTimer();
+</script>
+</body>
+</html>
