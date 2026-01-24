@@ -1,1724 +1,2008 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Adventure | Voidgarden</title>
-<meta name="color-scheme" content="dark">
-<script src="../../protections.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-:root {
---accent-color: #C1FC32;
---accent-dark: #9bc726;
---bg-black: #000000;
---bg-dark: #1a1a1a;
---bg-card: rgba(30, 30, 30, 0.7);
---text-primary: #f5f5f7;
---text-secondary: #a1a1a6;
---radius-small: 12px;
---radius-medium: 20px;
---radius-large: 28px;
---spacing-xs: 8px;
---spacing-sm: 16px;
---spacing-md: 24px;
---spacing-lg: 32px;
---spacing-xl: 48px;
-}
-* {
-margin: 0;
-padding: 0;
-box-sizing: border-box;
-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-}
-body {
-background-color: var(--bg-black);
-color: var(--text-primary);
-min-height: 100vh;
-background-image:
-radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
-radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
-overflow-x: hidden;
-}
-.container {
-max-width: 1200px;
-margin: 0 auto;
-padding: var(--spacing-md);
-}
-.blur-background {
-backdrop-filter: saturate(180%) blur(20px);
--webkit-backdrop-filter: saturate(180%) blur(20px);
-background-color: rgba(22, 22, 24, 0.8);
-border: 1px solid rgba(255, 255, 255, 0.1);
-}
-header {
-padding: var(--spacing-lg) 0;
-margin-bottom: var(--spacing-md);
-}
-.profile-section {
-display: flex;
-align-items: center;
-gap: var(--spacing-md);
-margin-bottom: var(--spacing-lg);
-}
-.username {
-font-size: 2.5rem;
-font-weight: 700;
-color: #ffffff;
-margin-bottom: 4px;
-}
-.tagline {
-color: var(--text-secondary);
-font-size: 1.1rem;
-}
-/* Compact Stats Container */
-.stats-container {
-background: var(--bg-card);
-border-radius: var(--radius-medium);
-padding: var(--spacing-sm);
-margin-bottom: var(--spacing-lg);
-border: 1px solid rgba(255, 255, 255, 0.05);
-display: grid;
-grid-template-rows: auto auto;
-gap: var(--spacing-sm);
-}
-.stats-row {
-display: flex;
-justify-content: space-around;
-align-items: center;
-}
-.stat-item {
-display: flex;
-flex-direction: column;
-align-items: center;
-flex: 1;
-padding: 6px;
-border-radius: var(--radius-small);
-transition: all 0.3s ease;
-}
-.stat-item:hover {
-background: rgba(193, 252, 50, 0.05);
-}
-.stat-value {
-font-size: 1.4rem;
-font-weight: bold;
-color: var(--accent-color);
-margin-bottom: 4px;
-}
-.stat-label {
-font-size: 0.8rem;
-color: var(--text-secondary);
-text-transform: uppercase;
-letter-spacing: 0.5px;
-}
-/* Game Grid Styles */
-.game-section {
-margin: var(--spacing-xl) 0;
-}
-.game-container {
-display: grid;
-grid-template-columns: 1fr 400px;
-gap: var(--spacing-lg);
-margin-bottom: var(--spacing-xl);
-}
-@media (max-width: 900px) {
-.game-container {
-grid-template-columns: 1fr;
-}
-}
-.grid-container {
-background: var(--bg-card);
-border-radius: var(--radius-large);
-padding: var(--spacing-lg);
-border: 1px solid rgba(255, 255, 255, 0.05);
-}
-.grid-title {
-font-size: 1.5rem;
-margin-bottom: var(--spacing-md);
-display: flex;
-align-items: center;
-gap: var(--spacing-sm);
-color: var(--accent-color);
-}
-.game-grid {
-display: grid;
-grid-template-columns: repeat(3, 1fr);
-grid-template-rows: repeat(3, 1fr);
-gap: 10px;
-aspect-ratio: 1/1;
-max-width: 500px;
-margin: 0 auto;
-}
-.grid-cell {
-background: rgba(40, 40, 40, 0.6);
-border-radius: var(--radius-small);
-border: 2px solid rgba(255, 255, 255, 0.05);
-display: flex;
-align-items: center;
-justify-content: center;
-font-size: 2rem;
-transition: all 0.3s ease;
-position: relative;
-overflow: hidden;
-cursor: pointer;
-}
-.grid-cell.active {
-border-color: var(--accent-color);
-box-shadow: 0 0 15px rgba(193, 252, 50, 0.3);
-}
-.grid-cell.enemy {
-background: rgba(220, 53, 69, 0.2);
-border-color: rgba(220, 53, 69, 0.3);
-}
-.grid-cell.chest {
-background: rgba(255, 193, 7, 0.2);
-border-color: rgba(255, 193, 7, 0.3);
-}
-.grid-cell.exit {
-background: rgba(25, 135, 84, 0.2);
-border-color: rgba(25, 135, 84, 0.3);
-}
-.grid-cell.shop {
-background: rgba(111, 66, 193, 0.2);
-border-color: rgba(111, 66, 193, 0.3);
-}
-.cell-content {
-width: 60%;
-height: 60%;
-background-size: contain;
-background-repeat: no-repeat;
-background-position: center;
-}
-/* Game Controls */
-.controls-container {
-display: grid;
-grid-template-columns: 1fr 1fr 1fr;
-grid-template-rows: 1fr 1fr 1fr;
-gap: 8px;
-max-width: 200px;
-margin: var(--spacing-md) auto;
-}
-.control-btn {
-background: var(--bg-dark);
-border: 1px solid rgba(255, 255, 255, 0.1);
-border-radius: var(--radius-small);
-height: 60px;
-display: flex;
-align-items: center;
-justify-content: center;
-color: var(--accent-color);
-font-size: 1.5rem;
-cursor: pointer;
-transition: all 0.2s ease;
-}
-.control-btn:hover {
-background: rgba(193, 252, 50, 0.1);
-transform: scale(1.05);
-}
-.control-btn:active {
-transform: scale(0.95);
-}
-.control-btn.up { grid-column: 2; grid-row: 1; }
-.control-btn.down { grid-column: 2; grid-row: 3; }
-.control-btn.left { grid-column: 1; grid-row: 2; }
-.control-btn.right { grid-column: 3; grid-row: 2; }
-.control-btn.next-stage {
-grid-column: 2;
-grid-row: 2;
-background: rgba(25, 135, 84, 0.2);
-color: var(--accent-color);
-font-size: 1.2rem;
-}
-/* Game Info Panel */
-.info-panel {
-background: var(--bg-card);
-border-radius: var(--radius-large);
-padding: var(--spacing-lg);
-border: 1px solid rgba(255, 255, 255, 0.05);
-height: 100%;
-display: flex;
-flex-direction: column;
-}
-/* Inventory Display */
-.inventory-display {
-display: grid;
-grid-template-columns: repeat(3, 1fr);
-gap: var(--spacing-xs);
-margin-bottom: var(--spacing-md);
-max-height: 400px;
-overflow-y: auto;
-}
-.inventory-item {
-background: rgba(255, 255, 255, 0.03);
-border-radius: var(--radius-small);
-padding: var(--spacing-sm);
-border: 1px solid rgba(255, 255, 255, 0.05);
-text-align: center;
-position: relative;
-min-height: 120px;
-}
-.item-icon {
-font-size: 2rem;
-margin-bottom: 8px;
-}
-.item-name {
-font-size: 0.8rem;
-color: var(--text-secondary);
-margin-bottom: 4px;
-}
-.item-count {
-position: absolute;
-top: 4px;
-right: 4px;
-background: var(--accent-color);
-color: #000;
-font-size: 0.7rem;
-font-weight: bold;
-width: 18px;
-height: 18px;
-border-radius: 50%;
-display: flex;
-align-items: center;
-justify-content: center;
-}
-.sell-btn {
-background: rgba(220, 53, 69, 0.2);
-border: 1px solid rgba(220, 53, 69, 0.3);
-color: #ff6b6b;
-border-radius: var(--radius-small);
-padding: 4px 8px;
-font-size: 0.7rem;
-cursor: pointer;
-width: 100%;
-margin-top: 4px;
-}
-.sell-btn:hover {
-background: rgba(220, 53, 69, 0.3);
-}
-/* Equipment Display */
-.equipment-display {
-display: flex;
-gap: var(--spacing-sm);
-margin-bottom: var(--spacing-lg);
-}
-.equipment-slot {
-flex: 1;
-text-align: center;
-padding: var(--spacing-sm);
-background: rgba(193, 252, 50, 0.1);
-border-radius: var(--radius-small);
-font-size: 0.8rem;
-}
-/* Action Buttons */
-.action-buttons {
-display: flex;
-gap: var(--spacing-sm);
-margin-top: var(--spacing-md);
-}
-.action-btn {
-flex: 1;
-background: var(--bg-dark);
-border: 1px solid rgba(255, 255, 255, 0.1);
-border-radius: var(--radius-small);
-padding: var(--spacing-sm);
-color: var(--text-primary);
-font-weight: 500;
-cursor: pointer;
-transition: all 0.3s ease;
-text-align: center;
-}
-.action-btn:hover {
-background: rgba(193, 252, 50, 0.1);
-border-color: var(--accent-color);
-}
-.action-btn.primary {
-background: var(--accent-color);
-color: #000;
-font-weight: bold;
-}
-/* Footer */
-footer {
-text-align: center;
-padding: var(--spacing-lg) 0;
-color: var(--text-secondary);
-font-size: 0.9rem;
-border-top: 1px solid rgba(255, 255, 255, 0.05);
-margin-top: var(--spacing-xl);
-}
-/* Back to Home Button */
-.back-link {
-display: inline-flex;
-align-items: center;
-gap: 8px;
-color: var(--accent-color);
-text-decoration: none;
-margin-bottom: var(--spacing-lg);
-font-weight: 500;
-transition: all 0.3s ease-in-out;
-padding: var(--spacing-xs) var(--spacing-sm);
-border-radius: var(--radius-small);
-background: rgba(193, 252, 50, 0.1);
-}
-.back-link:hover {
-background: rgba(193, 252, 50, 0.2);
-}
-/* Combat Modal */
-.combat-modal {
-position: fixed;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-background: rgba(0, 0, 0, 0.8);
-display: flex;
-align-items: center;
-justify-content: center;
-z-index: 100;
-opacity: 0;
-pointer-events: none;
-transition: opacity 0.3s ease;
-}
-.combat-modal.active {
-opacity: 1;
-pointer-events: all;
-}
-.combat-content {
-background: var(--bg-dark);
-border-radius: var(--radius-large);
-padding: var(--spacing-xl);
-max-width: 500px;
-width: 90%;
-border: 2px solid var(--accent-color);
-box-shadow: 0 0 30px rgba(193, 252, 50, 0.2);
-}
-.combat-stats {
-display: grid;
-grid-template-columns: 1fr 1fr;
-gap: var(--spacing-lg);
-margin: var(--spacing-lg) 0;
-}
-.combat-character {
-text-align: center;
-}
-.combat-character h4 {
-margin-bottom: var(--spacing-sm);
-color: var(--accent-color);
-}
-.health-bar {
-height: 20px;
-background: rgba(255, 255, 255, 0.1);
-border-radius: 10px;
-overflow: hidden;
-margin-top: var(--spacing-xs);
-}
-.health-fill {
-height: 100%;
-background: var(--accent-color);
-transition: width 0.5s ease;
-}
-.combat-actions {
-display: flex;
-gap: var(--spacing-sm);
-margin-top: var(--spacing-lg);
-}
-.combat-btn {
-flex: 1;
-padding: var(--spacing-sm);
-background: var(--bg-card);
-border: 1px solid rgba(255, 255, 255, 0.1);
-color: var(--text-primary);
-border-radius: var(--radius-small);
-cursor: pointer;
-transition: all 0.3s ease;
-font-weight: 500;
-}
-.combat-btn:hover {
-background: rgba(193, 252, 50, 0.1);
-border-color: var(--accent-color);
-}
-.combat-btn.attack {
-background: rgba(220, 53, 69, 0.2);
-color: #ff6b6b;
-}
-/* Shop Modal */
-.shop-modal {
-position: fixed;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-background: rgba(0, 0, 0, 0.8);
-display: flex;
-align-items: center;
-justify-content: center;
-z-index: 100;
-opacity: 0;
-pointer-events: none;
-transition: opacity 0.3s ease;
-}
-.shop-modal.active {
-opacity: 1;
-pointer-events: all;
-}
-/* In the <style> section, find .shop-content and update it: */
-.shop-content {
-background: var(--bg-dark);
-border-radius: var(--radius-medium); /* Changed from large */
-padding: var(--spacing-md); /* Reduced from xl */
-max-width: 400px; /* Reduced from 500px */
-width: 90%;
-border: 1px solid rgba(193, 252, 50, 0.5); /* Lighter border */
-box-shadow: 0 0 20px rgba(193, 252, 50, 0.15); /* Reduced shadow */
-}
-/* Update shop items grid to 3×3 */
-.shop-items {
-display: grid;
-grid-template-columns: repeat(3, 1fr); /* 3 columns for 3×3 grid */
-gap: var(--spacing-xs); /* Smaller gap */
-margin: var(--spacing-md) 0; /* Reduced margin */
-}
-/* Make shop items smaller */
-.shop-item {
-background: var(--bg-card);
-border-radius: var(--radius-small);
-padding: var(--spacing-xs); /* Reduced padding */
-border: 1px solid rgba(255, 255, 255, 0.08);
-cursor: pointer;
-transition: all 0.2s ease;
-text-align: center;
-min-height: 80px; /* Fixed height */
-display: flex;
-flex-direction: column;
-justify-content: center;
-align-items: center;
-}
-/* Smaller shop item icons */
-.shop-item-icon {
-font-size: 1.5rem; /* Reduced from 2rem */
-margin-bottom: 4px;
-display: block;
-}
-/* Smaller text */
-.shop-item-name {
-font-weight: 500;
-margin-bottom: 2px;
-font-size: 0.8rem; /* Reduced from 0.9rem */
-}
-.shop-item-price {
-color: var(--accent-color);
-font-weight: bold;
-margin-bottom: 0;
-font-size: 0.8rem;
-}
-/* Effect text smaller */
-.shop-item .item-effect {
-font-size: 0.65rem !important; /* Smaller effect text */
-margin: 2px 0 !important;
-}
-/* Death Modal */
-.death-modal {
-position: fixed;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-background: rgba(0, 0, 0, 0.9);
-display: flex;
-align-items: center;
-justify-content: center;
-z-index: 200;
-opacity: 0;
-pointer-events: none;
-transition: opacity 0.5s ease;
-}
-.death-modal.active {
-opacity: 1;
-pointer-events: all;
-}
-.death-content {
-background: linear-gradient(135deg, rgba(40, 0, 0, 0.9), rgba(20, 0, 0, 0.9));
-border-radius: var(--radius-large);
-padding: var(--spacing-xl);
-max-width: 500px;
-width: 90%;
-border: 2px solid rgba(220, 53, 69, 0.5);
-box-shadow: 0 0 60px rgba(220, 53, 69, 0.4);
-text-align: center;
-}
-.death-icon {
-font-size: 4rem;
-color: #dc3545;
-margin-bottom: var(--spacing-md);
-}
-.death-title {
-font-size: 2.5rem;
-color: #dc3545;
-margin-bottom: var(--spacing-lg);
-}
-.death-actions {
-display: flex;
-gap: var(--spacing-sm);
-margin-top: var(--spacing-lg);
-}
-.death-btn {
-flex: 1;
-padding: var(--spacing-sm) var(--spacing-md);
-border: none;
-border-radius: var(--radius-small);
-font-weight: 600;
-cursor: pointer;
-}
-.death-btn.return-btn {
-background: var(--accent-color);
-color: #000;
-}
-.death-btn.return-btn:hover {
-background: var(--accent-dark);
-}
-/* Animations */
-@keyframes pulse {
-0% { transform: scale(1); }
-50% { transform: scale(1.05); }
-100% { transform: scale(1); }
-}
-@keyframes fadeIn {
-from { opacity: 0; transform: translateY(10px); }
-to { opacity: 1; transform: translateY(0); }
-}
-.fade-in {
-animation: fadeIn 0.6s ease forwards;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adventure | Voidgarden</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../../protections.js"></script>
+    <link rel="stylesheet" href="../../svg-icons.css">
+    <link rel="stylesheet" href="../../navigation.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        .blur-background {
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            background-color: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        header {
+            padding: var(--spacing-lg) 0;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .profile-section {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .username {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Compact Stats Container */
+        .stats-container {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: grid;
+            grid-template-rows: auto auto;
+            gap: var(--spacing-sm);
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            padding: 6px;
+            border-radius: var(--radius-small);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            background: rgba(193, 252, 50, 0.05);
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Game Grid Styles */
+        .game-section {
+            margin: var(--spacing-xl) 0;
+        }
+
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        @media (max-width: 900px) {
+            .game-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .grid-container {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .grid-title {
+            font-size: 1.5rem;
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: var(--accent-color);
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            aspect-ratio: 1/1;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .grid-cell {
+            background: rgba(40, 40, 40, 0.6);
+            border-radius: var(--radius-small);
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .grid-cell.active {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 15px rgba(193, 252, 50, 0.3);
+        }
+
+        .grid-cell.enemy {
+            background: rgba(220, 53, 69, 0.2);
+            border-color: rgba(220, 53, 69, 0.3);
+        }
+
+        .grid-cell.chest {
+            background: rgba(255, 193, 7, 0.2);
+            border-color: rgba(255, 193, 7, 0.3);
+        }
+
+        .grid-cell.exit {
+            background: rgba(25, 135, 84, 0.2);
+            border-color: rgba(25, 135, 84, 0.3);
+        }
+        
+        .grid-cell.shop {
+            background: rgba(111, 66, 193, 0.2);
+            border-color: rgba(111, 66, 193, 0.3);
+        }
+
+        .cell-content {
+            width: 60%;
+            height: 60%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        /* Game Controls */
+        .controls-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 8px;
+            max-width: 200px;
+            margin: var(--spacing-md) auto;
+        }
+
+        .control-btn {
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            transform: scale(1.05);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .control-btn.up { grid-column: 2; grid-row: 1; }
+        .control-btn.down { grid-column: 2; grid-row: 3; }
+        .control-btn.left { grid-column: 1; grid-row: 2; }
+        .control-btn.right { grid-column: 3; grid-row: 2; }
+        .control-btn.next-stage { 
+            grid-column: 2; 
+            grid-row: 2; 
+            background: rgba(25, 135, 84, 0.2);
+            color: var(--accent-color);
+            font-size: 1.2rem;
+        }
+
+        /* Game Info Panel */
+        .info-panel {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Inventory Display */
+        .inventory-display {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-md);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .inventory-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-small);
+            padding: var(--spacing-sm);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+            position: relative;
+            min-height: 120px;
+        }
+
+        .item-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .item-name {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .item-count {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: var(--accent-color);
+            color: #000;
+            font-size: 0.7rem;
+            font-weight: bold;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sell-btn {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            color: #ff6b6b;
+            border-radius: var(--radius-small);
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .sell-btn:hover {
+            background: rgba(220, 53, 69, 0.3);
+        }
+
+        /* Equipment Display */
+        .equipment-display {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .equipment-slot {
+            flex: 1;
+            text-align: center;
+            padding: var(--spacing-sm);
+            background: rgba(193, 252, 50, 0.1);
+            border-radius: var(--radius-small);
+            font-size: 0.8rem;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+        }
+
+        .action-btn {
+            flex: 1;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            padding: var(--spacing-sm);
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .action-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+        }
+
+        .action-btn.primary {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: bold;
+        }
+
+        /* Combat Modal */
+        .combat-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .combat-modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .combat-content {
+            background: var(--bg-dark);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-xl);
+            max-width: 500px;
+            width: 90%;
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 0 30px rgba(193, 252, 50, 0.2);
+        }
+
+        .combat-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+            margin: var(--spacing-lg) 0;
+        }
+
+        .combat-character {
+            text-align: center;
+        }
+
+        .combat-character h4 {
+            margin-bottom: var(--spacing-sm);
+            color: var(--accent-color);
+        }
+
+        .health-bar {
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: var(--spacing-xs);
+        }
+
+        .health-fill {
+            height: 100%;
+            background: var(--accent-color);
+            transition: width 0.5s ease;
+        }
+
+        .combat-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-lg);
+        }
+
+        .combat-btn {
+            flex: 1;
+            padding: var(--spacing-sm);
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .combat-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+        }
+
+        .combat-btn.attack {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+        }
+
+        /* Shop Modal */
+        .shop-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .shop-modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* In the <style> section, find .shop-content and update it: */
+        .shop-content {
+            background: var(--bg-dark);
+            border-radius: var(--radius-medium); /* Changed from large */
+            padding: var(--spacing-md); /* Reduced from xl */
+            max-width: 400px; /* Reduced from 500px */
+            width: 90%;
+            border: 1px solid rgba(193, 252, 50, 0.5); /* Lighter border */
+            box-shadow: 0 0 20px rgba(193, 252, 50, 0.15); /* Reduced shadow */
+        }
+        
+        /* Update shop items grid to 3×3 */
+        .shop-items {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 columns for 3×3 grid */
+            gap: var(--spacing-xs); /* Smaller gap */
+            margin: var(--spacing-md) 0; /* Reduced margin */
+        }
+        
+        /* Make shop items smaller */
+        .shop-item {
+            background: var(--bg-card);
+            border-radius: var(--radius-small);
+            padding: var(--spacing-xs); /* Reduced padding */
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            min-height: 80px; /* Fixed height */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* Smaller shop item icons */
+        .shop-item-icon {
+            font-size: 1.5rem; /* Reduced from 2rem */
+            margin-bottom: 4px;
+            display: block;
+        }
+        
+        /* Smaller text */
+        .shop-item-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+            font-size: 0.8rem; /* Reduced from 0.9rem */
+        }
+        
+        .shop-item-price {
+            color: var(--accent-color);
+            font-weight: bold;
+            margin-bottom: 0;
+            font-size: 0.8rem;
+        }
+        
+        /* Effect text smaller */
+        .shop-item .item-effect {
+            font-size: 0.65rem !important; /* Smaller effect text */
+            margin: 2px 0 !important;
+        }
+
+        /* Death Modal */
+        .death-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .death-modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .death-content {
+            background: linear-gradient(135deg, rgba(40, 0, 0, 0.9), rgba(20, 0, 0, 0.9));
+            border-radius: var(--radius-large);
+            padding: var(--spacing-xl);
+            max-width: 500px;
+            width: 90%;
+            border: 2px solid rgba(220, 53, 69, 0.5);
+            box-shadow: 0 0 60px rgba(220, 53, 69, 0.4);
+            text-align: center;
+        }
+
+        .death-icon {
+            font-size: 4rem;
+            color: #dc3545;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .death-title {
+            font-size: 2.5rem;
+            color: #dc3545;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .death-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-lg);
+        }
+
+        .death-btn {
+            flex: 1;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .death-btn.return-btn {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .death-btn.return-btn:hover {
+            background: var(--accent-dark);
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease forwards;
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-<a href="voidgarden.html" class="back-link fade-in" id="returnToFarm">
-<i class="fas fa-arrow-left"></i> Back to Farm
-</a>
-<header class="fade-in">
-<div class="profile-section">
-<div>
-<h1 class="username">Adventure</h1>
-<p class="tagline">3×3 grid RPG - Fight enemies, collect loot, find shops</p>
-</div>
-</div>
-</header>
-<div class="stats-container blur-background fade-in">
-<div class="stats-row">
-<div class="stat-item">
-<div class="stat-value" id="statAttack">15</div>
-<div class="stat-label">ATK</div>
-</div>
-<div class="stat-item">
-<div class="stat-value" id="statHealth">150</div>
-<div class="stat-label">HP</div>
-</div>
-<div class="stat-item">
-<div class="stat-value" id="statDefense">10</div>
-<div class="stat-label">DEF</div>
-</div>
-</div>
-<div class="stats-row">
-<div class="stat-item">
-<div class="stat-value" id="statGold">0</div>
-<div class="stat-label">GOLD</div>
-</div>
-<div class="stat-item">
-<div class="stat-value" id="statStage">1</div>
-<div class="stat-label">STAGE</div>
-</div>
-<div class="stat-item">
-<div class="stat-value" id="statMoves">0</div>
-<div class="stat-label">MOVES</div>
-</div>
-</div>
-</div>
-<section class="game-section">
-<div class="game-container">
-<div class="grid-container blur-background fade-in">
-<div class="game-grid" id="gameGrid">
-</div>
-<div class="controls-container">
-<div class="control-btn up" id="moveUp">
-<i class="fas fa-arrow-up"></i>
-</div>
-<div class="control-btn left" id="moveLeft">
-<i class="fas fa-arrow-left"></i>
-</div>
-<div class="control-btn next-stage" id="nextStageBtn">
-<i class="fas fa-forward"></i>
-</div>
-<div class="control-btn right" id="moveRight">
-<i class="fas fa-arrow-right"></i>
-</div>
-<div class="control-btn down" id="moveDown">
-<i class="fas fa-arrow-down"></i>
-</div>
-</div>
-<p style="text-align: center; margin-top: var(--spacing-sm); color: var(--text-secondary); font-size: 0.9rem;">
-<i class="fas fa-keyboard"></i> Use arrow keys or WASD to move, N for next stage
-</p>
-</div>
-<div class="info-panel blur-background fade-in">
-<div class="grid-title">
-<i class="fas fa-backpack"></i> Inventory
-</div>
-<div class="inventory-display" id="inventory">
-</div>
-<div class="grid-title">
-<i class="fas fa-tshirt"></i> Equipment
-</div>
-<div class="equipment-display">
-<div class="equipment-slot" id="equippedWeapon">
-Weapon: None
-</div>
-<div class="equipment-slot" id="equippedArmor">
-Armor: None
-</div>
-</div>
-<div style="margin-top: -20px;" class="action-buttons">
-<button class="action-btn" id="returnWithLootBtn">
-<i class="fas fa-home"></i> Return with Loot
-</button>
-</div>
-</div>
-</div>
-</section>
-<div class="combat-modal" id="combatModal">
-<div class="combat-content">
-<h2 style="text-align: center; color: var(--accent-color); margin-bottom: var(--spacing-lg);">
-<i class="fas fa-crosshairs"></i> Combat!
-</h2>
-<div class="combat-stats">
-<div class="combat-character">
-<h4>Player</h4>
-<div class="stat-value" id="combatPlayerHealth">100</div>
-<div class="health-bar">
-<div class="health-fill" id="playerHealthBar" style="width: 100%"></div>
-</div>
-</div>
-<div class="combat-character">
-<h4 id="enemyName">Enemy</h4>
-<div class="stat-value" id="combatEnemyHealth">50</div>
-<div class="health-bar">
-<div class="health-fill" id="enemyHealthBar" style="width: 100%; background: #dc3545;"></div>
-</div>
-</div>
-</div>
-<div id="combatLog" style="background: rgba(0,0,0,0.3); padding: var(--spacing-sm); border-radius: var(--radius-small); margin-bottom: var(--spacing-md); min-height: 80px;">
-<p>You encounter an enemy! Choose your action.</p>
-</div>
-<div class="combat-actions">
-<button class="combat-btn attack" id="attackBtn">
-<i class="fas fa-fist-raised"></i> Attack
-</button>
-<button class="combat-btn" id="defendBtn">
-<i class="fas fa-shield-alt"></i> Defend
-</button>
-<button class="combat-btn" id="fleeBtn">
-<i class="fas fa-running"></i> Flee
-</button>
-</div>
-</div>
-</div>
-<div class="shop-modal" id="shopModal">
-<div class="shop-content">
-<h2 style="text-align: center; color: var(--accent-color); margin-bottom: var(--spacing-lg);">
-Shop
-</h2>
-<div style="text-align: center; margin-bottom: var(--spacing-md);">
-<div class="stat-value" id="playerGoldShop">0</div>
-<div class="stat-label">Your Gold</div>
-</div>
-<div class="shop-items" id="shopItems">
-</div>
-<div class="action-buttons">
-<button class="action-btn" id="exitShopBtn">
-<i class="fas fa-door-closed"></i> Exit Shop
-</button>
-</div>
-</div>
-</div>
-<div class="death-modal" id="deathModal">
-<div class="death-content">
-<div class="death-icon">
-<i class="fas fa-skull-crossbones"></i>
-</div>
-<h2 class="death-title">DEFEATED</h2>
-<p style="margin-bottom: var(--spacing-lg); color: var(--text-primary);">
-You have been defeated in battle!
-</p>
-<div class="death-actions">
-<button class="death-btn return-btn" id="deathReturnBtn">
-<i class="fas fa-home"></i> Return to Farm
-</button>
-</div>
-</div>
-</div>
-<footer class="fade-in">
-<p>© 2026 lildavegoth | Voidgarden Adventure</p>
-<p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
-Adventure loot will be synced to your farm when you return
-</p>
-</footer>
-</div>
-<script src="shared-data.js"></script>
-<script>
-// ========== GAME STATE ==========
-const gameState = {
-playerPosition: { row: 0, col: 0 },
-stage: 1,
-health: 100,
-maxHealth: 100,
-attack: 15,
-defense: 10,
-gold: 0,
-moves: 0,
-inventory: [],
-equipment: {
-weapon: null,
-armor: null
-},
-shop: {
-active: false,
-items: [],
-location: { row: -1, col: -1 }
-},
-grid: [],
-inCombat: false,
-currentEnemy: null,
-gameActive: true
-};
-// ========== ENEMIES & ITEMS ==========
-const ENEMY_TYPES = [
-{ name: "Goblin", health: 30, attack: 10, defense: 5, gold: 5 },
-{ name: "Skeleton", health: 25, attack: 12, defense: 3, gold: 7 },
-{ name: "Slime", health: 40, attack: 8, defense: 2, gold: 3 },
-{ name: "Wolf", health: 30, attack: 15, defense: 4, gold: 5 }
-];
-const ITEM_TYPES = {
-potion: [
-{ id: 'health_potion', name: 'Health Potion', icon: '❤️', type: 'consumable', effect: { health: 30 }, rarity: 'common', price: 20 }
-],
-weapon: [
-{ id: 'rusty_sword', name: 'Rusty Sword', icon: '🗡️', type: 'weapon', stats: { attack: 5 }, rarity: 'common', price: 50 },
-{ id: 'iron_sword', name: 'Iron Sword', icon: '⚔️', type: 'weapon', stats: { attack: 10 }, rarity: 'uncommon', price: 100 }
-],
-armor: [
-{ id: 'leather_armor', name: 'Leather Armor', icon: '🧥', type: 'armor', stats: { defense: 5, health: 10 }, rarity: 'common', price: 40 },
-{ id: 'chainmail', name: 'Chainmail', icon: '⛓️', type: 'armor', stats: { defense: 10, health: 20 }, rarity: 'uncommon', price: 80 }
-],
-boost: [
-{ id: 'attack_potion', name: 'Attack Potion', icon: '✊', type: 'consumable', effect: { attack: 5 }, duration: 3, rarity: 'uncommon', price: 30 },
-{ id: 'defense_potion', name: 'Defense Potion', icon: '🛡️', type: 'consumable', effect: { defense: 5 }, duration: 3, rarity: 'uncommon', price: 30 },
-{ id: 'strength_potion', name: 'Strength Potion', icon: '💪', type: 'consumable', effect: { attack: 10, health: 20 }, duration: 2, rarity: 'rare', price: 50 },
-]
-};
-// ========== INITIALIZATION ==========
-document.addEventListener('DOMContentLoaded', function() {
-initializeGame();
-});
-function initializeGame() {
-loadCharacterStats();
-createGrid();
-updateGridDisplay();
-applyEquipmentBonuses();
-updateUI();
-setupEventListeners();
-}
-function loadCharacterStats() {
-const gameData = window.loadGameState();
-// Base stats
-gameState.attack = 15;
-gameState.defense = 10;
-gameState.maxHealth = 100;
-if (gameData) {
-// Check for character stats from farm
-if (gameData.character) {
-const char = gameData.character;
-gameState.attack += char.attackBoost || 0;
-gameState.defense += char.defenseBoost || 0;
-gameState.maxHealth += char.healthBoost || 0;
-}
-// Check for equipped items from farm that give bonuses
-if (gameData.equipment) {
-// Check for weapon bonuses
-if (gameData.equipment.weapon) {
-gameState.attack += gameData.equipment.weapon.attack || 0;
-}
-// Check for armor bonuses
-if (gameData.equipment.armor) {
-gameState.defense += gameData.equipment.armor.defense || 0;
-gameState.maxHealth += gameData.equipment.armor.health || 0;
-}
-// Check for accessory bonuses
-if (gameData.equipment.accessory) {
-gameState.attack += gameData.equipment.accessory.attack || 0;
-gameState.defense += gameData.equipment.accessory.defense || 0;
-gameState.maxHealth += gameData.equipment.accessory.health || 0;
-}
-}
-// Check for active buffs/potions from farm
-if (gameData.activeBuffs) {
-gameData.activeBuffs.forEach(buff => {
-if (buff.type === 'attack') gameState.attack += buff.value;
-if (buff.type === 'defense') gameState.defense += buff.value;
-if (buff.type === 'health') gameState.maxHealth += buff.value;
-});
-}
-}
-// Set current health to max health
-gameState.health = gameState.maxHealth;
-// Update UI to show buffed stats
-updateUI();
-}
-function applyEquipmentBonuses() {
-// Reset to base stats (without equipment)
-loadCharacterStats();
-// Apply adventure equipment bonuses
-if (gameState.equipment.weapon) {
-gameState.attack += gameState.equipment.weapon.stats.attack || 0;
-}
-if (gameState.equipment.armor) {
-gameState.defense += gameState.equipment.armor.stats.defense || 0;
-gameState.maxHealth += gameState.equipment.armor.stats.health || 0;
-gameState.health = Math.min(gameState.health, gameState.maxHealth);
-}
-updateUI();
-}
-function equipWeapon(item) {
-gameState.equipment.weapon = item;
-applyEquipmentBonuses();
-}
-function equipArmor(item) {
-gameState.equipment.armor = item;
-applyEquipmentBonuses();
-const bonusText = [];
-if (item.stats.defense) bonusText.push(`${item.stats.defense} DEF`);
-if (item.stats.health) bonusText.push(`${item.stats.health} HP`);
-}
-// ========== GRID SYSTEM ==========
-function createGrid() {
-gameState.grid = [];
-const gridSize = 3;
-for (let row = 0; row < gridSize; row++) {
-gameState.grid[row] = [];
-for (let col = 0; col < gridSize; col++) {
-gameState.grid[row][col] = {
-type: 'empty',
-revealed: true
-};
-}
-}
-gameState.grid[0][0].type = 'player';
-gameState.grid[0][0].revealed = true;
-placeRandomItems('enemy', 2);
-placeRandomItems('chest', 2);
-if (Math.random() < 0.3) {
-placeRandomItems('shop', 1);
-}
-gameState.grid[2][2].type = 'exit';
-gameState.grid[2][2].revealed = false;
-}
-function placeRandomItems(type, count) {
-const gridSize = 3;
-let placed = 0;
-while (placed < count) {
-const row = Math.floor(Math.random() * gridSize);
-const col = Math.floor(Math.random() * gridSize);
-const isPlayerStart = (row === 0 && col === 0);
-const isExit = (row === 2 && col === 2);
-const isEmpty = (gameState.grid[row][col].type === 'empty');
-if (!isPlayerStart && !isExit && isEmpty) {
-gameState.grid[row][col].type = type;
-gameState.grid[row][col].revealed = true;
-if (type === 'shop') {
-gameState.shop.location = { row, col };
-generateShopItems();
-}
-placed++;
-}
-}
-}
-function updateGridDisplay() {
-const gridElement = document.getElementById('gameGrid');
-gridElement.innerHTML = '';
-for (let row = 0; row < 3; row++) {
-for (let col = 0; col < 3; col++) {
-const cell = document.createElement('div');
-cell.className = 'grid-cell';
-cell.dataset.row = row;
-cell.dataset.col = col;
-const cellData = gameState.grid[row][col];
-const cellContent = document.createElement('div');
-cellContent.className = 'cell-content';
-// Show content based on cell type (remove revealed check)
-if (row === gameState.playerPosition.row && col === gameState.playerPosition.col) {
-cell.classList.add('active');
-// Show player icon
-cellContent.innerHTML = '<i class="fas fa-user" style="color: var(--accent-color); font-size: 1.5rem;"></i>';
-} else if (cellData.type === 'enemy') {
-cell.classList.add('enemy');
-// Show enemy icon
-cellContent.innerHTML = '<i class="fas fa-skull" style="color: #dc3545; font-size: 1.5rem;"></i>';
-} else if (cellData.type === 'chest') {
-cell.classList.add('chest');
-// Show chest icon
-cellContent.innerHTML = '<i class="fas fa-chest" style="color: #ffc107; font-size: 1.5rem;"></i>';
-} else if (cellData.type === 'shop') {
-cell.classList.add('shop');
-// Show shop icon
-cellContent.innerHTML = '<i class="fas fa-store" style="color: #6f42c1; font-size: 1.5rem;"></i>';
-} else if (cellData.type === 'exit') {
-cell.classList.add('exit');
-// Show exit icon
-cellContent.innerHTML = '<i class="fas fa-door-open" style="color: #198754; font-size: 1.5rem;"></i>';
-} else {
-// Empty cell - show nothing or a subtle indicator
-cellContent.innerHTML = '<i class="fas fa-square" style="color: rgba(255,255,255,0.1); font-size: 1rem;"></i>';
-}
-cell.appendChild(cellContent);
-gridElement.appendChild(cell);
-}
-}
-}
-// ========== MOVEMENT ==========
-function movePlayer(rowDelta, colDelta) {
-if (!gameState.gameActive || gameState.inCombat) return;
-const newRow = gameState.playerPosition.row + rowDelta;
-const newCol = gameState.playerPosition.col + colDelta;
-if (newRow < 0 || newRow >= 3 || newCol < 0 || newCol >= 3) {
-return;
-}
-const cellType = gameState.grid[newRow][newCol].type;
-const oldRow = gameState.playerPosition.row;
-const oldCol = gameState.playerPosition.col;
-gameState.grid[oldRow][oldCol].type = 'empty';
-gameState.playerPosition.row = newRow;
-gameState.playerPosition.col = newCol;
-gameState.moves++;
-updateGridDisplay();
-updateUI();
-if (cellType === 'enemy') {
-startCombat(newRow, newCol);
-} else if (cellType === 'chest') {
-openChest(newRow, newCol);
-} else if (cellType === 'shop') {
-openShopModal();
-} else if (cellType === 'exit') {
-reachExit();
-}
-}
-function nextStage() {
-const isOnExit = (gameState.playerPosition.row === 2 && gameState.playerPosition.col === 2);
-if (!isOnExit) {
-return;
-}
-gameState.stage++;
-gameState.maxHealth += 10;
-gameState.health = gameState.maxHealth;
-gameState.attack += 2;
-gameState.defense += 1;
-gameState.grid[gameState.playerPosition.row][gameState.playerPosition.col].type = 'empty';
-gameState.playerPosition = { row: 0, col: 0 };
-gameState.shop = { active: false, items: [], location: { row: -1, col: -1 } };
-createGrid();
-updateGridDisplay();
-updateUI();
-}
-// ========== COMBAT ==========
-function startCombat(row, col) {
-gameState.inCombat = true;
-const enemyType = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
-const stageMultiplier = 1 + (gameState.stage - 1) * 0.1;
-const scaledEnemy = {
-...enemyType,
-health: Math.floor(enemyType.health * stageMultiplier),
-attack: Math.floor(enemyType.attack * stageMultiplier),
-defense: Math.floor(enemyType.defense * stageMultiplier),
-gold: Math.floor(enemyType.gold * stageMultiplier)
-};
-gameState.currentEnemy = {
-row,
-col,
-type: scaledEnemy,
-health: scaledEnemy.health,
-maxHealth: scaledEnemy.health
-};
-document.getElementById('combatPlayerHealth').textContent = gameState.health;
-document.getElementById('combatEnemyHealth').textContent = gameState.currentEnemy.health;
-document.getElementById('enemyName').textContent = scaledEnemy.name;
-document.getElementById('playerHealthBar').style.width = `${(gameState.health / gameState.maxHealth) * 100}%`;
-document.getElementById('enemyHealthBar').style.width = '100%';
-const combatLog = document.getElementById('combatLog');
-combatLog.innerHTML = `<p>You encounter a ${scaledEnemy.name}!</p>`;
-document.getElementById('combatModal').classList.add('active');
-}
-function combatAction(action) {
-if (!gameState.inCombat || !gameState.currentEnemy) return;
-const enemy = gameState.currentEnemy;
-const combatLog = document.getElementById('combatLog');
-let logMessage = '';
-if (action === 'attack') {
-const playerDamage = Math.max(1, gameState.attack - enemy.type.defense);
-enemy.health -= playerDamage;
-logMessage += `<p>You attack for ${playerDamage} damage!</p>`;
-if (enemy.health > 0) {
-const enemyDamage = Math.max(1, enemy.type.attack - gameState.defense);
-gameState.health -= enemyDamage;
-logMessage += `<p>The ${enemy.type.name} attacks back for ${enemyDamage} damage!</p>`;
-}
-} else if (action === 'defend') {
-const enemyDamage = Math.max(1, Math.floor((enemy.type.attack - gameState.defense) * 0.5));
-gameState.health -= enemyDamage;
-logMessage += `<p>You defend! Enemy attacks for ${enemyDamage} damage.</p>`;
-} else if (action === 'flee') {
-if (Math.random() > 0.5) {
-logMessage += `<p>You successfully flee!</p>`;
-endCombat(false);
-updateUI();
-return;
-} else {
-const enemyDamage = Math.max(1, enemy.type.attack - gameState.defense);
-gameState.health -= enemyDamage;
-logMessage += `<p>You fail to flee! Enemy attacks for ${enemyDamage} damage.</p>`;
-}
-}
-if (enemy.health <= 0) {
-logMessage += `<p>You defeated the ${enemy.type.name}!</p>`;
-logMessage += `<p>Gained ${enemy.type.gold} gold!</p>`;
-gameState.gold += enemy.type.gold;
-gameState.grid[enemy.row][enemy.col].type = 'empty';
-endCombat(true);
-}
-if (gameState.health <= 0) {
-gameState.health = 0;
-logMessage += `<p>You have been defeated!</p>`;
-gameState.gameActive = false;
-endCombat(false);
-setTimeout(() => showDeathScreen(), 1000);
-}
-combatLog.innerHTML = logMessage;
-document.getElementById('combatPlayerHealth').textContent = gameState.health;
-document.getElementById('combatEnemyHealth').textContent = Math.max(0, enemy.health);
-document.getElementById('playerHealthBar').style.width = `${(gameState.health / gameState.maxHealth) * 100}%`;
-document.getElementById('enemyHealthBar').style.width = `${(enemy.health / enemy.maxHealth) * 100}%`;
-updateUI();
-}
-function endCombat(victory) {
-gameState.inCombat = false;
-if (victory && gameState.currentEnemy) {
-const enemy = gameState.currentEnemy;
-const goldEarned = enemy.type.gold;
-gameState.gold += goldEarned;
-// Chance to drop an item (30% chance)
-if (Math.random() < 0.3) {
-const dropType = Math.random();
-let dropItem = null;
-if (dropType < 0.4) {
-// Drop health potion
-dropItem = ITEM_TYPES.potion[0];
-} else if (dropType < 0.7) {
-// Drop attack potion
-dropItem = ITEM_TYPES.boost[0];
-} else {
-// Drop defense potion
-dropItem = ITEM_TYPES.boost[1];
-}
-if (dropItem) {
-addItemToInventory(dropItem);
-}
-}
-}
-gameState.currentEnemy = null;
-document.getElementById('combatModal').classList.remove('active');
-updateGridDisplay();
-updateUI();
-}
-// ========== INVENTORY ==========
-function addItemToInventory(item) {
-const existingItem = gameState.inventory.find(i => i.id === item.id);
-if (existingItem) {
-existingItem.count = (existingItem.count || 1) + 1;
-} else {
-gameState.inventory.push({ ...item, count: 1 });
-}
-}
-function updateInventoryDisplay() {
-const inventoryElement = document.getElementById('inventory');
-inventoryElement.innerHTML = '';
-if (gameState.inventory.length === 0) {
-inventoryElement.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: var(--spacing-md);">Inventory is empty</div>';
-return;
-}
-gameState.inventory.forEach((item, index) => {
-const itemElement = document.createElement('div');
-itemElement.className = 'inventory-item';
-itemElement.dataset.index = index;
-const hasMultiple = item.count > 1;
-const isEquippable = item.type === 'weapon' || item.type === 'armor';
-const isConsumable = item.type === 'consumable';
-let buttonsHTML = '';
-if (isEquippable) {
-buttonsHTML = `
-<button class="action-btn equip-btn" data-index="${index}" style="font-size: 0.7rem; padding: 4px 8px; margin-top: 4px; margin-bottom: 2px;">
-<i class="fas fa-plus"></i> Equip
-</button>
-<button class="sell-btn" data-index="${index}">
-<i class="fas fa-coins"></i> Sell
-</button>
-`;
-} else if (isConsumable) {
-buttonsHTML = `
-<button class="action-btn use-btn" data-index="${index}" style="background: rgba(25, 135, 84, 0.2); color: #4cd964; border-color: rgba(25, 135, 84, 0.3); font-size: 0.7rem; padding: 4px 8px; margin-top: 4px; margin-bottom: 2px;">
-<i class="fas fa-heart"></i> Use
-</button>
-<button class="sell-btn" data-index="${index}">
-<i class="fas fa-coins"></i> Sell
-</button>
-`;
-} else {
-buttonsHTML = `
-<button class="sell-btn" data-index="${index}">
-<i class="fas fa-coins"></i> Sell
-</button>
-`;
-}
-let effectText = '';
-if (item.type === 'consumable' && item.effect) {
-const effects = [];
-if (item.effect.health) effects.push(`+${item.effect.health} HP`);
-if (item.effect.attack) effects.push(`+${item.effect.attack} ATK`);
-if (item.effect.defense) effects.push(`+${item.effect.defense} DEF`);
-if (item.duration) effects.push(`${item.duration} turns`);
-if (effects.length > 0) {
-effectText = `<div class="item-effect" style="font-size: 0.7rem; color: var(--accent-color); margin-top: 2px;">${effects.join(', ')}</div>`;
-}
-}
-itemElement.innerHTML = `
-<div class="item-icon">${item.icon || '📦'}</div>
-<div class="item-name">${item.name}</div>
-${effectText}
-${hasMultiple ? `<div class="item-count">${item.count}</div>` : ''}
-${buttonsHTML}
-`;
-itemElement.innerHTML = `
-<div class="item-icon">${item.icon || '📦'}</div>
-<div class="item-name">${item.name}</div>
-${hasMultiple ? `<div class="item-count">${item.count}</div>` : ''}
-${buttonsHTML}
-`;
-inventoryElement.appendChild(itemElement);
-});
-}
-function sellItem(index) {
-const item = gameState.inventory[index];
-const sellPrice = calculateSellPrice(item);
-gameState.gold += sellPrice;
-if (item.count > 1) {
-item.count--;
-if (item.count === 1) delete item.count;
-} else {
-gameState.inventory.splice(index, 1);
-}
-updateUI();
-updateInventoryDisplay();
-}
-function calculateSellPrice(item) {
-let basePrice = 0;
-if (item.type === 'consumable') {
-basePrice = 5;
-} else if (item.type === 'weapon') {
-basePrice = item.stats.attack * 3;
-} else if (item.type === 'armor') {
-basePrice = (item.stats.defense + item.stats.health) * 2;
-}
-return Math.floor(basePrice);
-}
-function useItem(item, index) {
-if (item.type === 'consumable') {
-if (item.effect.health) {
-const oldHealth = gameState.health;
-gameState.health = Math.min(gameState.maxHealth, gameState.health + item.effect.health);
-const healed = gameState.health - oldHealth;
-}
-// Handle attack boost
-if (item.effect.attack) {
-const oldAttack = gameState.attack;
-gameState.attack += item.effect.attack;
-// Set up to remove boost after duration
-setTimeout(() => {
-gameState.attack = oldAttack;
-updateUI();
-}, (item.duration || 1) * 3000); // 3 seconds per "turn"
-}
-// Handle defense boost
-if (item.effect.defense) {
-const oldDefense = gameState.defense;
-gameState.defense += item.effect.defense;
-// Set up to remove boost after duration
-setTimeout(() => {
-gameState.defense = oldDefense;
-updateUI();
-}, (item.duration || 1) * 3000);
-}
-// Remove item after use
-if (item.count > 1) {
-item.count--;
-} else {
-gameState.inventory.splice(index, 1);
-}
-updateInventoryDisplay();
-updateUI();
-}
-}
-// ========== SHOP ==========
-function generateShopItems() {
-const shopItems = [];
-const itemPool = [];
-// Add all item types to the pool
-ITEM_TYPES.potion.forEach(potion => {
-itemPool.push({...potion});
-});
-ITEM_TYPES.weapon.forEach(weapon => {
-itemPool.push({...weapon});
-});
-ITEM_TYPES.armor.forEach(armor => {
-itemPool.push({...armor});
-});
-ITEM_TYPES.boost.forEach(boost => {
-itemPool.push({...boost});
-});
-// Select 9 random items for 3×3 grid shop
-const itemsToSelect = Math.min(9, itemPool.length);
-const selectedIndices = new Set();
-// Add guaranteed basic items first
-const basicItems = ['health_potion', 'rusty_sword', 'leather_armor'];
-basicItems.forEach(itemId => {
-const basicItem = itemPool.find(item => item.id === itemId);
-if (basicItem) {
-shopItems.push({...basicItem});
-selectedIndices.add(itemPool.indexOf(basicItem));
-}
-});
-// Fill remaining slots with random items
-while (selectedIndices.size < itemsToSelect) {
-const randomIndex = Math.floor(Math.random() * itemPool.length);
-if (!selectedIndices.has(randomIndex)) {
-selectedIndices.add(randomIndex);
-shopItems.push({...itemPool[randomIndex]});
-}
-}
-gameState.shop.items = shopItems;
-gameState.shop.active = true;
-}
-function openShopModal() {
-const isOnShop = (gameState.playerPosition.row === gameState.shop.location.row &&
-gameState.playerPosition.col === gameState.shop.location.col);
-if (!isOnShop || !gameState.shop.active) {
-return;
-}
-document.getElementById('playerGoldShop').textContent = gameState.gold;
-if (gameState.shop.items.length === 0) {
-generateShopItems();
-}
-displayShopItems();
-document.getElementById('shopModal').classList.add('active');
-}
-function displayShopItems() {
-const shopItemsContainer = document.getElementById('shopItems');
-shopItemsContainer.innerHTML = '';
-// Ensure we have exactly 9 items (pad with empty slots if needed)
-const itemsToShow = 9;
-const displayItems = [...gameState.shop.items];
-// Pad with empty slots if less than 9 items
-while (displayItems.length < itemsToShow) {
-displayItems.push(null); // Null represents empty slot
-}
-displayItems.slice(0, itemsToShow).forEach((item, index) => {
-const itemElement = document.createElement('div');
-if (!item) {
-// Empty slot
-itemElement.className = 'shop-item unavailable';
-itemElement.innerHTML = `
-<div class="shop-item-icon" style="opacity: 0.3;">📦</div>
-<div class="shop-item-name" style="opacity: 0.5;">Empty</div>
-<div class="shop-item-price" style="opacity: 0.5;">-</div>
-`;
-itemElement.style.cursor = 'default';
-} else {
-itemElement.className = 'shop-item';
-itemElement.dataset.index = index;
-const canAfford = gameState.gold >= item.price;
-if (!canAfford) {
-itemElement.classList.add('unavailable');
-}
-// Effect text
-let effectText = '';
-if (item.type === 'consumable' && item.effect) {
-const effects = [];
-if (item.effect.health) effects.push(`+${item.effect.health} HP`);
-if (item.effect.attack) effects.push(`+${item.effect.attack} ATK`);
-if (item.effect.defense) effects.push(`+${item.effect.defense} DEF`);
-if (item.duration) effects.push(`${item.duration} turns`);
-if (effects.length > 0) {
-effectText = `<div style="font-size: 0.65rem; color: var(--accent-color); margin: 2px 0;">${effects.join(', ')}</div>`;
-}
-} else if (item.type === 'weapon' && item.stats) {
-if (item.stats.attack) {
-effectText = `<div style="font-size: 0.65rem; color: var(--accent-color); margin: 2px 0;">+${item.stats.attack} ATK</div>`;
-}
-} else if (item.type === 'armor' && item.stats) {
-const armorEffects = [];
-if (item.stats.defense) armorEffects.push(`+${item.stats.defense} DEF`);
-if (item.stats.health) armorEffects.push(`+${item.stats.health} HP`);
-if (armorEffects.length > 0) {
-effectText = `<div style="font-size: 0.65rem; color: var(--accent-color); margin: 2px 0;">${armorEffects.join(', ')}</div>`;
-}
-}
-itemElement.innerHTML = `
-<div class="shop-item-icon">${item.icon || '📦'}</div>
-<div class="shop-item-name">${item.name}</div>
-${effectText}
-<div class="shop-item-price">${item.price} gold</div>
-`;
-if (canAfford) {
-itemElement.addEventListener('click', () => buyItem(item, index));
-}
-}
-shopItemsContainer.appendChild(itemElement);
-});
-}
-function buyItem(item, displayIndex) {
-if (gameState.gold < item.price) {
-return;
-}
-// Find the actual index in shop.items array
-const actualIndex = gameState.shop.items.findIndex(shopItem =>
-shopItem && shopItem.id === item.id
-);
-if (actualIndex === -1) {
-return;
-}
-gameState.gold -= item.price;
-addItemToInventory(item);
-gameState.shop.items.splice(actualIndex, 1);
-document.getElementById('playerGoldShop').textContent = gameState.gold;
-updateUI();
-displayShopItems();
-// Check if shop is empty (all null or no real items)
-const hasRealItems = gameState.shop.items.some(item => item !== null);
-if (!hasRealItems) {
-setTimeout(() => {
-closeShopModal();
-}, 1000);
-}
-}
-function closeShopModal() {
-document.getElementById('shopModal').classList.remove('active');
-}
-// ========== CHEST & EXIT ==========
-function openChest(row, col) {
-const lootType = Math.random();
-if (lootType < 0.3) {
-// Give gold
-const goldAmount = Math.floor(Math.random() * 20) + 10;
-gameState.gold += goldAmount;
-showFloatingText(`+${goldAmount} Gold`, '#FFD700');
-} else if (lootType < 0.55) {
-// Give health potion
-const potion = ITEM_TYPES.potion[0];
-addItemToInventory(potion);
-showFloatingText(`${potion.icon} ${potion.name}`, '#ff6b6b');
-} else if (lootType < 0.7) {
-// Give attack potion
-const boost = ITEM_TYPES.boost[0];
-addItemToInventory(boost);
-showFloatingText(`${boost.icon} ${boost.name}`, '#4cd964');
-} else if (lootType < 0.85) {
-// Give defense potion
-const boost = ITEM_TYPES.boost[1];
-addItemToInventory(boost);
-showFloatingText(`${boost.icon} ${boost.name}`, '#5ac8fa');
-}
-gameState.grid[row][col].type = 'empty';
-updateGridDisplay();
-updateInventoryDisplay();
-updateUI();
-}
-function reachExit() {
-gameState.grid[2][2].revealed = true;
-updateGridDisplay();
-document.getElementById('nextStageBtn').style.animation = "pulse 1s infinite";
-}
-// ========== DEATH SCREEN ==========
-function showDeathScreen() {
-document.getElementById('deathModal').classList.add('active');
-}
-function returnToFarmAfterDeath() {
-syncLootToFarm();
-window.location.href = "voidgarden.html";
-}
-// ========== RETURN TO FARM ==========
-function syncLootToFarm() {
-const gameData = window.loadGameState();
-if (!gameData) return;
-// Add adventure gold to farm gold
-gameData.gold = (gameData.gold || 0) + gameState.gold;
-// Add adventure XP (10 XP per gold)
-gameData.xp = (gameData.xp || 0) + (gameState.gold * 10);
-// Initialize inventory if it doesn't exist
-if (!gameData.inventory) {
-gameData.inventory = {};
-}
-// Sync adventure items to farm inventory
-gameState.inventory.forEach(item => {
-const itemKey = item.id;
-const count = item.count || 1;
-// Handle other potions
-if (itemKey.includes('potion')) {
-if (itemKey === 'health_potion') {
-gameData.inventory.healthPotion = (gameData.inventory.healthPotion || 0) + count;
-} else if (itemKey === 'attack_potion') {
-// Add to character boosts
-if (!gameData.characterBoosts) {
-gameData.characterBoosts = [];
-}
-gameData.characterBoosts.push({
-type: 'attack',
-value: item.effect.attack || 5,
-duration: item.duration || 3
-});
-} else if (itemKey === 'defense_potion') {
-// Add to character boosts
-if (!gameData.characterBoosts) {
-gameData.characterBoosts = [];
-}
-gameData.characterBoosts.push({
-type: 'defense',
-value: item.effect.defense || 5,
-duration: item.duration || 3
-});
-}
-}
-// Handle equipment items
-if (item.type === 'weapon' || item.type === 'armor') {
-if (!gameData.adventureItems) {
-gameData.adventureItems = [];
-}
-gameData.adventureItems.push({
-name: item.name,
-type: item.type,
-icon: item.icon,
-count: count
-});
-}
-});
-// Save updated farm state
-window.saveGameState(gameData);
-}
-function returnToFarmWithLoot() {
-if (!confirm("Return to farm with all collected loot?")) {
-return;
-}
-// Sync all loot
-syncLootToFarm();
-// Show confirmation
-alert(`Returning to farm with:\n• ${gameState.gold} gold\n\nAll loot has been added to your farm!`);
-window.location.href = "voidgarden.html";
-}
-// ========== UI UPDATES ==========
-function updateUI() {
-document.getElementById('statAttack').textContent = gameState.attack;
-document.getElementById('statHealth').textContent = gameState.health;
-document.getElementById('statDefense').textContent = gameState.defense;
-document.getElementById('statGold').textContent = gameState.gold;
-document.getElementById('statStage').textContent = gameState.stage;
-document.getElementById('statMoves').textContent = gameState.moves;
-// Update equipment display with stats
-const weaponDisplay = document.getElementById('equippedWeapon');
-const armorDisplay = document.getElementById('equippedArmor');
-if (gameState.equipment.weapon) {
-const attackBonus = gameState.equipment.weapon.stats.attack || 0;
-weaponDisplay.innerHTML = `Weapon: ${gameState.equipment.weapon.name}<br><small>+${attackBonus} ATK</small>`;
-} else {
-weaponDisplay.textContent = 'Weapon: None';
-}
-if (gameState.equipment.armor) {
-const defBonus = gameState.equipment.armor.stats.defense || 0;
-const healthBonus = gameState.equipment.armor.stats.health || 0;
-const bonuses = [];
-if (defBonus > 0) bonuses.push(`+${defBonus} DEF`);
-if (healthBonus > 0) bonuses.push(`+${healthBonus} HP`);
-armorDisplay.innerHTML = `Armor: ${gameState.equipment.armor.name}<br><small>${bonuses.join(', ')}</small>`;
-} else {
-armorDisplay.textContent = 'Armor: None';
-}
-updateInventoryDisplay();
-}
-// Add this function AFTER updateUI() function
-function updateActiveBoosts() {
-const attackStat = document.getElementById('statAttack');
-const defenseStat = document.getElementById('statDefense');
-attackStat.innerHTML = gameState.attack.toString();
-defenseStat.innerHTML = gameState.defense.toString();
-}
-// Then update the updateUI() function to call updateActiveBoosts():
-function updateUI() {
-document.getElementById('statAttack').textContent = gameState.attack;
-document.getElementById('statHealth').textContent = gameState.health;
-document.getElementById('statDefense').textContent = gameState.defense;
-document.getElementById('statGold').textContent = gameState.gold;
-document.getElementById('statStage').textContent = gameState.stage;
-document.getElementById('statMoves').textContent = gameState.moves;
-// Update equipment display
-const weaponDisplay = document.getElementById('equippedWeapon');
-const armorDisplay = document.getElementById('equippedArmor');
-if (gameState.equipment.weapon) {
-const attackBonus = gameState.equipment.weapon.stats.attack || 0;
-weaponDisplay.innerHTML = `Weapon: ${gameState.equipment.weapon.name}<br><small>+${attackBonus} ATK</small>`;
-} else {
-weaponDisplay.textContent = 'Weapon: None';
-}
-if (gameState.equipment.armor) {
-const defBonus = gameState.equipment.armor.stats.defense || 0;
-const healthBonus = gameState.equipment.armor.stats.health || 0;
-const bonuses = [];
-if (defBonus > 0) bonuses.push(`+${defBonus} DEF`);
-if (healthBonus > 0) bonuses.push(`+${healthBonus} HP`);
-armorDisplay.innerHTML = `Armor: ${gameState.equipment.armor.name}<br><small>${bonusText.join(', ')}</small>`;
-} else {
-armorDisplay.textContent = 'Armor: None';
-}
-updateInventoryDisplay();
-updateActiveBoosts(); // ADD THIS LINE
-}
-// ========== EVENT LISTENERS ==========
-function setupEventListeners() {
-// Movement buttons
-document.getElementById('moveUp').addEventListener('click', (e) => {
-if (!gameState.inCombat && gameState.gameActive) movePlayer(-1, 0);
-});
-document.getElementById('moveDown').addEventListener('click', (e) => {
-if (!gameState.inCombat && gameState.gameActive) movePlayer(1, 0);
-});
-document.getElementById('moveLeft').addEventListener('click', (e) => {
-if (!gameState.inCombat && gameState.gameActive) movePlayer(0, -1);
-});
-document.getElementById('moveRight').addEventListener('click', (e) => {
-if (!gameState.inCombat && gameState.gameActive) movePlayer(0, 1);
-});
-document.getElementById('nextStageBtn').addEventListener('click', nextStage);
-// Combat buttons
-document.getElementById('attackBtn').addEventListener('click', () => combatAction('attack'));
-document.getElementById('defendBtn').addEventListener('click', () => combatAction('defend'));
-document.getElementById('fleeBtn').addEventListener('click', () => combatAction('flee'));
-// Shop buttons
-document.getElementById('exitShopBtn').addEventListener('click', closeShopModal);
-// Return buttons
-document.getElementById('returnWithLootBtn').addEventListener('click', returnToFarmWithLoot);
-document.getElementById('deathReturnBtn').addEventListener('click', returnToFarmAfterDeath);
-document.getElementById('returnToFarm').addEventListener('click', function(e) {
-e.preventDefault();
-returnToFarmWithLoot();
-});
-// Inventory click events
-document.addEventListener('click', function(e) {
-if (e.target.classList.contains('sell-btn') ||
-e.target.closest('.sell-btn')) {
-const btn = e.target.classList.contains('sell-btn') ? e.target : e.target.closest('.sell-btn');
-const index = parseInt(btn.dataset.index);
-sellItem(index);
-}
-if (e.target.classList.contains('equip-btn') ||
-e.target.closest('.equip-btn')) {
-const btn = e.target.classList.contains('equip-btn') ? e.target : e.target.closest('.equip-btn');
-const index = parseInt(btn.dataset.index);
-const item = gameState.inventory[index];
-if (item.type === 'weapon') {
-equipWeapon(item);
-} else if (item.type === 'armor') {
-equipArmor(item);
-}
-}
-if (e.target.classList.contains('use-btn') ||
-e.target.closest('.use-btn')) {
-const btn = e.target.classList.contains('use-btn') ? e.target : e.target.closest('.use-btn');
-const index = parseInt(btn.dataset.index);
-const item = gameState.inventory[index];
-if (item.type === 'consumable') {
-useItem(item, index);
-}
-}
-});
-// Keyboard controls
-document.addEventListener('keydown', function(e) {
-if (!gameState.gameActive || gameState.inCombat) return;
-switch(e.key) {
-case 'ArrowUp':
-case 'w':
-case 'W':
-if (!gameState.inCombat && gameState.gameActive) movePlayer(-1, 0);
-e.preventDefault();
-break;
-case 'ArrowDown':
-case 's':
-case 'S':
-if (!gameState.inCombat && gameState.gameActive) movePlayer(1, 0);
-e.preventDefault();
-break;
-case 'ArrowLeft':
-case 'a':
-case 'A':
-if (!gameState.inCombat && gameState.gameActive) movePlayer(0, -1);
-e.preventDefault();
-break;
-case 'ArrowRight':
-case 'd':
-case 'D':
-if (!gameState.inCombat && gameState.gameActive) movePlayer(0, 1);
-e.preventDefault();
-break;
-case 'n':
-case 'N':
-if (!gameState.inCombat && gameState.gameActive) nextStage();
-e.preventDefault();
-break;
-case 'Escape':
-closeShopModal();
-e.preventDefault();
-break;
-}
-});
-// Prevent clicks on modals from affecting underlying game
-const modals = ['combatModal', 'shopModal', 'deathModal'];
-modals.forEach(modalId => {
-const modal = document.getElementById(modalId);
-modal.addEventListener('click', function(e) {
-// Only close if clicking on the modal background (not the content)
-if (e.target === this) {
-// Don't close combat or death modals by clicking outside
-if (modalId === 'combatModal' || modalId === 'deathModal') {
-return; // Don't allow closing combat/death modals by clicking outside
-}
-// Only allow closing shop modal by clicking outside
-if (modalId === 'shopModal') {
-closeShopModal();
-}
-}
-});
-});
-// Prevent clicks inside modal content from bubbling up
-const modalContents = ['combatContent', 'shopContent', 'deathContent'];
-modalContents.forEach(contentId => {
-const content = document.getElementById(contentId);
-if (content) {
-content.addEventListener('click', function(e) {
-e.stopPropagation(); // Prevent click from reaching modal background
-});
-}
-});
-}
-</script>
+    <div class="container">
+        <!-- Back to Farm -->
+        <a href="voidgarden.html" class="back-link fade-in" id="returnToFarm">
+            <i class="fas fa-arrow-left"></i> Back to Farm
+        </a>
+        
+        <!-- Header -->
+        <header class="fade-in">
+            <div class="profile-section">
+                <div> 
+                    <h1 class="username">Adventure</h1>
+                    <p class="tagline">3×3 grid RPG - Fight enemies, collect loot, find shops</p>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Stats Container -->
+        <div class="stats-container fade-in">
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-value" id="statAttack">15</div>
+                    <div class="stat-label">ATK</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statHealth">150</div>
+                    <div class="stat-label">HP</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statDefense">10</div>
+                    <div class="stat-label">DEF</div>
+                </div>
+            </div>
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-value" id="statGold">0</div>
+                    <div class="stat-label">GOLD</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statStage">1</div>
+                    <div class="stat-label">STAGE</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statMoves">0</div>
+                    <div class="stat-label">MOVES</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game Section -->
+        <section class="game-section">
+            <div class="game-container">
+                <!-- Game Grid -->
+                <div class="grid-container fade-in">
+                    <div class="game-grid" id="gameGrid">
+                        <!-- Grid cells will be generated by JavaScript -->
+                    </div>
+                    
+                    <!-- Game Controls -->
+                    <div class="controls-container">
+                        <div class="control-btn up" id="moveUp">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div class="control-btn left" id="moveLeft">
+                            <i class="fas fa-arrow-left"></i>
+                        </div>
+                        <div class="control-btn next-stage" id="nextStageBtn">
+                            <i class="fas fa-forward"></i>
+                        </div>
+                        <div class="control-btn right" id="moveRight">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                        <div class="control-btn down" id="moveDown">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                    </div>
+                    
+                    <p style="text-align: center; margin-top: var(--spacing-sm); color: var(--text-secondary); font-size: 0.9rem;">
+                        <i class="fas fa-keyboard"></i> Use arrow keys or WASD to move, N for next stage
+                    </p>
+                </div>
+                
+                <!-- Game Info Panel -->
+                <div class="info-panel fade-in">
+                    <div class="grid-title">
+                        <i class="fas fa-backpack"></i> Inventory
+                    </div>
+                    
+                    <!-- Inventory Display -->
+                    <div class="inventory-display" id="inventory">
+                        <!-- Inventory items will be added here -->
+                    </div>
+                    
+                    <!-- Equipment -->
+                    <div class="grid-title">
+                        <i class="fas fa-tshirt"></i> Equipment
+                    </div>
+                    <div class="equipment-display">
+                        <div class="equipment-slot" id="equippedWeapon">
+                            Weapon: None
+                        </div>
+                        <div class="equipment-slot" id="equippedArmor">
+                            Armor: None
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div style="margin-top: -20px;" class="action-buttons">
+                        <button class="action-btn" id="returnWithLootBtn">
+                            <i class="fas fa-home"></i> Return with Loot
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Combat Modal -->
+        <div class="combat-modal" id="combatModal">
+            <div class="combat-content">
+                <h2 style="text-align: center; color: var(--accent-color); margin-bottom: var(--spacing-lg);">
+                    <i class="fas fa-crosshairs"></i> Combat!
+                </h2>
+                
+                <div class="combat-stats">
+                    <div class="combat-character">
+                        <h4>Player</h4>
+                        <div class="stat-value" id="combatPlayerHealth">100</div>
+                        <div class="health-bar">
+                            <div class="health-fill" id="playerHealthBar" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="combat-character">
+                        <h4 id="enemyName">Enemy</h4>
+                        <div class="stat-value" id="combatEnemyHealth">50</div>
+                        <div class="health-bar">
+                            <div class="health-fill" id="enemyHealthBar" style="width: 100%; background: #dc3545;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="combatLog" style="background: rgba(0,0,0,0.3); padding: var(--spacing-sm); border-radius: var(--radius-small); margin-bottom: var(--spacing-md); min-height: 80px;">
+                    <p>You encounter an enemy! Choose your action.</p>
+                </div>
+                
+                <div class="combat-actions">
+                    <button class="combat-btn attack" id="attackBtn">
+                        <i class="fas fa-fist-raised"></i> Attack
+                    </button>
+                    <button class="combat-btn" id="defendBtn">
+                        <i class="fas fa-shield-alt"></i> Defend
+                    </button>
+                    <button class="combat-btn" id="fleeBtn">
+                        <i class="fas fa-running"></i> Flee
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Shop Modal -->
+        <div class="shop-modal" id="shopModal">
+            <div class="shop-content">
+                <h2 style="text-align: center; color: var(--accent-color); margin-bottom: var(--spacing-lg);">
+                    Shop
+                </h2>
+                
+                <div style="text-align: center; margin-bottom: var(--spacing-md);">
+                    <div class="stat-value" id="playerGoldShop">0</div>
+                    <div class="stat-label">Your Gold</div>
+                </div>
+                
+                <div class="shop-items" id="shopItems">
+                    <!-- Shop items will be added here -->
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="action-btn" id="exitShopBtn">
+                        <i class="fas fa-door-closed"></i> Exit Shop
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Death Modal -->
+        <div class="death-modal" id="deathModal">
+            <div class="death-content">
+                <div class="death-icon">
+                    <i class="fas fa-skull-crossbones"></i>
+                </div>
+                
+                <h2 class="death-title">DEFEATED</h2>
+                
+                <p style="margin-bottom: var(--spacing-lg); color: var(--text-primary);">
+                    You have been defeated in battle!
+                </p>
+                
+                <div class="death-actions">
+                    <button class="death-btn return-btn" id="deathReturnBtn">
+                        <i class="fas fa-home"></i> Return to Farm
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="fade-in">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Voidgarden Adventure</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script src="shared-data.js"></script>
+    <script>
+    // ========== GAME STATE ==========
+    const gameState = {
+        playerPosition: { row: 0, col: 0 },
+        stage: 1,
+        health: 100,
+        maxHealth: 100,
+        attack: 15,
+        defense: 10,
+        gold: 0,
+        moves: 0,
+        inventory: [],
+        equipment: {
+            weapon: null,
+            armor: null
+        },
+        shop: {
+            active: false,
+            items: [],
+            location: { row: -1, col: -1 }
+        },
+        grid: [],
+        inCombat: false,
+        currentEnemy: null,
+        gameActive: true
+    };
+    
+    // ========== ENEMIES & ITEMS ==========
+    const ENEMY_TYPES = [
+        { name: "Goblin", health: 30, attack: 10, defense: 5, gold: 5 },
+        { name: "Skeleton", health: 25, attack: 12, defense: 3, gold: 7 },
+        { name: "Slime", health: 40, attack: 8, defense: 2, gold: 3 },
+        { name: "Wolf", health: 30, attack: 15, defense: 4, gold: 5 }
+    ];
+    
+    const ITEM_TYPES = {
+        potion: [
+            { id: 'health_potion', name: 'Health Potion', icon: '❤️', type: 'consumable', effect: { health: 30 }, rarity: 'common', price: 20 }
+        ],
+        weapon: [
+            { id: 'rusty_sword', name: 'Rusty Sword', icon: '🗡️', type: 'weapon', stats: { attack: 5 }, rarity: 'common', price: 50 },
+            { id: 'iron_sword', name: 'Iron Sword', icon: '⚔️', type: 'weapon', stats: { attack: 10 }, rarity: 'uncommon', price: 100 }
+        ],
+        armor: [
+            { id: 'leather_armor', name: 'Leather Armor', icon: '🧥', type: 'armor', stats: { defense: 5, health: 10 }, rarity: 'common', price: 40 },
+            { id: 'chainmail', name: 'Chainmail', icon: '⛓️', type: 'armor', stats: { defense: 10, health: 20 }, rarity: 'uncommon', price: 80 }
+        ],
+        boost: [
+            { id: 'attack_potion', name: 'Attack Potion', icon: '✊', type: 'consumable', effect: { attack: 5 }, duration: 3, rarity: 'uncommon', price: 30 },
+            { id: 'defense_potion', name: 'Defense Potion', icon: '🛡️', type: 'consumable', effect: { defense: 5 }, duration: 3, rarity: 'uncommon', price: 30 },
+            { id: 'strength_potion', name: 'Strength Potion', icon: '💪', type: 'consumable', effect: { attack: 10, health: 20 }, duration: 2, rarity: 'rare', price: 50 },
+        ]
+    };
+    
+    // ========== INITIALIZATION ==========
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeGame();
+    });
+    
+    function initializeGame() {
+        loadCharacterStats();
+        createGrid();
+        updateGridDisplay();
+        applyEquipmentBonuses();
+        updateUI();
+        setupEventListeners();
+    }
+    
+    function loadCharacterStats() {
+        const gameData = window.loadGameState();
+        
+        // Base stats
+        gameState.attack = 15;
+        gameState.defense = 10;
+        gameState.maxHealth = 100;
+        
+        if (gameData) {
+            // Check for character stats from farm
+            if (gameData.character) {
+                const char = gameData.character;
+                gameState.attack += char.attackBoost || 0;
+                gameState.defense += char.defenseBoost || 0;
+                gameState.maxHealth += char.healthBoost || 0;
+            }
+            
+            // Check for equipped items from farm that give bonuses
+            if (gameData.equipment) {
+                // Check for weapon bonuses
+                if (gameData.equipment.weapon) {
+                    gameState.attack += gameData.equipment.weapon.attack || 0;
+                }
+                
+                // Check for armor bonuses
+                if (gameData.equipment.armor) {
+                    gameState.defense += gameData.equipment.armor.defense || 0;
+                    gameState.maxHealth += gameData.equipment.armor.health || 0;
+                }
+                
+                // Check for accessory bonuses
+                if (gameData.equipment.accessory) {
+                    gameState.attack += gameData.equipment.accessory.attack || 0;
+                    gameState.defense += gameData.equipment.accessory.defense || 0;
+                    gameState.maxHealth += gameData.equipment.accessory.health || 0;
+                }
+            }
+            
+            // Check for active buffs/potions from farm
+            if (gameData.activeBuffs) {
+                gameData.activeBuffs.forEach(buff => {
+                    if (buff.type === 'attack') gameState.attack += buff.value;
+                    if (buff.type === 'defense') gameState.defense += buff.value;
+                    if (buff.type === 'health') gameState.maxHealth += buff.value;
+                });
+            }
+        }
+        
+        // Set current health to max health
+        gameState.health = gameState.maxHealth;
+        
+        // Update UI to show buffed stats
+        updateUI();
+    }
+    
+    function applyEquipmentBonuses() {
+        // Reset to base stats (without equipment)
+        loadCharacterStats();
+        
+        // Apply adventure equipment bonuses
+        if (gameState.equipment.weapon) {
+            gameState.attack += gameState.equipment.weapon.stats.attack || 0;
+        }
+        
+        if (gameState.equipment.armor) {
+            gameState.defense += gameState.equipment.armor.stats.defense || 0;
+            gameState.maxHealth += gameState.equipment.armor.stats.health || 0;
+            gameState.health = Math.min(gameState.health, gameState.maxHealth);
+        }
+        
+        updateUI();
+    }
+    
+    function equipWeapon(item) {
+        gameState.equipment.weapon = item;
+        applyEquipmentBonuses();
+    }
+    
+    function equipArmor(item) {
+        gameState.equipment.armor = item;
+        applyEquipmentBonuses();
+        
+        const bonusText = [];
+        if (item.stats.defense) bonusText.push(`${item.stats.defense} DEF`);
+        if (item.stats.health) bonusText.push(`${item.stats.health} HP`);
+        
+    }
+    
+    // ========== GRID SYSTEM ==========
+    function createGrid() {
+        gameState.grid = [];
+        const gridSize = 3;
+        
+        for (let row = 0; row < gridSize; row++) {
+            gameState.grid[row] = [];
+            for (let col = 0; col < gridSize; col++) {
+                gameState.grid[row][col] = { 
+                    type: 'empty',
+                    revealed: true
+                };
+            }
+        }
+        
+        gameState.grid[0][0].type = 'player';
+        gameState.grid[0][0].revealed = true;
+        
+        placeRandomItems('enemy', 2);
+        placeRandomItems('chest', 2);
+        
+        if (Math.random() < 0.3) {
+            placeRandomItems('shop', 1);
+        }
+        
+        gameState.grid[2][2].type = 'exit';
+        gameState.grid[2][2].revealed = false;
+    }
+    
+    function placeRandomItems(type, count) {
+        const gridSize = 3;
+        let placed = 0;
+        
+        while (placed < count) {
+            const row = Math.floor(Math.random() * gridSize);
+            const col = Math.floor(Math.random() * gridSize);
+            
+            const isPlayerStart = (row === 0 && col === 0);
+            const isExit = (row === 2 && col === 2);
+            const isEmpty = (gameState.grid[row][col].type === 'empty');
+            
+            if (!isPlayerStart && !isExit && isEmpty) {
+                gameState.grid[row][col].type = type;
+                gameState.grid[row][col].revealed = true;
+                
+                if (type === 'shop') {
+                    gameState.shop.location = { row, col };
+                    generateShopItems();
+                }
+                
+                placed++;
+            }
+        }
+    }
+    
+    function updateGridDisplay() {
+        const gridElement = document.getElementById('gameGrid');
+        gridElement.innerHTML = '';
+        
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                cell.dataset.row = row;
+                cell.dataset.col = col;
+                
+                const cellData = gameState.grid[row][col];
+                const cellContent = document.createElement('div');
+                cellContent.className = 'cell-content';
+                
+                // Show content based on cell type (remove revealed check)
+                if (row === gameState.playerPosition.row && col === gameState.playerPosition.col) {
+                    cell.classList.add('active');
+                    // Show player icon
+                    cellContent.innerHTML = '<i class="fas fa-user" style="color: var(--accent-color); font-size: 1.5rem;"></i>';
+                } else if (cellData.type === 'enemy') {
+                    cell.classList.add('enemy');
+                    // Show enemy icon
+                    cellContent.innerHTML = '<i class="fas fa-skull" style="color: #dc3545; font-size: 1.5rem;"></i>';
+                } else if (cellData.type === 'chest') {
+                    cell.classList.add('chest');
+                    // Show chest icon
+                    cellContent.innerHTML = '<i class="fas fa-chest" style="color: #ffc107; font-size: 1.5rem;"></i>';
+                } else if (cellData.type === 'shop') {
+                    cell.classList.add('shop');
+                    // Show shop icon
+                    cellContent.innerHTML = '<i class="fas fa-store" style="color: #6f42c1; font-size: 1.5rem;"></i>';
+                } else if (cellData.type === 'exit') {
+                    cell.classList.add('exit');
+                    // Show exit icon
+                    cellContent.innerHTML = '<i class="fas fa-door-open" style="color: #198754; font-size: 1.5rem;"></i>';
+                } else {
+                    // Empty cell - show nothing or a subtle indicator
+                    cellContent.innerHTML = '<i class="fas fa-square" style="color: rgba(255,255,255,0.1); font-size: 1rem;"></i>';
+                }
+                
+                cell.appendChild(cellContent);
+                gridElement.appendChild(cell);
+            }
+        }
+    }
+    
+    // ========== MOVEMENT ==========
+    function movePlayer(rowDelta, colDelta) {
+        if (!gameState.gameActive || gameState.inCombat) return;
+        
+        const newRow = gameState.playerPosition.row + rowDelta;
+        const newCol = gameState.playerPosition.col + colDelta;
+        
+        if (newRow < 0 || newRow >= 3 || newCol < 0 || newCol >= 3) {
+            return;
+        }
+        
+        const cellType = gameState.grid[newRow][newCol].type;
+        
+        const oldRow = gameState.playerPosition.row;
+        const oldCol = gameState.playerPosition.col;
+        
+        gameState.grid[oldRow][oldCol].type = 'empty';
+        gameState.playerPosition.row = newRow;
+        gameState.playerPosition.col = newCol;
+        
+        gameState.moves++;
+        
+        updateGridDisplay();
+        updateUI();
+        
+        
+        if (cellType === 'enemy') {
+            startCombat(newRow, newCol);
+        } else if (cellType === 'chest') {
+            openChest(newRow, newCol);
+        } else if (cellType === 'shop') {
+            openShopModal();
+        } else if (cellType === 'exit') {
+            reachExit();
+        }
+    }
+    
+    function nextStage() {
+        const isOnExit = (gameState.playerPosition.row === 2 && gameState.playerPosition.col === 2);
+        
+        if (!isOnExit) {
+            return;
+        }
+        
+        gameState.stage++;
+        gameState.maxHealth += 10;
+        gameState.health = gameState.maxHealth;
+        gameState.attack += 2;
+        gameState.defense += 1;
+        
+        gameState.grid[gameState.playerPosition.row][gameState.playerPosition.col].type = 'empty';
+        gameState.playerPosition = { row: 0, col: 0 };
+        gameState.shop = { active: false, items: [], location: { row: -1, col: -1 } };
+        
+        createGrid();
+        updateGridDisplay();
+        updateUI();
+        
+    }
+    
+    // ========== COMBAT ==========
+    function startCombat(row, col) {
+        gameState.inCombat = true;
+        
+        const enemyType = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
+        const stageMultiplier = 1 + (gameState.stage - 1) * 0.1;
+        
+        const scaledEnemy = {
+            ...enemyType,
+            health: Math.floor(enemyType.health * stageMultiplier),
+            attack: Math.floor(enemyType.attack * stageMultiplier),
+            defense: Math.floor(enemyType.defense * stageMultiplier),
+            gold: Math.floor(enemyType.gold * stageMultiplier)
+        };
+        
+        gameState.currentEnemy = {
+            row,
+            col,
+            type: scaledEnemy,
+            health: scaledEnemy.health,
+            maxHealth: scaledEnemy.health
+        };
+        
+        document.getElementById('combatPlayerHealth').textContent = gameState.health;
+        document.getElementById('combatEnemyHealth').textContent = gameState.currentEnemy.health;
+        document.getElementById('enemyName').textContent = scaledEnemy.name;
+        document.getElementById('playerHealthBar').style.width = `${(gameState.health / gameState.maxHealth) * 100}%`;
+        document.getElementById('enemyHealthBar').style.width = '100%';
+        
+        const combatLog = document.getElementById('combatLog');
+        combatLog.innerHTML = `<p>You encounter a ${scaledEnemy.name}!</p>`;
+        
+        document.getElementById('combatModal').classList.add('active');
+    }
+    
+    function combatAction(action) {
+        if (!gameState.inCombat || !gameState.currentEnemy) return;
+        
+        const enemy = gameState.currentEnemy;
+        const combatLog = document.getElementById('combatLog');
+        let logMessage = '';
+        
+        if (action === 'attack') {
+            const playerDamage = Math.max(1, gameState.attack - enemy.type.defense);
+            enemy.health -= playerDamage;
+            logMessage += `<p>You attack for ${playerDamage} damage!</p>`;
+            
+            if (enemy.health > 0) {
+                const enemyDamage = Math.max(1, enemy.type.attack - gameState.defense);
+                gameState.health -= enemyDamage;
+                logMessage += `<p>The ${enemy.type.name} attacks back for ${enemyDamage} damage!</p>`;
+            }
+        } else if (action === 'defend') {
+            const enemyDamage = Math.max(1, Math.floor((enemy.type.attack - gameState.defense) * 0.5));
+            gameState.health -= enemyDamage;
+            logMessage += `<p>You defend! Enemy attacks for ${enemyDamage} damage.</p>`;
+        } else if (action === 'flee') {
+            if (Math.random() > 0.5) {
+                logMessage += `<p>You successfully flee!</p>`;
+                endCombat(false);
+                updateUI();
+                return;
+            } else {
+                const enemyDamage = Math.max(1, enemy.type.attack - gameState.defense);
+                gameState.health -= enemyDamage;
+                logMessage += `<p>You fail to flee! Enemy attacks for ${enemyDamage} damage.</p>`;
+            }
+        }
+        
+        if (enemy.health <= 0) {
+            logMessage += `<p>You defeated the ${enemy.type.name}!</p>`;
+            logMessage += `<p>Gained ${enemy.type.gold} gold!</p>`;
+            gameState.gold += enemy.type.gold;
+            gameState.grid[enemy.row][enemy.col].type = 'empty';
+            endCombat(true);
+        }
+        
+        if (gameState.health <= 0) {
+            gameState.health = 0;
+            logMessage += `<p>You have been defeated!</p>`;
+            gameState.gameActive = false;
+            endCombat(false);
+            setTimeout(() => showDeathScreen(), 1000);
+        }
+        
+        combatLog.innerHTML = logMessage;
+        document.getElementById('combatPlayerHealth').textContent = gameState.health;
+        document.getElementById('combatEnemyHealth').textContent = Math.max(0, enemy.health);
+        document.getElementById('playerHealthBar').style.width = `${(gameState.health / gameState.maxHealth) * 100}%`;
+        document.getElementById('enemyHealthBar').style.width = `${(enemy.health / enemy.maxHealth) * 100}%`;
+        
+        updateUI();
+    }
+    
+    function endCombat(victory) {
+        gameState.inCombat = false;
+        
+        if (victory && gameState.currentEnemy) {
+            const enemy = gameState.currentEnemy;
+            const goldEarned = enemy.type.gold;
+            gameState.gold += goldEarned;
+            
+            // Chance to drop an item (30% chance)
+            if (Math.random() < 0.3) {
+                const dropType = Math.random();
+                let dropItem = null;
+                
+                if (dropType < 0.4) {
+                    // Drop health potion
+                    dropItem = ITEM_TYPES.potion[0];
+                } else if (dropType < 0.7) {
+                    // Drop attack potion
+                    dropItem = ITEM_TYPES.boost[0];
+                } else {
+                    // Drop defense potion
+                    dropItem = ITEM_TYPES.boost[1];
+                }
+                
+                if (dropItem) {
+                    addItemToInventory(dropItem);
+                }
+            }
+            
+        }
+        
+        gameState.currentEnemy = null;
+        document.getElementById('combatModal').classList.remove('active');
+        updateGridDisplay();
+        updateUI();
+    }
+    
+    // ========== INVENTORY ==========
+    function addItemToInventory(item) {
+        const existingItem = gameState.inventory.find(i => i.id === item.id);
+        if (existingItem) {
+            existingItem.count = (existingItem.count || 1) + 1;
+        } else {
+            gameState.inventory.push({ ...item, count: 1 });
+        }
+    }
+    
+    function updateInventoryDisplay() {
+        const inventoryElement = document.getElementById('inventory');
+        inventoryElement.innerHTML = '';
+        
+        if (gameState.inventory.length === 0) {
+            inventoryElement.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: var(--spacing-md);">Inventory is empty</div>';
+            return;
+        }
+        
+        gameState.inventory.forEach((item, index) => {
+            const itemElement = document.createElement('div');
+            itemElement.className = 'inventory-item';
+            itemElement.dataset.index = index;
+            
+            const hasMultiple = item.count > 1;
+            const isEquippable = item.type === 'weapon' || item.type === 'armor';
+            const isConsumable = item.type === 'consumable';
+            
+            let buttonsHTML = '';
+            
+            if (isEquippable) {
+                buttonsHTML = `
+                    <button class="action-btn equip-btn" data-index="${index}" style="font-size: 0.7rem; padding: 4px 8px; margin-top: 4px; margin-bottom: 2px;">
+                        <i class="fas fa-plus"></i> Equip
+                    </button>
+                    <button class="sell-btn" data-index="${index}">
+                        <i class="fas fa-coins"></i> Sell
+                    </button>
+                `;
+            } else if (isConsumable) {
+                buttonsHTML = `
+                    <button class="action-btn use-btn" data-index="${index}" style="background: rgba(25, 135, 84, 0.2); color: #4cd964; border-color: rgba(25, 135, 84, 0.3); font-size: 0.7rem; padding: 4px 8px; margin-top: 4px; margin-bottom: 2px;">
+                        <i class="fas fa-heart"></i> Use
+                    </button>
+                    <button class="sell-btn" data-index="${index}">
+                        <i class="fas fa-coins"></i> Sell
+                    </button>
+                `;
+            } else {
+                buttonsHTML = `
+                    <button class="sell-btn" data-index="${index}">
+                        <i class="fas fa-coins"></i> Sell
+                    </button>
+                `;
+            }
+            
+            let effectText = '';
+            if (item.type === 'consumable' && item.effect) {
+                const effects = [];
+                if (item.effect.health) effects.push(`+${item.effect.health} HP`);
+                if (item.effect.attack) effects.push(`+${item.effect.attack} ATK`);
+                if (item.effect.defense) effects.push(`+${item.effect.defense} DEF`);
+                if (item.duration) effects.push(`${item.duration} turns`);
+                
+                if (effects.length > 0) {
+                    effectText = `<div class="item-effect" style="font-size: 0.7rem; color: var(--accent-color); margin-top: 2px;">${effects.join(', ')}</div>`;
+                }
+            }
+            
+            itemElement.innerHTML = `
+                <div class="item-icon">${item.icon || '📦'}</div>
+                <div class="item-name">${item.name}</div>
+                ${effectText}
+                ${hasMultiple ? `<div class="item-count">${item.count}</div>` : ''}
+                ${buttonsHTML}
+            `;
+            
+            itemElement.innerHTML = `
+                <div class="item-icon">${item.icon || '📦'}</div>
+                <div class="item-name">${item.name}</div>
+                ${hasMultiple ? `<div class="item-count">${item.count}</div>` : ''}
+                ${buttonsHTML}
+            `;
+            
+            inventoryElement.appendChild(itemElement);
+        });
+    }
+    
+    function sellItem(index) {
+        const item = gameState.inventory[index];
+        const sellPrice = calculateSellPrice(item);
+        
+        gameState.gold += sellPrice;
+        
+        if (item.count > 1) {
+            item.count--;
+            if (item.count === 1) delete item.count;
+        } else {
+            gameState.inventory.splice(index, 1);
+        }
+        
+        updateUI();
+        updateInventoryDisplay();
+    }
+    
+    function calculateSellPrice(item) {
+        let basePrice = 0;
+        
+        if (item.type === 'consumable') {
+            basePrice = 5;
+        } else if (item.type === 'weapon') {
+            basePrice = item.stats.attack * 3;
+        } else if (item.type === 'armor') {
+            basePrice = (item.stats.defense + item.stats.health) * 2;
+        }
+        
+        return Math.floor(basePrice);
+    }
+    
+    function useItem(item, index) {
+        if (item.type === 'consumable') {
+            if (item.effect.health) {
+                const oldHealth = gameState.health;
+                gameState.health = Math.min(gameState.maxHealth, gameState.health + item.effect.health);
+                const healed = gameState.health - oldHealth;
+            }
+            
+            // Handle attack boost
+            if (item.effect.attack) {
+                const oldAttack = gameState.attack;
+                gameState.attack += item.effect.attack;
+                
+                // Set up to remove boost after duration
+                setTimeout(() => {
+                    gameState.attack = oldAttack;
+                    updateUI();
+                }, (item.duration || 1) * 3000); // 3 seconds per "turn"
+            }
+            
+            // Handle defense boost
+            if (item.effect.defense) {
+                const oldDefense = gameState.defense;
+                gameState.defense += item.effect.defense;
+                
+                // Set up to remove boost after duration
+                setTimeout(() => {
+                    gameState.defense = oldDefense;
+                    updateUI();
+                }, (item.duration || 1) * 3000);
+            }
+            
+            // Remove item after use
+            if (item.count > 1) {
+                item.count--;
+            } else {
+                gameState.inventory.splice(index, 1);
+            }
+            
+            updateInventoryDisplay();
+            updateUI();
+        }
+    }
+    
+    // ========== SHOP ==========
+    function generateShopItems() {
+        const shopItems = [];
+        const itemPool = [];
+        
+        // Add all item types to the pool
+        ITEM_TYPES.potion.forEach(potion => {
+            itemPool.push({...potion});
+        });
+        
+        ITEM_TYPES.weapon.forEach(weapon => {
+            itemPool.push({...weapon});
+        });
+        
+        ITEM_TYPES.armor.forEach(armor => {
+            itemPool.push({...armor});
+        });
+        
+        ITEM_TYPES.boost.forEach(boost => {
+            itemPool.push({...boost});
+        });
+        
+        // Select 9 random items for 3×3 grid shop
+        const itemsToSelect = Math.min(9, itemPool.length);
+        const selectedIndices = new Set();
+        
+        // Add guaranteed basic items first
+        const basicItems = ['health_potion', 'rusty_sword', 'leather_armor'];
+        basicItems.forEach(itemId => {
+            const basicItem = itemPool.find(item => item.id === itemId);
+            if (basicItem) {
+                shopItems.push({...basicItem});
+                selectedIndices.add(itemPool.indexOf(basicItem));
+            }
+        });
+        
+        // Fill remaining slots with random items
+        while (selectedIndices.size < itemsToSelect) {
+            const randomIndex = Math.floor(Math.random() * itemPool.length);
+            if (!selectedIndices.has(randomIndex)) {
+                selectedIndices.add(randomIndex);
+                shopItems.push({...itemPool[randomIndex]});
+            }
+        }
+        
+        gameState.shop.items = shopItems;
+        gameState.shop.active = true;
+    }
+    
+    function openShopModal() {
+        const isOnShop = (gameState.playerPosition.row === gameState.shop.location.row && 
+                         gameState.playerPosition.col === gameState.shop.location.col);
+        
+        if (!isOnShop || !gameState.shop.active) {
+            return;
+        }
+        
+        document.getElementById('playerGoldShop').textContent = gameState.gold;
+        
+        if (gameState.shop.items.length === 0) {
+            generateShopItems();
+        }
+        
+        displayShopItems();
+        document.getElementById('shopModal').classList.add('active');
+    }
+    
+    function displayShopItems() {
+        const shopItemsContainer = document.getElementById('shopItems');
+        shopItemsContainer.innerHTML = '';
+        
+        // Ensure we have exactly 9 items (pad with empty slots if needed)
+        const itemsToShow = 9;
+        const displayItems = [...gameState.shop.items];
+        
+        // Pad with empty slots if less than 9 items
+        while (displayItems.length < itemsToShow) {
+            displayItems.push(null); // Null represents empty slot
+        }
+        
+        displayItems.slice(0, itemsToShow).forEach((item, index) => {
+            const itemElement = document.createElement('div');
+            
+            if (!item) {
+                // Empty slot
+                itemElement.className = 'shop-item unavailable';
+                itemElement.innerHTML = `
+                    <div class="shop-item-icon" style="opacity: 0.3;">📦</div>
+                    <div class="shop-item-name" style="opacity: 0.5;">Empty</div>
+                    <div class="shop-item-price" style="opacity: 0.5;">-</div>
+                `;
+                itemElement.style.cursor = 'default';
+            } else {
+                itemElement.className = 'shop-item';
+                itemElement.dataset.index = index;
+                
+                const canAfford = gameState.gold >= item.price;
+                if (!canAfford) {
+                    itemElement.classList.add('unavailable');
+                }
+                
+                // Effect text
+                let effectText = '';
+                if (item.type === 'consumable' && item.effect) {
+                    const effects = [];
+                    if (item.effect.health) effects.push(`+${item.effect.health} HP`);
+                    if (item.effect.attack) effects.push(`+${item.effect.attack} ATK`);
+                    if (item.effect.defense) effects.push(`+${item.effect.defense} DEF`);
+                    if (item.duration) effects.push(`${item.duration} turns`);
+                    
+                    if (effects.length > 0) {
+                        effectText = `<div style="font-size: 0.65rem; color: var(--accent-color); margin: 2px 0;">${effects.join(', ')}</div>`;
+                    }
+                } else if (item.type === 'weapon' && item.stats) {
+                    if (item.stats.attack) {
+                        effectText = `<div style="font-size: 0.65rem; color: var(--accent-color); margin: 2px 0;">+${item.stats.attack} ATK</div>`;
+                    }
+                } else if (item.type === 'armor' && item.stats) {
+                    const armorEffects = [];
+                    if (item.stats.defense) armorEffects.push(`+${item.stats.defense} DEF`);
+                    if (item.stats.health) armorEffects.push(`+${item.stats.health} HP`);
+                    if (armorEffects.length > 0) {
+                        effectText = `<div style="font-size: 0.65rem; color: var(--accent-color); margin: 2px 0;">${armorEffects.join(', ')}</div>`;
+                    }
+                }
+                
+                itemElement.innerHTML = `
+                    <div class="shop-item-icon">${item.icon || '📦'}</div>
+                    <div class="shop-item-name">${item.name}</div>
+                    ${effectText}
+                    <div class="shop-item-price">${item.price} gold</div>
+                `;
+                
+                if (canAfford) {
+                    itemElement.addEventListener('click', () => buyItem(item, index));
+                }
+            }
+            
+            shopItemsContainer.appendChild(itemElement);
+        });
+    }
+    
+    function buyItem(item, displayIndex) {
+        if (gameState.gold < item.price) {
+            return;
+        }
+        
+        // Find the actual index in shop.items array
+        const actualIndex = gameState.shop.items.findIndex(shopItem => 
+            shopItem && shopItem.id === item.id
+        );
+        
+        if (actualIndex === -1) {
+            return;
+        }
+        
+        gameState.gold -= item.price;
+        addItemToInventory(item);
+        gameState.shop.items.splice(actualIndex, 1);
+        
+        document.getElementById('playerGoldShop').textContent = gameState.gold;
+        updateUI();
+        displayShopItems();
+        
+        
+        // Check if shop is empty (all null or no real items)
+        const hasRealItems = gameState.shop.items.some(item => item !== null);
+        if (!hasRealItems) {
+            setTimeout(() => {
+                closeShopModal();
+            }, 1000);
+        }
+    }
+    
+    function closeShopModal() {
+        document.getElementById('shopModal').classList.remove('active');
+    }
+    
+    // ========== CHEST & EXIT ==========
+    function openChest(row, col) {
+        const lootType = Math.random();
+        
+        if (lootType < 0.3) {
+            // Give gold
+            const goldAmount = Math.floor(Math.random() * 20) + 10;
+            gameState.gold += goldAmount;
+            showFloatingText(`+${goldAmount} Gold`, '#FFD700');
+        } else if (lootType < 0.55) {
+            // Give health potion
+            const potion = ITEM_TYPES.potion[0];
+            addItemToInventory(potion);
+            showFloatingText(`${potion.icon} ${potion.name}`, '#ff6b6b');
+        } else if (lootType < 0.7) {
+            // Give attack potion
+            const boost = ITEM_TYPES.boost[0];
+            addItemToInventory(boost);
+            showFloatingText(`${boost.icon} ${boost.name}`, '#4cd964');
+        } else if (lootType < 0.85) {
+            // Give defense potion
+            const boost = ITEM_TYPES.boost[1];
+            addItemToInventory(boost);
+            showFloatingText(`${boost.icon} ${boost.name}`, '#5ac8fa');
+        }
+        
+        gameState.grid[row][col].type = 'empty';
+        updateGridDisplay();
+        updateInventoryDisplay();
+        updateUI();
+    }
+    
+    function reachExit() {
+        gameState.grid[2][2].revealed = true;
+        updateGridDisplay();
+        document.getElementById('nextStageBtn').style.animation = "pulse 1s infinite";
+    }
+    
+    // ========== DEATH SCREEN ==========
+    function showDeathScreen() {
+        document.getElementById('deathModal').classList.add('active');
+    }
+    
+    function returnToFarmAfterDeath() {
+        syncLootToFarm();
+        window.location.href = "voidgarden.html";
+    }
+    
+    // ========== RETURN TO FARM ==========
+    function syncLootToFarm() {
+        const gameData = window.loadGameState();
+        
+        if (!gameData) return;
+        
+        // Add adventure gold to farm gold
+        gameData.gold = (gameData.gold || 0) + gameState.gold;
+        
+        // Add adventure XP (10 XP per gold)
+        gameData.xp = (gameData.xp || 0) + (gameState.gold * 10);
+        
+        // Initialize inventory if it doesn't exist
+        if (!gameData.inventory) {
+            gameData.inventory = {};
+        }
+        
+        // Sync adventure items to farm inventory
+        gameState.inventory.forEach(item => {
+            const itemKey = item.id;
+            const count = item.count || 1;
+            
+            // Handle other potions
+            if (itemKey.includes('potion')) {
+                if (itemKey === 'health_potion') {
+                    gameData.inventory.healthPotion = (gameData.inventory.healthPotion || 0) + count;
+                } else if (itemKey === 'attack_potion') {
+                    // Add to character boosts
+                    if (!gameData.characterBoosts) {
+                        gameData.characterBoosts = [];
+                    }
+                    gameData.characterBoosts.push({
+                        type: 'attack',
+                        value: item.effect.attack || 5,
+                        duration: item.duration || 3
+                    });
+                } else if (itemKey === 'defense_potion') {
+                    // Add to character boosts
+                    if (!gameData.characterBoosts) {
+                        gameData.characterBoosts = [];
+                    }
+                    gameData.characterBoosts.push({
+                        type: 'defense',
+                        value: item.effect.defense || 5,
+                        duration: item.duration || 3
+                    });
+                }
+            }
+            
+            // Handle equipment items
+            if (item.type === 'weapon' || item.type === 'armor') {
+                if (!gameData.adventureItems) {
+                    gameData.adventureItems = [];
+                }
+                gameData.adventureItems.push({
+                    name: item.name,
+                    type: item.type,
+                    icon: item.icon,
+                    count: count
+                });
+            }
+        });
+        
+        // Save updated farm state
+        window.saveGameState(gameData);
+    }
+    
+    function returnToFarmWithLoot() {
+        if (!confirm("Return to farm with all collected loot?")) {
+            return;
+        }
+        
+        // Sync all loot
+        syncLootToFarm();
+        
+        // Show confirmation
+        alert(`Returning to farm with:\n• ${gameState.gold} gold\n\nAll loot has been added to your farm!`);
+        
+        window.location.href = "voidgarden.html";
+    }
+    
+    // ========== UI UPDATES ==========
+    function updateUI() {
+        document.getElementById('statAttack').textContent = gameState.attack;
+        document.getElementById('statHealth').textContent = gameState.health;
+        document.getElementById('statDefense').textContent = gameState.defense;
+        document.getElementById('statGold').textContent = gameState.gold;
+        document.getElementById('statStage').textContent = gameState.stage;
+        document.getElementById('statMoves').textContent = gameState.moves;
+        
+        // Update equipment display with stats
+        const weaponDisplay = document.getElementById('equippedWeapon');
+        const armorDisplay = document.getElementById('equippedArmor');
+        
+        if (gameState.equipment.weapon) {
+            const attackBonus = gameState.equipment.weapon.stats.attack || 0;
+            weaponDisplay.innerHTML = `Weapon: ${gameState.equipment.weapon.name}<br><small>+${attackBonus} ATK</small>`;
+        } else {
+            weaponDisplay.textContent = 'Weapon: None';
+        }
+        
+        if (gameState.equipment.armor) {
+            const defBonus = gameState.equipment.armor.stats.defense || 0;
+            const healthBonus = gameState.equipment.armor.stats.health || 0;
+            const bonuses = [];
+            if (defBonus > 0) bonuses.push(`+${defBonus} DEF`);
+            if (healthBonus > 0) bonuses.push(`+${healthBonus} HP`);
+            
+            armorDisplay.innerHTML = `Armor: ${gameState.equipment.armor.name}<br><small>${bonuses.join(', ')}</small>`;
+        } else {
+            armorDisplay.textContent = 'Armor: None';
+        }
+        
+        updateInventoryDisplay();
+    }
+    
+    // Add this function AFTER updateUI() function
+    function updateActiveBoosts() {
+        const attackStat = document.getElementById('statAttack');
+        const defenseStat = document.getElementById('statDefense');
+        
+        attackStat.innerHTML = gameState.attack.toString();
+        defenseStat.innerHTML = gameState.defense.toString();
+    }
+    
+    // Then update the updateUI() function to call updateActiveBoosts():
+    function updateUI() {
+        document.getElementById('statAttack').textContent = gameState.attack;
+        document.getElementById('statHealth').textContent = gameState.health;
+        document.getElementById('statDefense').textContent = gameState.defense;
+        document.getElementById('statGold').textContent = gameState.gold;
+        document.getElementById('statStage').textContent = gameState.stage;
+        document.getElementById('statMoves').textContent = gameState.moves;
+        
+        // Update equipment display
+        const weaponDisplay = document.getElementById('equippedWeapon');
+        const armorDisplay = document.getElementById('equippedArmor');
+        
+        if (gameState.equipment.weapon) {
+            const attackBonus = gameState.equipment.weapon.stats.attack || 0;
+            weaponDisplay.innerHTML = `Weapon: ${gameState.equipment.weapon.name}<br><small>+${attackBonus} ATK</small>`;
+        } else {
+            weaponDisplay.textContent = 'Weapon: None';
+        }
+        
+        if (gameState.equipment.armor) {
+            const defBonus = gameState.equipment.armor.stats.defense || 0;
+            const healthBonus = gameState.equipment.armor.stats.health || 0;
+            const bonuses = [];
+            if (defBonus > 0) bonuses.push(`+${defBonus} DEF`);
+            if (healthBonus > 0) bonuses.push(`+${healthBonus} HP`);
+            
+            armorDisplay.innerHTML = `Armor: ${gameState.equipment.armor.name}<br><small>${bonusText.join(', ')}</small>`;
+        } else {
+            armorDisplay.textContent = 'Armor: None';
+        }
+        
+        updateInventoryDisplay();
+        updateActiveBoosts(); // ADD THIS LINE
+    }
+    
+    // ========== EVENT LISTENERS ==========
+        function setupEventListeners() {
+            // Movement buttons
+            document.getElementById('moveUp').addEventListener('click', (e) => {
+                if (!gameState.inCombat && gameState.gameActive) movePlayer(-1, 0);
+            });
+            document.getElementById('moveDown').addEventListener('click', (e) => {
+                if (!gameState.inCombat && gameState.gameActive) movePlayer(1, 0);
+            });
+            document.getElementById('moveLeft').addEventListener('click', (e) => {
+                if (!gameState.inCombat && gameState.gameActive) movePlayer(0, -1);
+            });
+            document.getElementById('moveRight').addEventListener('click', (e) => {
+                if (!gameState.inCombat && gameState.gameActive) movePlayer(0, 1);
+            });
+            document.getElementById('nextStageBtn').addEventListener('click', nextStage);
+            
+            // Combat buttons
+            document.getElementById('attackBtn').addEventListener('click', () => combatAction('attack'));
+            document.getElementById('defendBtn').addEventListener('click', () => combatAction('defend'));
+            document.getElementById('fleeBtn').addEventListener('click', () => combatAction('flee'));
+            
+            // Shop buttons
+            document.getElementById('exitShopBtn').addEventListener('click', closeShopModal);
+            
+            // Return buttons
+            document.getElementById('returnWithLootBtn').addEventListener('click', returnToFarmWithLoot);
+            document.getElementById('deathReturnBtn').addEventListener('click', returnToFarmAfterDeath);
+            document.getElementById('returnToFarm').addEventListener('click', function(e) {
+                e.preventDefault();
+                returnToFarmWithLoot();
+            });
+            
+            // Inventory click events
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('sell-btn') || 
+                    e.target.closest('.sell-btn')) {
+                    const btn = e.target.classList.contains('sell-btn') ? e.target : e.target.closest('.sell-btn');
+                    const index = parseInt(btn.dataset.index);
+                    sellItem(index);
+                }
+                
+                if (e.target.classList.contains('equip-btn') || 
+                    e.target.closest('.equip-btn')) {
+                    const btn = e.target.classList.contains('equip-btn') ? e.target : e.target.closest('.equip-btn');
+                    const index = parseInt(btn.dataset.index);
+                    const item = gameState.inventory[index];
+                    
+                    if (item.type === 'weapon') {
+                        equipWeapon(item);
+                    } else if (item.type === 'armor') {
+                        equipArmor(item);
+                    }
+                }
+                
+                if (e.target.classList.contains('use-btn') || 
+                    e.target.closest('.use-btn')) {
+                    const btn = e.target.classList.contains('use-btn') ? e.target : e.target.closest('.use-btn');
+                    const index = parseInt(btn.dataset.index);
+                    const item = gameState.inventory[index];
+                    
+                    if (item.type === 'consumable') {
+                        useItem(item, index);
+                    }
+                }
+            });
+            
+            // Keyboard controls
+            document.addEventListener('keydown', function(e) {
+                if (!gameState.gameActive || gameState.inCombat) return;
+                
+                switch(e.key) {
+                    case 'ArrowUp':
+                    case 'w':
+                    case 'W':
+                        if (!gameState.inCombat && gameState.gameActive) movePlayer(-1, 0);
+                        e.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                    case 'S':
+                        if (!gameState.inCombat && gameState.gameActive) movePlayer(1, 0);
+                        e.preventDefault();
+                        break;
+                    case 'ArrowLeft':
+                    case 'a':
+                    case 'A':
+                        if (!gameState.inCombat && gameState.gameActive) movePlayer(0, -1);
+                        e.preventDefault();
+                        break;
+                    case 'ArrowRight':
+                    case 'd':
+                    case 'D':
+                        if (!gameState.inCombat && gameState.gameActive) movePlayer(0, 1);
+                        e.preventDefault();
+                        break;
+                    case 'n':
+                    case 'N':
+                        if (!gameState.inCombat && gameState.gameActive) nextStage();
+                        e.preventDefault();
+                        break;
+                    case 'Escape':
+                        closeShopModal();
+                        e.preventDefault();
+                        break;
+                }
+            });
+            
+            // Prevent clicks on modals from affecting underlying game
+            const modals = ['combatModal', 'shopModal', 'deathModal'];
+            
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                modal.addEventListener('click', function(e) {
+                    // Only close if clicking on the modal background (not the content)
+                    if (e.target === this) {
+                        // Don't close combat or death modals by clicking outside
+                        if (modalId === 'combatModal' || modalId === 'deathModal') {
+                            return; // Don't allow closing combat/death modals by clicking outside
+                        }
+                        // Only allow closing shop modal by clicking outside
+                        if (modalId === 'shopModal') {
+                            closeShopModal();
+                        }
+                    }
+                });
+            });
+            
+            // Prevent clicks inside modal content from bubbling up
+            const modalContents = ['combatContent', 'shopContent', 'deathContent'];
+            
+            modalContents.forEach(contentId => {
+                const content = document.getElementById(contentId);
+                if (content) {
+                    content.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Prevent click from reaching modal background
+                    });
+                }
+            });
+        }
+        
+    </script>
 </body>
 </html>
