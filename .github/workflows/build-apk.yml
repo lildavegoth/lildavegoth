@@ -1,0 +1,68 @@
+name: Build APK
+
+# Trigger the workflow on every push to the main branch
+on:
+  push:
+    branches: [ "homepage" ]
+
+jobs:
+  build-android-apk:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # 1. Checkout the repository code
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        path: 'source-files' # Clones your repo into a folder named 'source-files'
+
+    # 2. Set up the Java environment (required for Android builds)
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    # 3. Set up the Android SDK and command-line tools
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+
+    # 4. Install Node.js and Apache Cordova
+    - name: Setup Node.js and Cordova
+      run: |
+        npm install -g cordova
+
+    # 5. Create a fresh Cordova project and copy your web files
+    - name: Prepare Cordova Project
+      run: |
+        # Create a new Cordova app
+        cordova create cordova-build com.lildavegoth.homepage "lildavegoth"
+        cd cordova-build
+        
+        # Add the Android platform to the project
+        cordova platform add android
+        
+        # DELETE the default www folder and copy YOUR website files into it
+        rm -rf www
+        cp -r ../source-files www
+        
+        # --- CRITICAL FOR YOUR APP ---
+        # Ensure Cordova loads your correct index.html
+        # The default file in your repo is index.html, so this should work.
+        # If the main file has a different name, you would adjust it here.
+
+    # 6. Build the Android APK (Debug version for testing)
+    - name: Build Android APK
+      run: |
+        cd cordova-build
+        cordova build android --no-telemetry
+
+    # 7. Upload the generated APK as a workflow artifact
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: kiraku-homepage-apk
+        path: |
+          cordova-build/platforms/android/app/build/outputs/apk/debug/*.apk
+          cordova-build/platforms/android/app/build/outputs/apk/release/*.apk
+        retention-days: 7
