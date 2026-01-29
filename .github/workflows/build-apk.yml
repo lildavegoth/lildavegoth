@@ -18,148 +18,169 @@ jobs:
         with:
           node-version: "18"
 
-      - name: Create package files
+      - name: Debug - List files
         run: |
-          npm init -y
-          npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0
-          echo '{"appId":"com.lildavegoth.kakoikiraku","appName":"Kakoi Kiraku Home","webDir":"./","server":{"androidScheme":"https"}}' > capacitor.config.json
+          echo "=== Current directory structure ==="
+          ls -la
+          echo "=== Android folder ==="
+          ls -la android/ || echo "No android folder"
+          echo "=== package.json ==="
+          cat package.json || echo "No package.json"
 
-      - name: Create Android files
+      - name: Create minimal setup
+        run: |
+          # Create package.json if missing
+          if [ ! -f package.json ]; then
+            echo '{"name":"kakoikiraku","version":"1.0.0","dependencies":{}}' > package.json
+          fi
+          
+          # Install Capacitor
+          npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0
+          
+          # Create basic config
+          echo '{
+            "appId": "com.lildavegoth.kakoikiraku",
+            "appName": "Kakoi Kiraku Home",
+            "webDir": ".",
+            "server": {
+              "androidScheme": "https"
+            }
+          }' > capacitor.config.json
+
+      - name: Create essential Android files only
         run: |
           mkdir -p android/app/src/main/res/values
           
-          # Create AndroidManifest.xml
-          echo '<?xml version="1.0" encoding="utf-8"?>' > android/app/src/main/AndroidManifest.xml
-          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android"' >> android/app/src/main/AndroidManifest.xml
-          echo '    package="com.lildavegoth.kakoikiraku">' >> android/app/src/main/AndroidManifest.xml
-          echo '' >> android/app/src/main/AndroidManifest.xml
-          echo '    <!-- ALL PERMISSIONS FOR FULL ACCESS -->' >> android/app/src/main/AndroidManifest.xml
-          echo '    <uses-permission android:name="android.permission.INTERNET" />' >> android/app/src/main/AndroidManifest.xml
-          echo '    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />' >> android/app/src/main/AndroidManifest.xml
-          echo '    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />' >> android/app/src/main/AndroidManifest.xml
-          echo '    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />' >> android/app/src/main/AndroidManifest.xml
-          echo '    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' >> android/app/src/main/AndroidManifest.xml
-          echo '    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />' >> android/app/src/main/AndroidManifest.xml
-          echo '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' >> android/app/src/main/AndroidManifest.xml
-          echo '' >> android/app/src/main/AndroidManifest.xml
-          echo '    <application' >> android/app/src/main/AndroidManifest.xml
-          echo '        android:allowBackup="true"' >> android/app/src/main/AndroidManifest.xml
-          echo '        android:icon="@mipmap/ic_launcher"' >> android/app/src/main/AndroidManifest.xml
-          echo '        android:label="Kakoi Kiraku Home"' >> android/app/src/main/AndroidManifest.xml
-          echo '        android:theme="@style/AppTheme"' >> android/app/src/main/AndroidManifest.xml
-          echo '        android:usesCleartextTraffic="true">' >> android/app/src/main/AndroidManifest.xml
-          echo '' >> android/app/src/main/AndroidManifest.xml
-          echo '        <activity' >> android/app/src/main/AndroidManifest.xml
-          echo '            android:name="com.getcapacitor.BridgeActivity"' >> android/app/src/main/AndroidManifest.xml
-          echo '            android:exported="true"' >> android/app/src/main/AndroidManifest.xml
-          echo '            android:launchMode="singleTask"' >> android/app/src/main/AndroidManifest.xml
-          echo '            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"' >> android/app/src/main/AndroidManifest.xml
-          echo '            android:windowSoftInputMode="adjustResize">' >> android/app/src/main/AndroidManifest.xml
-          echo '' >> android/app/src/main/AndroidManifest.xml
-          echo '            <intent-filter>' >> android/app/src/main/AndroidManifest.xml
-          echo '                <action android:name="android.intent.action.MAIN" />' >> android/app/src/main/AndroidManifest.xml
-          echo '                <category android:name="android.intent.category.LAUNCHER" />' >> android/app/src/main/AndroidManifest.xml
-          echo '            </intent-filter>' >> android/app/src/main/AndroidManifest.xml
-          echo '        </activity>' >> android/app/src/main/AndroidManifest.xml
-          echo '    </application>' >> android/app/src/main/AndroidManifest.xml
-          echo '</manifest>' >> android/app/src/main/AndroidManifest.xml
+          # AndroidManifest.xml (minimal version)
+          echo '<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.lildavegoth.kakoikiraku">
+    
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="Kakoi Kiraku Home"
+        android:theme="@style/AppTheme">
+        
+        <activity
+            android:name="com.getcapacitor.BridgeActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>' > android/app/src/main/AndroidManifest.xml
           
-          # Create styles.xml
-          echo '<?xml version="1.0" encoding="utf-8"?>' > android/app/src/main/res/values/styles.xml
-          echo '<resources>' >> android/app/src/main/res/values/styles.xml
-          echo '    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">' >> android/app/src/main/res/values/styles.xml
-          echo '        <item name="colorPrimary">#000000</item>' >> android/app/src/main/res/values/styles.xml
-          echo '        <item name="colorPrimaryDark">#000000</item>' >> android/app/src/main/res/values/styles.xml
-          echo '        <item name="colorAccent">#FFFFFF</item>' >> android/app/src/main/res/values/styles.xml
-          echo '        <item name="android:windowBackground">#FFFFFF</item>' >> android/app/src/main/res/values/styles.xml
-          echo '    </style>' >> android/app/src/main/res/values/styles.xml
-          echo '</resources>' >> android/app/src/main/res/values/styles.xml
+          # Minimal styles.xml
+          echo '<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="colorPrimary">#000000</item>
+    </style>
+</resources>' > android/app/src/main/res/values/styles.xml
           
-          # Create strings.xml
-          echo '<?xml version="1.0" encoding="utf-8"?>' > android/app/src/main/res/values/strings.xml
-          echo '<resources>' >> android/app/src/main/res/values/strings.xml
-          echo '    <string name="app_name">Kakoi Kiraku Home</string>' >> android/app/src/main/res/values/strings.xml
-          echo '</resources>' >> android/app/src/main/res/values/strings.xml
+          # Create absolute minimal build.gradle files
+          echo 'buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:7.4.2"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}' > android/build.gradle
           
-          # Create build.gradle (project level)
-          echo 'buildscript {' > android/build.gradle
-          echo '    repositories {' >> android/build.gradle
-          echo '        google()' >> android/build.gradle
-          echo '        mavenCentral()' >> android/build.gradle
-          echo '    }' >> android/build.gradle
-          echo '    dependencies {' >> android/build.gradle
-          echo '        classpath "com.android.tools.build:gradle:8.0.0"' >> android/build.gradle
-          echo '    }' >> android/build.gradle
-          echo '}' >> android/build.gradle
-          echo '' >> android/build.gradle
-          echo 'allprojects {' >> android/build.gradle
-          echo '    repositories {' >> android/build.gradle
-          echo '        google()' >> android/build.gradle
-          echo '        mavenCentral()' >> android/build.gradle
-          echo '    }' >> android/build.gradle
-          echo '}' >> android/build.gradle
-          echo '' >> android/build.gradle
-          echo 'task clean(type: Delete) {' >> android/build.gradle
-          echo '    delete rootProject.buildDir' >> android/build.gradle
-          echo '}' >> android/build.gradle
+          echo 'plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "com.lildavegoth.kakoikiraku"
+    compileSdk 33
+    
+    defaultConfig {
+        applicationId "com.lildavegoth.kakoikiraku"
+        minSdk 24
+        targetSdk 33
+        versionCode 1
+        versionName "1.0"
+    }
+    
+    buildTypes {
+        debug {
+            debuggable true
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ["*.jar"], dir: "libs")
+}' > android/app/build.gradle
           
-          # Create app/build.gradle
-          echo 'plugins {' > android/app/build.gradle
-          echo '    id "com.android.application"' >> android/app/build.gradle
-          echo '}' >> android/app/build.gradle
-          echo '' >> android/app/build.gradle
-          echo 'android {' >> android/app/build.gradle
-          echo '    namespace "com.lildavegoth.kakoikiraku"' >> android/app/build.gradle
-          echo '    compileSdk 34' >> android/app/build.gradle
-          echo '' >> android/app/build.gradle
-          echo '    defaultConfig {' >> android/app/build.gradle
-          echo '        applicationId "com.lildavegoth.kakoikiraku"' >> android/app/build.gradle
-          echo '        minSdk 24' >> android/app/build.gradle
-          echo '        targetSdk 34' >> android/app/build.gradle
-          echo '        versionCode 1' >> android/app/build.gradle
-          echo '        versionName "1.0"' >> android/app/build.gradle
-          echo '    }' >> android/app/build.gradle
-          echo '' >> android/app/build.gradle
-          echo '    buildTypes {' >> android/app/build.gradle
-          echo '        release {' >> android/app/build.gradle
-          echo '            minifyEnabled false' >> android/app/build.gradle
-          echo '        }' >> android/app/build.gradle
-          echo '        debug {' >> android/app/build.gradle
-          echo '            debuggable true' >> android/app/build.gradle
-          echo '        }' >> android/app/build.gradle
-          echo '    }' >> android/app/build.gradle
-          echo '' >> android/app/build.gradle
-          echo '    compileOptions {' >> android/app/build.gradle
-          echo '        sourceCompatibility JavaVersion.VERSION_17' >> android/app/build.gradle
-          echo '        targetCompatibility JavaVersion.VERSION_17' >> android/app/build.gradle
-          echo '    }' >> android/app/build.gradle
-          echo '}' >> android/app/build.gradle
-          echo '' >> android/app/build.gradle
-          echo 'dependencies {' >> android/app/build.gradle
-          echo '    implementation "androidx.appcompat:appcompat:1.6.1"' >> android/app/build.gradle
-          echo '}' >> android/app/build.gradle
+          echo 'include ":app"' > android/settings.gradle
           
-          # Create settings.gradle
-          echo 'rootProject.name = "Kakoi Kiraku Home"' > android/settings.gradle
-          echo 'include ":app"' >> android/settings.gradle
+          echo 'android.useAndroidX=true' > android/gradle.properties
+
+      - name: Debug - Check Android files
+        run: |
+          echo "=== Checking Android files ==="
+          ls -la android/
+          ls -la android/app/ || echo "No app folder"
+          echo "=== AndroidManifest.xml exists? ==="
+          test -f android/app/src/main/AndroidManifest.xml && echo "YES" || echo "NO"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          api-level: 33
+          build-tools: 33.0.0
+          ndk: false
+          cmake: false
 
       - name: Initialize Capacitor
         run: |
-          npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="./" --silent
-          npx cap add android --silent
-          npx cap sync android
+          echo "=== Initializing Capacitor ==="
+          npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="." --silent || echo "Cap init may have warnings"
+          npx cap add android --silent || echo "Cap add may have warnings"
+          
+          echo "=== Syncing ==="
+          npx cap sync android || echo "Sync had issues"
 
-      - name: Build APK
+      - name: Debug - List Android project
         run: |
+          echo "=== Android project structure ==="
+          find android -type f -name "*.gradle" -o -name "*.xml" -o -name "*.properties" | sort
+
+      - name: Build APK (with debug output)
+        run: |
+          echo "=== Building APK ==="
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace --info
 
-      - name: Upload APK
+      - name: Check for APK
+        run: |
+          echo "=== Looking for APK ==="
+          find android -name "*.apk" -type f 2>/dev/null || echo "No APK found"
+
+      - name: Upload APK if exists
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: kakoikiraku-home-apk
+          name: kakoikiraku-apk
           path: android/app/build/outputs/apk/debug/*.apk
