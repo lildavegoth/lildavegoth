@@ -1,9 +1,9 @@
-name: Build React Native WebView APK
+name: Build WebView APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [homepage]
+    branches: [main]
 
 jobs:
   build:
@@ -14,46 +14,39 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
+    - name: Setup Node.js and Java
       uses: actions/setup-node@v4
       with:
         node-version: '18'
+    
+    - name: Setup JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
 
     - name: Create React Native project
       run: |
         echo "=== CREATING REACT NATIVE PROJECT ==="
-        npx react-native init KakoikirakuApp --template react-native-template-typescript
+        # Use the new CLI command
+        npx @react-native-community/cli@latest init KirakuApp --skip-install
         
-        cd KakoikirakuApp
+        cd KirakuApp
+        
+        # Install dependencies
+        npm install
         
         # Install WebView
-        npm install react-native-webview
+        npm install react-native-webview@latest
         
-        # Install file system access
-        npm install react-native-fs
-        npm install react-native-document-picker
-        
-        # Create simplified App.js
-        cat > App.js << 'EOF'
-        import React from 'react';
-        import { WebView } from 'react-native-webview';
-        import { PermissionsAndroid, Platform } from 'react-native';
-        
+        # Create simple App.js with permissions - CORRECT INDENTATION
+        echo 'import React from "react";
+        import { WebView } from "react-native-webview";
+
         const App = () => {
-          React.useEffect(() => {
-            if (Platform.OS === 'android') {
-              PermissionsAndroid.requestMultiple([
-                PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-                PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-                PermissionsAndroid.PERMISSIONS.MANAGE_EXTERNAL_STORAGE,
-                PermissionsAndroid.PERMISSIONS.INTERNET,
-              ]);
-            }
-          }, []);
-          
           return (
             <WebView
-              source={{ uri: 'https://lildavegoth.github.io/lildavegoth/' }}
+              source={{ uri: "https://lildavegoth.github.io/lildavegoth/" }}
               allowFileAccess={true}
               allowUniversalAccessFromFileURLs={true}
               allowFileAccessFromFileURLs={true}
@@ -63,28 +56,45 @@ jobs:
             />
           );
         };
-        
-        export default App;
-        EOF
-        
-        echo "=== PROJECT CREATED ==="
+
+        export default App;' > App.js
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
+    - name: Add Android permissions
+      run: |
+        echo "=== ADDING ANDROID PERMISSIONS ==="
+        cd KirakuApp/android/app/src/main
+        
+        # Backup original
+        cp AndroidManifest.xml AndroidManifest.xml.backup
+        
+        # Insert permissions after <manifest> tag
+        sed -i '/<manifest /a\
+    <uses-permission android:name="android.permission.INTERNET" />\
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />\
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' AndroidManifest.xml
+        
+        echo "=== PERMISSIONS ADDED ==="
+        cat AndroidManifest.xml
+
     - name: Build Android APK
       run: |
         echo "=== BUILDING APK ==="
-        cd KakoikirakuApp/android
+        cd KirakuApp/android
+        
+        # Make gradlew executable
+        chmod +x gradlew
         
         # Build debug APK
-        ./gradlew assembleDebug
-        
-        echo "=== APK LOCATION ==="
-        ls -la app/build/outputs/apk/debug/
+        ./gradlew assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: kakoikiraku-webview-apk
-        path: KakoikirakuApp/android/app/build/outputs/apk/debug/*.apk
+        name: kiraku-webview-apk
+        path: KirakuApp/android/app/build/outputs/apk/debug/*.apk
+        retention-days: 1
