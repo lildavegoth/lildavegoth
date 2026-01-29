@@ -1,9 +1,9 @@
-name: Build Kakoi Kiraku Home APK
+name: Build Kakoi Kiraku Home APK (With Offline Website)
 
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [homepage]
 
 jobs:
   build:
@@ -11,8 +11,10 @@ jobs:
     timeout-minutes: 30
     
     steps:
-    - name: Checkout code
+    - name: Checkout YOUR website code
       uses: actions/checkout@v4
+      with:
+        path: website-source
 
     - name: Setup Node.js 20 and Java 17
       uses: actions/setup-node@v4
@@ -28,25 +30,39 @@ jobs:
     - name: Create project with custom names
       run: |
         echo "=== CREATING PROJECT WITH CUSTOM NAMES ==="
-        # INIT WITH CUSTOM NAMES
-        npx @react-native-community/cli@latest init KakoikirakuHome \
-          --package-name "com.lildavegoth.kakoikirakuhome" \
-          --title "Kakoi Kiraku Home" \
-          --skip-install
+        npx @react-native-community/cli@latest init KakoikirakuHome --package-name "com.lildavegoth.kakoikirakuhome" --title "Kakoi Kiraku Home" --skip-install
         
         cd KakoikirakuHome
         
         npm install
         npm install react-native-webview@latest
+
+        - name: Bundle your website into app assets
+      run: |
+        echo "=== BUNDLING YOUR WEBSITE INTO APK ==="
+        cd KakoikirakuHome
         
-        # Create WebView App.js
+        mkdir -p android/app/src/main/assets/website
+        cd ../website-source
+        
+        cp -r *.html *.css *.js *.cssjs *.json pages/ images/ ../KakoikirakuHome/android/app/src/main/assets/website/ 2>/dev/null || true
+        
+        cd ../KakoikirakuHome
+        
         echo 'import React from "react";
         import { WebView } from "react-native-webview";
+        import { Platform } from "react-native";
 
         const App = () => {
+          const localSource = { 
+            uri: Platform.OS === "android" 
+              ? "file:///android_asset/website/index.html"
+              : "file://\${RNFS.MainBundlePath}/website/index.html" 
+          };
+          
           return (
             <WebView
-              source={{ uri: "https://lildavegoth.github.io/lildavegoth/" }}
+              source={localSource}
               allowFileAccess={true}
               allowUniversalAccessFromFileURLs={true}
               allowFileAccessFromFileURLs={true}
@@ -58,14 +74,16 @@ jobs:
         };
 
         export default App;' > App.js
+        
+        echo "=== WEBSITE BUNDLED ==="
+        ls -la android/app/src/main/assets/website/
 
-    - name: Verify names
+    - name: Verify names and structure
       run: |
         cd KakoikirakuHome
-        echo "=== VERIFYING NAMES ==="
-        echo "Package name in build.gradle:"
+        echo "Package name:"
         grep "applicationId" android/app/build.gradle
-        echo "App name in strings.xml:"
+        echo "App name:"
         cat android/app/src/main/res/values/strings.xml
 
     - name: Setup Android SDK
@@ -73,9 +91,7 @@ jobs:
 
     - name: Add Android permissions
       run: |
-        echo "=== ADDING ANDROID PERMISSIONS ==="
         cd KakoikirakuHome/android/app/src/main
-        
         cp AndroidManifest.xml AndroidManifest.xml.backup
         
         sed -i '/<manifest /a\
@@ -83,18 +99,24 @@ jobs:
         <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\
         <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\
         <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />\
-        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' AndroidManifest.xml
+        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\
+        <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />' AndroidManifest.xml
 
     - name: Build Release APK
       run: |
-        echo "=== BUILDING RELEASE APK ==="
         cd KakoikirakuHome/android
-        
         chmod +x gradlew
         ./gradlew assembleRelease --no-daemon
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: kakoikiraku-home-apk
+        name: kakoikiraku-home-offline-apk
         path: KakoikirakuHome/android/app/build/outputs/apk/release/*.apk
+
+    - name: Upload website bundle info
+      if: always()
+      run: |
+        cd KakoikirakuHome
+        echo "Files in APK:"
+        find android/app/src/main/assets/website -type f | sort
