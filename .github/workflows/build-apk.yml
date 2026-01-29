@@ -10,177 +10,52 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "18"
 
-      - name: Debug - List files
-        run: |
-          echo "=== Current directory structure ==="
-          ls -la
-          echo "=== Android folder ==="
-          ls -la android/ || echo "No android folder"
-          echo "=== package.json ==="
-          cat package.json || echo "No package.json"
+    - name: Install dependencies
+      run: |
+        npm init -y
+        npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0
+        echo '{"appId":"com.lildavegoth.kakoikiraku","appName":"Kakoi Kiraku Home","webDir":"./","server":{"androidScheme":"https"}}' > capacitor.config.json
 
-      - name: Create minimal setup
-        run: |
-          # Create package.json if missing
-          if [ ! -f package.json ]; then
-            echo '{"name":"kakoikiraku","version":"1.0.0","dependencies":{}}' > package.json
-          fi
-          
-          # Install Capacitor
-          npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0
-          
-          # Create basic config
-          echo '{
-            "appId": "com.lildavegoth.kakoikiraku",
-            "appName": "Kakoi Kiraku Home",
-            "webDir": ".",
-            "server": {
-              "androidScheme": "https"
-            }
-          }' > capacitor.config.json
-
-      - name: Create essential Android files only
-        run: |
-          mkdir -p android/app/src/main/res/values
-          
-          # AndroidManifest.xml (minimal version)
-          echo '<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.lildavegoth.kakoikiraku">
-    
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="Kakoi Kiraku Home"
-        android:theme="@style/AppTheme">
+    - name: Create minimal Android project
+      run: |
+        # Download a pre-built Android template
+        curl -L https://github.com/ionic-team/capacitor-android-template/archive/refs/heads/main.zip -o android-template.zip
+        unzip -q android-template.zip -d android-temp
+        mv android-temp/capacitor-android-template-main/android .
+        rm -rf android-temp android-template.zip
         
-        <activity
-            android:name="com.getcapacitor.BridgeActivity"
-            android:exported="true"
-            android:launchMode="singleTask">
-            
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-    </application>
-</manifest>' > android/app/src/main/AndroidManifest.xml
-          
-          # Minimal styles.xml
-          echo '<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <item name="colorPrimary">#000000</item>
-    </style>
-</resources>' > android/app/src/main/res/values/styles.xml
-          
-          # Create absolute minimal build.gradle files
-          echo 'buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath "com.android.tools.build:gradle:7.4.2"
-    }
-}
+        # Update package name and permissions
+        sed -i 's/com.getcapacitor.myapp/com.lildavegoth.kakoikiraku/g' android/app/src/main/AndroidManifest.xml
+        sed -i 's/My App/Kakoi Kiraku Home/g' android/app/src/main/AndroidManifest.xml
+        
+        # Add ALL permissions
+        PERMISSIONS='<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />'
+        sed -i "s|<uses-permission|${PERMISSIONS}\n    <uses-permission|" android/app/src/main/AndroidManifest.xml
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}' > android/build.gradle
-          
-          echo 'plugins {
-    id "com.android.application"
-}
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
 
-android {
-    namespace "com.lildavegoth.kakoikiraku"
-    compileSdk 33
-    
-    defaultConfig {
-        applicationId "com.lildavegoth.kakoikiraku"
-        minSdk 24
-        targetSdk 33
-        versionCode 1
-        versionName "1.0"
-    }
-    
-    buildTypes {
-        debug {
-            debuggable true
-        }
-    }
-}
+    - name: Sync Capacitor
+      run: |
+        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="./" --silent
+        npx cap add android --silent
+        npx cap sync android
 
-dependencies {
-    implementation fileTree(include: ["*.jar"], dir: "libs")
-}' > android/app/build.gradle
-          
-          echo 'include ":app"' > android/settings.gradle
-          
-          echo 'android.useAndroidX=true' > android/gradle.properties
+    - name: Build APK
+      run: |
+        cd android
+        ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Debug - Check Android files
-        run: |
-          echo "=== Checking Android files ==="
-          ls -la android/
-          ls -la android/app/ || echo "No app folder"
-          echo "=== AndroidManifest.xml exists? ==="
-          test -f android/app/src/main/AndroidManifest.xml && echo "YES" || echo "NO"
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 33
-          build-tools: 33.0.0
-          ndk: false
-          cmake: false
-
-      - name: Initialize Capacitor
-        run: |
-          echo "=== Initializing Capacitor ==="
-          npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="." --silent || echo "Cap init may have warnings"
-          npx cap add android --silent || echo "Cap add may have warnings"
-          
-          echo "=== Syncing ==="
-          npx cap sync android || echo "Sync had issues"
-
-      - name: Debug - List Android project
-        run: |
-          echo "=== Android project structure ==="
-          find android -type f -name "*.gradle" -o -name "*.xml" -o -name "*.properties" | sort
-
-      - name: Build APK (with debug output)
-        run: |
-          echo "=== Building APK ==="
-          cd android
-          chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace --info
-
-      - name: Check for APK
-        run: |
-          echo "=== Looking for APK ==="
-          find android -name "*.apk" -type f 2>/dev/null || echo "No APK found"
-
-      - name: Upload APK if exists
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: kakoikiraku-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: kakoikiraku-apk
+        path: android/app/build/outputs/apk/debug/*.apk
