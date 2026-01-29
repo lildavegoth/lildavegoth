@@ -1,4 +1,4 @@
-name: Build Kakoi Kiraku Home APK
+name: Build Kakoi Kiraku Home APK (With Offline Website)
 
 on:
   workflow_dispatch:
@@ -27,15 +27,22 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Create project with custom names
+    - name: Create project with custom names (FIXED)
       run: |
         echo "=== CREATING PROJECT WITH CUSTOM NAMES ==="
-        npx @react-native-community/cli@latest init KakoikirakuHome --package-name "com.lildavegoth.kakoikirakuhome" --title "Kakoi Kiraku Home" --skip-install
+        # FIX: Use specific version, not @latest
+        npx @react-native-community/cli@11.3.6 init KakoikirakuHome --package-name "com.lildavegoth.kakoikirakuhome" --title "Kakoi Kiraku Home" --skip-install
         
-        cd KakoikirakuHome
-        
-        npm install
-        npm install react-native-webview@latest
+        # Check if project was created
+        if [ -d "KakoikirakuHome" ]; then
+          echo "✓ Project created successfully"
+          cd KakoikirakuHome
+          npm install
+          npm install react-native-webview@latest
+        else
+          echo "✗ Project creation failed"
+          exit 1
+        fi
 
     - name: Bundle your website into app assets
       run: |
@@ -80,6 +87,7 @@ jobs:
 
     - name: Verify names and structure
       run: |
+        echo "=== VERIFYING ==="
         cd KakoikirakuHome
         echo "Package name:"
         grep "applicationId" android/app/build.gradle
@@ -91,6 +99,7 @@ jobs:
 
     - name: Add Android permissions
       run: |
+        echo "=== ADDING PERMISSIONS ==="
         cd KakoikirakuHome/android/app/src/main
         cp AndroidManifest.xml AndroidManifest.xml.backup
         
@@ -104,6 +113,7 @@ jobs:
 
     - name: Build Release APK
       run: |
+        echo "=== BUILDING APK ==="
         cd KakoikirakuHome/android
         chmod +x gradlew
         ./gradlew assembleRelease --no-daemon
@@ -117,6 +127,11 @@ jobs:
     - name: Upload website bundle info
       if: always()
       run: |
-        cd KakoikirakuHome
-        echo "Files in APK:"
-        find android/app/src/main/assets/website -type f | sort
+        echo "=== BUNDLE INFO ==="
+        if [ -d "KakoikirakuHome" ]; then
+          cd KakoikirakuHome
+          echo "Files in APK:"
+          find android/app/src/main/assets/website -type f | sort || echo "No website folder"
+        else
+          echo "Project folder not found"
+        fi
