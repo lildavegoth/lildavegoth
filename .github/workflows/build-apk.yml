@@ -27,22 +27,52 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Create project with custom names (FIXED)
+    - name: Create project with custom names (DIRECT METHOD)
       run: |
-        echo "=== CREATING PROJECT WITH CUSTOM NAMES ==="
-        # FIX: Use specific version, not @latest
-        npx @react-native-community/cli@11.3.6 init KakoikirakuHome --package-name "com.lildavegoth.kakoikirakuhome" --title "Kakoi Kiraku Home" --skip-install
+        echo "=== CREATING PROJECT DIRECTLY ==="
         
-        # Check if project was created
-        if [ -d "KakoikirakuHome" ]; then
-          echo "✓ Project created successfully"
-          cd KakoikirakuHome
-          npm install
-          npm install react-native-webview@latest
-        else
-          echo "✗ Project creation failed"
-          exit 1
-        fi
+        # Create project directory
+        mkdir -p KakoikirakuHome
+        cd KakoikirakuHome
+        
+        # Initialize npm project
+        npm init -y
+        
+        # Install React Native and WebView directly
+        npm install react-native@latest react-native-webview@latest
+        
+        # Create basic React Native structure
+        mkdir -p android ios
+        
+        # Create simple App.js
+        echo 'import React from "react";
+        import { WebView } from "react-native-webview";
+        import { Platform } from "react-native";
+
+        const App = () => {
+          const localSource = { 
+            uri: Platform.OS === "android" 
+              ? "file:///android_asset/website/index.html"
+              : "file://\${RNFS.MainBundlePath}/website/index.html" 
+          };
+          
+          return (
+            <WebView
+              source={localSource}
+              allowFileAccess={true}
+              allowUniversalAccessFromFileURLs={true}
+              allowFileAccessFromFileURLs={true}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              style={{ flex: 1 }}
+            />
+          );
+        };
+
+        export default App;' > App.js
+        
+        echo "=== BASIC PROJECT CREATED ==="
+        ls -la
 
     - name: Bundle your website into app assets
       run: |
