@@ -1,11 +1,12 @@
-
-name: Debug Android Build
+name: Build Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [homepage]
 
 jobs:
-  debug-build:
+  build:
     runs-on: ubuntu-latest
     
     steps:
@@ -17,162 +18,44 @@ jobs:
       with:
         node-version: "18"
 
-    - name: Show current files
+    - name: Install dependencies
       run: |
-        echo "=== CURRENT REPO STRUCTURE ==="
-        find . -type f -name "*.json" -o -name "*.yml" -o -name "*.yaml" -o -name "*.xml" | sort
-        echo ""
-        echo "=== HAS ANDROID FOLDER? ==="
-        ls -la android/ 2>/dev/null || echo "No android folder found"
-        echo ""
-        echo "=== HAS package.json? ==="
-        cat package.json 2>/dev/null || echo "No package.json found"
-
-    - name: Clean and setup fresh
-      run: |
-        echo "=== CLEANING OLD FILES ==="
-        rm -rf android node_modules package-lock.json capacitor.config.json 2>/dev/null || true
-        
-        echo "=== CREATING FRESH SETUP ==="
         npm init -y
-        npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0
-        
-        echo '{
-          "appId": "com.lildavegoth.kakoikiraku",
-          "appName": "Kakoi Kiraku Home",
-          "webDir": ".",
-          "server": {
-            "androidScheme": "https"
-          }
-        }' > capacitor.config.json
+        npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0
+        echo '{"appId":"com.lildavegoth.kakoikiraku","appName":"Kakoi Kiraku Home","webDir":"./","server":{"androidScheme":"https"}}' > capacitor.config.json
 
-    - name: Create Android project using Capacitor
+    - name: Create minimal Android project
       run: |
-        echo "=== CREATING ANDROID PROJECT ==="
-        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="."
-        npx cap add android 2>&1 | tee capacitor-log.txt
+        # Download a pre-built Android template
+        curl -L https://github.com/ionic-team/capacitor-android-template/archive/refs/heads/main.zip -o android-template.zip
+        unzip -q android-template.zip -d android-temp
+        mv android-temp/capacitor-android-template-main/android .
+        rm -rf android-temp android-template.zip
         
-        echo "=== CAPACITOR LOG ==="
-        cat capacitor-log.txt
+        # Update package name and permissions
+        sed -i 's/com.getcapacitor.myapp/com.lildavegoth.kakoikiraku/g' android/app/src/main/AndroidManifest.xml
+        sed -i 's/My App/Kakoi Kiraku Home/g' android/app/src/main/AndroidManifest.xml
         
-        echo "=== ANDROID PROJECT CREATED? ==="
-        if [ -d "android" ]; then
-          echo "✓ Android folder created"
-          ls -la android/
-        else
-          echo "✗ Android folder NOT created"
-          exit 1
-        fi
-
-        - name: Update AndroidManifest with permissions
-      run: |
-        echo "=== UPDATING PERMISSIONS ==="
-        
-        # Backup original
-        cp android/app/src/main/AndroidManifest.xml android/app/src/main/AndroidManifest.xml.backup
-        
-        # Create new manifest with all permissions
-        cat > android/app/src/main/AndroidManifest.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.lildavegoth.kakoikiraku">
-        
-          <!-- ALL PERMISSIONS -->
-          <uses-permission android:name="android.permission.INTERNET" />
-          <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-          <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-          <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
-          <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-          <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-          <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-        
-          <application
-            android:allowBackup="true"
-            android:icon="@mipmap/ic_launcher"
-            android:label="Kakoi Kiraku Home"
-            android:theme="@style/AppTheme"
-            android:usesCleartextTraffic="true">
-            
-            <activity
-              android:name="com.getcapacitor.BridgeActivity"
-              android:exported="true"
-              android:launchMode="singleTask"
-              android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
-              android:windowSoftInputMode="adjustResize">
-              
-              <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-              </intent-filter>
-            </activity>
-          </application>
-        </manifest>
-        EOF
-        
-        echo "=== PERMISSIONS ADDED ==="
-        cat android/app/src/main/AndroidManifest.xml
-        
-        echo "=== PERMISSIONS ADDED ==="
-        cat android/app/src/main/AndroidManifest.xml
+        # Add ALL permissions
+        PERMISSIONS='<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />'
+        sed -i "s|<uses-permission|${PERMISSIONS}\n    <uses-permission|" android/app/src/main/AndroidManifest.xml
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
-      with:
-        api-level: 33
-        build-tools: 33.0.0
 
-    - name: Sync web files
+    - name: Sync Capacitor
       run: |
-        echo "=== SYNCING WEB FILES ==="
-        npx cap sync android 2>&1 | tee sync-log.txt
-        echo "=== SYNC LOG ==="
-        cat sync-log.txt
+        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="./" --silent
+        npx cap add android --silent
+        npx cap sync android
 
-    - name: Try Gradle build (catch errors)
-      id: build
-      continue-on-error: true
+    - name: Build APK
       run: |
-        echo "=== ATTEMPTING BUILD ==="
         cd android
-        
-        # Make gradlew executable
-        chmod +x ./gradlew 2>/dev/null || true
-        
-        # Try to build with full error output
-        ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-log.txt
-        
-        # Check if APK was created
-        if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-          echo "✓ APK created successfully"
-          echo "apk_exists=true" >> $GITHUB_OUTPUT
-        else
-          echo "✗ APK NOT created"
-          echo "apk_exists=false" >> $GITHUB_OUTPUT
-        fi
-        
-        echo "=== BUILD LOG (last 50 lines) ==="
-        tail -50 build-log.txt
-
-    - name: Upload build logs
-      if: steps.build.outputs.apk_exists != 'true'
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-failure-logs
-        path: |
-          capacitor-log.txt
-          sync-log.txt
-          android/build-log.txt
+        ./gradlew assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
-      if: steps.build.outputs.apk_exists == 'true'
       uses: actions/upload-artifact@v4
       with:
-        name: kakoikiraku-debug-apk
-        path: android/app/build/outputs/apk/debug/app-debug.apk
-
-    - name: Show final error if any
-      if: failure()
-      run: |
-        echo "=== BUILD FAILED ==="
-        echo "Check the 'build-failure-logs' artifact for details"
-        echo "Or look at the 'Try Gradle build' step output above"
+        name: kakoikiraku-apk
+        path: android/app/build/outputs/apk/debug/*.apk
