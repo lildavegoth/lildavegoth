@@ -27,52 +27,46 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Create project with custom names (DIRECT METHOD)
+    - name: Create project with custom names (WORKING METHOD)
       run: |
-        echo "=== CREATING PROJECT DIRECTLY ==="
+        echo "=== CREATING PROJECT ==="
         
-        # Create project directory
-        mkdir -p KakoikirakuHome
-        cd KakoikirakuHome
-        
-        # Initialize npm project
-        npm init -y
-        
-        # Install React Native and WebView directly
-        npm install react-native@latest react-native-webview@latest
-        
-        # Create basic React Native structure
-        mkdir -p android ios
-        
-        # Create simple App.js
-        echo 'import React from "react";
-        import { WebView } from "react-native-webview";
-        import { Platform } from "react-native";
-
-        const App = () => {
-          const localSource = { 
-            uri: Platform.OS === "android" 
-              ? "file:///android_asset/website/index.html"
-              : "file://\${RNFS.MainBundlePath}/website/index.html" 
-          };
+        # Method 1: Try multiple approaches until one works
+        echo "Attempt 1: Using react-native CLI..."
+        npx react-native@0.72.0 init KakoikirakuHome --package-name "com.lildavegoth.kakoikirakuhome" --title "Kakoi Kiraku Home" --skip-install 2>/dev/null || {
+          echo "Attempt 1 failed, trying Attempt 2..."
           
-          return (
-            <WebView
-              source={localSource}
-              allowFileAccess={true}
-              allowUniversalAccessFromFileURLs={true}
-              allowFileAccessFromFileURLs={true}
-              javaScriptEnabled={true}
-              domStorageEnabled={true}
-              style={{ flex: 1 }}
-            />
-          );
-        };
-
-        export default App;' > App.js
+          # Method 2: Download pre-made template
+          git clone https://github.com/react-native-webview/react-native-webview-template.git KakoikirakuHome 2>/dev/null || {
+            echo "Attempt 2 failed, trying Attempt 3..."
+            
+            # Method 3: Manual creation with npx react-native init (no version)
+            npx react-native init KakoikirakuHome --package-name "com.lildavegoth.kakoikirakuhome" --title "Kakoi Kiraku Home" --skip-install 2>/dev/null || {
+              echo "All methods failed, creating minimal structure..."
+              
+              # Last resort: Create minimal structure
+              mkdir -p KakoikirakuHome
+              cd KakoikirakuHome
+              npm init -y
+              exit 1
+            }
+          }
+        }
         
-        echo "=== BASIC PROJECT CREATED ==="
+        # If we get here, project was created
+        cd KakoikirakuHome
+        echo "✓ Project created"
+        npm install
+        npm install react-native-webview@latest
+        
+        echo "=== PROJECT STRUCTURE ==="
         ls -la
+        if [ -d "android" ]; then
+          echo "Android folder exists"
+          find android -name "*.gradle" -o -name "AndroidManifest.xml" | head -5
+        else
+          echo "WARNING: No android folder!"
+        fi
 
     - name: Bundle your website into app assets
       run: |
