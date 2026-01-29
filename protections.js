@@ -424,6 +424,7 @@
     
     document.head.appendChild(selectionStyle);
     
+    // Cordova system
     // Don't run in regular browsers (only in Cordova)
     if (!window.cordova) return;
     
@@ -734,5 +735,75 @@
         preloadPage: (url) => preloadPage(url),
         navigateTo: (pageId) => loadSpaPage(pageId, `${pageId}.html`)
     };
+    
+    // Input files
+    window.AutoFileImport = {
+        cordovaMode: !!(window.cordova && cordova.plugins.file),
+        
+        init() {
+            if (!this.cordovaMode) return;
+            
+            const originalClick = HTMLInputElement.prototype.click;
+            HTMLInputElement.prototype.click = function() {
+                if (this.type === 'file') {
+                    AutoFileImport.handleFileSelect(this, (error, files) => {
+                        if (error) return;
+                        const dataTransfer = new DataTransfer();
+                        files.forEach(fileData => {
+                            const file = new File([fileData.content], fileData.name, { type: fileData.type });
+                            dataTransfer.items.add(file);
+                        });
+                        this.files = dataTransfer.files;
+                        this.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                } else {
+                    originalClick.call(this);
+                }
+            };
+        },
+        
+        handleFileSelect(inputElement, callback) {
+            const accept = inputElement.getAttribute('accept') || '*/*';
+            const multiple = inputElement.hasAttribute('multiple');
+            
+            if (this.cordovaMode) {
+                this._cordovaImport(accept, multiple, callback);
+            } else {
+                this._browserImport(accept, multiple, callback);
+            }
+        },
+        
+        _cordovaImport(accept, multiple, callback) {
+            window.FileChooser.open({ mime: accept, multiple: multiple }, (uri) => {
+                const uris = multiple && Array.isArray(uri) ? uri : [uri];
+                Promise.all(uris.map(u => this.readCordovaFile(u)))
+                    .then(files => callback(null, files))
+                    .catch(() => callback('Failed'));
+            }, () => callback('Cancelled'));
+        },
+        
+        readCordovaFile(uri) {
+            return new Promise((resolve, reject) => {
+                window.resolveLocalFileSystemURL(uri, (fileEntry) => {
+                    fileEntry.file((file) => {
+                        const reader = new FileReader();
+                        reader.onloadend = (e) => resolve({
+                            name: fileEntry.name,
+                            content: e.target.result,
+                            type: file.type
+                        });
+                        reader.onerror = reject;
+                        reader.readAsText(file);
+                    }, reject);
+                }, reject);
+            });
+        },
+        
+        _browserImport(accept, multiple, callback) {
+            callback('Not Cordova');
+        }
+    };
+    
+    document.addEventListener('deviceready', () => AutoFileImport.init());
     
 })();
