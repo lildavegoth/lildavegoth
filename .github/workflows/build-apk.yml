@@ -20,7 +20,7 @@ jobs:
     - name: Setup Node.js and Cordova
       run: |
         npm install -g cordova
-    - name: Prepare Cordova Project
+             - name: Prepare Cordova Project
       run: |
         cordova create cordova-build com.lildavegoth.kakoikirakuhome "Kakoi Kiraku Home"
         cd cordova-build
@@ -28,11 +28,39 @@ jobs:
         cordova plugin add cordova-plugin-file
         cordova plugin add cordova-plugin-file-opener2
         cordova plugin add cordova-plugin-android-permissions
+        cordova plugin add cordova-plugin-local-notification
+        cordova plugin add cordova-plugin-badge
         rm -rf www
         cp -r ../source-files www
+        
+        # Create proper Android adaptive icons
         if [ -f "www/icon.png" ]; then
-            cp www/icon.png icon.png
+            mkdir -p res/mipmap-hdpi res/mipmap-mdpi res/mipmap-xhdpi res/mipmap-xxhdpi res/mipmap-xxxhdpi
+            convert www/icon.png -resize 72x72 res/mipmap-hdpi/ic_launcher.png
+            convert www/icon.png -resize 48x48 res/mipmap-mdpi/ic_launcher.png
+            convert www/icon.png -resize 96x96 res/mipmap-xhdpi/ic_launcher.png
+            convert www/icon.png -resize 144x144 res/mipmap-xxhdpi/ic_launcher.png
+            convert www/icon.png -resize 192x192 res/mipmap-xxxhdpi/ic_launcher.png
+            cp www/icon.png res/mipmap-xxxhdpi/ic_launcher_foreground.png
+            echo "Adaptive icons created"
         fi
+        
+        # Create config.xml with proper icon references
+        cat > config.xml << 'EOF'
+        <?xml version='1.0' encoding='utf-8'?>
+        <widget id="com.lildavegoth.kakoikirakuhome" version="1.0.2">
+        <name>Kakoi Kiraku Home</name>
+        <description>Collections of offline web Apps, Games and Tools</description>
+        <platform name="android">
+            <icon density="hdpi" src="res/mipmap-hdpi/ic_launcher.png" />
+            <icon density="mdpi" src="res/mipmap-mdpi/ic_launcher.png" />
+            <icon density="xhdpi" src="res/mipmap-xhdpi/ic_launcher.png" />
+            <icon density="xxhdpi" src="res/mipmap-xxhdpi/ic_launcher.png" />
+            <icon density="xxxhdpi" src="res/mipmap-xxxhdpi/ic_launcher.png" />
+        </platform>
+        <content src="index.html" />
+        </widget>
+        EOF
     - name: Build Android APK
       run: |
         cd cordova-build
