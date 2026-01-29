@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Auto-delete after 30 minutes
     
     steps:
     - name: Checkout code
@@ -18,65 +19,77 @@ jobs:
       with:
         node-version: "18"
 
+    - name: Clean previous builds
+      run: |
+        echo "=== CLEANING PREVIOUS BUILD ==="
+        rm -rf android node_modules package-lock.json capacitor.config.json 2>/dev/null || true
+
     - name: Install dependencies
       run: |
+        echo "=== INSTALLING DEPENDENCIES ==="
         npm init -y
         npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0 --no-audit
         echo '{"appId":"com.lildavegoth.kakoikiraku","appName":"Kakoi Kiraku Home","webDir":"./","server":{"androidScheme":"https"}}' > capacitor.config.json
 
-    - name: Create Android project
+    - name: Initialize Capacitor
+      run: |
+        echo "=== INITIALIZING CAPACITOR ==="
+        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="./" --silent
+
+    - name: Create Android project with full permissions
       run: |
         echo "=== CREATING ANDROID PROJECT ==="
         
-        # First create Android project with Capacitor
-        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="./"
-        npx cap add android
+        # Add Android platform
+        npx cap add android --silent
         
-        echo "=== UPDATING PERMISSIONS ==="
+        echo "=== SETTING FULL PERMISSIONS ==="
         
-        # Update AndroidManifest.xml with ALL permissions (using echo to avoid EOF issues)
-        echo '<?xml version="1.0" encoding="utf-8"?>' > android/app/src/main/AndroidManifest.xml
-        echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android"' >> android/app/src/main/AndroidManifest.xml
-        echo '  package="com.lildavegoth.kakoikiraku">' >> android/app/src/main/AndroidManifest.xml
-        echo '' >> android/app/src/main/AndroidManifest.xml
-        echo '  <!-- ALL PERMISSIONS -->' >> android/app/src/main/AndroidManifest.xml
-        echo '  <uses-permission android:name="android.permission.INTERNET" />' >> android/app/src/main/AndroidManifest.xml
-        echo '  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />' >> android/app/src/main/AndroidManifest.xml
-        echo '  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />' >> android/app/src/main/AndroidManifest.xml
-        echo '  <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />' >> android/app/src/main/AndroidManifest.xml
-        echo '  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' >> android/app/src/main/AndroidManifest.xml
-        echo '  <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />' >> android/app/src/main/AndroidManifest.xml
-        echo '  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' >> android/app/src/main/AndroidManifest.xml
-        echo '' >> android/app/src/main/AndroidManifest.xml
-        echo '  <application' >> android/app/src/main/AndroidManifest.xml
-        echo '    android:allowBackup="true"' >> android/app/src/main/AndroidManifest.xml
-        echo '    android:icon="@mipmap/ic_launcher"' >> android/app/src/main/AndroidManifest.xml
-        echo '    android:label="Kakoi Kiraku Home"' >> android/app/src/main/AndroidManifest.xml
-        echo '    android:theme="@style/AppTheme"' >> android/app/src/main/AndroidManifest.xml
-        echo '    android:usesCleartextTraffic="true">' >> android/app/src/main/AndroidManifest.xml
-        echo '' >> android/app/src/main/AndroidManifest.xml
-        echo '    <activity' >> android/app/src/main/AndroidManifest.xml
-        echo '      android:name="com.getcapacitor.BridgeActivity"' >> android/app/src/main/AndroidManifest.xml
-        echo '      android:exported="true"' >> android/app/src/main/AndroidManifest.xml
-        echo '      android:launchMode="singleTask"' >> android/app/src/main/AndroidManifest.xml
-        echo '      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"' >> android/app/src/main/AndroidManifest.xml
-        echo '      android:windowSoftInputMode="adjustResize">' >> android/app/src/main/AndroidManifest.xml
-        echo '' >> android/app/src/main/AndroidManifest.xml
-        echo '      <intent-filter>' >> android/app/src/main/AndroidManifest.xml
-        echo '        <action android:name="android.intent.action.MAIN" />' >> android/app/src/main/AndroidManifest.xml
-        echo '        <category android:name="android.intent.category.LAUNCHER" />' >> android/app/src/main/AndroidManifest.xml
-        echo '      </intent-filter>' >> android/app/src/main/AndroidManifest.xml
-        echo '    </activity>' >> android/app/src/main/AndroidManifest.xml
-        echo '  </application>' >> android/app/src/main/AndroidManifest.xml
-        echo '</manifest>' >> android/app/src/main/AndroidManifest.xml
+        # Create AndroidManifest.xml with ALL permissions - EXACT FORMAT YOU REQUESTED
+        cat > android/app/src/main/AndroidManifest.xml << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.lildavegoth.kakoikiraku">
         
-        echo "=== ANDROID PROJECT READY ==="
-        ls -la android/
+          <!-- ALL PERMISSIONS -->
+          <uses-permission android:name="android.permission.INTERNET" />
+          <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+          <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+          <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+          <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+          <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+          <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+        
+          <application
+            android:allowBackup="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="Kakoi Kiraku Home"
+            android:theme="@style/AppTheme"
+            android:usesCleartextTraffic="true">
+            
+            <activity
+              android:name="com.getcapacitor.BridgeActivity"
+              android:exported="true"
+              android:launchMode="singleTask"
+              android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+              android:windowSoftInputMode="adjustResize">
+              
+              <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+              </intent-filter>
+            </activity>
+          </application>
+        </manifest>
+        EOF
+        
+        echo "=== ANDROID PROJECT CREATED ==="
+        ls -la android/app/src/main/
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Sync web files
+    - name: Sync web files to Android
       run: |
         echo "=== SYNCING WEB FILES ==="
         npx cap sync android
@@ -88,8 +101,16 @@ jobs:
         chmod +x ./gradlew
         ./gradlew assembleDebug --no-daemon --stacktrace
 
-    - name: Upload APK
+    - name: Upload APK with auto-expiry
       uses: actions/upload-artifact@v4
       with:
         name: kakoikiraku-apk
         path: android/app/build/outputs/apk/debug/*.apk
+        retention-days: 1  # Auto-delete APK after 1 day
+
+    - name: Cleanup after build
+      if: always()
+      run: |
+        echo "=== CLEANING UP ==="
+        rm -rf android node_modules 2>/dev/null || true
+        echo "Workflow will auto-cancel after 30 minutes timeout"
