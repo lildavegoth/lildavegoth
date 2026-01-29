@@ -1,9 +1,6 @@
-
 name: Build Android APK
 
 on:
-  push:
-    branches: [ "homepage" ]
   workflow_dispatch:
 
 jobs:
@@ -11,51 +8,31 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
+    - uses: actions/checkout@v4
+    
+    - name: Setup Android
+      uses: android-actions/setup-android@v3
+    
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-
-    - name: Install dependencies
+    
+    - run: npm install @capacitor/cli @capacitor/core @capacitor/android
+    
+    - name: Create minimal config files
       run: |
-        npm install
-        npm install @capacitor/core @capacitor/cli @capacitor/android
-
-    - name: Initialize Capacitor
-      run: |
-        npx cap init --app-name "Kakoi Kiraku Home" --app-id "com.lildavegoth.kakoikiraku"
-        npx cap add android
-
-    - name: Configure Capacitor for root directory
-      run: |
-        # Update capacitor.config.json to use root directory
-        echo '{
-          "appId": "com.lildavegoth.kakoikiraku",
-          "appName": "Kakoi Kiraku Home",
-          "webDir": "./",
-          "server": {
-            "androidScheme": "https"
-          }
-        }' > capacitor.config.json
-
-    - name: Sync Android project
-      run: |
-        npx cap sync android
-
-    - name: Setup Java and Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: Build Debug APK
-      run: |
-        cd android
-        ./gradlew assembleDebug
-
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
+        # Create capacitor.config.json
+        echo '{"appId":"com.lildavegoth.kakoikiraku","appName":"Kakoi Kiraku Home","webDir":"./","server":{"androidScheme":"https"}}' > capacitor.config.json
+        
+        # Create basic Android files if missing
+        mkdir -p android/app/src/main/res/values
+        echo '<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.lildavegoth.kakoikiraku"><uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/><uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/><application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="Kakoi Kiraku Home"><activity android:name="com.getcapacitor.BridgeActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity></application></manifest>' > android/app/src/main/AndroidManifest.xml
+    
+    - run: npx cap sync android
+    - run: cd android && ./gradlew assembleDebug
+    
+    - uses: actions/upload-artifact@v4
       with:
-        name: kakoi-kiraku-home-apk
-        path: android/app/build/outputs/apk/debug/app-debug.apk
+        name: app
+        path: android/app/build/outputs/apk/debug/*.apk
