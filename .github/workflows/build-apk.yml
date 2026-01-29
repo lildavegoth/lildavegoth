@@ -21,10 +21,11 @@ jobs:
     - name: Install dependencies
       run: |
         npm init -y
-        npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0
+        npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0 --no-audit
         echo '{"appId":"com.lildavegoth.kakoikiraku","appName":"Kakoi Kiraku Home","webDir":"./","server":{"androidScheme":"https"}}' > capacitor.config.json
 
-        - name: Create Android project using Capacitor
+    - name: Create Android project
+      run: |
         echo "=== CREATING ANDROID PROJECT ==="
         
         # First create Android project with Capacitor
@@ -33,46 +34,41 @@ jobs:
         
         echo "=== UPDATING PERMISSIONS ==="
         
-        # Update AndroidManifest.xml with ALL permissions
-        cat > android/app/src/main/AndroidManifest.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.lildavegoth.kakoikiraku">
-        
-          <!-- ALL PERMISSIONS -->
-          <uses-permission android:name="android.permission.INTERNET" />
-          <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-          <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-          <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
-          <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-          <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-          <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-        
-          <application
-            android:allowBackup="true"
-            android:icon="@mipmap/ic_launcher"
-            android:label="Kakoi Kiraku Home"
-            android:theme="@style/AppTheme"
-            android:usesCleartextTraffic="true">
-            
-            <activity
-              android:name="com.getcapacitor.BridgeActivity"
-              android:exported="true"
-              android:launchMode="singleTask"
-              android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
-              android:windowSoftInputMode="adjustResize">
-              
-              <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-              </intent-filter>
-            </activity>
-          </application>
-        </manifest>
-        EOF
-        
-        echo "=== ANDROID PROJECT READY ==="
-        ls -la android/
+        # Update AndroidManifest.xml with ALL permissions (using echo to avoid EOF issues)
+        echo '<?xml version="1.0" encoding="utf-8"?>' > android/app/src/main/AndroidManifest.xml
+        echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android"' >> android/app/src/main/AndroidManifest.xml
+        echo '  package="com.lildavegoth.kakoikiraku">' >> android/app/src/main/AndroidManifest.xml
+        echo '' >> android/app/src/main/AndroidManifest.xml
+        echo '  <!-- ALL PERMISSIONS -->' >> android/app/src/main/AndroidManifest.xml
+        echo '  <uses-permission android:name="android.permission.INTERNET" />' >> android/app/src/main/AndroidManifest.xml
+        echo '  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />' >> android/app/src/main/AndroidManifest.xml
+        echo '  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />' >> android/app/src/main/AndroidManifest.xml
+        echo '  <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />' >> android/app/src/main/AndroidManifest.xml
+        echo '  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' >> android/app/src/main/AndroidManifest.xml
+        echo '  <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />' >> android/app/src/main/AndroidManifest.xml
+        echo '  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' >> android/app/src/main/AndroidManifest.xml
+        echo '' >> android/app/src/main/AndroidManifest.xml
+        echo '  <application' >> android/app/src/main/AndroidManifest.xml
+        echo '    android:allowBackup="true"' >> android/app/src/main/AndroidManifest.xml
+        echo '    android:icon="@mipmap/ic_launcher"' >> android/app/src/main/AndroidManifest.xml
+        echo '    android:label="Kakoi Kiraku Home"' >> android/app/src/main/AndroidManifest.xml
+        echo '    android:theme="@style/AppTheme"' >> android/app/src/main/AndroidManifest.xml
+        echo '    android:usesCleartextTraffic="true">' >> android/app/src/main/AndroidManifest.xml
+        echo '' >> android/app/src/main/AndroidManifest.xml
+        echo '    <activity' >> android/app/src/main/AndroidManifest.xml
+        echo '      android:name="com.getcapacitor.BridgeActivity"' >> android/app/src/main/AndroidManifest.xml
+        echo '      android:exported="true"' >> android/app/src/main/AndroidManifest.xml
+        echo '      android:launchMode="singleTask"' >> android/app/src/main/AndroidManifest.xml
+        echo '      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"' >> android/app/src/main/AndroidManifest.xml
+        echo '      android:windowSoftInputMode="adjustResize">' >> android/app/src/main/AndroidManifest.xml
+        echo '' >> android/app/src/main/AndroidManifest.xml
+        echo '      <intent-filter>' >> android/app/src/main/AndroidManifest.xml
+        echo '        <action android:name="android.intent.action.MAIN" />' >> android/app/src/main/AndroidManifest.xml
+        echo '        <category android:name="android.intent.category.LAUNCHER" />' >> android/app/src/main/AndroidManifest.xml
+        echo '      </intent-filter>' >> android/app/src/main/AndroidManifest.xml
+        echo '    </activity>' >> android/app/src/main/AndroidManifest.xml
+        echo '  </application>' >> android/app/src/main/AndroidManifest.xml
+        echo '</manifest>' >> android/app/src/main/AndroidManifest.xml
         
         echo "=== ANDROID PROJECT READY ==="
         ls -la android/
@@ -89,11 +85,7 @@ jobs:
       run: |
         echo "=== BUILDING APK ==="
         cd android
-        
-        # Make gradlew executable
         chmod +x ./gradlew
-        
-        # Build with debug output
         ./gradlew assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
