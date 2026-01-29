@@ -29,8 +29,13 @@ jobs:
         echo "=== INSTALLING DEPENDENCIES ==="
         npm init -y
         npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0 --no-audit
-        echo '{"appId":"com.lildavegoth.kakoikiraku","appName":"Kakoi Kiraku Home","webDir":"./","server":{"androidScheme":"https"}}' > capacitor.config.json
+        echo '{"appId":"com.lildavegoth.kakoikiraku","appName":"Kakoi Kiraku Home","webDir":".","server":{"androidScheme":"https"}}' > capacitor.config.json
 
+    - name: Initialize Capacitor
+      run: |
+        echo "=== INITIALIZING CAPACITOR ==="
+        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="."
+   
     - name: Initialize Capacitor
       run: |
         echo "=== INITIALIZING CAPACITOR ==="
@@ -43,9 +48,12 @@ jobs:
         # Add Android platform
         npx cap add android
         
+        echo "=== SYNCING WEB FILES FIRST (creates capacitor.plugins.json) ==="
+        npx cap sync android
+        
         echo "=== SETTING FULL PERMISSIONS ==="
         
-        # Create AndroidManifest.xml with ALL permissions - EXACT FORMAT YOU REQUESTED
+        # Create AndroidManifest.xml with ALL permissions
         cat > android/app/src/main/AndroidManifest.xml << 'EOF'
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -84,7 +92,7 @@ jobs:
         EOF
         
         echo "=== ANDROID PROJECT CREATED ==="
-        ls -la android/app/src/main/
+        ls -la android/app/src/main/assets/
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
