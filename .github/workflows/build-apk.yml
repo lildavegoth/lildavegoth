@@ -1,4 +1,4 @@
-name: Build WebView APK
+name: Build Standalone WebView APK
 
 on:
   workflow_dispatch:
@@ -28,18 +28,13 @@ jobs:
     - name: Create React Native project
       run: |
         echo "=== CREATING REACT NATIVE PROJECT ==="
-        # Use the new CLI command
         npx @react-native-community/cli@latest init KirakuApp --skip-install
         
         cd KirakuApp
         
-        # Install dependencies
         npm install
-        
-        # Install WebView
         npm install react-native-webview@latest
         
-        # Create simple App.js with permissions - CORRECT INDENTATION
         echo 'import React from "react";
         import { WebView } from "react-native-webview";
 
@@ -67,34 +62,39 @@ jobs:
         echo "=== ADDING ANDROID PERMISSIONS ==="
         cd KirakuApp/android/app/src/main
         
-        # Backup original
         cp AndroidManifest.xml AndroidManifest.xml.backup
         
-        # Insert permissions after <manifest> tag
         sed -i '/<manifest /a\
-        <uses-permission android:name="android.permission.INTERNET" />\
-        <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\
-        <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\
-        <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />\
-        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' AndroidManifest.xml
-        
-        echo "=== PERMISSIONS ADDED ==="
-        cat AndroidManifest.xml
+    <uses-permission android:name="android.permission.INTERNET" />\
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />\
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' AndroidManifest.xml
 
-    - name: Build Android APK
+    - name: Create JavaScript bundle
       run: |
-        echo "=== BUILDING APK ==="
+        echo "=== CREATING JS BUNDLE ==="
+        cd KirakuApp
+        
+        # Create assets directory
+        mkdir -p android/app/src/main/assets
+        
+        # Bundle JavaScript for standalone app
+        npx react-native bundle --platform android --dev false \
+          --entry-file index.js \
+          --bundle-output android/app/src/main/assets/index.android.bundle \
+          --assets-dest android/app/src/main/res/
+
+    - name: Build Release APK
+      run: |
+        echo "=== BUILDING RELEASE APK ==="
         cd KirakuApp/android
         
-        # Make gradlew executable
         chmod +x gradlew
-        
-        # Build debug APK
-        ./gradlew assembleDebug --no-daemon --stacktrace
+        ./gradlew assembleRelease --no-daemon --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: kiraku-webview-apk
-        path: KirakuApp/android/app/build/outputs/apk/debug/*.apk
-        retention-days: 1
+        name: kiraku-standalone-apk
+        path: KirakuApp/android/app/build/outputs/apk/release/*.apk
