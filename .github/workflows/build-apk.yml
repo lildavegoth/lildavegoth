@@ -17,183 +17,71 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'  # This handles the lock file issue
 
-    - name: Create package-lock.json
+    - name: Create package files
       run: |
-        # Create a proper lock file
-        npm init -y --scope=lildavegoth
-        npm install @capacitor/core @capacitor/cli @capacitor/android --save-exact
-        echo "Lock file created successfully"
+        npm init -y
+        npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0
+        echo '{"appId":"com.lildavegoth.kiraku","appName":"Kakoi Kiraku","webDir":"./","server":{"androidScheme":"https"}}' > capacitor.config.json
 
-    - name: Create Capacitor config
+    - name: Create Android files using echo commands
       run: |
-        # Create capacitor.config.json
-        echo '{
-          "appId": "com.lildavegoth.kiraku",
-          "appName": "Kakoi Kiraku",
-          "webDir": "./",
-          "server": {
-            "androidScheme": "https"
-          },
-          "plugins": {
-            "Filesystem": {
-              "androidPermissions": [
-                "READ_EXTERNAL_STORAGE",
-                "WRITE_EXTERNAL_STORAGE",
-                "MANAGE_EXTERNAL_STORAGE"
-              ]
-            }
-          }
-        }' > capacitor.config.json
-
-        - name: Create minimal Android files
-      run: |
-        # Create essential Android directory structure
         mkdir -p android/app/src/main/res/values
-        mkdir -p android/app/src/main/res/drawable
         
-        # AndroidManifest.xml with ALL permissions
-        cat > android/app/src/main/AndroidManifest.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-            package="com.lildavegoth.kiraku">
+        # Create AndroidManifest.xml line by line (no EOF issues)
+        echo '<?xml version="1.0" encoding="utf-8"?>' > android/app/src/main/AndroidManifest.xml
+        echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android"' >> android/app/src/main/AndroidManifest.xml
+        echo '    package="com.lildavegoth.kiraku">' >> android/app/src/main/AndroidManifest.xml
+        echo '' >> android/app/src/main/AndroidManifest.xml
+        echo '    <uses-permission android:name="android.permission.INTERNET" />' >> android/app/src/main/AndroidManifest.xml
+        echo '    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />' >> android/app/src/main/AndroidManifest.xml
+        echo '    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />' >> android/app/src/main/AndroidManifest.xml
+        echo '    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />' >> android/app/src/main/AndroidManifest.xml
+        echo '    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' >> android/app/src/main/AndroidManifest.xml
+        echo '' >> android/app/src/main/AndroidManifest.xml
+        echo '    <application' >> android/app/src/main/AndroidManifest.xml
+        echo '        android:allowBackup="true"' >> android/app/src/main/AndroidManifest.xml
+        echo '        android:icon="@mipmap/ic_launcher"' >> android/app/src/main/AndroidManifest.xml
+        echo '        android:label="Kakoi Kiraku"' >> android/app/src/main/AndroidManifest.xml
+        echo '        android:theme="@style/AppTheme">' >> android/app/src/main/AndroidManifest.xml
+        echo '' >> android/app/src/main/AndroidManifest.xml
+        echo '        <activity' >> android/app/src/main/AndroidManifest.xml
+        echo '            android:name="com.getcapacitor.BridgeActivity"' >> android/app/src/main/AndroidManifest.xml
+        echo '            android:exported="true"' >> android/app/src/main/AndroidManifest.xml
+        echo '            android:launchMode="singleTask">' >> android/app/src/main/AndroidManifest.xml
+        echo '' >> android/app/src/main/AndroidManifest.xml
+        echo '            <intent-filter>' >> android/app/src/main/AndroidManifest.xml
+        echo '                <action android:name="android.intent.action.MAIN" />' >> android/app/src/main/AndroidManifest.xml
+        echo '                <category android:name="android.intent.category.LAUNCHER" />' >> android/app/src/main/AndroidManifest.xml
+        echo '            </intent-filter>' >> android/app/src/main/AndroidManifest.xml
+        echo '        </activity>' >> android/app/src/main/AndroidManifest.xml
+        echo '    </application>' >> android/app/src/main/AndroidManifest.xml
+        echo '</manifest>' >> android/app/src/main/AndroidManifest.xml
         
-        <!-- ALL PERMISSIONS FOR FULL ACCESS -->
-        <uses-permission android:name="android.permission.INTERNET" />
-        <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-        <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-        <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
-        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-        <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-        <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+        # Create styles.xml
+        echo '<?xml version="1.0" encoding="utf-8"?>' > android/app/src/main/res/values/styles.xml
+        echo '<resources>' >> android/app/src/main/res/values/styles.xml
+        echo '    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">' >> android/app/src/main/res/values/styles.xml
+        echo '        <item name="colorPrimary">#000000</item>' >> android/app/src/main/res/values/styles.xml
+        echo '        <item name="colorPrimaryDark">#000000</item>' >> android/app/src/main/res/values/styles.xml
+        echo '    </style>' >> android/app/src/main/res/values/styles.xml
+        echo '</resources>' >> android/app/src/main/res/values/styles.xml
         
-        <application
-            android:allowBackup="true"
-            android:icon="@mipmap/ic_launcher"
-            android:label="Kakoi Kiraku"
-            android:theme="@style/AppTheme"
-            android:usesCleartextTraffic="true">
-            
-            <activity
-                android:name="com.getcapacitor.BridgeActivity"
-                android:exported="true"
-                android:launchMode="singleTask"
-                android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
-                android:windowSoftInputMode="adjustResize">
-                
-                <intent-filter>
-                    <action android:name="android.intent.action.MAIN" />
-                    <category android:name="android.intent.category.LAUNCHER" />
-                </intent-filter>
-            </activity>
-        </application>
-        </manifest>
-        EOF
+        # Create build.gradle files
+        echo 'buildscript { repositories { google(); mavenCentral() } }' > android/build.gradle
+        echo 'plugins { id "com.android.application" }' > android/app/build.gradle
+        echo 'android { compileSdk 34; defaultConfig { applicationId "com.lildavegoth.kiraku" } }' >> android/app/build.gradle
 
-        # styles.xml
-        cat > android/app/src/main/res/values/styles.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <item name="colorPrimary">#000000</item>
-        <item name="colorPrimaryDark">#000000</item>
-        <item name="colorAccent">#FFFFFF</item>
-        <item name="android:windowBackground">#FFFFFF</item>
-    </style>
-</resources>
-EOF
-
-        # strings.xml
-        cat > android/app/src/main/res/values/strings.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">Kakoi Kiraku</string>
-</resources>
-EOF
-
-        # Create minimal build.gradle files
-        cat > android/build.gradle << 'EOF'
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.0.0'
-    }
-}
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
-task clean(type: Delete) {
-    delete rootProject.buildDir
-}
-EOF
-
-        cat > android/app/build.gradle << 'EOF'
-apply plugin: 'com.android.application'
-
-android {
-    namespace 'com.lildavegoth.kiraku'
-    compileSdk 34
-    
-    defaultConfig {
-        applicationId "com.lildavegoth.kiraku"
-        minSdk 24
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
-    }
-    
-    buildTypes {
-        release {
-            minifyEnabled false
-        }
-        debug {
-            debuggable true
-        }
-    }
-    
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-}
-
-dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-}
-EOF
-
-        echo "Android files created successfully"
-
-    - name: Initialize and sync Capacitor
-      run: |
-        # Initialize Capacitor with silent flag
-        npx cap init "Kakoi Kiraku" "com.lildavegoth.kiraku" --web-dir="./" --silent || true
-        npx cap add android --silent
-        
-        # Sync web assets to Android
-        npx cap sync android --deployment
-
-    - name: Setup Java and Android SDK
+    - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Build APK
+    - name: Build APK with Gradle
       run: |
         cd android
-        chmod +x ./gradlew
-        ./gradlew assembleDebug --no-daemon
+        ./gradlew assembleDebug --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: kakoi-kiraku-app
+        name: app-apk
         path: android/app/build/outputs/apk/debug/*.apk
-        retention-days: 7
