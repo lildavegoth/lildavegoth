@@ -2,37 +2,198 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Android
-      uses: android-actions/setup-android@v3
-    
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-    
-    - run: npm install @capacitor/cli @capacitor/core @capacitor/android
-    
-    - name: Create minimal config files
+        cache: 'npm'  # This handles the lock file issue
+
+    - name: Create package-lock.json
+      run: |
+        # Create a proper lock file
+        npm init -y --scope=lildavegoth
+        npm install @capacitor/core @capacitor/cli @capacitor/android --save-exact
+        echo "Lock file created successfully"
+
+    - name: Create Capacitor config
       run: |
         # Create capacitor.config.json
-        echo '{"appId":"com.lildavegoth.kakoikiraku","appName":"Kakoi Kiraku Home","webDir":"./","server":{"androidScheme":"https"}}' > capacitor.config.json
-        
-        # Create basic Android files if missing
+        echo '{
+          "appId": "com.lildavegoth.kiraku",
+          "appName": "Kakoi Kiraku",
+          "webDir": "./",
+          "server": {
+            "androidScheme": "https"
+          },
+          "plugins": {
+            "Filesystem": {
+              "androidPermissions": [
+                "READ_EXTERNAL_STORAGE",
+                "WRITE_EXTERNAL_STORAGE",
+                "MANAGE_EXTERNAL_STORAGE"
+              ]
+            }
+          }
+        }' > capacitor.config.json
+
+    - name: Create minimal Android files
+      run: |
+        # Create essential Android directory structure
         mkdir -p android/app/src/main/res/values
-        echo '<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.lildavegoth.kakoikiraku"><uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/><uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/><application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="Kakoi Kiraku Home"><activity android:name="com.getcapacitor.BridgeActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity></application></manifest>' > android/app/src/main/AndroidManifest.xml
+        mkdir -p android/app/src/main/res/drawable
+        
+        # AndroidManifest.xml with ALL permissions
+        cat > android/app/src/main/AndroidManifest.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.lildavegoth.kiraku">
     
-    - run: npx cap sync android
-    - run: cd android && ./gradlew assembleDebug
+    <!-- ALL PERMISSIONS FOR FULL ACCESS -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     
-    - uses: actions/upload-artifact@v4
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="Kakoi Kiraku"
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true">
+        
+        <activity
+            android:name="com.getcapacitor.BridgeActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:windowSoftInputMode="adjustResize">
+            
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+EOF
+
+        # styles.xml
+        cat > android/app/src/main/res/values/styles.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="colorPrimary">#000000</item>
+        <item name="colorPrimaryDark">#000000</item>
+        <item name="colorAccent">#FFFFFF</item>
+        <item name="android:windowBackground">#FFFFFF</item>
+    </style>
+</resources>
+EOF
+
+        # strings.xml
+        cat > android/app/src/main/res/values/strings.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kakoi Kiraku</string>
+</resources>
+EOF
+
+        # Create minimal build.gradle files
+        cat > android/build.gradle << 'EOF'
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.0.0'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+EOF
+
+        cat > android/app/build.gradle << 'EOF'
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.lildavegoth.kiraku'
+    compileSdk 34
+    
+    defaultConfig {
+        applicationId "com.lildavegoth.kiraku"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+    
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+        debug {
+            debuggable true
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+}
+EOF
+
+        echo "Android files created successfully"
+
+    - name: Initialize and sync Capacitor
+      run: |
+        # Initialize Capacitor with silent flag
+        npx cap init "Kakoi Kiraku" "com.lildavegoth.kiraku" --web-dir="./" --silent || true
+        npx cap add android --silent
+        
+        # Sync web assets to Android
+        npx cap sync android --deployment
+
+    - name: Setup Java and Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Build APK
+      run: |
+        cd android
+        chmod +x ./gradlew
+        ./gradlew assembleDebug --no-daemon
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
       with:
-        name: app
+        name: kakoi-kiraku-app
         path: android/app/build/outputs/apk/debug/*.apk
+        retention-days: 7
