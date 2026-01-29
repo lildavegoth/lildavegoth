@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build React Native WebView APK
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Auto-delete after 30 minutes
+    timeout-minutes: 30
     
     steps:
     - name: Checkout code
@@ -17,123 +17,74 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: "18"
+        node-version: '18'
 
-    - name: Clean previous builds
+    - name: Create React Native project
       run: |
-        echo "=== CLEANING PREVIOUS BUILD ==="
-        rm -rf android node_modules package-lock.json capacitor.config.json 2>/dev/null || true
-
-    - name: Install dependencies
-      run: |
-        echo "=== INSTALLING DEPENDENCIES ==="
-        npm init -y
-        npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0 --no-audit
+        echo "=== CREATING REACT NATIVE PROJECT ==="
+        npx react-native init KakoikirakuApp --template react-native-template-typescript
         
-        # Create capacitor.config.json with ROOT directory
-        echo '{
-          "appId": "com.lildavegoth.kakoikiraku",
-          "appName": "Kakoi Kiraku Home",
-          "webDir": ".",
-          "bundledWebRuntime": false,
-          "server": {
-            "androidScheme": "https"
-          }
-        }' > capacitor.config.json
-
-    - name: Initialize Capacitor
-      run: |
-        echo "=== INITIALIZING CAPACITOR ==="
-        # Try with . first, if fails use empty string
-        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="." || \
-        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir=""
-
-    - name: Create Android project with full permissions
-      run: |
-        echo "=== CREATING ANDROID PROJECT ==="
+        cd KakoikirakuApp
         
-        # Add Android platform
-        npx cap add android
+        # Install WebView
+        npm install react-native-webview
         
-        echo "=== CREATING MISSING capacitor.plugins.json ==="
+        # Install file system access
+        npm install react-native-fs
+        npm install react-native-document-picker
         
-        # Create the missing file manually
-        mkdir -p android/app/src/main/assets/
-        echo '{}' > android/app/src/main/assets/capacitor.plugins.json
+        # Create simplified App.js
+        cat > App.js << 'EOF'
+        import React from 'react';
+        import { WebView } from 'react-native-webview';
+        import { PermissionsAndroid, Platform } from 'react-native';
         
-        echo "=== SYNCING WEB FILES ==="
-        npx cap sync android
+        const App = () => {
+          React.useEffect(() => {
+            if (Platform.OS === 'android') {
+              PermissionsAndroid.requestMultiple([
+                PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+                PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+                PermissionsAndroid.PERMISSIONS.MANAGE_EXTERNAL_STORAGE,
+                PermissionsAndroid.PERMISSIONS.INTERNET,
+              ]);
+            }
+          }, []);
+          
+          return (
+            <WebView
+              source={{ uri: 'https://lildavegoth.github.io/lildavegoth/' }}
+              allowFileAccess={true}
+              allowUniversalAccessFromFileURLs={true}
+              allowFileAccessFromFileURLs={true}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              style={{ flex: 1 }}
+            />
+          );
+        };
         
-        echo "=== SETTING FULL PERMISSIONS ==="
-        
-        # Create AndroidManifest.xml with ALL permissions
-        cat > android/app/src/main/AndroidManifest.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.lildavegoth.kakoikiraku">
-        
-          <!-- ALL PERMISSIONS -->
-          <uses-permission android:name="android.permission.INTERNET" />
-          <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-          <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-          <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
-          <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-          <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-          <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-        
-          <application
-            android:allowBackup="true"
-            android:icon="@mipmap/ic_launcher"
-            android:label="Kakoi Kiraku Home"
-            android:theme="@style/AppTheme"
-            android:usesCleartextTraffic="true">
-            
-            <activity
-              android:name="com.getcapacitor.BridgeActivity"
-              android:exported="true"
-              android:launchMode="singleTask"
-              android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
-              android:windowSoftInputMode="adjustResize">
-              
-              <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-              </intent-filter>
-            </activity>
-          </application>
-        </manifest>
+        export default App;
         EOF
         
-        echo "=== CHECKING CREATED FILES ==="
-        ls -la android/app/src/main/assets/
-        echo "=== capacitor.plugins.json content ==="
-        cat android/app/src/main/assets/capacitor.plugins.json || echo "File not found"
+        echo "=== PROJECT CREATED ==="
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Sync web files to Android
-      run: |
-        echo "=== SYNCING WEB FILES ==="
-        npx cap sync android
-
-    - name: Build APK
+    - name: Build Android APK
       run: |
         echo "=== BUILDING APK ==="
-        cd android
-        chmod +x ./gradlew
-        ./gradlew assembleDebug --no-daemon --stacktrace
+        cd KakoikirakuApp/android
+        
+        # Build debug APK
+        ./gradlew assembleDebug
+        
+        echo "=== APK LOCATION ==="
+        ls -la app/build/outputs/apk/debug/
 
-    - name: Upload APK with auto-expiry
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: kakoikiraku-apk
-        path: android/app/build/outputs/apk/debug/*.apk
-        retention-days: 1  # Auto-delete APK after 1 day
-
-    - name: Cleanup after build
-      if: always()
-      run: |
-        echo "=== CLEANING UP ==="
-        rm -rf android node_modules 2>/dev/null || true
-        echo "Workflow will auto-cancel after 30 minutes timeout"
+        name: kakoikiraku-webview-apk
+        path: KakoikirakuApp/android/app/build/outputs/apk/debug/*.apk
