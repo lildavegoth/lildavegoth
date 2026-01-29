@@ -24,34 +24,76 @@ jobs:
         npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0
         echo '{"appId":"com.lildavegoth.kakoikiraku","appName":"Kakoi Kiraku Home","webDir":"./","server":{"androidScheme":"https"}}' > capacitor.config.json
 
-    - name: Create minimal Android project
-      run: |
-        # Download a pre-built Android template
-        curl -L https://github.com/ionic-team/capacitor-android-template/archive/refs/heads/main.zip -o android-template.zip
-        unzip -q android-template.zip -d android-temp
-        mv android-temp/capacitor-android-template-main/android .
-        rm -rf android-temp android-template.zip
+        - name: Create Android project using Capacitor
+        echo "=== CREATING ANDROID PROJECT ==="
         
-        # Update package name and permissions
-        sed -i 's/com.getcapacitor.myapp/com.lildavegoth.kakoikiraku/g' android/app/src/main/AndroidManifest.xml
-        sed -i 's/My App/Kakoi Kiraku Home/g' android/app/src/main/AndroidManifest.xml
+        # First create Android project with Capacitor
+        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="./"
+        npx cap add android
         
-        # Add ALL permissions
-        PERMISSIONS='<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />'
-        sed -i "s|<uses-permission|${PERMISSIONS}\n    <uses-permission|" android/app/src/main/AndroidManifest.xml
+        echo "=== UPDATING PERMISSIONS ==="
+        
+        # Update AndroidManifest.xml with ALL permissions
+        cat > android/app/src/main/AndroidManifest.xml << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.lildavegoth.kakoikiraku">
+        
+          <!-- ALL PERMISSIONS -->
+          <uses-permission android:name="android.permission.INTERNET" />
+          <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+          <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+          <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+          <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+          <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+          <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+        
+          <application
+            android:allowBackup="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="Kakoi Kiraku Home"
+            android:theme="@style/AppTheme"
+            android:usesCleartextTraffic="true">
+            
+            <activity
+              android:name="com.getcapacitor.BridgeActivity"
+              android:exported="true"
+              android:launchMode="singleTask"
+              android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+              android:windowSoftInputMode="adjustResize">
+              
+              <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+              </intent-filter>
+            </activity>
+          </application>
+        </manifest>
+        EOF
+        
+        echo "=== ANDROID PROJECT READY ==="
+        ls -la android/
+        
+        echo "=== ANDROID PROJECT READY ==="
+        ls -la android/
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Sync Capacitor
+    - name: Sync web files
       run: |
-        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="./" --silent
-        npx cap add android --silent
+        echo "=== SYNCING WEB FILES ==="
         npx cap sync android
 
     - name: Build APK
       run: |
+        echo "=== BUILDING APK ==="
         cd android
+        
+        # Make gradlew executable
+        chmod +x ./gradlew
+        
+        # Build with debug output
         ./gradlew assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
