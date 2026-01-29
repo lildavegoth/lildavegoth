@@ -29,12 +29,24 @@ jobs:
         echo "=== INSTALLING DEPENDENCIES ==="
         npm init -y
         npm install @capacitor/core@5.7.0 @capacitor/cli@5.7.0 @capacitor/android@5.7.0 --no-audit
-        echo '{"appId":"com.lildavegoth.kakoikiraku","appName":"Kakoi Kiraku Home","webDir":".","server":{"androidScheme":"https"}}' > capacitor.config.json
+        
+        # Create capacitor.config.json with ROOT directory
+        echo '{
+          "appId": "com.lildavegoth.kakoikiraku",
+          "appName": "Kakoi Kiraku Home",
+          "webDir": ".",
+          "bundledWebRuntime": false,
+          "server": {
+            "androidScheme": "https"
+          }
+        }' > capacitor.config.json
 
     - name: Initialize Capacitor
       run: |
         echo "=== INITIALIZING CAPACITOR ==="
-        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="."
+        # Try with . first, if fails use empty string
+        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir="." || \
+        npx cap init "Kakoi Kiraku Home" "com.lildavegoth.kakoikiraku" --web-dir=""
 
     - name: Create Android project with full permissions
       run: |
@@ -43,7 +55,13 @@ jobs:
         # Add Android platform
         npx cap add android
         
-        echo "=== SYNCING WEB FILES FIRST (creates capacitor.plugins.json) ==="
+        echo "=== CREATING MISSING capacitor.plugins.json ==="
+        
+        # Create the missing file manually
+        mkdir -p android/app/src/main/assets/
+        echo '{}' > android/app/src/main/assets/capacitor.plugins.json
+        
+        echo "=== SYNCING WEB FILES ==="
         npx cap sync android
         
         echo "=== SETTING FULL PERMISSIONS ==="
@@ -86,8 +104,10 @@ jobs:
         </manifest>
         EOF
         
-        echo "=== ANDROID PROJECT CREATED ==="
+        echo "=== CHECKING CREATED FILES ==="
         ls -la android/app/src/main/assets/
+        echo "=== capacitor.plugins.json content ==="
+        cat android/app/src/main/assets/capacitor.plugins.json || echo "File not found"
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
