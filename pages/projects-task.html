@@ -71,10 +71,28 @@
         }
 
         .controls {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: var(--spacing-sm);
             margin-top: var(--spacing-md);
-            flex-wrap: wrap;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .controls .btn {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .controls-row {
+            display: flex;
+            gap: var(--spacing-sm);
+            width: 100%;
+        }
+        
+        .controls-row .btn {
+            flex: 1;
+            justify-content: center;
         }
 
         .btn {
@@ -147,6 +165,14 @@
             position: relative;
             overflow: auto;
             max-height: 600px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .spreadsheet-wrapper::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
         }
 
         .spreadsheet-table {
@@ -465,7 +491,6 @@
         .task-textarea {
             width: 100%;
             min-width: 230px;
-            max-width: 230px;
             background: transparent;
             border: none;
             color: var(--text-primary);
@@ -474,10 +499,10 @@
             outline: none;
             font-family: inherit;
             resize: none;
-            overflow-y: auto;
-            max-height: 105px;
-            min-height: 105px;
-            line-height: 1.3;
+            overflow-y: hidden;
+            min-height: 20px;
+            max-height: none;
+            line-height: 1.05;
             text-align: left;
         }
 
@@ -532,15 +557,67 @@
             cursor: not-allowed;
         }
 
-        @media (max-width: 768px) {
-            .controls {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
+        .folders-container {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+            overflow-x: auto;
+            padding-bottom: 8px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            margin-bottom: -20px;
+        }
+        
+        .folders-container::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+
+        .folder-tab {
+            padding: 10px 20px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-secondary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .folder-tab:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .folder-tab.active {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: bold;
+            border-color: var(--accent-color);
+        }
+
+        .add-folder-btn {
+            padding: 10px 20px;
+            background: rgba(193, 252, 50, 0.1);
+            border: 1px solid var(--accent-color);
+            border-radius: var(--radius-small);
+            color: var(--accent-color);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .add-folder-btn:hover {
+            background: rgba(193, 252, 50, 0.2);
         }
     </style>
 </head>
@@ -564,8 +641,13 @@
                 <button class="btn danger" id="clearBtn">
                     <i class="fas fa-trash"></i> Clear All
                 </button>
+                <button class="btn" id="addRowBtnTop">
+                    <i class="fas fa-plus"></i> Add Row
+                </button>
             </div>
         </header>
+
+        <div class="folders-container" id="foldersContainer"></div>
         
         <div class="spreadsheet-container">
             <div class="spreadsheet-wrapper scrollable">
@@ -582,7 +664,7 @@
                     </tbody>
                 </table>
             </div>
-            <button class="add-row-btn" id="addRowBtn">
+            <button class="add-row-btn" id="addRowBtnBottom">
                 Add Row
             </button>
         </div>
@@ -592,7 +674,7 @@
                 <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
                 <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
             </div>
-            <p>© 2026 lildavegoth | CSS Snippets Gallery</p>
+            <p>© 2026 lildavegoth | Projects Task Manager</p>
             <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
                 Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
             </p>
@@ -602,38 +684,52 @@
     <div class="modal-overlay" id="singleModal">
         <div class="modal">
             <div class="modal-header">
-                <h2 class="modal-title" id="modalTitle">
-                    <!-- Generate Buttons -->
-                </h2>
+                <h2 class="modal-title" id="modalTitle"></h2>
             </div>
             
             <div class="form-group">
-                <p style="color: var(--text-primary); font-size: 1rem; line-height: 1.5;" id="modalMessage">
-                    <!-- Generate Buttons -->
-                </p>
+                <p style="color: var(--text-primary); font-size: 1rem; line-height: 1.5;" id="modalMessage"></p>
             </div>
             
-            <div class="modal-actions" id="modalActions">
-                <!-- Generate Buttons -->
-            </div>
+            <div class="modal-actions" id="modalActions"></div>
         </div>
     </div>
 
     <script>
-        const KEY = "projectSpreadsheet"
+        const KEY = "projectFolders"
         
-        let data = JSON.parse(localStorage.getItem(KEY)) || []
+        let folders = JSON.parse(localStorage.getItem(KEY)) || []
+        let currentFolderId = null
         let rowToDeleteIndex = -1
         let importedDataToConfirm = []
                         
         const body = document.getElementById("tableBody")
-        const addRowBtn = document.getElementById("addRowBtn")
+        const addRowBtnTop = document.getElementById("addRowBtnTop")
+        const addRowBtnBottom = document.getElementById("addRowBtnBottom")
         const clearBtn = document.getElementById("clearBtn")
         const exportBtn = document.getElementById("exportBtn")
         const importBtn = document.getElementById("importBtn")
+        const foldersContainer = document.getElementById("foldersContainer")
                         
         function save() {
-            localStorage.setItem(KEY, JSON.stringify(data))
+            localStorage.setItem(KEY, JSON.stringify(folders))
+        }
+                        
+        function getCurrentFolder() {
+            return folders.find(f => f.id === currentFolderId)
+        }
+                        
+        function getCurrentData() {
+            const folder = getCurrentFolder()
+            return folder ? folder.data : []
+        }
+                        
+        function setCurrentData(data) {
+            const folder = getCurrentFolder()
+            if (folder) {
+                folder.data = data
+                save()
+            }
         }
                         
         function rowTemplate(project, index) {
@@ -647,6 +743,7 @@
                 project.name = e.target.value
                 save()
             }
+            updateStatusColor(nameInput, project.status)
             nameTd.appendChild(nameInput)
             
             const tasksTd = document.createElement("td")
@@ -716,7 +813,7 @@
             
             const status = document.createElement("select")
             status.className = "status-select"
-            ;["Pending", "In Progress", "Completed"].forEach(v => {
+            ;["Pending", "In Progress", "Completed", "Deprecated"].forEach(v => {
                 const o = document.createElement("option")
                 o.value = v
                 o.textContent = v
@@ -756,12 +853,36 @@
             actionTd.appendChild(controls)
             
             tr.append(nameTd, tasksTd, notesTd, actionTd)
+            setTimeout(() => {
+                tr.querySelectorAll('.task-textarea').forEach(autoResizeTextarea)
+            }, 10)
+            
             return tr
+        }
+        
+        function updateStatusColor(nameInput, status) {
+            const colors = {
+                "Pending": "#D9C181",
+                "In Progress": "#A9ACFF",
+                "Completed": "#C1FC32",
+                "Deprecated": "#C42833"
+            }
+            nameInput.style.color = colors[status] || "var(--text-primary)"
+            status.onchange = e => {
+                project.status = e.target.value
+                save()
+                updateStatusColor(nameInput, project.status)
+            }
         }
                         
         function render() {
             body.innerHTML = ""
             
+            if (!currentFolderId) {
+                return
+            }
+            
+            const data = getCurrentData()
             const sortedData = [...data].sort((a, b) => {
                 if (a.pinned && !b.pinned) return -1
                 if (!a.pinned && b.pinned) return 1
@@ -778,6 +899,170 @@
                 const originalIndex = data.indexOf(p)
                 body.appendChild(rowTemplate(p, originalIndex))
             })
+        }
+        
+        function renderFolders() {
+            foldersContainer.innerHTML = ""
+            
+            folders.forEach(folder => {
+                const tab = document.createElement("div")
+                tab.className = folder.id === currentFolderId ? "folder-tab active" : "folder-tab"
+                tab.textContent = folder.name
+                tab.onclick = () => {
+                    currentFolderId = folder.id
+                    renderFolders()
+                    render()
+                }
+                tab.ondblclick = (e) => {
+                    e.stopPropagation()
+                    editFolder(folder)
+                }
+                foldersContainer.appendChild(tab)
+            })
+            
+            const addFolderBtn = document.createElement("button")
+            addFolderBtn.className = "add-folder-btn"
+            addFolderBtn.innerHTML = '<i class="fas fa-plus"></i> Add Folder'
+            addFolderBtn.onclick = addFolder
+            foldersContainer.appendChild(addFolderBtn)
+        }
+        
+        function addFolder() {
+            showModalWithInput("Add Folder", "Enter folder name:", "Create")
+        }
+        
+        function showModalWithInput(title, message, buttonText) {
+            document.getElementById("modalTitle").textContent = title
+            document.getElementById("modalMessage").textContent = message
+            
+            const input = document.createElement("input")
+            input.className = "form-input"
+            input.placeholder = "Folder name"
+            input.style.marginTop = "10px"
+            document.getElementById("modalMessage").appendChild(input)
+            
+            const modalActions = document.getElementById("modalActions")
+            modalActions.innerHTML = ""
+            
+            const cancelBtn = document.createElement("button")
+            cancelBtn.className = "btn"
+            cancelBtn.textContent = "Cancel"
+            cancelBtn.onclick = hideModal
+            
+            const actionBtn = document.createElement("button")
+            actionBtn.className = "btn primary"
+            actionBtn.textContent = buttonText
+            
+            if (title === "Add Folder") {
+                actionBtn.onclick = () => createFolder(input)
+            }
+            
+            input.onkeypress = (e) => {
+                if (e.key === "Enter") actionBtn.click()
+            }
+            
+            modalActions.appendChild(cancelBtn)
+            modalActions.appendChild(actionBtn)
+            
+            document.getElementById("singleModal").classList.add("active")
+            input.focus()
+        }
+        
+        function createFolder(input) {
+            const name = input.value.trim()
+            if (name) {
+                const newFolder = {
+                    id: Date.now().toString(),
+                    name: name,
+                    data: []
+                }
+                folders.push(newFolder)
+                currentFolderId = newFolder.id
+                save()
+                renderFolders()
+                render()
+                hideModal()
+                window.showMessage('Folder created')
+            }
+        }
+        
+        function editFolder(folder) {
+            showEditModal("Edit Folder", "Edit folder name:", "Save", folder)
+        }
+        
+        function showEditModal(title, message, buttonText, folder) {
+            document.getElementById("modalTitle").textContent = title
+            document.getElementById("modalMessage").textContent = message
+            
+            const input = document.createElement("input")
+            input.className = "form-input"
+            input.placeholder = "Folder name"
+            input.value = folder.name
+            input.style.marginTop = "10px"
+            document.getElementById("modalMessage").appendChild(input)
+            
+            const modalActions = document.getElementById("modalActions")
+            modalActions.innerHTML = ""
+            
+            const deleteBtn = document.createElement("button")
+            deleteBtn.className = "btn danger"
+            deleteBtn.textContent = "Delete Folder"
+            deleteBtn.onclick = () => deleteFolder(folder.id)
+            
+            const cancelBtn = document.createElement("button")
+            cancelBtn.className = "btn"
+            cancelBtn.textContent = "Cancel"
+            cancelBtn.onclick = hideModal
+            
+            const saveBtn = document.createElement("button")
+            saveBtn.className = "btn primary"
+            saveBtn.textContent = buttonText
+            saveBtn.onclick = () => updateFolder(folder.id, input)
+            
+            input.onkeypress = (e) => {
+                if (e.key === "Enter") saveBtn.click()
+            }
+            
+            modalActions.appendChild(deleteBtn)
+            modalActions.appendChild(cancelBtn)
+            modalActions.appendChild(saveBtn)
+            
+            document.getElementById("singleModal").classList.add("active")
+            input.focus()
+            input.select()
+        }
+        
+        function updateFolder(folderId, input) {
+            const name = input.value.trim()
+            if (name) {
+                const folder = folders.find(f => f.id === folderId)
+                if (folder) {
+                    folder.name = name
+                    save()
+                    renderFolders()
+                    hideModal()
+                }
+            }
+        }
+        
+        function deleteFolder(folderId) {
+            const folderIndex = folders.findIndex(f => f.id === folderId)
+            if (folderIndex !== -1) {
+                showModal("Delete Folder", `Delete folder "${folders[folderIndex].name}" and all its projects?`, [
+                    { class: "btn", text: "Cancel", action: hideModal },
+                    { class: "btn danger", text: "Delete", action: () => {
+                        folders.splice(folderIndex, 1)
+                        if (currentFolderId === folderId) {
+                            currentFolderId = folders.length > 0 ? folders[0].id : null
+                        }
+                        save()
+                        renderFolders()
+                        render()
+                        hideModal()
+                        window.showMessage('Folder deleted')
+                    }}
+                ])
+            }
         }
         
         function showModal(title, message, buttons) {
@@ -804,8 +1089,9 @@
         
         function deleteRow() {
             if (rowToDeleteIndex !== -1) {
+                const data = getCurrentData()
                 data.splice(rowToDeleteIndex, 1)
-                save()
+                setCurrentData(data)
                 render()
                 hideModal()
                 rowToDeleteIndex = -1
@@ -833,11 +1119,14 @@
         
         function exportData() {
             const exportData = {
-                version: '1.1',
+                version: '1.2',
                 exportedAt: new Date().toISOString(),
-                data: data.map(project => ({
-                    ...project,
-                    pinned: project.pinned || false
+                folders: folders.map(folder => ({
+                    ...folder,
+                    data: folder.data.map(project => ({
+                        ...project,
+                        pinned: project.pinned || false
+                    }))
                 }))
             }
             
@@ -877,10 +1166,13 @@
                         const encryptedContent = e.target.result
                         const decryptedData = decryptData(encryptedContent)
                         
-                        if (decryptedData && decryptedData.data) {
-                            importedDataToConfirm = decryptedData.data.map(project => ({
-                                ...project,
-                                pinned: project.pinned || false
+                        if (decryptedData && decryptedData.folders) {
+                            importedDataToConfirm = decryptedData.folders.map(folder => ({
+                                ...folder,
+                                data: folder.data.map(project => ({
+                                    ...project,
+                                    pinned: project.pinned || false
+                                }))
                             }))
                             
                             showModal("Import Confirmation", "How would you like to import the data?", [
@@ -906,19 +1198,16 @@
         }
         
         function mergeImport() {
-            const existingIds = new Set(data.map(item => item.name + item.notes))
+            const existingIds = new Set(folders.map(f => f.id))
             
-            importedDataToConfirm.forEach(item => {
-                const itemId = item.name + item.notes
-                if (!existingIds.has(itemId)) {
-                    data.push({
-                        ...item,
-                        pinned: item.pinned || false
-                    })
+            importedDataToConfirm.forEach(folder => {
+                if (!existingIds.has(folder.id)) {
+                    folders.push(folder)
                 }
             })
             
             save()
+            renderFolders()
             render()
             importedDataToConfirm = []
             hideModal()
@@ -926,35 +1215,31 @@
         }
         
         function replaceImport() {
-            data = importedDataToConfirm.map(project => ({
-                ...project,
-                pinned: project.pinned || false
+            folders = importedDataToConfirm.map(folder => ({
+                ...folder,
+                data: folder.data.map(project => ({
+                    ...project,
+                    pinned: project.pinned || false
+                }))
             }))
             save()
+            renderFolders()
             render()
             importedDataToConfirm = []
             hideModal()
             window.showMessage('Projects replaced successfully')
         }
                         
-        addRowBtn.onclick = () => {
-            data.push({
-                name: "",
-                notes: "",
-                tasks: [],
-                status: "Pending",
-                pinned: false
-            })
-            save()
-            render()
-        }
-                        
         clearBtn.onclick = () => {
-            showModal("Confirm Clear All", "This will permanently delete all projects and tasks. This action cannot be undone.", [
+            if (!currentFolderId) {
+                window.showMessage('Please select a folder first')
+                return
+            }
+            
+            showModal("Confirm Clear All", "This will permanently delete all projects and tasks in current folder. This action cannot be undone.", [
                 { class: "btn", text: "Cancel", action: hideModal },
                 { class: "btn danger", text: "Clear All", action: () => {
-                    data = []
-                    save()
+                    setCurrentData([])
                     render()
                     hideModal()
                     window.showMessage('All Projects has been deleted')
@@ -964,8 +1249,52 @@
         
         exportBtn.onclick = exportData
         importBtn.onclick = importData
-                        
-        render()
+        addRowBtnTop.onclick = addNewRow
+        addRowBtnBottom.onclick = addNewRow
+        
+        if (folders.length === 0) {
+            renderFolders()
+        } else {
+            currentFolderId = folders[0].id
+            renderFolders()
+            render()
+        }
+        
+        function addNewRow() {
+            if (!currentFolderId) {
+                window.showMessage('Please select a folder first')
+                return
+            }
+            
+            const data = getCurrentData()
+            const newProject = {
+                name: "",
+                notes: "",
+                tasks: [],
+                status: "Pending",
+                pinned: false
+            }
+            data.push(newProject)
+            setCurrentData(data)
+            render()
+            
+            setTimeout(() => {
+                const rows = document.querySelectorAll('#tableBody tr')
+                rows.forEach(row => {
+                    const nameInput = row.querySelector('.cell-textarea')
+                    if (nameInput && nameInput.value === "") {
+                        nameInput.focus()
+                        nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                        return
+                    }
+                })
+            }, 100)
+        }
+        
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto'
+            textarea.style.height = (textarea.scrollHeight) + 'px'
+        }
         
     </script>
 </body>
