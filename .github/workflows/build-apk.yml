@@ -257,16 +257,30 @@ jobs:
         echo "=== BUILDING APK ==="
         cd KakoikirakuHome/android
         
-        # Make sure gradle wrapper is complete
+        # Fix gradle wrapper
         if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-          echo "Downloading missing gradle-wrapper.jar..."
-          # Download the complete gradle wrapper
-          GRADLE_VERSION="7.5"
-          curl -L https://downloads.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip -o gradle.zip
-          unzip -q gradle.zip
-          cp -r gradle-${GRADLE_VERSION}/lib/gradle-wrapper.jar gradle/wrapper/
-          cp -r gradle-${GRADLE_VERSION}/lib/gradle-wrapper.properties gradle/wrapper/
-          rm -rf gradle-${GRADLE_VERSION} gradle.zip
+          echo "Setting up complete gradle wrapper..."
+          
+          # Create proper gradle wrapper structure
+          mkdir -p gradle/wrapper
+          
+          # Download gradle wrapper JAR directly
+          curl -L https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
+          
+          # Ensure gradle-wrapper.properties exists
+          if [ ! -f "gradle/wrapper/gradle-wrapper.properties" ]; then
+            echo 'distributionBase=GRADLE_USER_HOME
+            distributionPath=wrapper/dists
+            distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-bin.zip
+            zipStoreBase=GRADLE_USER_HOME
+            zipStorePath=wrapper/dists' > gradle/wrapper/gradle-wrapper.properties
+          fi
+          
+          # Ensure gradlew script exists
+          if [ ! -f "gradlew" ]; then
+            curl -L https://raw.githubusercontent.com/gradle/gradle/master/gradlew -o gradlew
+            chmod +x gradlew
+          fi
         fi
         
         chmod +x ./gradlew
