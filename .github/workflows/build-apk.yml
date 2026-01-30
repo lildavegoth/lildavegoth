@@ -231,13 +231,37 @@ jobs:
         echo "=== BUILDING PURE ANDROID WEBVIEW APK ==="
         cd KakoikirakuHome
         
-        # 1. CREATE PROPER ANDROID PROJECT STRUCTURE
+        # 1. ENSURE GRADLE WRAPPER EXISTS
+        echo "=== SETTING UP GRADLE WRAPPER ==="
+        cd android
+        
+        # Remove any broken wrapper and create fresh
+        rm -rf gradle/wrapper gradlew 2>/dev/null || true
+        
+        # Download complete gradle wrapper
+        curl -L https://raw.githubusercontent.com/gradle/gradle/master/gradlew -o gradlew
+        chmod +x gradlew
+        
+        mkdir -p gradle/wrapper
+        curl -L https://raw.githubusercontent.com/gradle/gradle/master/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
+          echo "Downloading wrapper jar failed, will continue anyway"
+        
+        # Create wrapper properties
+        echo 'distributionBase=GRADLE_USER_HOME
+        distributionPath=wrapper/dists
+        distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-bin.zip
+        zipStoreBase=GRADLE_USER_HOME
+        zipStorePath=wrapper/dists' > gradle/wrapper/gradle-wrapper.properties
+        
+        cd ..
+        
+        # 2. CREATE PROPER ANDROID PROJECT STRUCTURE
         echo "=== CREATING COMPLETE ANDROID PROJECT ==="
         mkdir -p android/app/src/main/java/com/lildavegoth/kakoikirakuhome
         mkdir -p android/app/src/main/res/layout
         mkdir -p android/app/src/main/res/drawable
         
-        # 2. CREATE MAIN ACTIVITY JAVA FILE
+        # 3. CREATE MAIN ACTIVITY JAVA FILE
         echo 'package com.lildavegoth.kakoikirakuhome;
 
         import android.os.Bundle;
@@ -287,7 +311,7 @@ jobs:
           }
         }' > android/app/src/main/java/com/lildavegoth/kakoikirakuhome/MainActivity.java
         
-        # 3. CREATE ACTIVITY LAYOUT XML
+        # 4. CREATE ACTIVITY LAYOUT XML
         echo '<?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
           android:layout_width="match_parent"
@@ -301,7 +325,7 @@ jobs:
           
         </LinearLayout>' > android/app/src/main/res/layout/activity_main.xml
         
-        # 4. CREATE SIMPLE BUILD.GRADLE THAT ACTUALLY WORKS
+        # 5. CREATE SIMPLE BUILD.GRADLE THAT ACTUALLY WORKS
         cd android
         
         echo 'buildscript {
@@ -325,7 +349,7 @@ jobs:
           delete rootProject.buildDir
         }' > build.gradle
         
-        # 5. CREATE APP BUILD.GRADLE WITH WORKING DEPENDENCIES
+        # 6. CREATE APP BUILD.GRADLE WITH WORKING DEPENDENCIES
         echo 'apply plugin: "com.android.application"
 
         android {
@@ -355,24 +379,19 @@ jobs:
           implementation "androidx.appcompat:appcompat:1.6.1"
         }' > app/build.gradle
         
-        # 6. BUILD THE APK
-        echo "=== STARTING BUILD ==="
+        # 7. CREATE LOCAL.PROPERTIES FOR ANDROID SDK
+        echo 'sdk.dir=/usr/local/lib/android/sdk' > local.properties
         
-        # Setup gradle wrapper
-        if [ ! -f "gradlew" ]; then
-          curl -L https://raw.githubusercontent.com/gradle/gradle/master/gradlew -o gradlew
-          chmod +x gradlew
+        # 8. BUILD THE APK
+        echo "=== STARTING GRADLE BUILD ==="
+        
+        # Try to build
+        if ./gradlew assembleRelease --no-daemon --stacktrace; then
+          echo "✓ BUILD SUCCESSFUL"
+        else
+          echo "✗ Release build failed, trying debug..."
+          ./gradlew assembleDebug --no-daemon
         fi
-        
-        mkdir -p gradle/wrapper
-        echo 'distributionBase=GRADLE_USER_HOME
-        distributionPath=wrapper/dists
-        distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-bin.zip
-        zipStoreBase=GRADLE_USER_HOME
-        zipStorePath=wrapper/dists' > gradle/wrapper/gradle-wrapper.properties
-        
-        # Build with verbose output
-        ./gradlew assembleRelease --no-daemon --stacktrace
         
         echo "=== CHECKING FOR APK ==="
         find . -name "*.apk" -type f -exec ls -lh {} \;
