@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projects Task Manager | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        header {
+            padding: var(--spacing-lg) 0;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .username {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .controls {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.primary {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: bold;
+        }
+
+        .btn.danger {
+            background: rgba(220, 53, 69, 0.2);
+            border-color: rgba(220, 53, 69, 0.3);
+            color: #ff6b6b;
+        }
+
+        .btn.danger:hover {
+            background: rgba(220, 53, 69, 0.3);
+            border-color: #dc3545;
+        }
+
+        .btn.success {
+            background: rgba(25, 135, 84, 0.2);
+            border-color: rgba(25, 135, 84, 0.3);
+            color: #20c997;
+        }
+
+        .btn.success:hover {
+            background: rgba(25, 135, 84, 0.3);
+            border-color: #20c997;
+        }
+
+        .btn.small {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .spreadsheet-container {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            margin-top: var(--spacing-lg);
+        }
+
+        .spreadsheet-wrapper {
+            position: relative;
+            overflow: auto;
+            max-height: 600px;
+        }
+
+        .spreadsheet-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 800px;
+        }
+
+        .spreadsheet-table th {
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            user-select: none;
+        }
+
+        .spreadsheet-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.2);
+            transition: background 0.2s ease;
+            vertical-align: top;
+        }
+
+        .spreadsheet-table tr:hover td {
+            background: rgba(193, 252, 50, 0.03);
+        }
+
+        .spreadsheet-table td:last-child {
+            border-right: none;
+        }
+
+        .spreadsheet-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .cell-textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            padding: 0;
+            outline: none;
+            font-family: inherit;
+            resize: none;
+            overflow-y: auto;
+            min-height: 150px;
+            line-height: 1.4;
+            text-align: left;
+            display: block;
+        }
+
+        .cell-textarea:focus {
+            background: rgba(193, 252, 50, 0.1);
+            border-radius: 4px;
+        }
+
+        .status-select {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            padding: 6px 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-right: 8px;
+            text-align: center;
+        }
+
+        .status-select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+        
+        .status-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background: transparent;
+        }
+
+        .add-row-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-row-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .row-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .row-btn {
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .row-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .row-btn.delete:hover {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+            border-color: rgba(220, 53, 69, 0.3);
+        }
+        
+        .row-btn.pinned {
+            background: rgba(193, 252, 50, 0.2);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        
+        .row-btn.pinned:hover {
+            background: rgba(193, 252, 50, 0.3);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(10px);
+            padding: var(--spacing-sm);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: var(--bg-dark);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 0 50px rgba(193, 252, 50, 0.3);
+            animation: modalAppear 0.3s ease-out;
+        }
+
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(193, 252, 50, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+        
+        @media (max-width: 768px) {
+            .modal-actions {
+                flex-direction: column;
+            }
+            
+            .modal-actions .btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 100px;
+            font-family: inherit;
+        }
+
+        .scrollable {
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+
+        .tasks-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 120px;
+            overflow-y: auto;
+            padding-right: 4px;
+            margin-right: 2px;
+        }
+
+        .task-item {
+            display: flex;
+            gap: 10px;
+        }
+
+        .task-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+            appearance: none;
+            border: 2px solid var(--accent-color);
+            border-radius: 50%;
+            background: transparent;
+            position: relative;
+            margin-top: 4px;
+        }
+
+        .task-checkbox:checked {
+            background-color: var(--accent-color);
+        }
+
+        .task-checkbox:checked::after {
+            content: '';
+            position: absolute;
+            display: block;
+        }
+
+        .task-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .task-textarea {
+            width: 100%;
+            min-width: 230px;
+            max-width: 230px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            padding: 4px;
+            outline: none;
+            font-family: inherit;
+            resize: none;
+            overflow-y: auto;
+            max-height: 105px;
+            min-height: 105px;
+            line-height: 1.3;
+            text-align: left;
+        }
+
+        .task-textarea:focus {
+            background: rgba(193, 252, 50, 0.1);
+            border-radius: 4px;
+        }
+
+        .task-remove-btn {
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+            margin-top: 4px;
+        }
+
+        .task-remove-btn:hover {
+            background: rgba(220, 53, 69, 0.3);
+            color: #ff6b6b;
+            border-color: rgba(220, 53, 69, 0.5);
+        }
+
+        .add-task-btn {
+            margin-top: 8px;
+            background: rgba(193, 252, 50, 0.1);
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            border-radius: var(--radius-small);
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            width: fit-content;
+        }
+
+        .add-task-btn:hover {
+            background: rgba(193, 252, 50, 0.2);
+        }
+
+        .add-task-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a style="margin-bottom: -20px;" href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <header>
+            <h1 class="username">Projects Task Manager</h1>
+            <p class="tagline">Projects management with unlimited rows</p>
+            
+            <div class="controls">
+                <button class="btn success" id="exportBtn">
+                    <i class="fas fa-file-export"></i> Export
+                </button>
+                <button class="btn" id="importBtn">
+                    <i class="fas fa-file-import"></i> Import
+                </button>
+                <button class="btn danger" id="clearBtn">
+                    <i class="fas fa-trash"></i> Clear All
+                </button>
+            </div>
+        </header>
+        
+        <div class="spreadsheet-container">
+            <div class="spreadsheet-wrapper scrollable">
+                <table class="spreadsheet-table" id="spreadsheetTable">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 200px;">Project Name</th>
+                            <th style="min-width: 320px;">Tasks</th>
+                            <th style="min-width: 300px;">Notes</th>
+                            <th style="min-width: 180px;">Status & Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+            <button class="add-row-btn" id="addRowBtn">
+                Add Row
+            </button>
+        </div>
+        
+        <footer class="fade-in">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | CSS Snippets Gallery</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+    
+    <div class="modal-overlay" id="singleModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">
+                    <!-- Generate Buttons -->
+                </h2>
+            </div>
+            
+            <div class="form-group">
+                <p style="color: var(--text-primary); font-size: 1rem; line-height: 1.5;" id="modalMessage">
+                    <!-- Generate Buttons -->
+                </p>
+            </div>
+            
+            <div class="modal-actions" id="modalActions">
+                <!-- Generate Buttons -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const KEY = "projectSpreadsheet"
+        
+        let data = JSON.parse(localStorage.getItem(KEY)) || []
+        let rowToDeleteIndex = -1
+        let importedDataToConfirm = []
+                        
+        const body = document.getElementById("tableBody")
+        const addRowBtn = document.getElementById("addRowBtn")
+        const clearBtn = document.getElementById("clearBtn")
+        const exportBtn = document.getElementById("exportBtn")
+        const importBtn = document.getElementById("importBtn")
+                        
+        function save() {
+            localStorage.setItem(KEY, JSON.stringify(data))
+        }
+                        
+        function rowTemplate(project, index) {
+            const tr = document.createElement("tr")
+            
+            const nameTd = document.createElement("td")
+            const nameInput = document.createElement("textarea")
+            nameInput.className = "cell-textarea"
+            nameInput.value = project.name
+            nameInput.oninput = e => {
+                project.name = e.target.value
+                save()
+            }
+            nameTd.appendChild(nameInput)
+            
+            const tasksTd = document.createElement("td")
+            tasksTd.style.paddingRight = "8px"
+            
+            const tasksBox = document.createElement("div")
+            tasksBox.className = "tasks-container"
+            
+            project.tasks.forEach((t, i) => {
+                const item = document.createElement("div")
+                item.className = "task-item"
+                
+                const check = document.createElement("input")
+                check.type = "checkbox"
+                check.className = "task-checkbox"
+                check.checked = t.done
+                check.onchange = e => {
+                    t.done = e.target.checked
+                    save()
+                }
+                
+                const text = document.createElement("textarea")
+                text.className = "task-textarea"
+                text.value = t.text
+                text.oninput = e => {
+                    t.text = e.target.value
+                    save()
+                }
+                
+                const remove = document.createElement("button")
+                remove.className = "task-remove-btn"
+                remove.innerHTML = "×"
+                remove.onclick = () => {
+                    project.tasks.splice(i, 1)
+                    save()
+                    render()
+                }
+                
+                item.append(check, text, remove)
+                tasksBox.appendChild(item)
+            })
+            
+            const addTask = document.createElement("button")
+            addTask.className = "add-task-btn"
+            addTask.textContent = "Add Task"
+            addTask.onclick = () => {
+                project.tasks.push({ text: "", done: false })
+                save()
+                render()
+            }
+            
+            tasksTd.append(tasksBox, addTask)
+            
+            const notesTd = document.createElement("td")
+            const notesInput = document.createElement("textarea")
+            notesInput.className = "cell-textarea"
+            notesInput.value = project.notes
+            notesInput.oninput = e => {
+                project.notes = e.target.value
+                save()
+            }
+            notesTd.appendChild(notesInput)
+            
+            const actionTd = document.createElement("td")
+            const controls = document.createElement("div")
+            controls.className = "row-controls"
+            
+            const status = document.createElement("select")
+            status.className = "status-select"
+            ;["Pending", "In Progress", "Completed"].forEach(v => {
+                const o = document.createElement("option")
+                o.value = v
+                o.textContent = v
+                if (project.status === v) o.selected = true
+                status.appendChild(o)
+            })
+            status.onchange = e => {
+                project.status = e.target.value
+                save()
+                render()
+            }
+            
+            const pinBtn = document.createElement("button")
+            pinBtn.className = project.pinned ? "row-btn pinned" : "row-btn"
+            pinBtn.innerHTML = project.pinned ? '<i class="fas fa-thumbtack"></i>' : '<i class="fas fa-thumbtack"></i>'
+            pinBtn.title = project.pinned ? "Unpin Project" : "Pin Project"
+            pinBtn.onclick = (e) => {
+                e.stopPropagation()
+                project.pinned = !project.pinned
+                save()
+                render()
+            }
+            
+            const del = document.createElement("button")
+            del.className = "row-btn delete"
+            del.innerHTML = '<i class="fas fa-trash"></i>'
+            del.onclick = (e) => {
+                e.stopPropagation()
+                rowToDeleteIndex = index
+                showModal("Delete Project", "Delete this project?", [
+                    { class: "btn", text: "Cancel", action: hideModal },
+                    { class: "btn danger", text: "Delete", action: deleteRow }
+                ])
+            }
+            
+            controls.append(status, pinBtn, del)
+            actionTd.appendChild(controls)
+            
+            tr.append(nameTd, tasksTd, notesTd, actionTd)
+            return tr
+        }
+                        
+        function render() {
+            body.innerHTML = ""
+            
+            const sortedData = [...data].sort((a, b) => {
+                if (a.pinned && !b.pinned) return -1
+                if (!a.pinned && b.pinned) return 1
+                
+                const nameA = a.name.toLowerCase()
+                const nameB = b.name.toLowerCase()
+                
+                if (nameA < nameB) return -1
+                if (nameA > nameB) return 1
+                return 0
+            })
+            
+            sortedData.forEach((p, i) => {
+                const originalIndex = data.indexOf(p)
+                body.appendChild(rowTemplate(p, originalIndex))
+            })
+        }
+        
+        function showModal(title, message, buttons) {
+            document.getElementById("modalTitle").textContent = title
+            document.getElementById("modalMessage").textContent = message
+            
+            const modalActions = document.getElementById("modalActions")
+            modalActions.innerHTML = ""
+            
+            buttons.forEach(button => {
+                const btn = document.createElement("button")
+                btn.className = button.class
+                btn.textContent = button.text
+                btn.onclick = button.action
+                modalActions.appendChild(btn)
+            })
+            
+            document.getElementById("singleModal").classList.add("active")
+        }
+        
+        function hideModal() {
+            document.getElementById("singleModal").classList.remove("active")
+        }
+        
+        function deleteRow() {
+            if (rowToDeleteIndex !== -1) {
+                data.splice(rowToDeleteIndex, 1)
+                save()
+                render()
+                hideModal()
+                rowToDeleteIndex = -1
+                window.showMessage('Project has been deleted')
+            }
+        }
+        
+        function encryptData(data) {
+            try {
+                const jsonString = JSON.stringify(data)
+                return btoa(unescape(encodeURIComponent(jsonString)))
+            } catch {
+                return null
+            }
+        }
+        
+        function decryptData(encryptedString) {
+            try {
+                const jsonString = decodeURIComponent(escape(atob(encryptedString)))
+                return JSON.parse(jsonString)
+            } catch {
+                return null
+            }
+        }
+        
+        function exportData() {
+            const exportData = {
+                version: '1.1',
+                exportedAt: new Date().toISOString(),
+                data: data.map(project => ({
+                    ...project,
+                    pinned: project.pinned || false
+                }))
+            }
+            
+            const encryptedData = encryptData(exportData)
+            if (!encryptedData) {
+                window.showMessage('Export failed')
+                return
+            }
+            
+            const timestamp = new Date().toISOString().split('T')[0]
+            const filename = `projects-backup-${timestamp}.json`
+            
+            const blob = new Blob([encryptedData], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = filename
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+        }
+        
+        function importData() {
+            const fileInput = document.createElement('input')
+            fileInput.type = 'file'
+            fileInput.accept = '.json'
+            
+            fileInput.onchange = (e) => {
+                const file = e.target.files[0]
+                if (!file) return
+                
+                const reader = new FileReader()
+                
+                reader.onload = (e) => {
+                    try {
+                        const encryptedContent = e.target.result
+                        const decryptedData = decryptData(encryptedContent)
+                        
+                        if (decryptedData && decryptedData.data) {
+                            importedDataToConfirm = decryptedData.data.map(project => ({
+                                ...project,
+                                pinned: project.pinned || false
+                            }))
+                            
+                            showModal("Import Confirmation", "How would you like to import the data?", [
+                                { class: "btn", text: "Cancel", action: () => {
+                                    importedDataToConfirm = []
+                                    hideModal()
+                                }},
+                                { class: "btn", text: "Merge", action: mergeImport },
+                                { class: "btn danger", text: "Replace All", action: replaceImport }
+                            ])
+                        } else {
+                            window.showMessage('Invalid backup file')
+                        }
+                    } catch {
+                        window.showMessage('Failed to read file')
+                    }
+                }
+                
+                reader.readAsText(file)
+            }
+            
+            fileInput.click()
+        }
+        
+        function mergeImport() {
+            const existingIds = new Set(data.map(item => item.name + item.notes))
+            
+            importedDataToConfirm.forEach(item => {
+                const itemId = item.name + item.notes
+                if (!existingIds.has(itemId)) {
+                    data.push({
+                        ...item,
+                        pinned: item.pinned || false
+                    })
+                }
+            })
+            
+            save()
+            render()
+            importedDataToConfirm = []
+            hideModal()
+            window.showMessage('Projects merged successfully')
+        }
+        
+        function replaceImport() {
+            data = importedDataToConfirm.map(project => ({
+                ...project,
+                pinned: project.pinned || false
+            }))
+            save()
+            render()
+            importedDataToConfirm = []
+            hideModal()
+            window.showMessage('Projects replaced successfully')
+        }
+                        
+        addRowBtn.onclick = () => {
+            data.push({
+                name: "",
+                notes: "",
+                tasks: [],
+                status: "Pending",
+                pinned: false
+            })
+            save()
+            render()
+        }
+                        
+        clearBtn.onclick = () => {
+            showModal("Confirm Clear All", "This will permanently delete all projects and tasks. This action cannot be undone.", [
+                { class: "btn", text: "Cancel", action: hideModal },
+                { class: "btn danger", text: "Clear All", action: () => {
+                    data = []
+                    save()
+                    render()
+                    hideModal()
+                    window.showMessage('All Projects has been deleted')
+                }}
+            ])
+        }
+        
+        exportBtn.onclick = exportData
+        importBtn.onclick = importData
+                        
+        render()
+        
+    </script>
+</body>
+</html>
