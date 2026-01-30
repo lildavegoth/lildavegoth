@@ -256,8 +256,21 @@ jobs:
       run: |
         echo "=== BUILDING APK ==="
         cd KakoikirakuHome/android
-        chmod +x gradlew
-        ./gradlew assembleRelease --no-daemon
+        
+        # Make sure gradle wrapper is complete
+        if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "Downloading missing gradle-wrapper.jar..."
+          # Download the complete gradle wrapper
+          GRADLE_VERSION="7.5"
+          curl -L https://downloads.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip -o gradle.zip
+          unzip -q gradle.zip
+          cp -r gradle-${GRADLE_VERSION}/lib/gradle-wrapper.jar gradle/wrapper/
+          cp -r gradle-${GRADLE_VERSION}/lib/gradle-wrapper.properties gradle/wrapper/
+          rm -rf gradle-${GRADLE_VERSION} gradle.zip
+        fi
+        
+        chmod +x ./gradlew
+        ./gradlew assembleRelease --no-daemon --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
