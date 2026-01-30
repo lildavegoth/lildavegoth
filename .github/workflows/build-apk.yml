@@ -1,4 +1,3 @@
----
 name: Build Kakoi Kiraku Home APK (With Offline Website)
 on:
   workflow_dispatch: null
@@ -250,50 +249,18 @@ jobs:
           echo "=== WEBSITE BUNDLED ==="
 
           ls -la android/app/src/main/assets/website/
-      - name: Verify names and structure
-        run: |
-          echo "=== VERIFYING ==="
-          cd KakoikirakuHome
-          echo "Package name:"
-          grep "applicationId" android/app/build.gradle
-          echo "App name:"
-          cat android/app/src/main/res/values/strings.xml
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Add Android permissions
+      - name: Build Pure Android WebView APK
         run: >
-          echo "=== ADDING PERMISSIONS ==="
-
-          cd KakoikirakuHome/android/app/src/main
-
-          cp AndroidManifest.xml AndroidManifest.xml.backup
-
-
-          sed -i '/<manifest /a\
-
-          <uses-permission android:name="android.permission.INTERNET" />\
-
-          <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\
-
-          <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\
-
-          <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />\
-
-          <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\
-
-          <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />' AndroidManifest.xml
-      - name: Build Release APK (PROPER BUILD)
-        run: "echo \"=== BUILDING PROPER APK ===\"
+          echo "=== BUILDING PURE ANDROID WEBVIEW APK ==="
 
           cd KakoikirakuHome
 
 
           # 1. CREATE PROPER ANDROID PROJECT STRUCTURE
 
-          echo \"=== CREATING COMPLETE ANDROID PROJECT ===\"
+          echo "=== CREATING COMPLETE ANDROID PROJECT ==="
 
-          mkdir -p
-          android/app/src/main/java/com/lildavegoth/kakoikirakuhome
+          mkdir -p android/app/src/main/java/com/lildavegoth/kakoikirakuhome
 
           mkdir -p android/app/src/main/res/layout
 
@@ -317,117 +284,63 @@ jobs:
 
 
           public class MainActivity extends AppCompatActivity {
-
-          \  private WebView webView;
-
-          \ \ 
-
-          \  @Override
-
-          \  protected void onCreate(Bundle savedInstanceState) {
-
-          \    super.onCreate(savedInstanceState);
-
-          \    setContentView(R.layout.activity_main);
-
-          \   \ 
-
-          \    webView = findViewById(R.id.webview);
-
-          \   \ 
-
-          \    // Enable JavaScript and other settings
-
-          \    WebSettings webSettings = webView.getSettings();
-
-          \    webSettings.setJavaScriptEnabled(true);
-
-          \    webSettings.setAllowFileAccess(true);
-
-          \    webSettings.setAllowContentAccess(true);
-
-          \    webSettings.setAllowFileAccessFromFileURLs(true);
-
-          \    webSettings.setAllowUniversalAccessFromFileURLs(true);
-
-          \    webSettings.setDomStorageEnabled(true);
-
-          \   \ 
-
-          \    // Load local website from assets
-
-          \    webView.loadUrl(\"file:///android_asset/website/index.\
-          html\");
-
-          \   \ 
-
-          \    webView.setWebViewClient(new WebViewClient() {
-
-          \      @Override
-
-          \      public boolean shouldOverrideUrlLoading(WebView view,
-          String url) {
-
-          \        view.loadUrl(url);
-
-          \        return true;
-
-          \      }
-
-          \    });
-
-          \  }
-
-          \ \ 
-
-          \  @Override
-
-          \  public void onBackPressed() {
-
-          \    if (webView.canGoBack()) {
-
-          \      webView.goBack();
-
-          \    } else {
-
-          \      super.onBackPressed();
-
-          \    }
-
-          \  }
-
-          }' >
-          android/app/src/main/java/com/lildavegoth/kakoikirakuhome/MainActivit\
-          y.java
+            private WebView webView;
+            
+            @Override
+            protected void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              setContentView(R.layout.activity_main);
+              
+              webView = findViewById(R.id.webview);
+              
+              // Enable JavaScript and other settings
+              WebSettings webSettings = webView.getSettings();
+              webSettings.setJavaScriptEnabled(true);
+              webSettings.setAllowFileAccess(true);
+              webSettings.setAllowContentAccess(true);
+              webSettings.setAllowFileAccessFromFileURLs(true);
+              webSettings.setAllowUniversalAccessFromFileURLs(true);
+              webSettings.setDomStorageEnabled(true);
+              
+              // Load local website from assets
+              webView.loadUrl("file:///android_asset/website/index.html");
+              
+              webView.setWebViewClient(new WebViewClient() {
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                  view.loadUrl(url);
+                  return true;
+                }
+              });
+            }
+            
+            @Override
+            public void onBackPressed() {
+              if (webView.canGoBack()) {
+                webView.goBack();
+              } else {
+                super.onBackPressed();
+              }
+            }
+          }' > android/app/src/main/java/com/lildavegoth/kakoikirakuhome/MainActivity.java
 
 
           # 3. CREATE ACTIVITY LAYOUT XML
 
-          echo '<?xml version=\"1.0\" encoding=\"utf-8\"?>
+          echo '<?xml version="1.0" encoding="utf-8"?>
 
-          <LinearLayout
-          xmlns:android=\"http://schemas.android.com/apk/res/android\"
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+            
+            <WebView
+              android:id="@+id/webview"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent" />
 
-          \  android:layout_width=\"match_parent\"
-
-          \  android:layout_height=\"match_parent\"
-
-          \  android:orientation=\"vertical\">
-
-          \ \ 
-
-          \  <WebView
-
-          \    android:id=\"@+id/webview\"
-
-          \    android:layout_width=\"match_parent\"
-
-          \    android:layout_height=\"match_parent\" />
-
-          \ \ 
-
-          </LinearLayout>' >
-          android/app/src/main/res/layout/activity_main.xml
+            
+          </LinearLayout>' > android/app/src/main/res/layout/activity_main.xml
 
 
           # 4. CREATE SIMPLE BUILD.GRADLE THAT ACTUALLY WORKS
@@ -436,116 +349,73 @@ jobs:
 
 
           echo 'buildscript {
-
-          \  repositories {
-
-          \    google()
-
-          \    mavenCentral()
-
-          \  }
-
-          \  dependencies {
-
-          \    classpath \"com.android.tools.build:gradle:7.4.2\"
-
-          \  }
-
+            repositories {
+              google()
+              mavenCentral()
+            }
+            dependencies {
+              classpath "com.android.tools.build:gradle:7.4.2"
+            }
           }
 
 
           allprojects {
-
-          \  repositories {
-
-          \    google()
-
-          \    mavenCentral()
-
-          \  }
-
+            repositories {
+              google()
+              mavenCentral()
+            }
           }
 
 
           task clean(type: Delete) {
-
-          \  delete rootProject.buildDir
-
+            delete rootProject.buildDir
           }' > build.gradle
 
 
           # 5. CREATE APP BUILD.GRADLE WITH WORKING DEPENDENCIES
 
-          echo 'apply plugin: \"com.android.application\"
+          echo 'apply plugin: "com.android.application"
 
 
           android {
-
-          \  compileSdk 33
-
-          \ \ 
-
-          \  defaultConfig {
-
-          \    applicationId \"com.lildavegoth.kakoikirakuhome\"
-
-          \    minSdk 21
-
-          \    targetSdk 33
-
-          \    versionCode 1
-
-          \    versionName \"1.0\"
-
-          \  }
-
-          \ \ 
-
-          \  buildTypes {
-
-          \    release {
-
-          \      minifyEnabled false
-
-          \    }
-
-          \  }
-
-          \ \ 
-
-          \  compileOptions {
-
-          \    sourceCompatibility JavaVersion.VERSION_11
-
-          \    targetCompatibility JavaVersion.VERSION_11
-
-          \  }
-
+            compileSdk 33
+            
+            defaultConfig {
+              applicationId "com.lildavegoth.kakoikirakuhome"
+              minSdk 21
+              targetSdk 33
+              versionCode 1
+              versionName "1.0"
+            }
+            
+            buildTypes {
+              release {
+                minifyEnabled false
+              }
+            }
+            
+            compileOptions {
+              sourceCompatibility JavaVersion.VERSION_11
+              targetCompatibility JavaVersion.VERSION_11
+            }
           }
 
 
           dependencies {
-
-          \  implementation \"androidx.appcompat:appcompat:1.6.1\"
-
+            implementation "androidx.appcompat:appcompat:1.6.1"
           }' > app/build.gradle
 
 
           # 6. BUILD THE APK
 
-          echo \"=== STARTING BUILD ===\"
+          echo "=== STARTING BUILD ==="
 
 
           # Setup gradle wrapper
 
-          if [ ! -f \"gradlew\" ]; then
-
-          \  curl -L
-          https://raw.githubusercontent.com/gradle/gradle/master/gradlew -o
-          gradlew
-
-          \  chmod +x gradlew
-
+          if [ ! -f "gradlew" ]; then
+            curl -L https://raw.githubusercontent.com/gradle/gradle/master/gradlew -o gradlew
+            chmod +x gradlew
           fi
 
 
@@ -555,98 +425,24 @@ jobs:
 
           distributionPath=wrapper/dists
 
-          distributionUrl=https\\://services.gradle.org/distributions\
-          /gradle-7.5-bin.zip
+          distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-bin.zip
 
           zipStoreBase=GRADLE_USER_HOME
 
-          zipStorePath=wrapper/dists' >
-          gradle/wrapper/gradle-wrapper.properties
+          zipStorePath=wrapper/dists' > gradle/wrapper/gradle-wrapper.properties
 
 
           # Build with verbose output
 
-          ./gradlew assembleRelease --no-daemon --stacktrace --info
-          2>&1 | tail -100
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
 
-          # 7. CHECK FOR REAL APK
+          echo "=== CHECKING FOR APK ==="
 
-          echo \"=== CHECKING FOR APK ===\"
-
-          APK_PATH=$(find . -name \"*.apk\" -type f 2>/dev/null | head
-          -1)
-
-
-          if [ -f \"$APK_PATH\" ]; then
-
-          \  APK_SIZE=$(stat -c%s \"$APK_PATH\")
-
-          \  echo \"✓ REAL APK FOUND: $APK_PATH\"
-
-          \  echo \"✓ APK SIZE: $APK_SIZE bytes\"
-
-          \ \ 
-
-          \  if [ $APK_SIZE -lt 100000 ]; then
-
-          \    echo \"⚠ WARNING: APK seems too small ($APK_SIZE
-          bytes)\"
-
-          \    echo \"Building debug version instead...\"
-
-          \    ./gradlew assembleDebug --no-daemon
-
-          \  fi
-
-          else
-
-          \  echo \"✗ No APK found, building debug version...\"
-
-          \  ./gradlew assembleDebug --no-daemon --stacktrace
-
-          fi
-
-
-          # 8. SHOW ALL APKS
-
-          echo \"=== ALL APKS CREATED ===\"
-
-          find . -name \"*.apk\" -type f -exec ls -lh {} \\;
-
-
-          # 9. ENSURE WE HAVE AT LEAST ONE REAL APK
-
-          if [ ! -f \"app/build/outputs/apk/release/app-release.apk\"
-          ] && [ ! -f \"app/build/outputs/apk/debug/app-debug.apk\" ]; then
-
-          \  echo \"=== CREATING SIMPLE APK MANUALLY AS LAST RESORT
-          ===\"
-
-          \  mkdir -p app/build/outputs/apk/debug
-
-          \  # Create minimal APK structure (zip with AndroidManifest)
-
-          \  echo \"PK\x03\x04\" >
-          app/build/outputs/apk/debug/app-debug.apk
-
-          \  echo \"Created minimal APK structure\"
-
-          fi\n"
+          find . -name "*.apk" -type f -exec ls -lh {} \;
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: kakoikiraku-home-offline-apk
           path: KakoikirakuHome/android/app/build/outputs/apk/release/*.apk
-      - name: Upload website bundle info
-        if: always()
-        run: >
-          echo "=== BUNDLE INFO ==="
-
-          if [ -d "KakoikirakuHome" ]; then
-            cd KakoikirakuHome
-            echo "Files in APK:"
-            find android/app/src/main/assets/website -type f | sort || echo "No website folder"
-          else
-            echo "Project folder not found"
-          fi
+          if-no-files-found: warn
