@@ -27,46 +27,163 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Create project with custom names (WORKING METHOD)
+    - name: Create React Native project (MANUAL - NO CLI)
       run: |
-        echo "=== CREATING PROJECT ==="
+        echo "=== CREATING REACT NATIVE PROJECT MANUALLY ==="
         
-        # Method 1: Try multiple approaches until one works
-        echo "Attempt 1: Using react-native CLI..."
-        npx react-native@0.72.0 init KakoikirakuHome --package-name "com.lildavegoth.kakoikirakuhome" --title "Kakoi Kiraku Home" --skip-install 2>/dev/null || {
-          echo "Attempt 1 failed, trying Attempt 2..."
+        # Create fresh directory
+        rm -rf KakoikirakuHome 2>/dev/null || true
+        mkdir -p KakoikirakuHome
+        cd KakoikirakuHome
+        
+        echo "=== CREATING PACKAGE.JSON ==="
+        echo '{
+          "name": "kakoikiraku-home",
+          "version": "1.0.0",
+          "private": true,
+          "scripts": {
+            "android": "cd android && ./gradlew assembleDebug",
+            "build": "cd android && ./gradlew assembleRelease"
+          },
+          "dependencies": {
+            "react": "18.2.0",
+            "react-native": "0.72.0",
+            "react-native-webview": "13.6.0"
+          }
+        }' > package.json
+        
+        echo "=== INSTALLING DEPENDENCIES ==="
+        npm install --no-audit
+        
+        echo "=== CREATING APP.JS ==="
+        echo 'import React from "react";
+        import { WebView } from "react-native-webview";
+
+        const App = () => {
+          return (
+            <WebView
+              source={{ uri: "file:///android_asset/website/index.html" }}
+              allowFileAccess={true}
+              allowUniversalAccessFromFileURLs={true}
+              allowFileAccessFromFileURLs={true}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              style={{ flex: 1 }}
+            />
+          );
+        };
+
+        export default App;' > App.js
+        
+        echo "=== CREATING MINIMAL ANDROID STRUCTURE ==="
+        mkdir -p android/app/src/main/java/com/lildavegoth/kakoikirakuhome
+        mkdir -p android/app/src/main/res/values
+        mkdir -p android/app/src/main/res/drawable
+        mkdir -p android/gradle/wrapper
+        
+        echo "Project created successfully at: $(pwd)"
+    
+    - name: Create Android Gradle Files
+      run: |
+        echo "=== CREATING ANDROID BUILD FILES ==="
+        cd KakoikirakuHome
+        
+        # Create all necessary Android files manually
+        echo 'buildscript {
+          ext {
+            buildToolsVersion = "33.0.0"
+            minSdkVersion = 21
+            compileSdkVersion = 33
+            targetSdkVersion = 33
+          }
+          repositories {
+            google()
+            mavenCentral()
+          }
+          dependencies {
+            classpath("com.android.tools.build:gradle:7.4.2")
+          }
+        }
+
+        allprojects {
+          repositories {
+            google()
+            mavenCentral()
+          }
+        }
+
+        task clean(type: Delete) {
+          delete rootProject.buildDir
+        }' > android/build.gradle
+        
+        echo 'apply plugin: "com.android.application"
+
+        android {
+          namespace "com.lildavegoth.kakoikirakuhome"
+          compileSdk 33
           
-          # Method 2: Download pre-made template
-          git clone https://github.com/react-native-webview/react-native-webview-template.git KakoikirakuHome 2>/dev/null || {
-            echo "Attempt 2 failed, trying Attempt 3..."
-            
-            # Method 3: Manual creation with npx react-native init (no version)
-            npx react-native init KakoikirakuHome --package-name "com.lildavegoth.kakoikirakuhome" --title "Kakoi Kiraku Home" --skip-install 2>/dev/null || {
-              echo "All methods failed, creating minimal structure..."
-              
-              # Last resort: Create minimal structure
-              mkdir -p KakoikirakuHome
-              cd KakoikirakuHome
-              npm init -y
-              exit 1
+          defaultConfig {
+            applicationId "com.lildavegoth.kakoikirakuhome"
+            minSdk 21
+            targetSdk 33
+            versionCode 1
+            versionName "1.0"
+          }
+          
+          buildTypes {
+            release {
+              minifyEnabled false
             }
           }
         }
+
+        dependencies {
+          implementation "com.facebook.react:react-android"
+        }' > android/app/build.gradle
         
-        # If we get here, project was created
-        cd KakoikirakuHome
-        echo "✓ Project created"
-        npm install
-        npm install react-native-webview@latest
+        echo '<?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.lildavegoth.kakoikirakuhome">
+          
+          <uses-permission android:name="android.permission.INTERNET" />
+          <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+          <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+          <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+          
+          <application
+            android:name=".MainApplication"
+            android:label="Kakoi Kiraku Home"
+            android:icon="@mipmap/ic_launcher"
+            android:theme="@style/AppTheme"
+            android:usesCleartextTraffic="true">
+            
+            <activity
+              android:name=".MainActivity"
+              android:exported="true"
+              android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+              <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+              </intent-filter>
+            </activity>
+          </application>
+        </manifest>' > android/app/src/main/AndroidManifest.xml
         
-        echo "=== PROJECT STRUCTURE ==="
-        ls -la
-        if [ -d "android" ]; then
-          echo "Android folder exists"
-          find android -name "*.gradle" -o -name "AndroidManifest.xml" | head -5
-        else
-          echo "WARNING: No android folder!"
-        fi
+        echo '<?xml version="1.0" encoding="utf-8"?>
+        <resources>
+          <string name="app_name">Kakoi Kiraku Home</string>
+        </resources>' > android/app/src/main/res/values/strings.xml
+        
+        echo 'rootProject.name = "KakoikirakuHome"
+        include ":app"' > android/settings.gradle
+        
+        echo 'distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-all.zip' > android/gradle/wrapper/gradle-wrapper.properties
+        
+        echo "=== DOWNLOADING GRADLE WRAPPER ==="
+        curl -L https://raw.githubusercontent.com/gradle/gradle/master/gradlew -o android/gradlew
+        chmod +x android/gradlew
+        
+        echo "=== ANDROID PROJECT READY ==="
 
     - name: Bundle your website into app assets
       run: |
