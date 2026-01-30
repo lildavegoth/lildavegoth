@@ -1,11 +1,4 @@
 Privacy-Focused Non-Commercial Creative License
-Version 1.0
-
-PREAMBLE:
-This license is designed for creators who want to share their work while protecting:
-1. Non-commercial use only
-2. User privacy in implementations
-3. Creative integrity of the work
 
 SECTION 1 - DEFINITIONS:
 "Commercial Use" means any use intended for or directed toward commercial advantage, 
