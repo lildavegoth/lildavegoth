@@ -828,10 +828,8 @@
         let repeat = 'none';
         let mediaNotification = null;
         let offlineTimer = null;
-        let audioWorker;
-        let audioContext;
-        let isUsingWorker = false;
-        let audioData = null;
+        let audioServiceWorker = null;
+        let audioTracking = null;
     
         const audioPlayer = document.getElementById('audioPlayer');
         const playBtn = document.getElementById('playBtn');
@@ -874,38 +872,6 @@
             
             request.onerror = function(e) {
             };
-        }
-        
-        function initAudioWorker() {
-            if (typeof Worker !== 'undefined') {
-                try {
-                    audioWorker = new Worker('../music-worker.js');
-                    
-                    audioWorker.onmessage = (event) => {
-                        const { action, time, duration } = event.data;
-                        
-                        if (action === 'loaded') {
-                            updateWorkerProgress();
-                        }
-                        
-                        if (action === 'timeUpdate') {
-                            const progressPercent = (time / audioPlayer.duration) * 100;
-                            progress.style.width = `${progressPercent}%`;
-                            currentTimeEl.textContent = formatTime(time);
-                        }
-                        
-                        if (action === 'ended') {
-                            nextSong();
-                        }
-                    };
-                    
-                    audioWorker.postMessage({ action: 'init' });
-                    isUsingWorker = true;
-                    
-                } catch {
-                    isUsingWorker = false;
-                }
-            }
         }
         
         function saveSongToDB(file, albumArt) {
@@ -1259,12 +1225,24 @@
             }
         }
         
+        function handleAudioEndSoon() {
+            if (repeat === 'one') {
+                audioPlayer.currentTime = 0;
+                audioPlayer.play();
+            } else {
+                nextSong();
+            }
+        }
+        
         function playSong() {
             if (queue.length === 0) return;
             if (currentIndex < 0 || currentIndex >= queue.length) return;
             
             const song = queue[currentIndex];
-            
+            audioPlayer.src = song.url;
+            audioPlayer.load();
+            isPlaying = true;
+            updatePlayButton();
             currentSongTitle.textContent = song.title;
             
             if (song.albumArt) {
@@ -1284,67 +1262,47 @@
                 updateNotification(song);
             }
             
-            if (isUsingWorker && audioWorker) {
-                fetch(song.url)
-                    .then(response => response.arrayBuffer())
-                    .then(arrayBuffer => {
-                        audioWorker.postMessage({ 
-                            action: 'load', 
-                            data: { arrayBuffer } 
-                        });
-                        
-                        setTimeout(() => {
-                            audioWorker.postMessage({ action: 'play' });
-                            isPlaying = true;
-                            updatePlayButton();
-                            startWorkerProgress();
-                        }, 100);
-                    });
-            } else {
-                audioPlayer.src = song.url;
-                audioPlayer.load();
+            audioPlayer.play().then(() => {
                 isPlaying = true;
                 updatePlayButton();
-                
-                audioPlayer.play().then(() => {
-                    isPlaying = true;
-                    updatePlayButton();
-                    if ('mediaSession' in navigator) {
-                        navigator.mediaSession.playbackState = 'playing';
-                    }
-                }).catch(() => {
-                    isPlaying = false;
-                    updatePlayButton();
-                });
-            }
-        }
-        
-        function startWorkerProgress() {
-            if (!isUsingWorker || !audioWorker) return;
-            
-            const updateTime = () => {
-                if (isPlaying && audioWorker) {
-                    audioWorker.postMessage({ action: 'getTime' });
-                    setTimeout(updateTime, 100);
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.playbackState = 'playing';
                 }
-            };
+                checkOfflinePlayback();
+            }).catch(() => {
+                isPlaying = false;
+                updatePlayButton();
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.playbackState = 'paused';
+                }
+            });
             
-            updateTime();
-        }
-        
-        function updateWorkerProgress() {
-            if (!isUsingWorker || !audioWorker) return;
-            
-            audioWorker.postMessage({ action: 'getTime' });
-        }
-        
-        function stopWorker() {
-            if (isUsingWorker && audioWorker) {
-                audioWorker.postMessage({ action: 'stop' });
+            if (audioServiceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'STOP_AUDIO_CHECK'
+                });
+                
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'START_AUDIO_CHECK',
+                    audioData: {
+                        currentTime: 0,
+                        duration: audioPlayer.duration || 0
+                    }
+                });
+                
+                audioTracking = setInterval(() => {
+                    if (navigator.serviceWorker.controller && audioPlayer.duration) {
+                        navigator.serviceWorker.controller.postMessage({
+                            type: 'UPDATE_AUDIO_TIME',
+                            audioData: {
+                                currentTime: audioPlayer.currentTime,
+                                duration: audioPlayer.duration
+                            }
+                        });
+                    }
+                }, 1000);
             }
         }
-        
-        window.addEventListener('beforeunload', stopWorker);
         
         function togglePlay() {
             if (queue.length === 0) return;
@@ -1356,33 +1314,42 @@
             }
             
             if (isPlaying) {
-                if (isUsingWorker && audioWorker) {
-                    audioWorker.postMessage({ action: 'pause' });
-                } else {
-                    audioPlayer.pause();
-                }
+                audioPlayer.pause();
                 isPlaying = false;
-                updatePlayButton();
-                
+                if (audioTracking) clearInterval(audioTracking);
+                if (navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'STOP_AUDIO_CHECK'
+                    });
+                }
                 if ('mediaSession' in navigator) {
                     navigator.mediaSession.playbackState = 'paused';
                 }
+                if (mediaNotification) {
+                    mediaNotification.close();
+                    mediaNotification = null;
+                }
+                clearInterval(offlineTimer);
             } else {
-                if (isUsingWorker && audioWorker) {
-                    audioWorker.postMessage({ action: 'play' });
+                audioPlayer.play().then(() => {
                     isPlaying = true;
                     updatePlayButton();
-                    startWorkerProgress();
-                } else {
-                    audioPlayer.play().then(() => {
-                        isPlaying = true;
-                        updatePlayButton();
-                    }).catch(() => {
-                        isPlaying = false;
-                        updatePlayButton();
-                    });
-                }
+                    if ('mediaSession' in navigator) {
+                        navigator.mediaSession.playbackState = 'playing';
+                    }
+                    if (queue[currentIndex] && Notification.permission === 'granted') {
+                        updateNotification(queue[currentIndex]);
+                    }
+                    checkOfflinePlayback();
+                }).catch(() => {
+                    isPlaying = false;
+                    updatePlayButton();
+                    if ('mediaSession' in navigator) {
+                        navigator.mediaSession.playbackState = 'paused';
+                    }
+                });
             }
+            updatePlayButton();
         }
         
         function prevSong() {
@@ -1621,7 +1588,6 @@
             updatePlayerControls();
             initDB();
             requestNotificationPermission();
-            initAudioWorker();
             
             document.getElementById('clearAllBtn').addEventListener('click', function() {
                 if (confirm("Delete all songs? This cannot be undone.")) {
@@ -1671,15 +1637,38 @@
                 document.getElementById('folderInput').click();
                 closeSettingsPopup();
             });
-            const checkAudioEnd = setInterval(() => {
-                if (!isPlaying) return;
+            
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('../sw.js')
+                    .then((registration) => {
+                        audioServiceWorker = registration.active || registration.waiting || registration.installing;
+                    });
                 
-                if (!isUsingWorker) {
-                    if (audioPlayer.currentTime >= audioPlayer.duration - 0.1) {
+                navigator.serviceWorker.addEventListener('message', (event) => {
+                    if (event.data.type === 'AUDIO_END_SOON') {
+                        handleAudioEndSoon();
+                    }
+                    
+                    if (event.data.type === 'PLAY_NEXT_SONG') {
+                        nextSong();
+                    }
+                });
+            }
+            
+            setInterval(() => {
+                if (!isPlaying || !audioPlayer.duration) return;
+                
+                const timeLeft = audioPlayer.duration - audioPlayer.currentTime;
+                
+                if (timeLeft <= 1) {
+                    if (repeat === 'one') {
+                        audioPlayer.currentTime = 0;
+                        audioPlayer.play();
+                    } else {
                         nextSong();
                     }
                 }
-            }, 500);
+            }, 300);
         });
     
         playBtn.addEventListener('click', togglePlay);
