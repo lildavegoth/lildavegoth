@@ -828,8 +828,7 @@
         let repeat = 'none';
         let mediaNotification = null;
         let offlineTimer = null;
-        let audioServiceWorker = null;
-        let audioTracking = null;
+        let backgroundTimer = null;
     
         const audioPlayer = document.getElementById('audioPlayer');
         const playBtn = document.getElementById('playBtn');
@@ -872,6 +871,25 @@
             
             request.onerror = function(e) {
             };
+        }
+        
+        function startBackgroundTimer() {
+            if (backgroundTimer) clearInterval(backgroundTimer);
+            
+            backgroundTimer = setInterval(() => {
+                if (audioPlayer.currentTime >= audioPlayer.duration - 0.5) {
+                    if (repeat === 'one') {
+                        audioPlayer.currentTime = 0;
+                        audioPlayer.play();
+                    } else {
+                        nextSong();
+                    }
+                }
+            }, 100);
+        }
+        
+        function stopBackgroundTimer() {
+            if (backgroundTimer) clearInterval(backgroundTimer);
         }
         
         function saveSongToDB(file, albumArt) {
@@ -1059,6 +1077,7 @@
             if (window.location.protocol === 'file:') {
                 if (isPlaying) {
                     clearInterval(offlineTimer);
+                    stopBackgroundTimer();
                     offlineTimer = setInterval(() => {
                         if (audioPlayer.paused && isPlaying) {
                             audioPlayer.play();
@@ -1066,6 +1085,7 @@
                     }, 1000);
                 } else {
                     clearInterval(offlineTimer);
+                    stopBackgroundTimer();
                 }
             }
         }
@@ -1225,15 +1245,6 @@
             }
         }
         
-        function handleAudioEndSoon() {
-            if (repeat === 'one') {
-                audioPlayer.currentTime = 0;
-                audioPlayer.play();
-            } else {
-                nextSong();
-            }
-        }
-        
         function playSong() {
             if (queue.length === 0) return;
             if (currentIndex < 0 || currentIndex >= queue.length) return;
@@ -1257,6 +1268,7 @@
             updateListDisplay();
             updatePlayerControls();
             updateMediaSession(song);
+            stopBackgroundTimer();
             
             if (Notification.permission === 'granted') {
                 updateNotification(song);
@@ -1276,32 +1288,6 @@
                     navigator.mediaSession.playbackState = 'paused';
                 }
             });
-            
-            if (audioServiceWorker && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({
-                    type: 'STOP_AUDIO_CHECK'
-                });
-                
-                navigator.serviceWorker.controller.postMessage({
-                    type: 'START_AUDIO_CHECK',
-                    audioData: {
-                        currentTime: 0,
-                        duration: audioPlayer.duration || 0
-                    }
-                });
-                
-                audioTracking = setInterval(() => {
-                    if (navigator.serviceWorker.controller && audioPlayer.duration) {
-                        navigator.serviceWorker.controller.postMessage({
-                            type: 'UPDATE_AUDIO_TIME',
-                            audioData: {
-                                currentTime: audioPlayer.currentTime,
-                                duration: audioPlayer.duration
-                            }
-                        });
-                    }
-                }, 1000);
-            }
         }
         
         function togglePlay() {
@@ -1315,13 +1301,8 @@
             
             if (isPlaying) {
                 audioPlayer.pause();
+                stopBackgroundTimer();
                 isPlaying = false;
-                if (audioTracking) clearInterval(audioTracking);
-                if (navigator.serviceWorker.controller) {
-                    navigator.serviceWorker.controller.postMessage({
-                        type: 'STOP_AUDIO_CHECK'
-                    });
-                }
                 if ('mediaSession' in navigator) {
                     navigator.mediaSession.playbackState = 'paused';
                 }
@@ -1330,6 +1311,7 @@
                     mediaNotification = null;
                 }
                 clearInterval(offlineTimer);
+                stopBackgroundTimer();
             } else {
                 audioPlayer.play().then(() => {
                     isPlaying = true;
@@ -1453,6 +1435,7 @@
                     musicIcon.style.display = 'flex';
                     coverImage.style.display = 'none';
                     clearInterval(offlineTimer);
+                    stopBackgroundTimer();
                 } else if (currentIndex >= index) {
                     if (currentIndex >= queue.length) {
                         currentIndex = queue.length - 1;
@@ -1614,6 +1597,10 @@
                     
                     closeSettingsPopup();
                 }
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.setActionHandler('nexttrack', nextSong);
+                    navigator.mediaSession.setActionHandler('previoustrack', prevSong);
+                }
             });
             
             repeatToggle.addEventListener('click', function(e) {
@@ -1637,38 +1624,6 @@
                 document.getElementById('folderInput').click();
                 closeSettingsPopup();
             });
-            
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('../sw.js')
-                    .then((registration) => {
-                        audioServiceWorker = registration.active || registration.waiting || registration.installing;
-                    });
-                
-                navigator.serviceWorker.addEventListener('message', (event) => {
-                    if (event.data.type === 'AUDIO_END_SOON') {
-                        handleAudioEndSoon();
-                    }
-                    
-                    if (event.data.type === 'PLAY_NEXT_SONG') {
-                        nextSong();
-                    }
-                });
-            }
-            
-            setInterval(() => {
-                if (!isPlaying || !audioPlayer.duration) return;
-                
-                const timeLeft = audioPlayer.duration - audioPlayer.currentTime;
-                
-                if (timeLeft <= 1) {
-                    if (repeat === 'one') {
-                        audioPlayer.currentTime = 0;
-                        audioPlayer.play();
-                    } else {
-                        nextSong();
-                    }
-                }
-            }, 300);
         });
     
         playBtn.addEventListener('click', togglePlay);
