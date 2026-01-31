@@ -1958,44 +1958,69 @@
 
         function setupInstallButton() {
             const installBtn = document.getElementById('installAppBtn');
+            let installPrompt;
             
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
-                deferredPrompt = e;
-                
-                if (installBtn) {
-                    installBtn.style.display = 'flex';
-                    
-                    installBtn.onclick = async () => {
-                        if (!deferredPrompt) return;
-                        
-                        deferredPrompt.prompt();
-                        
-                        const { outcome } = await deferredPrompt.userChoice;
-                        deferredPrompt = null;
-                        
-                        if (outcome === 'accepted') {
-                            installBtn.innerHTML = `
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="#4CAF50">
-                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                                </svg>`;
-                            
-                            setTimeout(() => {
-                                if (installBtn) installBtn.style.display = 'none';
-                            }, 2000);
-                        }
-                    };
-                }
+                installPrompt = e;
+                if (installBtn) installBtn.style.display = 'flex';
             });
             
+            if (installBtn) {
+                installBtn.onclick = async () => {
+                    if (!installPrompt) return;
+                    
+                    // Show loading state
+                    const originalHTML = installBtn.innerHTML;
+                    installBtn.innerHTML = '<span>Caching...</span>';
+                    installBtn.disabled = true;
+                    
+                    // Cache ALL files before install
+                    try {
+                        await cacheAllFiles();
+                        
+                        installPrompt.prompt();
+                        const result = await installPrompt.userChoice;
+                        installPrompt = null;
+                        
+                        if (result.outcome === 'accepted') {
+                            installBtn.innerHTML = '<span>✓ Installed!</span>';
+                        } else {
+                            installBtn.innerHTML = originalHTML;
+                            installBtn.disabled = false;
+                        }
+                    } catch (error) {
+                        installBtn.innerHTML = originalHTML;
+                        installBtn.disabled = false;
+                    }
+                };
+            }
+            
             window.addEventListener('appinstalled', () => {
-                if (installBtn) installBtn.style.display = 'none';
-                deferredPrompt = null;
+                if (installBtn) {
+                    installBtn.style.display = 'none';
+                }
+                installPrompt = null;
             });
             
             if (installBtn && window.matchMedia('(display-mode: standalone)').matches) {
                 installBtn.style.display = 'none';
             }
+        }
+        
+        // Function to cache all files
+        async function cacheAllFiles() {
+            if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+                return;
+            }
+            
+            // Send message to Service Worker to cache all files
+            navigator.serviceWorker.controller.postMessage({
+                type: 'CACHE_ALL'
+            });
+            
+            // Wait a bit for caching to complete
+            return new Promise(resolve => setTimeout(resolve, 2000));
         }
         
         // Share functionality for vertical bar

@@ -1,6 +1,7 @@
 const CACHE_NAME = 'kakoi-kiraku-app-v2';
 const urlsToCache = [
     // Root
+    '',
     'account.html',
     'auth.js',
     'browser-homepage.html',
@@ -112,7 +113,23 @@ self.addEventListener('fetch', event => {
                 });
             })
             .catch(() => {
-                return caches.match('./index.html');
+                return caches.match('index.html');
             })
     );
+});
+
+self.addEventListener('message', event => {
+    if (event.data.type === 'CACHE_ALL') {
+        event.waitUntil(
+            caches.open(CACHE_NAME).then(cache => {
+                return Promise.all(
+                    ALL_FILES_TO_CACHE.map(url => {
+                        return cache.add(url).catch(err => {
+                            console.log('Failed to cache:', url, err);
+                        });
+                    })
+                );
+            })
+        );
+    }
 });
