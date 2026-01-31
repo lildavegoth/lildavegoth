@@ -848,6 +848,11 @@
                 <span class="icon icon-github"></span>
             </button>
             
+            <!-- Install App -->
+            <button class="vertical-more-btn" data-tooltip="Install App" id="installAppBtn">
+                <span class="icon icon-install"></span>
+            </button>
+            
             <!-- Share -->
             <button class="vertical-more-btn" data-tooltip="Share" id="shareVerticalBtn">
                 <span class="icon icon-share"></span>
@@ -1291,6 +1296,21 @@
                     </div>
                 </div>
                 
+                <!-- YAML Validator -->
+                <div onclick="window.location.href='pages/yaml-validator.html'" class="project-card">
+                    <div class="project-title">
+                        <h3>YAML Validator</h3>
+                    </div>
+                    <p class="project-description">
+                        Validate, Verify and Reformat your YAML documents with complete error message to make you fix things more easier.
+                    </p>
+                    <div class="project-tech">
+                        <span class="tech-tag">Indent</span>
+                        <span class="tech-tag">Fix</span>
+                        <span class="tech-tag">Error</span>
+                    </div>
+                </div>
+                
         </section>
 
         <!-- Games Page -->
@@ -1714,7 +1734,8 @@
                 title: 'HTML Tools',
                 items: [
                     { title: 'HTML Generator', description: 'Convert plain text to clean HTML code with formatting tools.', url: 'pages/html-generator.html' },
-                    { title: 'HTML Cleaner', description: 'Clean and minify HTML code by removing unnecessary elements.', url: 'pages/html-cleaner.html' }
+                    { title: 'HTML Cleaner', description: 'Clean and minify HTML code by removing unnecessary elements.', url: 'pages/html-cleaner.html' },
+                    { title: 'HTML Editor', description: 'Edit your HTML and see the Live Preview to see the changes.', url: 'pages/html-editor.html' }
                 ]
             },
             'svg': {
@@ -1927,6 +1948,82 @@
             }
         }
         
+        function setupInstallButton() {
+            const installBtn = document.getElementById('installAppBtn');
+            let installPrompt;
+            
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                installPrompt = e;
+                if (installBtn) installBtn.style.display = 'flex';
+            });
+            
+            if (installBtn) {
+                installBtn.onclick = async () => {
+                    if (!installPrompt) return;
+                    installPrompt.prompt();
+                    const result = await installPrompt.userChoice;
+                    installPrompt = null;
+                    if (result.outcome === 'accepted' && installBtn) {
+                        installBtn.style.display = 'none';
+                    }
+                };
+            }
+            
+            window.addEventListener('appinstalled', () => {
+                if (installBtn) installBtn.style.display = 'none';
+                installPrompt = null;
+            });
+            
+            if (installBtn && window.matchMedia('(display-mode: standalone)').matches) {
+                installBtn.style.display = 'none';
+            }
+        }
+        
+        let deferredPrompt;
+
+        function setupInstallButton() {
+            const installBtn = document.getElementById('installAppBtn');
+            
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                
+                if (installBtn) {
+                    installBtn.style.display = 'flex';
+                    
+                    installBtn.onclick = async () => {
+                        if (!deferredPrompt) return;
+                        
+                        deferredPrompt.prompt();
+                        
+                        const { outcome } = await deferredPrompt.userChoice;
+                        deferredPrompt = null;
+                        
+                        if (outcome === 'accepted') {
+                            installBtn.innerHTML = `
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="#4CAF50">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                </svg>`;
+                            
+                            setTimeout(() => {
+                                if (installBtn) installBtn.style.display = 'none';
+                            }, 2000);
+                        }
+                    };
+                }
+            });
+            
+            window.addEventListener('appinstalled', () => {
+                if (installBtn) installBtn.style.display = 'none';
+                deferredPrompt = null;
+            });
+            
+            if (installBtn && window.matchMedia('(display-mode: standalone)').matches) {
+                installBtn.style.display = 'none';
+            }
+        }
+        
         // Share functionality for vertical bar
         function setupVerticalShareButton() {
             const shareButton = document.getElementById('shareVerticalBtn');
@@ -2000,6 +2097,7 @@
             setupVerticalShareButton();
             setupCreditsButton();
             setupSearchDebounce();
+            setupInstallButton();
         });
         
         document.addEventListener('click', function(event) {
