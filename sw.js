@@ -1,4 +1,3 @@
-// All Page
 const CACHE_NAME = 'kakoi-kiraku-app-v3';
 const urlsToCache = [
     // Root
@@ -193,56 +192,5 @@ self.addEventListener('message', event => {
                 );
             })
         );
-    }
-});
-
-// Music
-let audioCheckInterval = null;
-let currentAudioData = null;
-let lastUpdateTime = 0;
-
-self.addEventListener('message', (event) => {
-    if (event.data.type === 'START_AUDIO_CHECK') {
-        if (audioCheckInterval) clearInterval(audioCheckInterval);
-        
-        currentAudioData = event.data.audioData;
-        lastUpdateTime = Date.now();
-        
-        audioCheckInterval = setInterval(() => {
-            if (!currentAudioData) return;
-            
-            const now = Date.now();
-            const timePassed = (now - lastUpdateTime) / 1000;
-            
-            currentAudioData.currentTime += timePassed;
-            lastUpdateTime = now;
-            
-            if (currentAudioData.currentTime >= currentAudioData.duration - 1) {
-                self.clients.matchAll().then((clients) => {
-                    clients.forEach((client) => {
-                        client.postMessage({ type: 'AUDIO_END_SOON' });
-                    });
-                });
-            }
-        }, 500);
-    }
-    
-    if (event.data.type === 'UPDATE_AUDIO_TIME') {
-        currentAudioData = event.data.audioData;
-        lastUpdateTime = Date.now();
-    }
-    
-    if (event.data.type === 'STOP_AUDIO_CHECK') {
-        if (audioCheckInterval) clearInterval(audioCheckInterval);
-        audioCheckInterval = null;
-        currentAudioData = null;
-    }
-    
-    if (event.data.type === 'NEXT_SONG') {
-        self.clients.matchAll().then((clients) => {
-            clients.forEach((client) => {
-                client.postMessage({ type: 'PLAY_NEXT_SONG' });
-            });
-        });
     }
 });
