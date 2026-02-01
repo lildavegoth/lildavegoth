@@ -659,128 +659,37 @@
     </div>
 
     <script>
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxrmgcqr4Yl-kW_AycRi_vlrPUT1n4ifvVdZY3C2QyKV14xdjNiWG4tp5mDwl9TJfc3/exec';
-    const ADMIN_USER_ID = 'USER_mk3pkcpw_D63MH2N22';
-    
+    const API_BASE = '../api';
     let giveawayParticipants = [];
-    let giveawaySettings = {
-        status: 'active',
-        prize: 'Kakoi Kiraku',
-        maxParticipants: 1000
-    };
     let currentUser = null;
-    let isOnline = true;
     let isAdmin = false;
     
     async function initGiveaway() {
         currentUser = window.authCheck ? window.authCheck.getCurrentUser() : null;
-        checkAdminStatus();
+        isAdmin = currentUser && currentUser.id === 'USER_mk3pkcpw_D63MH2N22';
         
-        await testConnection();
-        await loadGiveawaySettings();
         await loadParticipants();
-        
         updateUI();
         setupEventListeners();
         
-        if (isAdmin) {
-            createFABButton();
-        }
+        if (isAdmin) createFABButton();
         
-        setInterval(() => {
-            loadGiveawaySettings();
-            loadParticipants();
-        }, 10000);
-    }
-    
-    async function testConnection() {
-        try {
-            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=test&t=${Date.now()}`);
-            if (response.ok) {
-                isOnline = true;
-                window.showMessage('Online', 'Connected to giveaway server', 'Notification', 'System');
-            }
-        } catch (error) {
-            isOnline = false;
-            window.showMessage('Offline', 'Using local storage mode', 'error', 'System');
-        }
-    }
-    
-    async function loadGiveawaySettings() {
-        try {
-            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getSettings&t=${Date.now()}`);
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    giveawaySettings = data.settings;
-                    updateGiveawayDisplay();
-                    localStorage.setItem('giveaway_settings', JSON.stringify(giveawaySettings));
-                }
-            }
-        } catch (error) {
-            const cached = localStorage.getItem('giveaway_settings');
-            if (cached) {
-                giveawaySettings = JSON.parse(cached);
-                updateGiveawayDisplay();
-            }
-        }
+        setInterval(loadParticipants, 10000);
     }
     
     async function loadParticipants() {
         try {
-            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getParticipants&t=${Date.now()}`);
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    giveawayParticipants = data.participants || [];
-                    updateParticipantCount();
-                    localStorage.setItem('giveaway_participants', JSON.stringify(giveawayParticipants));
-                }
+            const headers = currentUser ? { 'x-user-auth': JSON.stringify(currentUser) } : {};
+            const response = await fetch(`${API_BASE}/submit-entry`, { headers });
+            const data = await response.json();
+            
+            if (data.success) {
+                giveawayParticipants = data.participants || [];
+                document.getElementById('joinedCount').textContent = data.total || 0;
             }
         } catch (error) {
-            const cached = localStorage.getItem('giveaway_participants');
-            if (cached) {
-                giveawayParticipants = JSON.parse(cached);
-                updateParticipantCount();
-            }
-        }
-    }
-    
-    function updateGiveawayDisplay() {
-        const statusElement = document.querySelector('.giveaway-status');
-        const prizeElement = document.querySelector('.giveaway-prize');
-        const descriptionElement = document.querySelector('.giveaway-description');
-        
-        if (statusElement) {
-            statusElement.textContent = giveawaySettings.status.toUpperCase();
-            statusElement.style.background = giveawaySettings.status === 'active' 
-                ? 'rgba(193, 252, 50, 0.1)' 
-                : 'rgba(255, 59, 48, 0.1)';
-            statusElement.style.color = giveawaySettings.status === 'active' 
-                ? 'var(--accent-color)' 
-                : '#ff3b30';
-        }
-        
-        if (prizeElement) prizeElement.textContent = giveawaySettings.prize;
-        if (descriptionElement) descriptionElement.textContent = giveawaySettings.description;
-        
-        const joinButton = document.getElementById('joinButton');
-        if (joinButton && giveawaySettings.status === 'inactive') {
-            joinButton.disabled = true;
-            joinButton.style.opacity = '0.5';
-            joinButton.innerHTML = '<i class="fas fa-pause"></i> Giveaway Paused';
-        }
-    }
-    
-    function updateParticipantCount() {
-        const joinedCount = document.getElementById('joinedCount');
-        if (joinedCount) {
-            const count = giveawayParticipants.length;
-            joinedCount.textContent = count;
-            
-            if (count >= giveawaySettings.maxParticipants * 0.9) {
-                joinedCount.style.color = '#ff3b30';
-            }
+            const localCount = localStorage.getItem('giveaway_join_count') || 0;
+            document.getElementById('joinedCount').textContent = localCount;
         }
     }
     
@@ -791,14 +700,10 @@
         if (!currentUser) {
             joinButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In to Join';
             joinButton.disabled = false;
-            startButton.disabled = true;
-            
-            // Hide admin button for non-admin users
-            startButton.classList.remove('admin-visible');
             return;
         }
         
-        const hasJoined = giveawayParticipants.some(p => p.id === currentUser.id);
+        const hasJoined = giveawayParticipants.some(p => p.user_id === currentUser.id);
         
         if (hasJoined) {
             joinButton.innerHTML = '<i class="fas fa-check"></i> Already Joined';
@@ -810,19 +715,10 @@
             joinButton.style.background = 'var(--accent-color)';
         }
         
-        // Show button only if user is admin
         if (isAdmin) {
             startButton.classList.add('admin-visible');
             startButton.disabled = false;
-            startButton.innerHTML = '<i class="fas fa-crown"></i> Start Selection';
-        } else {
-            startButton.classList.remove('admin-visible');
-            startButton.disabled = true;
         }
-    }
-    
-    function checkAdminStatus() {
-        isAdmin = currentUser && currentUser.id === ADMIN_USER_ID;
     }
     
     async function joinGiveaway() {
@@ -834,59 +730,28 @@
             return;
         }
         
-        if (giveawaySettings.status === 'inactive') {
-            window.showMessage('Paused', 'Giveaway is inactive', 'error', 'Giveaway');
-            return;
-        }
-        
-        if (giveawayParticipants.length >= giveawaySettings.maxParticipants) {
-            window.showMessage('Full', 'Maximum participants reached', 'error', 'Giveaway');
-            return;
-        }
-        
-        const alreadyJoined = giveawayParticipants.some(p => p.id === currentUser.id);
-        if (alreadyJoined) {
-            window.showMessage('Already Joined', 'You already joined', 'info', 'Giveaway');
-            return;
-        }
-        
-        const participant = {
-            id: currentUser.id,
-            username: currentUser.username || 'Anonymous',
-            email: currentUser.email || '',
-            joinedAt: new Date().toISOString(),
-            timestamp: Date.now()
-        };
-        
         try {
-            const url = `${GOOGLE_SCRIPT_URL}?action=addParticipant&data=${encodeURIComponent(JSON.stringify(participant))}`;
-            const response = await fetch(url);
-            const result = await response.json();
+            const response = await fetch(`${API_BASE}/submit-entry`, {
+                method: 'POST',
+                headers: { 'x-user-auth': JSON.stringify(currentUser) }
+            });
             
-            if (result.success) {
-                giveawayParticipants.push(participant);
-                updateParticipantCount();
-                updateUI();
-                
+            const data = await response.json();
+            
+            if (data.success) {
                 window.showMessage('Joined!', 'You are now in the giveaway', 'Notification', 'Giveaway');
-                
-                const joinButton = document.getElementById('joinButton');
-                joinButton.style.animation = 'celebrate 0.5s ease';
-                setTimeout(() => joinButton.style.animation = '', 500);
+                await loadParticipants();
+                updateUI();
             } else {
-                window.showMessage('Error', result.message || 'Join failed', 'error', 'Giveaway');
+                window.showMessage('Already Joined', 'You already joined', 'info', 'Giveaway');
             }
-        } catch (error) {
-            window.showMessage('Offline', 'Saved locally, will sync later', 'info', 'Giveaway');
             
-            giveawayParticipants.push(participant);
-            localStorage.setItem('giveaway_participants', JSON.stringify(giveawayParticipants));
-            updateParticipantCount();
-            updateUI();
+        } catch (error) {
+            window.showMessage('Error', 'Failed to join', 'error', 'Giveaway');
         }
     }
     
-    function selectWinner() {
+    async function selectWinner() {
         if (!isAdmin) {
             window.showMessage('Admin Only', 'Only admin can select winner', 'error', 'Giveaway');
             return;
@@ -898,80 +763,38 @@
         }
         
         const startButton = document.getElementById('startButton');
-        const winnerDisplay = document.getElementById('winnerDisplay');
-        const winnerName = document.getElementById('winnerName');
-        const winnerDetails = document.getElementById('winnerDetails');
-        
         startButton.disabled = true;
         startButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Selecting...';
         
-        let count = 0;
-        const maxCount = 8;
-        const interval = setInterval(() => {
-            const randomIndex = Math.floor(Math.random() * giveawayParticipants.length);
-            winnerName.textContent = giveawayParticipants[randomIndex].username;
-            
-            if (++count >= maxCount) {
-                clearInterval(interval);
-                
-                const winnerIndex = Math.floor(Math.random() * giveawayParticipants.length);
-                const winner = giveawayParticipants[winnerIndex];
-                
-                setTimeout(() => {
-                    winnerName.textContent = winner.username;
-                    winnerDetails.textContent = `ID: ${winner.id} • Selected from ${giveawayParticipants.length} participants`;
-                    winnerDisplay.classList.add('active');
-                    
-                    startButton.disabled = false;
-                    startButton.innerHTML = '<i class="fas fa-play"></i> Start Selection';
-                    
-                    localStorage.setItem('lastGiveawayWinner', JSON.stringify({
-                        ...winner,
-                        selectedAt: new Date().toISOString()
-                    }));
-                    
-                    winnerDisplay.scrollIntoView({ behavior: 'smooth' });
-                }, 500);
-            }
-        }, 200);
-    }
-    
-    async function updateSetting(field, value) {
         try {
-            const url = `${GOOGLE_SCRIPT_URL}?action=updateSettings&field=${field}&value=${encodeURIComponent(value)}`;
-            const response = await fetch(url);
-            const result = await response.json();
+            const response = await fetch(`${API_BASE}/admin-controls`, {
+                method: 'POST',
+                headers: { 'x-user-auth': JSON.stringify(currentUser) },
+                body: JSON.stringify({ action: 'select_winner' })
+            });
             
-            if (result.success) {
-                giveawaySettings[field] = value;
-                updateGiveawayDisplay();
-                window.showMessage('Updated', `${field} set to ${value}`, 'Notification', 'System');
-                localStorage.setItem('giveaway_settings', JSON.stringify(giveawaySettings));
-            }
-        } catch (error) {
-            window.showMessage('Error', 'Failed to update', 'error', 'System');
-        }
-    }
-    
-    async function clearAllParticipants() {
-        try {
-            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=clearParticipants`);
-            const result = await response.json();
+            const data = await response.json();
             
-            if (result.success) {
-                giveawayParticipants = [];
-                updateParticipantCount();
-                localStorage.removeItem('giveaway_participants');
-                window.showMessage('Cleared', 'All participants removed', 'Notification', 'System');
+            if (data.success && data.winner) {
+                const winnerDisplay = document.getElementById('winnerDisplay');
+                const winnerName = document.getElementById('winnerName');
+                const winnerDetails = document.getElementById('winnerDetails');
+                
+                winnerName.textContent = data.winner.username;
+                winnerDetails.textContent = `Selected from ${giveawayParticipants.length} participants`;
+                winnerDisplay.classList.add('active');
+                winnerDisplay.scrollIntoView({ behavior: 'smooth' });
             }
+            
         } catch (error) {
-            window.showMessage('Error', 'Failed to clear', 'error', 'System');
+            window.showMessage('Error', 'Failed to select winner', 'error', 'Giveaway');
         }
+        
+        startButton.disabled = false;
+        startButton.innerHTML = '<i class="fas fa-crown"></i> Start Selection';
     }
     
     function createFABButton() {
-        if (!isAdmin) return;
-        
         const fab = document.createElement('button');
         fab.id = 'adminFAB';
         fab.innerHTML = '<i class="fas fa-cog"></i>';
@@ -995,110 +818,34 @@
             justify-content: center;
         `;
         
-        fab.addEventListener('click', function(event) {
-            event.stopPropagation();
-            toggleAdminPanel();
-        });
-        
+        fab.addEventListener('click', showAdminPanel);
         document.body.appendChild(fab);
     }
     
-    function toggleAdminPanel() {
-        const panel = document.getElementById('adminPanel');
-        
-        if (panel && panel.classList.contains('active')) {
-            hideAdminPanel();
-        } else {
-            showAdminPanel();
-        }
-    }
-    
     function showAdminPanel() {
-        if (document.getElementById('adminPanel')) return;
-        
-        // Create overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'admin-panel-overlay';
-        overlay.id = 'adminPanelOverlay';
-        
-        // Create panel container
-        const panel = document.createElement('div');
-        panel.id = 'adminPanel';
-        panel.className = 'admin-panel';
-        
-        // Create panel content
-        const panelContent = document.createElement('div');
-        panelContent.className = 'admin-panel-content';
-        
-        // Panel HTML content
-        panelContent.innerHTML = `
-            <div class="admin-header">
-                <h3>
-                    <i class="fas fa-crown"></i> Admin Controls
-                </h3>
-            </div>
-            
-            <div class="admin-sections">
-                <!-- Status Control -->
-                <div class="admin-section">
-                    <h4><i class="fas fa-power-off"></i> Giveaway Status</h4>
-                    <div class="status-buttons">
-                        <button class="status-btn ${giveawaySettings.status === 'active' ? 'active' : ''}" data-status="active">
-                            <i class="fas fa-play"></i> Active
-                        </button>
-                        <button class="status-btn ${giveawaySettings.status === 'inactive' ? 'active' : ''}" data-status="inactive">
-                            <i class="fas fa-pause"></i> Inactive
-                        </button>
+        const panelHTML = `
+            <div class="admin-panel-overlay active" id="adminPanelOverlay"></div>
+            <div class="admin-panel active" id="adminPanel">
+                <div class="admin-panel-content">
+                    <div class="admin-header">
+                        <h3><i class="fas fa-crown"></i> Admin Controls</h3>
                     </div>
-                </div>
-                
-                <!-- Prize Settings -->
-                <div class="admin-section">
-                    <h4><i class="fas fa-gift"></i> Prize Settings</h4>
-                    <input type="text" class="admin-input" id="adminPrizeInput" value="${giveawaySettings.prize}" placeholder="Prize Name">
-                    <button class="admin-btn" id="savePrizeBtn">
-                        <i class="fas fa-save"></i> Update Prize
-                    </button>
-                </div>
-                
-                <!-- Participants Limit -->
-                <div class="admin-section">
-                    <h4><i class="fas fa-users"></i> Participants Limit</h4>
-                    <input type="number" class="admin-input" id="adminMaxInput" value="${giveawaySettings.maxParticipants}" placeholder="Max Participants">
-                    <button class="admin-btn" id="saveMaxBtn">
-                        <i class="fas fa-save"></i> Update Limit
-                    </button>
-                </div>
-                
-                <!-- Quick Actions -->
-                <div class="admin-section">
-                    <h4><i class="fas fa-bolt"></i> Quick Actions</h4>
-                    <div class="action-buttons-grid">
-                        <button class="admin-btn secondary" id="refreshBtn">
-                            <i class="fas fa-sync"></i> Refresh Data
-                        </button>
-                        <button class="admin-btn danger" id="clearParticipantsBtn">
-                            <i class="fas fa-trash"></i> Clear All
-                        </button>
+                    <div class="admin-sections">
+                        <div class="admin-section">
+                            <h4><i class="fas fa-users"></i> Participants: ${giveawayParticipants.length}</h4>
+                            <button class="admin-btn" onclick="clearParticipants()">
+                                <i class="fas fa-trash"></i> Clear All
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         `;
         
-        // Assemble the structure
-        panel.appendChild(panelContent);
+        document.body.insertAdjacentHTML('beforeend', panelHTML);
         
-        // Add to body
-        document.body.appendChild(overlay);
-        document.body.appendChild(panel);
-        
-        // Show with animation
-        setTimeout(() => {
-            overlay.classList.add('active');
-            panel.classList.add('active');
-        }, 10);
-        
-        setupAdminPanelListeners();
+        document.getElementById('adminPanelOverlay').addEventListener('click', hideAdminPanel);
+        document.querySelector('.admin-panel-content').addEventListener('click', e => e.stopPropagation());
     }
     
     function hideAdminPanel() {
@@ -1114,67 +861,26 @@
         }, 300);
     }
     
-    function setupAdminPanelListeners() {
-        // Close when clicking overlay
-        const overlay = document.getElementById('adminPanelOverlay');
-        if (overlay) {
-            overlay.addEventListener('click', hideAdminPanel);
-        }
+    async function clearParticipants() {
+        if (!confirm('Clear ALL participants?')) return;
         
-        // Stop propagation when clicking inside panel content
-        const panelContent = document.querySelector('.admin-panel-content');
-        if (panelContent) {
-            panelContent.addEventListener('click', function(event) {
-                event.stopPropagation();
+        try {
+            const response = await fetch(`${API_BASE}/admin-controls`, {
+                method: 'POST',
+                headers: { 'x-user-auth': JSON.stringify(currentUser) },
+                body: JSON.stringify({ action: 'clear_all' })
             });
-        }
-        
-        // Rest of your event listeners remain the same...
-        document.querySelectorAll('.status-btn').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const status = this.getAttribute('data-status');
-                await updateSetting('status', status);
-                document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-            });
-        });
-        
-        const savePrizeBtn = document.getElementById('savePrizeBtn');
-        if (savePrizeBtn) {
-            savePrizeBtn.addEventListener('click', async function() {
-                const newPrize = document.getElementById('adminPrizeInput').value;
-                if (newPrize.trim()) {
-                    await updateSetting('prize', newPrize);
-                }
-            });
-        }
-        
-        const saveMaxBtn = document.getElementById('saveMaxBtn');
-        if (saveMaxBtn) {
-            saveMaxBtn.addEventListener('click', async function() {
-                const newMax = document.getElementById('adminMaxInput').value;
-                if (newMax > 0) {
-                    await updateSetting('maxParticipants', newMax);
-                }
-            });
-        }
-        
-        const clearBtn = document.getElementById('clearParticipantsBtn');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', async function() {
-                if (confirm('Clear ALL participants? This cannot be undone!')) {
-                    await clearAllParticipants();
-                }
-            });
-        }
-        
-        const refreshBtn = document.getElementById('refreshBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', function() {
-                loadGiveawaySettings();
-                loadParticipants();
-                window.showMessage('Refreshed', 'Data updated', 'Notification', 'System');
-            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                window.showMessage('Cleared', 'All participants removed', 'Notification', 'System');
+                await loadParticipants();
+                hideAdminPanel();
+            }
+            
+        } catch (error) {
+            window.showMessage('Error', 'Failed to clear', 'error', 'System');
         }
     }
     
@@ -1186,12 +892,11 @@
         if (joinButton) joinButton.addEventListener('click', joinGiveaway);
         if (startButton) startButton.addEventListener('click', selectWinner);
         if (selectAgainButton) selectAgainButton.addEventListener('click', () => {
-            const winnerDisplay = document.getElementById('winnerDisplay');
-            if (winnerDisplay) winnerDisplay.classList.remove('active');
+            document.getElementById('winnerDisplay').classList.remove('active');
         });
     }
     
     document.addEventListener('DOMContentLoaded', initGiveaway);
-</script>
+    </script>
 </body>
 </html>
