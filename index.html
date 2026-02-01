@@ -328,7 +328,6 @@
             background: transparent;
         }
         
-        /* HTML Tools Popup */
         .popup-overlay {
             position: fixed;
             top: 0;
@@ -828,6 +827,100 @@
             transform: translateY(-3px);
         }
         
+        #installDialog {
+            border: none;
+            border-radius: 12px;
+            padding: 0;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        #installDialog::backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .dialog-content {
+            padding: 20px;
+        }
+        
+        .dialog-content header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .app-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+        }
+        
+        .dialog-content h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+        
+        .dialog-content p {
+            margin: 5px 0 0 0;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .screenshots {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        
+        .screenshots img {
+            height: 200px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        
+        .features {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        
+        .features div {
+            margin: 8px 0;
+        }
+        
+        footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        #confirmInstall {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+        
+        #cancelInstall {
+            background: transparent;
+            border: 1px solid #ccc;
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+        
+        #closeDialog {
+            margin-left: auto;
+            background: transparent;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+        
     </style>
 </head>
 <body>
@@ -854,10 +947,44 @@
                 <span class="icon icon-github"></span>
             </button>
             
-            <!-- Install App -->
             <button class="vertical-more-btn" data-tooltip="Install App" id="installAppBtn">
                 <span class="icon icon-install"></span>
             </button>
+            
+            <dialog id="installDialog">
+                <div class="dialog-content">
+                    <header>
+                        <img src="/assets/icon-512.png" class="app-icon">
+                        <div>
+                            <h3>App Name</h3>
+                            <p>App Description</p>
+                        </div>
+                        <button id="closeDialog">&times;</button>
+                    </header>
+                    
+                    <div class="screenshots">
+                        <img src="/assets/screenshot1.png">
+                        <img src="/assets/screenshot2.png">
+                    </div>
+                    
+                    <div class="features">
+                        <div>
+                            <span>Works offline</span>
+                        </div>
+                        <div>
+                            <span>Fast loading</span>
+                        </div>
+                        <div>
+                            <span>No ads</span>
+                        </div>
+                    </div>
+                    
+                    <footer>
+                        <button id="cancelInstall">Cancel</button>
+                        <button id="confirmInstall">Install</button>
+                    </footer>
+                </div>
+            </dialog>
             
             <!-- Share -->
             <button class="vertical-more-btn" data-tooltip="Share" id="shareVerticalBtn">
@@ -1067,7 +1194,7 @@
                         <h3>HTML Tools</h3>
                     </div>
                     <p class="project-description">
-                        A collection of HTML utilities including HTML Generator & HTML Cleaner.
+                        A collection of HTML utilities including HTML Cleaner, HTML Code Comparator, HTML Editor & HTML Generator.
                     </p>
                     <div class="project-tech">
                         <span class="tech-tag">HTML</span>
@@ -1741,8 +1868,9 @@
             'html': {
                 title: 'HTML Tools',
                 items: [
-                    { title: 'HTML Generator', description: 'Convert plain text to clean HTML code with formatting tools.', url: 'pages/html-generator.html' },
                     { title: 'HTML Cleaner', description: 'Clean and minify HTML code by removing unnecessary elements.', url: 'pages/html-cleaner.html' },
+                    { title: 'HTML Code Conparator', description: 'Compare two HTML codes with unified diff summary.', url: 'pages/html-code-comparator.html' },
+                    { title: 'HTML Generator', description: 'Convert plain text to clean HTML code with formatting tools.', url: 'pages/html-generator.html' },
                     { title: 'HTML Editor', description: 'Edit your HTML and see the Live Preview to see the changes.', url: 'pages/html-editor.html' }
                 ]
             },
@@ -1765,8 +1893,8 @@
             'obsidian': {
                 title: 'Obsidian Tools',
                 items: [
-                    { title: 'Table Formatting Generator', description: 'Generate formatted tables for Obsidian to add Checkboxes (Task), Bulleted List, Numbered List, change Text Colors, and more.', url: 'pages/o-table-formatting.html' },
-                    { title: 'CSS Snippets Gallery', description: 'Browse and use CSS snippets to make your Obsidian interface looks way more better.', url: 'pages/o-css-snippets-gallery.html' }
+                    { title: 'CSS Snippets Gallery', description: 'Browse and use CSS snippets to make your Obsidian interface looks way more better.', url: 'pages/o-css-snippets-gallery.html' },
+                    { title: 'Table Formatting Generator', description: 'Generate formatted tables for Obsidian to add Checkboxes (Task), Bulleted List, Numbered List, change Text Colors, and more.', url: 'pages/o-table-formatting.html' }
                 ]
             },
             'credits': {
@@ -1958,52 +2086,69 @@
 
         function setupInstallButton() {
             const installBtn = document.getElementById('installAppBtn');
-            let installPrompt;
+            const installDialog = document.getElementById('installDialog');
+            const closeDialog = document.getElementById('closeDialog');
+            const cancelInstall = document.getElementById('cancelInstall');
+            const confirmInstall = document.getElementById('confirmInstall');
             
+            let installPrompt = null;
+        
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 installPrompt = e;
-                if (installBtn) installBtn.style.display = 'flex';
+                installBtn.style.display = 'flex';
             });
-            
+        
             if (installBtn) {
-                installBtn.onclick = async () => {
-                    if (!installPrompt) return;
-                    
-                    // Show loading state
-                    const originalHTML = installBtn.innerHTML;
-                    installBtn.innerHTML = '<span>Caching...</span>';
-                    installBtn.disabled = true;
-                    
-                    // Cache ALL files before install
-                    try {
-                        await cacheAllFiles();
-                        
-                        installPrompt.prompt();
-                        const result = await installPrompt.userChoice;
-                        installPrompt = null;
-                        
-                        if (result.outcome === 'accepted') {
-                            installBtn.innerHTML = '<span>✓ Installed!</span>';
-                        } else {
-                            installBtn.innerHTML = originalHTML;
-                            installBtn.disabled = false;
-                        }
-                    } catch (error) {
-                        installBtn.innerHTML = originalHTML;
-                        installBtn.disabled = false;
+                installBtn.onclick = () => {
+                    if (installDialog) {
+                        installDialog.showModal();
                     }
                 };
             }
-            
+        
+            if (closeDialog) {
+                closeDialog.onclick = () => {
+                    installDialog.close();
+                };
+            }
+        
+            if (cancelInstall) {
+                cancelInstall.onclick = () => {
+                    installDialog.close();
+                };
+            }
+        
+            if (confirmInstall) {
+                confirmInstall.onclick = async () => {
+                    if (installPrompt) {
+                        const originalText = confirmInstall.textContent;
+                        confirmInstall.textContent = 'Installing...';
+                        confirmInstall.disabled = true;
+                        
+                        try {
+                            await installPrompt.prompt();
+                            const result = await installPrompt.userChoice;
+                            
+                            if (result.outcome === 'accepted') {
+                                installBtn.style.display = 'none';
+                            }
+                        } catch {
+                            confirmInstall.textContent = originalText;
+                            confirmInstall.disabled = false;
+                        }
+                        
+                        installDialog.close();
+                    }
+                };
+            }
+        
             window.addEventListener('appinstalled', () => {
-                if (installBtn) {
-                    installBtn.style.display = 'none';
-                }
+                installBtn.style.display = 'none';
                 installPrompt = null;
             });
-            
-            if (installBtn && window.matchMedia('(display-mode: standalone)').matches) {
+        
+            if (window.matchMedia('(display-mode: standalone)').matches) {
                 installBtn.style.display = 'none';
             }
         }
