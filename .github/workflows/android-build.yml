@@ -1,26 +1,49 @@
 name: Build Android APK
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [homepage]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Bubblewrap
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '11'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+      
+    - name: Install Bubblewrap
       run: |
         npm install -g @bubblewrap/cli
-        bubblewrap init --manifest=https://YOUR-VERCEL-APP.vercel.app/manifest.json --defaults
+        bubblewrap --version
+        
+    - name: Initialize TWA project
+      run: |
+        bubblewrap init \
+          --manifest=https://https://kakoi-kiraku-home.vercel.app/manifest.json \
+          --directory=./android-app \
+          --defaults
+      env:
+        BUBBLEWRAP_KEYSTORE_PASSWORD: "android"
+        BUBBLEWRAP_KEY_PASSWORD: "android"
         
     - name: Build APK
-      run: bubblewrap build
+      run: |
+        cd android-app
+        bubblewrap build
         
     - name: Upload APK
       uses: actions/upload-artifact@v3
       with:
-        name: app-release
-        path: app-release.apk
+        name: kakoi-kiraku-app
+        path: android-app/app-release-signed.apk
