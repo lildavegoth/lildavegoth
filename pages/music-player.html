@@ -9,6 +9,13 @@
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
     <link rel="stylesheet" href="../navigation.css">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#C1FC32">
+    <link rel="manifest" href="manifest.json">
+    
     <script src="https://unpkg.com/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -828,7 +835,6 @@
         let repeat = 'none';
         let mediaNotification = null;
         let offlineTimer = null;
-        let backgroundTimer = null;
     
         const audioPlayer = document.getElementById('audioPlayer');
         const playBtn = document.getElementById('playBtn');
@@ -873,23 +879,27 @@
             };
         }
         
-        function startBackgroundTimer() {
-            if (backgroundTimer) clearInterval(backgroundTimer);
-            
-            backgroundTimer = setInterval(() => {
-                if (audioPlayer.currentTime >= audioPlayer.duration - 0.5) {
-                    if (repeat === 'one') {
-                        audioPlayer.currentTime = 0;
-                        audioPlayer.play();
-                    } else {
-                        nextSong();
-                    }
-                }
-            }, 100);
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('../sw.js');
         }
         
-        function stopBackgroundTimer() {
-            if (backgroundTimer) clearInterval(backgroundTimer);
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.setActionHandler('play', function() {
+                if (queue.length > 0) {
+                    audioPlayer.play();
+                    isPlaying = true;
+                    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                }
+            });
+            
+            navigator.mediaSession.setActionHandler('pause', function() {
+                audioPlayer.pause();
+                isPlaying = false;
+                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+            });
+            
+            navigator.mediaSession.setActionHandler('previoustrack', prevSong);
+            navigator.mediaSession.setActionHandler('nexttrack', nextSong);
         }
         
         function saveSongToDB(file, albumArt) {
@@ -1077,7 +1087,6 @@
             if (window.location.protocol === 'file:') {
                 if (isPlaying) {
                     clearInterval(offlineTimer);
-                    stopBackgroundTimer();
                     offlineTimer = setInterval(() => {
                         if (audioPlayer.paused && isPlaying) {
                             audioPlayer.play();
@@ -1085,7 +1094,6 @@
                     }, 1000);
                 } else {
                     clearInterval(offlineTimer);
-                    stopBackgroundTimer();
                 }
             }
         }
@@ -1268,7 +1276,6 @@
             updateListDisplay();
             updatePlayerControls();
             updateMediaSession(song);
-            stopBackgroundTimer();
             
             if (Notification.permission === 'granted') {
                 updateNotification(song);
@@ -1301,7 +1308,6 @@
             
             if (isPlaying) {
                 audioPlayer.pause();
-                stopBackgroundTimer();
                 isPlaying = false;
                 if ('mediaSession' in navigator) {
                     navigator.mediaSession.playbackState = 'paused';
@@ -1311,7 +1317,6 @@
                     mediaNotification = null;
                 }
                 clearInterval(offlineTimer);
-                stopBackgroundTimer();
             } else {
                 audioPlayer.play().then(() => {
                     isPlaying = true;
@@ -1435,7 +1440,6 @@
                     musicIcon.style.display = 'flex';
                     coverImage.style.display = 'none';
                     clearInterval(offlineTimer);
-                    stopBackgroundTimer();
                 } else if (currentIndex >= index) {
                     if (currentIndex >= queue.length) {
                         currentIndex = queue.length - 1;
@@ -1597,10 +1601,6 @@
                     
                     closeSettingsPopup();
                 }
-                if ('mediaSession' in navigator) {
-                    navigator.mediaSession.setActionHandler('nexttrack', nextSong);
-                    navigator.mediaSession.setActionHandler('previoustrack', prevSong);
-                }
             });
             
             repeatToggle.addEventListener('click', function(e) {
@@ -1716,6 +1716,36 @@
                 audioPlayer.play();
             }
         });
+        
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && isPlaying && audioPlayer.paused) {
+                audioPlayer.play();
+            }
+        });
+        
+        window.addEventListener('pagehide', function() {
+            if (isPlaying) {
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.playbackState = 'playing';
+                }
+            }
+        });
+        
+        window.addEventListener('pageshow', function() {
+            if (isPlaying && audioPlayer.paused) {
+                audioPlayer.play();
+            }
+        });
+        
+        navigator.serviceWorker.addEventListener('message', function(event) {
+            if (event.data.type === 'AUDIO_CONTINUE' && isPlaying && audioPlayer.paused) {
+                audioPlayer.play();
+            }
+            if (event.data.type === 'AUDIO_UPDATE' && isPlaying) {
+                audioPlayer.play();
+            }
+        });
+        
     </script>
 </body>
 </html>
