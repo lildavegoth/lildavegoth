@@ -1,0 +1,45 @@
+import { db } from '@vercel/postgres';
+
+export default async function handler(req, res) {
+  const authHeader = req.headers['x-user-auth'];
+  const user = authHeader ? JSON.parse(authHeader) : null;
+  
+  const ADMIN_USER_ID = 'USER_mk3pkcpw_D63MH2N22';
+  
+  if (!user || user.id !== ADMIN_USER_ID) {
+    return res.status(403).json({ success: false, error: 'Admin only' });
+  }
+
+  try {
+    const client = await db.connect();
+
+    if (req.method === 'POST') {
+      const { action } = req.body;
+
+      if (action === 'select_winner') {
+        const result = await client.sql`
+          SELECT * FROM giveaway_entries 
+          ORDER BY RANDOM() 
+          LIMIT 1;
+        `;
+
+        return res.status(200).json({
+          success: true,
+          winner: result.rows[0] || null
+        });
+      }
+
+      if (action === 'clear_all') {
+        await client.sql`DELETE FROM giveaway_entries`;
+        return res.status(200).json({ success: true, message: 'Cleared all' });
+      }
+    }
+
+    client.release();
+
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Database error' });
+  }
+
+  return res.status(405).json({ success: false, error: 'Method not allowed' });
+}
