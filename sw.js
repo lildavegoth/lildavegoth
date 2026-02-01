@@ -194,32 +194,3 @@ self.addEventListener('message', event => {
         );
     }
 });
-
-// Music Background Playback
-self.addEventListener('sync', event => {
-    if (event.tag === 'audio-playback') {
-        event.waitUntil(handleBackgroundAudio());
-    }
-});
-
-function handleBackgroundAudio() {
-    return self.clients.matchAll().then(clients => {
-        clients.forEach(client => {
-            client.postMessage({type: 'AUDIO_CONTINUE'});
-        });
-    });
-}
-
-self.addEventListener('periodicsync', event => {
-    if (event.tag === 'audio-check') {
-        event.waitUntil(checkAudioPlayback());
-    }
-});
-
-function checkAudioPlayback() {
-    return self.clients.matchAll().then(clients => {
-        clients.forEach(client => {
-            client.postMessage({type: 'AUDIO_UPDATE'});
-        });
-    });
-}
