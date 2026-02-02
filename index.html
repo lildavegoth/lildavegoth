@@ -833,6 +833,8 @@
             padding: 0;
             max-width: 400px;
             width: 90%;
+            background: var(--bg-card);
+            color: var(--text-primary);
         }
         
         #installDialog::backdrop {
@@ -859,11 +861,12 @@
         .dialog-content h3 {
             margin: 0;
             font-size: 1.2em;
+            color: var(--text-primary);
         }
         
         .dialog-content p {
             margin: 5px 0 0 0;
-            color: #666;
+            color: var(--text-secondary);
             font-size: 0.9em;
         }
         
@@ -872,26 +875,29 @@
             gap: 10px;
             margin: 20px 0;
             overflow-x: auto;
+            padding: 10px 0;
         }
         
         .screenshots img {
-            height: 200px;
+            height: 160px;
             border-radius: 8px;
-            border: 1px solid #eee;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .features {
             margin: 20px 0;
             padding: 15px;
-            background: #f5f5f5;
+            background: rgba(193, 252, 50, 0.05);
             border-radius: 8px;
+            border: 1px solid rgba(193, 252, 50, 0.1);
         }
         
         .features div {
             margin: 8px 0;
+            color: var(--text-primary);
         }
         
-        footer {
+        .dialog-content footer {
             display: flex;
             justify-content: flex-end;
             gap: 10px;
@@ -899,18 +905,22 @@
         }
         
         #confirmInstall {
-            background: #007aff;
-            color: white;
+            background: var(--accent-color);
+            color: var(--bg-black);
             border: none;
-            padding: 10px 20px;
+            padding: 12px 24px;
             border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
         }
         
         #cancelInstall {
-            background: transparent;
-            border: 1px solid #ccc;
-            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 24px;
             border-radius: 8px;
+            cursor: pointer;
         }
         
         #closeDialog {
@@ -919,6 +929,22 @@
             border: none;
             font-size: 1.5em;
             cursor: pointer;
+            color: var(--text-secondary);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #closeDialog:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        #confirmInstall:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         
     </style>
@@ -960,28 +986,32 @@
         <dialog id="installDialog">
             <div class="dialog-content">
                 <header>
-                    <img src="/assets/icon-512.png" class="app-icon">
+                    <img src="/images/icons/kiraku-home.png" class="app-icon">
                     <div>
-                        <h3>App Name</h3>
-                        <p>App Description</p>
+                        <h3>lildavegoth</h3>
+                        <p>Creative space for tools, apps & games</p>
                     </div>
                     <button id="closeDialog">&times;</button>
                 </header>
                 
                 <div class="screenshots">
-                    <img src="/assets/screenshot1.png">
-                    <img src="/assets/screenshot2.png">
+                    <img src="/images/4ever.webp">
+                    <img src="/images/card.webp">
+                    <img src="/images/.webp">
                 </div>
                 
                 <div class="features">
                     <div>
-                        <span>Works offline</span>
+                        <span>Works completely offline</span>
                     </div>
                     <div>
-                        <span>Fast loading</span>
+                        <span>All data stays on your device</span>
                     </div>
                     <div>
-                        <span>No ads</span>
+                        <span>No ads or tracking</span>
+                    </div>
+                    <div>
+                        <span>Fast and lightweight</span>
                     </div>
                 </div>
                 
@@ -2092,64 +2122,76 @@
             const confirmInstall = document.getElementById('confirmInstall');
             
             let installPrompt = null;
-        
+            
+            if (!installBtn) return;
+            
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 installPrompt = e;
                 installBtn.style.display = 'flex';
             });
-        
-            if (installBtn) {
-                installBtn.onclick = () => {
-                    if (installDialog) {
-                        installDialog.showModal();
-                    }
-                };
-            }
-        
+            
+            installBtn.onclick = () => {
+                if (!installDialog) return;
+                installDialog.showModal();
+            };
+            
             if (closeDialog) {
                 closeDialog.onclick = () => {
-                    installDialog.close();
+                    if (installDialog) installDialog.close();
                 };
             }
-        
+            
             if (cancelInstall) {
                 cancelInstall.onclick = () => {
-                    installDialog.close();
+                    if (installDialog) installDialog.close();
                 };
             }
-        
+            
             if (confirmInstall) {
                 confirmInstall.onclick = async () => {
-                    if (installPrompt) {
-                        const originalText = confirmInstall.textContent;
-                        confirmInstall.textContent = 'Installing...';
-                        confirmInstall.disabled = true;
+                    if (!installPrompt) {
+                        if (installDialog) installDialog.close();
+                        return;
+                    }
+                    
+                    const originalText = confirmInstall.textContent;
+                    confirmInstall.textContent = 'Installing...';
+                    confirmInstall.disabled = true;
+                    
+                    try {
+                        await installPrompt.prompt();
+                        const result = await installPrompt.userChoice;
                         
-                        try {
-                            await installPrompt.prompt();
-                            const result = await installPrompt.userChoice;
-                            
-                            if (result.outcome === 'accepted') {
-                                installBtn.style.display = 'none';
-                            }
-                        } catch {
-                            confirmInstall.textContent = originalText;
-                            confirmInstall.disabled = false;
+                        if (result.outcome === 'accepted') {
+                            installBtn.style.display = 'none';
+                            confirmInstall.textContent = 'Installed!';
                         }
                         
-                        installDialog.close();
+                        installPrompt = null;
+                        
+                    } catch {
+                        confirmInstall.textContent = originalText;
+                        confirmInstall.disabled = false;
                     }
+                    
+                    if (installDialog) installDialog.close();
                 };
             }
-        
+            
             window.addEventListener('appinstalled', () => {
-                installBtn.style.display = 'none';
+                if (installBtn) {
+                    installBtn.style.display = 'none';
+                }
                 installPrompt = null;
+                
+                if (installDialog) installDialog.close();
             });
-        
+            
             if (window.matchMedia('(display-mode: standalone)').matches) {
-                installBtn.style.display = 'none';
+                if (installBtn) {
+                    installBtn.style.display = 'none';
+                }
             }
         }
         
