@@ -827,40 +827,6 @@
             transform: translateY(-3px);
         }
         
-        #installDialog {
-          background: var(--bg-card);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: var(--radius-large);
-          width: 90%;
-          max-width: 500px;
-          padding: 0;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%) scale(0.9);
-          opacity: 0;
-          transition: transform 0.3s ease, opacity 0.3s ease;
-          z-index: 999999999;
-        }
-        
-        #installDialog[open] {
-          transform: translate(-50%, -50%) scale(1);
-          opacity: 1;
-        }
-        
-        #installDialog::backdrop {
-          background: rgba(0, 0, 0, 0.7);
-          backdrop-filter: blur(10px);
-        }
-        
-        #installDialog header {
-          display: flex;
-          align-items: center;
-          padding: 20px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
     </style>
 </head>
 <body>
@@ -1464,48 +1430,30 @@
     <!-- Overlay for vertical bar -->
     <div class="vertical-bar-overlay" id="verticalBarOverlay"></div>
     
-    <dialog id="installDialog">
-      <section>
-        <header>
-          <div class="img icon-app-icon" style="width: 60px; height: 60px; border-radius: var(--radius-medium); margin-right: 16px;"></div>
-          <div class="heading">
-            <span style="font-weight: 600; font-size: 1.2rem;">lildavegoth</span>
-            <span style="color: var(--text-secondary); font-size: 0.9rem;">Tools, games, and creative projects</span>
-          </div>
-          <button type="button" id="closeInstallDialog" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; padding: 8px;">
-            <i class="fas fa-times"></i>
-          </button>
-        </header>
-    
-        <div class="body" style="padding: 20px; overflow-y: auto; max-height: 300px;">
-          <p style="margin-bottom: 20px; color: var(--text-secondary);">Install this web app on your device for quick access and a better experience.</p>
-          
-          <ul style="list-style: none; padding: 0; margin: 0;">
-            <li style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-              <i class="fas fa-home" style="color: var(--accent-color); margin-right: 12px; width: 24px;"></i>
-              <span>Quick access from home screen</span>
-            </li>
-            <li style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-              <i class="fas fa-bolt" style="color: var(--accent-color); margin-right: 12px; width: 24px;"></i>
-              <span>Fast loading</span>
-            </li>
-            <li style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-              <i class="fas fa-wifi-slash" style="color: var(--accent-color); margin-right: 12px; width: 24px;"></i>
-              <span>Works offline</span>
-            </li>
-            <li style="display: flex; align-items: center; padding: 12px 0;">
-              <i class="fas fa-bell" style="color: var(--accent-color); margin-right: 12px; width: 24px;"></i>
-              <span>Notifications</span>
-            </li>
-          </ul>
+    <!-- Install Confirmation Dialog -->
+    <div id="installDialog" class="popup-overlay" style="display: none;">
+        <div class="popup-content blur-background" style="max-width: 400px;">
+            <div class="popup-header">
+                <h2>Install App</h2>
+                <button class="close-popup" onclick="closeInstallDialog()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="padding: var(--spacing-lg); text-align: center;">
+                <div class="img ing-kiraku-home" style="width: 80px; height: 80px; margin: 0 auto var(--spacing-md); border-radius: var(--radius-medium); border: 1px solid rgba(255, 255, 255, 0.1);"></div>
+                <h3 style="margin-bottom: var(--spacing-xs);">lildavegoth</h3>
+                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-lg); font-size: 0.95rem; line-height: 1.5;">
+                    Install this app for quick access to all projects, games, and tools. Works offline and loads faster.
+                </p>
+                <button id="confirmInstallBtn" style="width: 100%; padding: var(--spacing-md); background: var(--accent-color); color: var(--bg-black); border: none; border-radius: var(--radius-medium); font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;">
+                    Install App
+                </button>
+                <button onclick="closeInstallDialog()" style="width: 100%; padding: var(--spacing-md); background: transparent; color: var(--text-secondary); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-medium); font-weight: 500; font-size: 0.95rem; cursor: pointer; transition: all 0.3s ease; margin-top: var(--spacing-sm);">
+                    Cancel
+                </button>
+            </div>
         </div>
-    
-        <footer style="padding: 16px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: flex-end; gap: 12px;">
-          <button id="cancelInstall" style="padding: 10px 20px; border-radius: var(--radius-medium); background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-primary); cursor: pointer;">Later</button>
-          <button id="confirmInstall" style="padding: 10px 20px; border-radius: var(--radius-medium); background: var(--accent-color); border: none; color: black; font-weight: 600; cursor: pointer;">Install</button>
-        </footer>
-      </section>
-    </dialog>
+    </div>
     
     <script>
         let deferredPrompt;
@@ -2034,99 +1982,87 @@
         }
 
         function setupInstallButton() {
-          const installBtn = document.getElementById('installAppBtn');
-          let installPrompt;
-          
-          window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            installPrompt = e;
-          });
-          
-          if (installBtn) {
-            installBtn.onclick = async () => {
-              if (!installPrompt) {
-                const dialog = document.getElementById('installDialog');
-                if (dialog) {
-                  dialog.showModal();
-                }
-                return;
-              }
-              
-              installPrompt.prompt();
-              const result = await installPrompt.userChoice;
-              
-              if (result.outcome === 'accepted') {
+            const installBtn = document.getElementById('installAppBtn');
+            const confirmInstallBtn = document.getElementById('confirmInstallBtn');
+            let installPrompt;
+            
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                installPrompt = e;
+            });
+            
+            if (installBtn) {
+                installBtn.onclick = () => {
+                    showInstallDialog();
+                };
+            }
+            
+            if (confirmInstallBtn) {
+                confirmInstallBtn.onclick = async () => {
+                    if (!installPrompt) return;
+                    
+                    confirmInstallBtn.innerHTML = 'Caching...';
+                    confirmInstallBtn.disabled = true;
+                    
+                    try {
+                        await cacheAllFiles();
+                        
+                        installPrompt.prompt();
+                        const result = await installPrompt.userChoice;
+                        
+                        if (result.outcome === 'accepted') {
+                            confirmInstallBtn.innerHTML = '✓ Installed!';
+                            setTimeout(() => {
+                                closeInstallDialog();
+                            }, 1500);
+                        } else {
+                            confirmInstallBtn.innerHTML = 'Install App';
+                            confirmInstallBtn.disabled = false;
+                        }
+                        
+                        installPrompt = null;
+                    } catch (error) {
+                        confirmInstallBtn.innerHTML = 'Install App';
+                        confirmInstallBtn.disabled = false;
+                    }
+                };
+            }
+            
+            window.addEventListener('appinstalled', () => {
+                closeInstallDialog();
                 installPrompt = null;
-              }
-            };
-          }
-          
-          window.addEventListener('appinstalled', () => {
-            installPrompt = null;
-            const dialog = document.getElementById('installDialog');
-            if (dialog) {
-              dialog.close();
+            });
+            
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                if (installBtn) installBtn.style.display = 'none';
             }
-          });
-        
-        function setupInstallDialog() {
-          const dialog = document.getElementById('installDialog');
-          const closeBtn = document.getElementById('closeInstallDialog');
-          const cancelBtn = document.getElementById('cancelInstall');
-          const confirmBtn = document.getElementById('confirmInstall');
-          let installPrompt;
-          
-          window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            installPrompt = e;
-          });
-          
-          if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-              dialog.close();
-            });
-          }
-          
-          if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => {
-              dialog.close();
-            });
-          }
-          
-          if (confirmBtn) {
-            confirmBtn.addEventListener('click', async () => {
-              dialog.close();
-              
-              if (installPrompt) {
-                installPrompt.prompt();
-                const result = await installPrompt.userChoice;
-                
-                if (result.outcome === 'accepted') {
-                  installPrompt = null;
-                }
-              }
-            });
-          }
-          
-          dialog.addEventListener('click', (e) => {
-            if (e.target === dialog) {
-              dialog.close();
-            }
-          });
         }
         
-        // Function to cache all files
+        function showInstallDialog() {
+            document.getElementById('installDialog').style.display = 'flex';
+        }
+        
+        function closeInstallDialog() {
+            const dialog = document.getElementById('installDialog');
+            const confirmBtn = document.getElementById('confirmInstallBtn');
+            
+            dialog.style.display = 'none';
+            
+            if (confirmBtn) {
+                confirmBtn.innerHTML = 'Install App';
+                confirmBtn.disabled = false;
+            }
+        }
+        
         async function cacheAllFiles() {
             if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
                 return;
             }
             
-            // Send message to Service Worker to cache all files
             navigator.serviceWorker.controller.postMessage({
                 type: 'CACHE_ALL'
             });
             
-            // Wait a bit for caching to complete
             return new Promise(resolve => setTimeout(resolve, 2000));
         }
         
@@ -2204,8 +2140,6 @@
             setupCreditsButton();
             setupSearchDebounce();
             setupInstallButton();
-            setupInstallButton();
-            setupInstallDialog();
         });
         
         document.addEventListener('click', function(event) {
@@ -2246,6 +2180,63 @@
             
             const user = authCheck.isUserLoggedIn();
         }
+        
+        document.addEventListener('click', function(event) {
+            const popup = document.getElementById('universalPopup');
+            const popupContent = document.querySelector('#universalPopup .popup-content');
+            
+            if (popup.style.display === 'flex' && 
+                popupContent && 
+                !popupContent.contains(event.target)) {
+                
+                const isPopupTrigger = event.target.closest('.project-card[onclick*="openPopup"]') || 
+                                       event.target.closest('#creditsVerticalBtn');
+                
+                if (!isPopupTrigger) {
+                    closeUniversalPopup();
+                }
+            }
+            
+            const installDialog = document.getElementById('installDialog');
+            const installDialogContent = document.querySelector('#installDialog .popup-content');
+            
+            if (installDialog.style.display === 'flex' && 
+                installDialogContent && 
+                !installDialogContent.contains(event.target)) {
+                closeInstallDialog();
+            }
+        });
+        
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                if (document.getElementById('universalPopup').style.display === 'flex') {
+                    closeUniversalPopup();
+                }
+                if (document.getElementById('installDialog').style.display === 'flex') {
+                    closeInstallDialog();
+                }
+            }
+        });
+        
+        document.addEventListener('click', function(event) {
+            if (verticalBar.classList.contains('active') && 
+                !verticalBar.contains(event.target) && 
+                event.target !== moreButton && 
+                !moreButton.contains(event.target)) {
+                verticalBar.classList.remove('active');
+                overlay.classList.remove('active');
+                moreButton.classList.remove('active');
+            }
+            
+            const installDialog = document.getElementById('installDialog');
+            if (installDialog.style.display === 'flex') {
+                const isInstallButton = event.target.closest('#installAppBtn') || 
+                                        event.target.closest('#confirmInstallBtn');
+                if (!isInstallButton) {
+                    closeInstallDialog();
+                }
+            }
+        });
         
     </script>
 </body>
