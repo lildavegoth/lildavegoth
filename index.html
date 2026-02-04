@@ -1488,12 +1488,10 @@
     </div>
     
     <script>
-        let installBtn = document.getElementById('installAppBtn');
         let deferredPrompt = null;
         let swRegistration = null;
-        
-        installBtn.style.display = 'none';
-        
+        let installBtn = document.getElementById('installAppBtn');
+
         function openInstallDialog() {
             document.getElementById('installDialog').style.display = 'flex';
         }
@@ -1511,9 +1509,6 @@
         
             navigator.serviceWorker.register('sw.js')
                 .then(reg => {
-                    swRegistration = reg;
-                    reg.update();
-        
                     if (reg.waiting) updateButton('update');
                     if (reg.installing) trackInstalling(reg.installing);
         
@@ -1522,16 +1517,6 @@
                     });
                 });
         
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                window.location.reload();
-            });
-        
-            window.addEventListener('beforeinstallprompt', e => {
-                e.preventDefault();
-                deferredPrompt = e;
-                updateButton('install');
-            });
-        
             window.addEventListener('appinstalled', () => {
                 hideButton();
                 closeInstallDialog();
@@ -1539,6 +1524,20 @@
         
             if (navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
                 hideButton();
+            }
+            
+            showInstallButton();
+        }
+        
+        function showInstallButton() {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+            
+            if ((isIOS || isChrome) && !navigator.standalone && !window.matchMedia('(display-mode: standalone)').matches) {
+                installBtn.innerHTML = '<span class="icon icon-install"></span>';
+                installBtn.dataset.tooltip = 'Install App';
+                installBtn.style.display = 'flex';
+                installBtn.onclick = openInstallDialog;
             }
         }
         
@@ -1553,12 +1552,7 @@
         function updateButton(mode) {
             if (!installBtn) return;
         
-            if (mode === 'install' && deferredPrompt) {
-                installBtn.innerHTML = '<span class="icon icon-install"></span>';
-                installBtn.dataset.tooltip = 'Install App';
-                installBtn.style.display = 'flex';
-                installBtn.onclick = openInstallDialog;
-            } else if (mode === 'update') {
+            if (mode === 'update') {
                 installBtn.innerHTML = '<span class="icon icon-install"></span>';
                 installBtn.dataset.tooltip = 'Update App';
                 installBtn.style.display = 'flex';
@@ -2172,28 +2166,21 @@
             
             const confirmBtn = document.getElementById('confirmInstallBtn');
             if (confirmBtn) {
-                confirmBtn.onclick = async () => {
-                    if (deferredPrompt) {
-                        try {
-                            await deferredPrompt.prompt();
-                            const choiceResult = await deferredPrompt.userChoice;
-                            
-                            if (choiceResult.outcome === 'accepted') {
-                                installBtn.innerHTML = '<span class="icon icon-install"></span>';
-                                installBtn.dataset.tooltip = 'Installed';
-                                installBtn.style.opacity = '0.5';
-                                installBtn.style.pointerEvents = 'none';
-                                
-                                setTimeout(() => {
-                                    hideButton();
-                                }, 2000);
-                            }
-                            deferredPrompt = null;
-                        } catch (err) {
-                            closeInstallDialog();
-                        }
-                    }
+                confirmBtn.onclick = () => {
                     closeInstallDialog();
+                    hideButton();
+                    
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                    
+                    if (isIOS) {
+                        setTimeout(() => {
+                            alert('To install: Tap Share → Add to Home Screen');
+                        }, 100);
+                    } else {
+                        setTimeout(() => {
+                            alert('To install: Tap Menu (⋮) → Install App');
+                        }, 100);
+                    }
                 };
             }
             
