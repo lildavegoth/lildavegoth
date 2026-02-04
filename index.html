@@ -1534,6 +1534,7 @@
         
             window.addEventListener('appinstalled', () => {
                 hideButton();
+                closeInstallDialog();
             });
         
             if (navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
@@ -2171,19 +2172,28 @@
             
             const confirmBtn = document.getElementById('confirmInstallBtn');
             if (confirmBtn) {
-                confirmBtn.onclick = () => {
+                confirmBtn.onclick = async () => {
                     if (deferredPrompt) {
-                        deferredPrompt.prompt();
-                        deferredPrompt.userChoice.then(choice => {
-                            if (choice.outcome === 'accepted') {
-                                installBtn.innerHTML = '<span>Installed!</span>';
-                                delete installBtn.dataset.tooltip;
-                                setTimeout(hideButton, 2000);
+                        try {
+                            await deferredPrompt.prompt();
+                            const choiceResult = await deferredPrompt.userChoice;
+                            
+                            if (choiceResult.outcome === 'accepted') {
+                                installBtn.innerHTML = '<span class="icon icon-install"></span>';
+                                installBtn.dataset.tooltip = 'Installed';
+                                installBtn.style.opacity = '0.5';
+                                installBtn.style.pointerEvents = 'none';
+                                
+                                setTimeout(() => {
+                                    hideButton();
+                                }, 2000);
                             }
                             deferredPrompt = null;
-                        });
-                        closeInstallDialog();
+                        } catch (err) {
+                            closeInstallDialog();
+                        }
                     }
+                    closeInstallDialog();
                 };
             }
             
