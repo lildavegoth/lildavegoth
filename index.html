@@ -11,9 +11,14 @@
     <link rel="stylesheet" href="../navigation.css">
     
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="images/icons/kiraku-home.png">
+    <link rel="apple-touch-icon" href="images/icons/kiraku-home.png">
+    <meta name="theme-color" content="#C1FC32">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="Kakoi Kiraku Home">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kakoi Kiraku">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Kakoi Kiraku">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1452,7 +1457,20 @@
     </div>
     
     <script>
-        let deferredPrompt;
+        let installPrompt;
+        let isPWAInstalled = false;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            installPrompt = e;
+        });
+        
+        window.addEventListener('appinstalled', () => {
+            installPrompt = null;
+            isPWAInstalled = true;
+            const installBtn = document.getElementById('installAppBtn');
+            if (installBtn) installBtn.style.display = 'none';
+        });
         
         function switchPage(page) {
             const currentActivePage = document.querySelector('.page-section.active');
@@ -1982,11 +2000,6 @@
             const confirmInstallBtn = document.getElementById('confirmInstallBtn');
             let installPrompt;
             
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                installPrompt = e;
-            });
-            
             if (installBtn) {
                 installBtn.onclick = () => {
                     showInstallDialog();
@@ -2024,12 +2037,7 @@
                 };
             }
             
-            window.addEventListener('appinstalled', () => {
-                closeInstallDialog();
-                installPrompt = null;
-            });
-            
-            if (window.matchMedia('(display-mode: standalone)').matches) {
+            if (window.matchMedia('(display-mode: fullscreen)').matches) {
                 if (installBtn) installBtn.style.display = 'none';
             }
         }
@@ -2163,11 +2171,9 @@
         });
         
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js', { scope: './' })
-                .then(reg => {
-                })
-                .catch(err => {
-                });
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js');
+            });
         }
 
         // Auth Check (keep existing functionality)
