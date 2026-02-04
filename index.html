@@ -8,7 +8,7 @@
     <script src="protections.js"></script>
     <script src="auth-check.js"></script>
     <link rel="stylesheet" href="media.css">
-    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="navigation.css">
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="images/icons/kiraku-home.png">
@@ -1457,12 +1457,58 @@
     
     <script>
         let installPrompt = null;
+        let deferredPrompt = null;
 
-        window.addEventListener('beforeinstallprompt', (e) => {
+        window.addEventListener('beforeinstallprompt', e => {
             e.preventDefault();
-            installPrompt = e;
+            deferredPrompt = e;
         });
         
+        function isAppInstalled() {
+            return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        }
+        
+        function forceCache() {
+            navigator.serviceWorker.ready.then(reg => {
+                if (reg.active) {
+                    reg.active.postMessage({type: 'CACHE_ALL'});
+                }
+            });
+        }
+        
+        function updateInstallDialog() {
+            const title = document.getElementById('popupTitle'); // change if your title element has different ID
+            const content = document.getElementById('popupContent'); // change if your message area has different ID
+            const confirmBtn = document.getElementById('confirmInstallBtn');
+        
+            if (isAppInstalled()) {
+                title.textContent = 'Already Installed';
+                content.innerHTML = '<p>The app is already installed and ready to use offline.</p>';
+                confirmBtn.textContent = 'OK';
+                confirmBtn.onclick = () => {
+                    document.getElementById('installDialog').style.display = 'none';
+                };
+            } else if (deferredPrompt) {
+                title.textContent = 'Install App';
+                content.innerHTML = '<p>Add to home screen for offline use and faster loading.</p>';
+                confirmBtn.textContent = 'Install';
+                confirmBtn.onclick = () => {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then(() => {
+                        deferredPrompt = null;
+                    });
+                    document.getElementById('installDialog').style.display = 'none';
+                };
+            } else {
+                title.textContent = 'Cannot Install Yet';
+                content.innerHTML = '<p>Reload the page or use the site more to enable installation.</p>';
+                confirmBtn.textContent = 'OK';
+                confirmBtn.onclick = () => {
+                    document.getElementById('installDialog').style.display = 'none';
+                };
+            }
+        }
+
         function handleInstallClick() {
             showInstallDialog();
         }
@@ -1514,6 +1560,18 @@
             window.matchMedia('(display-mode: fullscreen)').matches) {
             const installBtn = document.getElementById('installAppBtn');
             if (installBtn) installBtn.style.display = 'none';
+        }
+        
+        function setupInstallButton() {
+            const installBtn = document.querySelector('.vertical-more-btn.install');
+        
+            if (installBtn) {
+                installBtn.addEventListener('click', () => {
+                    forceCache();
+                    document.getElementById('installDialog').style.display = 'flex';
+                    updateInstallDialog();
+                });
+            }
         }
         
         async function cacheAllFiles() {

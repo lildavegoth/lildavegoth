@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v4';
+const CACHE_NAME = 'kakoi-kiraku-app-v5';
 const CACHE_FILES = [
     // Root
     'account.html',
