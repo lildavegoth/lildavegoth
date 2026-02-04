@@ -1441,10 +1441,6 @@
             </div>
             <div style="padding: var(--spacing-lg); text-align: center;">
                 <div class="img ing-kiraku-home" style="width: 80px; height: 80px; margin: 0 auto var(--spacing-md); border-radius: var(--radius-medium); border: 1px solid rgba(255, 255, 255, 0.1);"></div>
-                <h3 style="margin-bottom: var(--spacing-xs);">lildavegoth</h3>
-                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-lg); font-size: 0.95rem; line-height: 1.5;">
-                    Install this app for quick access to all projects, games, and tools. Works offline and loads faster.
-                </p>
                 <button id="confirmInstallBtn" style="width: 100%; padding: var(--spacing-md); background: var(--accent-color); color: var(--bg-black); border: none; border-radius: var(--radius-medium); font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;">
                     Install App
                 </button>
@@ -1457,6 +1453,9 @@
     
     <script>
         let deferredPrompt;
+        let verticalBar;
+        let overlay;
+        let moreButton;
         
         function switchPage(page) {
             const currentActivePage = document.querySelector('.page-section.active');
@@ -1880,9 +1879,9 @@
         }
         
         function setupVerticalBarToggle() {
-            const moreButton = document.getElementById('moreButton');
-            const verticalBar = document.getElementById('verticalMoreBar');
-            const overlay = document.getElementById('verticalBarOverlay');
+            moreButton = document.getElementById('moreButton');
+            verticalBar = document.getElementById('verticalMoreBar');
+            overlay = document.getElementById('verticalBarOverlay');
             
             if (moreButton && verticalBar && overlay) {
                 moreButton.addEventListener('click', function(event) {
@@ -1891,41 +1890,32 @@
                     const isActive = verticalBar.classList.contains('active');
                     
                     if (isActive) {
-                        // Hide vertical bar
                         verticalBar.classList.remove('active');
                         overlay.classList.remove('active');
                         moreButton.classList.remove('active');
                     } else {
-                        // Get the More button position
                         const moreBtnRect = moreButton.getBoundingClientRect();
-                        
-                        // Calculate the exact center of the More button
                         const buttonCenterX = moreBtnRect.left + (moreBtnRect.width / 2);
-                        
                         const isMobile = window.innerWidth <= 768;
-                        const leftOffset = isMobile ? 30 : 50; // Less offset on mobile, more on desktop
+                        const leftOffset = isMobile ? 30 : 50;
                         const verticalBarCenterX = buttonCenterX - (verticalBar.offsetWidth / 2) - leftOffset;
                         const bottomPosition = window.innerWidth <= 768 ? '90px' : '120px';
                         
-                        // Set the position
                         verticalBar.style.left = verticalBarCenterX + 'px';
                         verticalBar.style.bottom = bottomPosition;
                         
-                        // Show vertical bar
                         verticalBar.classList.add('active');
                         overlay.classList.add('active');
                         moreButton.classList.add('active');
                     }
                 });
                 
-                // Close when clicking overlay
                 overlay.addEventListener('click', function() {
                     verticalBar.classList.remove('active');
                     overlay.classList.remove('active');
                     moreButton.classList.remove('active');
                 });
                 
-                // Close when clicking outside
                 document.addEventListener('click', function(event) {
                     if (verticalBar.classList.contains('active') && 
                         !verticalBar.contains(event.target) && 
@@ -1937,7 +1927,6 @@
                     }
                 });
                 
-                // Close with Escape key
                 document.addEventListener('keydown', function(event) {
                     if (event.key === 'Escape' && verticalBar.classList.contains('active')) {
                         verticalBar.classList.remove('active');
@@ -1946,7 +1935,6 @@
                     }
                 });
                 
-                // Close vertical bar when clicking any button inside it
                 verticalBar.querySelectorAll('.vertical-more-btn').forEach(button => {
                     button.addEventListener('click', function() {
                         setTimeout(() => {
@@ -1957,7 +1945,6 @@
                     });
                 });
                 
-                // Reposition on scroll
                 window.addEventListener('scroll', function() {
                     if (verticalBar.classList.contains('active')) {
                         const moreBtnRect = moreButton.getBoundingClientRect();
@@ -1968,7 +1955,6 @@
                     }
                 });
                 
-                // Reposition on resize
                 window.addEventListener('resize', function() {
                     if (verticalBar.classList.contains('active')) {
                         const moreBtnRect = moreButton.getBoundingClientRect();
@@ -1984,55 +1970,76 @@
         function setupInstallButton() {
             const installBtn = document.getElementById('installAppBtn');
             const confirmInstallBtn = document.getElementById('confirmInstallBtn');
-            let installPrompt;
             
+            setupBeforeInstallPrompt();
+            setupInstallButtonClick(installBtn);
+            setupConfirmButtonClick(confirmInstallBtn);
+            setupAppInstalledEvent();
+            hideInstallIfAlreadyInstalled(installBtn);
+        }
+        
+        function setupBeforeInstallPrompt() {
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
-                installPrompt = e;
+                deferredPrompt = e;
             });
-            
+        }
+        
+        function setupInstallButtonClick(installBtn) {
             if (installBtn) {
                 installBtn.onclick = () => {
                     showInstallDialog();
                 };
             }
-            
+        }
+        
+        function setupConfirmButtonClick(confirmInstallBtn) {
             if (confirmInstallBtn) {
                 confirmInstallBtn.onclick = async () => {
-                    if (!installPrompt) return;
+                    if (!deferredPrompt) return;
                     
                     confirmInstallBtn.innerHTML = 'Caching...';
                     confirmInstallBtn.disabled = true;
                     
                     try {
                         await cacheAllFiles();
-                        
-                        installPrompt.prompt();
-                        const result = await installPrompt.userChoice;
-                        
-                        if (result.outcome === 'accepted') {
-                            confirmInstallBtn.innerHTML = '✓ Installed!';
-                            setTimeout(() => {
-                                closeInstallDialog();
-                            }, 1500);
-                        } else {
-                            confirmInstallBtn.innerHTML = 'Install App';
-                            confirmInstallBtn.disabled = false;
-                        }
-                        
-                        installPrompt = null;
+                        await triggerInstallPrompt(confirmInstallBtn);
                     } catch (error) {
-                        confirmInstallBtn.innerHTML = 'Install App';
-                        confirmInstallBtn.disabled = false;
+                        resetConfirmButton(confirmInstallBtn);
                     }
                 };
             }
+        }
+        
+        async function triggerInstallPrompt(confirmInstallBtn) {
+            deferredPrompt.prompt();
+            const result = await deferredPrompt.userChoice;
             
+            if (result.outcome === 'accepted') {
+                confirmInstallBtn.innerHTML = '✓ Installed!';
+                setTimeout(() => {
+                    closeInstallDialog();
+                }, 1500);
+            } else {
+                resetConfirmButton(confirmInstallBtn);
+            }
+            
+            deferredPrompt = null;
+        }
+        
+        function resetConfirmButton(confirmInstallBtn) {
+            confirmInstallBtn.innerHTML = 'Install App';
+            confirmInstallBtn.disabled = false;
+        }
+        
+        function setupAppInstalledEvent() {
             window.addEventListener('appinstalled', () => {
                 closeInstallDialog();
-                installPrompt = null;
+                deferredPrompt = null;
             });
-            
+        }
+        
+        function hideInstallIfAlreadyInstalled(installBtn) {
             if (window.matchMedia('(display-mode: standalone)').matches) {
                 if (installBtn) installBtn.style.display = 'none';
             }
@@ -2049,8 +2056,7 @@
             dialog.style.display = 'none';
             
             if (confirmBtn) {
-                confirmBtn.innerHTML = 'Install App';
-                confirmBtn.disabled = false;
+                resetConfirmButton(confirmBtn);
             }
         }
         
