@@ -13,7 +13,6 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="images/icons/kiraku-home.png">
     <link rel="apple-touch-icon" href="images/icons/kiraku-home.png">
-    <meta name="theme-color" content="#C1FC32">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Kakoi Kiraku">
@@ -859,7 +858,7 @@
             </button>
             
             <!-- Install App -->
-            <button class="vertical-more-btn" data-tooltip="Install App" id="installAppBtn">
+            <button class="vertical-more-btn" data-tooltip="Install App" id="installAppBtn" onclick="handleInstallClick()">
                 <span class="icon icon-install"></span>
             </button>
             
@@ -1446,7 +1445,7 @@
             </div>
             <div style="padding: var(--spacing-lg); text-align: center;">
                 <div class="img ing-kiraku-home" style="width: 80px; height: 80px; margin: 0 auto var(--spacing-md); border-radius: var(--radius-medium); border: 1px solid rgba(255, 255, 255, 0.1);"></div>
-                <button id="confirmInstallBtn" style="width: 100%; padding: var(--spacing-md); background: var(--accent-color); color: var(--bg-black); border: none; border-radius: var(--radius-medium); font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;">
+                <button id="confirmInstallBtn" onclick="installApp()" style="width: 100%; padding: var(--spacing-md); background: var(--accent-color); color: var(--bg-black); border: none; border-radius: var(--radius-medium); font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;">
                     Install App
                 </button>
                 <button onclick="closeInstallDialog()" style="width: 100%; padding: var(--spacing-md); background: transparent; color: var(--text-secondary); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-medium); font-weight: 500; font-size: 0.95rem; cursor: pointer; transition: all 0.3s ease; margin-top: var(--spacing-sm);">
@@ -1457,20 +1456,77 @@
     </div>
     
     <script>
-        let installPrompt;
-        let isPWAInstalled = false;
-        
+        let installPrompt = null;
+
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             installPrompt = e;
         });
         
+        function handleInstallClick() {
+            showInstallDialog();
+        }
+        
+        function showInstallDialog() {
+            document.getElementById('installDialog').style.display = 'flex';
+        }
+        
+        function closeInstallDialog() {
+            document.getElementById('installDialog').style.display = 'none';
+            const confirmBtn = document.getElementById('confirmInstallBtn');
+            if (confirmBtn) {
+                confirmBtn.innerHTML = 'Install App';
+                confirmBtn.disabled = false;
+            }
+        }
+        
+        async function installApp() {
+            const confirmBtn = document.getElementById('confirmInstallBtn');
+            
+            if (installPrompt) {
+                confirmBtn.innerHTML = 'Installing...';
+                confirmBtn.disabled = true;
+                
+                installPrompt.prompt();
+                const result = await installPrompt.userChoice;
+                
+                if (result.outcome === 'accepted') {
+                    confirmBtn.innerHTML = '✓ Installed!';
+                    setTimeout(closeInstallDialog, 1500);
+                } else {
+                    confirmBtn.innerHTML = 'Install App';
+                    confirmBtn.disabled = false;
+                }
+                
+                installPrompt = null;
+            } else {
+                closeInstallDialog();
+            }
+        }
+        
         window.addEventListener('appinstalled', () => {
             installPrompt = null;
-            isPWAInstalled = true;
             const installBtn = document.getElementById('installAppBtn');
             if (installBtn) installBtn.style.display = 'none';
         });
+        
+        if (window.matchMedia('(display-mode: standalone)').matches || 
+            window.matchMedia('(display-mode: fullscreen)').matches) {
+            const installBtn = document.getElementById('installAppBtn');
+            if (installBtn) installBtn.style.display = 'none';
+        }
+        
+        async function cacheAllFiles() {
+            if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+                return;
+            }
+            
+            navigator.serviceWorker.controller.postMessage({
+                type: 'CACHE_ALL'
+            });
+            
+            return new Promise(resolve => setTimeout(resolve, 2000));
+        }
         
         function switchPage(page) {
             const currentActivePage = document.querySelector('.page-section.active');
@@ -1993,81 +2049,6 @@
                     }
                 });
             }
-        }
-
-        function setupInstallButton() {
-            const installBtn = document.getElementById('installAppBtn');
-            const confirmInstallBtn = document.getElementById('confirmInstallBtn');
-            let installPrompt;
-            
-            if (installBtn) {
-                installBtn.onclick = () => {
-                    showInstallDialog();
-                };
-            }
-            
-            if (confirmInstallBtn) {
-                confirmInstallBtn.onclick = async () => {
-                    if (!installPrompt) return;
-                    
-                    confirmInstallBtn.innerHTML = 'Caching...';
-                    confirmInstallBtn.disabled = true;
-                    
-                    try {
-                        await cacheAllFiles();
-                        
-                        installPrompt.prompt();
-                        const result = await installPrompt.userChoice;
-                        
-                        if (result.outcome === 'accepted') {
-                            confirmInstallBtn.innerHTML = '✓ Installed!';
-                            setTimeout(() => {
-                                closeInstallDialog();
-                            }, 1500);
-                        } else {
-                            confirmInstallBtn.innerHTML = 'Install App';
-                            confirmInstallBtn.disabled = false;
-                        }
-                        
-                        installPrompt = null;
-                    } catch (error) {
-                        confirmInstallBtn.innerHTML = 'Install App';
-                        confirmInstallBtn.disabled = false;
-                    }
-                };
-            }
-            
-            if (window.matchMedia('(display-mode: fullscreen)').matches) {
-                if (installBtn) installBtn.style.display = 'none';
-            }
-        }
-        
-        function showInstallDialog() {
-            document.getElementById('installDialog').style.display = 'flex';
-        }
-        
-        function closeInstallDialog() {
-            const dialog = document.getElementById('installDialog');
-            const confirmBtn = document.getElementById('confirmInstallBtn');
-            
-            dialog.style.display = 'none';
-            
-            if (confirmBtn) {
-                confirmBtn.innerHTML = 'Install App';
-                confirmBtn.disabled = false;
-            }
-        }
-        
-        async function cacheAllFiles() {
-            if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
-                return;
-            }
-            
-            navigator.serviceWorker.controller.postMessage({
-                type: 'CACHE_ALL'
-            });
-            
-            return new Promise(resolve => setTimeout(resolve, 2000));
         }
         
         // Share functionality for vertical bar
