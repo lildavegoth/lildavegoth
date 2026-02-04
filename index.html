@@ -1456,7 +1456,84 @@
     </div>
     
     <script>
-        let deferredPrompt;
+        let installBtn = document.getElementById('installAppBtn');
+        let deferredPrompt = null;
+        let swRegistration = null;
+        
+        function initPWA() {
+            if (!('serviceWorker' in navigator)) return;
+        
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => {
+                    swRegistration = reg;
+                    reg.update();
+        
+                    if (reg.waiting) updateButton('update');
+                    if (reg.installing) trackInstalling(reg.installing);
+        
+                    reg.addEventListener('updatefound', () => {
+                        if (reg.installing) trackInstalling(reg.installing);
+                    });
+                });
+        
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+        
+            window.addEventListener('beforeinstallprompt', e => {
+                e.preventDefault();
+                deferredPrompt = e;
+                updateButton('install');
+            });
+        
+            window.addEventListener('appinstalled', () => {
+                hideButton();
+            });
+        
+            if (navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
+                hideButton();
+            }
+        }
+        
+        function trackInstalling(worker) {
+            worker.addEventListener('statechange', () => {
+                if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                    updateButton('update');
+                }
+            });
+        }
+        
+        function updateButton(mode) {
+            if (!installBtn) return;
+        
+            if (mode === 'install' && deferredPrompt) {
+                installBtn.innerHTML = '<span>Install App</span>';
+                installBtn.style.display = 'flex';
+                installBtn.onclick = () => {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then(choice => {
+                        if (choice.outcome === 'accepted') {
+                            installBtn.innerHTML = '<span>Installed!</span>';
+                            setTimeout(hideButton, 2000);
+                        }
+                        deferredPrompt = null;
+                    });
+                };
+            } else if (mode === 'update') {
+                installBtn.innerHTML = '<span>Update App</span>';
+                installBtn.style.display = 'flex';
+                installBtn.onclick = () => {
+                    if (swRegistration && swRegistration.waiting) {
+                        swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                        installBtn.innerHTML = '<span>Updating...</span>';
+                    }
+                };
+            }
+        }
+        
+        function hideButton() {
+            if (installBtn) installBtn.style.display = 'none';
+        }
         
         function switchPage(page) {
             const currentActivePage = document.querySelector('.page-section.active');
@@ -1981,73 +2058,6 @@
             }
         }
 
-        function setupInstallButton() {
-            const installBtn = document.getElementById('installAppBtn');
-            let installPrompt;
-            
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                installPrompt = e;
-                if (installBtn) installBtn.style.display = 'flex';
-            });
-            
-            if (installBtn) {
-                installBtn.onclick = async () => {
-                    if (!installPrompt) return;
-                    
-                    // Show loading state
-                    const originalHTML = installBtn.innerHTML;
-                    installBtn.innerHTML = '<span>Caching...</span>';
-                    installBtn.disabled = true;
-                    
-                    // Cache ALL files before install
-                    try {
-                        await cacheAllFiles();
-                        
-                        installPrompt.prompt();
-                        const result = await installPrompt.userChoice;
-                        installPrompt = null;
-                        
-                        if (result.outcome === 'accepted') {
-                            installBtn.innerHTML = '<span>✓ Installed!</span>';
-                        } else {
-                            installBtn.innerHTML = originalHTML;
-                            installBtn.disabled = false;
-                        }
-                    } catch (error) {
-                        installBtn.innerHTML = originalHTML;
-                        installBtn.disabled = false;
-                    }
-                };
-            }
-            
-            window.addEventListener('appinstalled', () => {
-                if (installBtn) {
-                    installBtn.style.display = 'none';
-                }
-                installPrompt = null;
-            });
-            
-            if (installBtn && window.matchMedia('(display-mode: standalone)').matches) {
-                installBtn.style.display = 'none';
-            }
-        }
-        
-        // Function to cache all files
-        async function cacheAllFiles() {
-            if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
-                return;
-            }
-            
-            // Send message to Service Worker to cache all files
-            navigator.serviceWorker.controller.postMessage({
-                type: 'CACHE_ALL'
-            });
-            
-            // Wait a bit for caching to complete
-            return new Promise(resolve => setTimeout(resolve, 2000));
-        }
-        
         // Share functionality for vertical bar
         function setupVerticalShareButton() {
             const shareButton = document.getElementById('shareVerticalBtn');
@@ -2117,6 +2127,7 @@
         }
         
         document.addEventListener('DOMContentLoaded', function() {
+            initPWA();
             setupVerticalBarToggle();
             setupVerticalShareButton();
             setupCreditsButton();
@@ -2148,15 +2159,6 @@
             }
         });
         
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js', { scope: './' })
-                .then(reg => {
-                })
-                .catch(err => {
-                });
-        }
-
-        // Auth Check (keep existing functionality)
         if (typeof authCheck !== 'undefined') {
             authCheck.createProtectedLink('protectedFeature', 'protected-page.html');
             

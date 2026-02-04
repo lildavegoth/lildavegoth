@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v7';
+const CACHE_NAME = 'kakoi-kiraku-app-v8';
 const urlsToCache = [
     // Root
     '',
@@ -185,12 +185,12 @@ self.addEventListener('message', event => {
             caches.open(CACHE_NAME).then(cache => {
                 return Promise.all(
                     ALL_FILES_TO_CACHE.map(url => {
-                        return cache.add(url).catch(err => {
-                            console.log('Failed to cache:', url, err);
-                        });
+                        return cache.add(url).catch(() => {});
                     })
                 );
             })
         );
+    } else if (event.data.type === 'SKIP_WAITING') {
+        event.waitUntil(self.skipWaiting());
     }
 });
