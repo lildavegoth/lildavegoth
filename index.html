@@ -1460,6 +1460,20 @@
         let deferredPrompt = null;
         let swRegistration = null;
         
+        installBtn.style.display = 'none';
+        
+        function openInstallDialog() {
+            document.getElementById('installDialog').style.display = 'flex';
+        }
+        
+        function closeInstallDialog() {
+            document.getElementById('installDialog').style.display = 'none';
+        }
+        
+        function hideButton() {
+            installBtn.style.display = 'none';
+        }
+        
         function initPWA() {
             if (!('serviceWorker' in navigator)) return;
         
@@ -1523,20 +1537,6 @@
                     }
                 };
             }
-        }
-        
-        function hideButton() {
-            if (installBtn) installBtn.style.display = 'none';
-        }
-        
-        installBtn.style.display = 'none';
-
-        function openInstallDialog() {
-            document.getElementById('installDialog').style.display = 'flex';
-        }
-        
-        function closeInstallDialog() {
-            document.getElementById('installDialog').style.display = 'none';
         }
         
         function switchPage(page) {
@@ -2138,6 +2138,25 @@
             setupSearchDebounce();
         });
         
+        const confirmBtn = document.getElementById('confirmInstallBtn');
+            if (confirmBtn) {
+                confirmBtn.onclick = () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        deferredPrompt.userChoice.then(choice => {
+                            if (choice.outcome === 'accepted') {
+                                installBtn.innerHTML = '<span>Installed!</span>';
+                                delete installBtn.dataset.tooltip;
+                                setTimeout(hideButton, 2000);
+                            }
+                            deferredPrompt = null;
+                        });
+                        closeInstallDialog();
+                    }
+                };
+            }
+        });
+        
         document.addEventListener('click', function(event) {
             const popup = document.getElementById('universalPopup');
             const popupContent = document.querySelector('#universalPopup .popup-content');
@@ -2166,25 +2185,7 @@
             authCheck.createProtectedLink('protectedFeature', 'protected-page.html');
             
             const user = authCheck.isUserLoggedIn();
-        }
-        
-        const confirmBtn = document.getElementById('confirmInstallBtn');
-            if (confirmBtn) {
-                confirmBtn.onclick = () => {
-                    if (deferredPrompt) {
-                        deferredPrompt.prompt();
-                        deferredPrompt.userChoice.then(choice => {
-                            if (choice.outcome === 'accepted') {
-                                installBtn.innerHTML = '<span>Installed!</span>';
-                                delete installBtn.dataset.tooltip;
-                                setTimeout(hideButton, 2000);
-                            }
-                            deferredPrompt = null;
-                        });
-                        closeInstallDialog();
-                    }
-                };
-            }
+        }        
             
     </script>
 </body>
