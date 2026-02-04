@@ -1,6 +1,7 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.1.3';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.1.4';
 
 const urlsToCache = [
+    // Root
     '',
     'account.html',
     'auth.js',
@@ -12,6 +13,7 @@ const urlsToCache = [
     'notification.cssjs',
     'protections.js',
     'sw.js',
+    // Pages
     'pages/3-tiles.html',
     'pages/2048.html',
     'pages/appflowy-json-converter.html',
@@ -50,6 +52,7 @@ const urlsToCache = [
     'pages/weather.html',
     'pages/yaml-validator.html',
     'pages/youtube-thumbnail-grabber.html',
+    // Voidgarden
     'pages/voidgarden/adventure.html',
     'pages/voidgarden/character.html',
     'pages/voidgarden/credits.html',

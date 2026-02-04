@@ -1441,10 +1441,33 @@
             </div>
             <div style="padding: var(--spacing-lg); text-align: center;">
                 <div class="icon icon-kiraku-home" style="width: 80px; height: 80px; margin: 0 auto var(--spacing-md); border-radius: var(--radius-medium); border: 1px solid rgba(255, 255, 255, 0.1);"></div>
-                <h3 style="margin-bottom: var(--spacing-xs);">lildavegoth</h3>
+                <h3 style="margin-bottom: var(--spacing-xs);">Kakoi Kiraku Home</h3>
                 <p style="color: var(--text-secondary); margin-bottom: var(--spacing-lg); font-size: 0.95rem; line-height: 1.5;">
                     Install this app for quick access to all projects, games, and tools, it also works offline.
                 </p>
+    
+                <!-- Horizontal Scrollable Screenshot Gallery -->
+                <div style="position: relative; margin-bottom: var(--spacing-lg);">
+                    <button id="screenshotLeft" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; background: rgba(0,0,0,0.5); border: none; border-radius: 50%; color: white; font-size: 1.2rem; z-index: 10; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button id="screenshotRight" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; background: rgba(0,0,0,0.5); border: none; border-radius: 50%; color: white; font-size: 1.2rem; z-index: 10; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+    
+                    <div id="screenshotGallery" style="display: flex; overflow-x: auto; gap: 12px; scroll-behavior: smooth; padding: 8px 0; scrollbar-width: none;">
+                        <img src="images/left-side.webp" class="gallery-image" style="width: 200px; height: auto; border-radius: var(--radius-medium); flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1);">
+                        <img src="images/right-side.webp" class="gallery-image" style="width: 200px; height: auto; border-radius: var(--radius-medium); flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1);">
+                        <!-- Add more images here if you have them -->
+                    </div>
+    
+                    <div style="display: flex; justify-content: center; gap: 8px; margin-top: 12px;">
+                        <span class="nav-dot active" style="width: 8px; height: 8px; background: var(--accent-color); border-radius: 50%;"></span>
+                        <span class="nav-dot" style="width: 8px; height: 8px; background: rgba(255,255,255,0.2); border-radius: 50%;"></span>
+                        <!-- Add more dots if you add more images -->
+                    </div>
+                </div>
+    
                 <button id="confirmInstallBtn" style="width: 100%; padding: var(--spacing-md); background: var(--accent-color); color: var(--bg-black); border: none; border-radius: var(--radius-medium); font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;">
                     Install App
                 </button>
@@ -2154,6 +2177,54 @@
                     }
                 };
             }
+            
+            const gallery = document.getElementById('screenshotGallery');
+            const scrollLeftBtn = document.getElementById('screenshotLeft');
+            const scrollRightBtn = document.getElementById('screenshotRight');
+            const navDots = document.querySelectorAll('#installDialog .nav-dot');
+            const galleryImages = document.querySelectorAll('#screenshotGallery .gallery-image');
+        
+            if (scrollLeftBtn && scrollRightBtn && gallery) {
+                scrollLeftBtn.addEventListener('click', () => {
+                    gallery.scrollBy({ left: -200, behavior: 'smooth' });
+                });
+                scrollRightBtn.addEventListener('click', () => {
+                    gallery.scrollBy({ left: 200, behavior: 'smooth' });
+                });
+            }
+        
+            if (gallery) {
+                gallery.addEventListener('scroll', updateScreenshotDots);
+                updateScreenshotDots();
+            }
+        
+            function updateScreenshotDots() {
+                if (!gallery || navDots.length === 0) return;
+                const scrollPos = gallery.scrollLeft;
+                const imageWidth = galleryImages[0]?.offsetWidth || 0;
+                const gap = 12;
+                const totalWidth = imageWidth + gap;
+                if (totalWidth === 0) return;
+                const activeIndex = Math.round(scrollPos / totalWidth);
+                navDots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === activeIndex);
+                    if (index === activeIndex) {
+                        dot.style.background = 'var(--accent-color)';
+                    } else {
+                        dot.style.background = 'rgba(255,255,255,0.2)';
+                    }
+                });
+            }
+        
+            navDots.forEach((dot, index) => {
+                dot.addEventListener('click', () => {
+                    if (!gallery || galleryImages.length === 0) return;
+                    const imageWidth = galleryImages[0].offsetWidth;
+                    const gap = 12;
+                    const scrollPosition = (imageWidth + gap) * index;
+                    gallery.scrollTo({ left: scrollPosition, behavior: 'smooth' });
+                });
+            });
         });
         
         document.addEventListener('click', function(event) {
