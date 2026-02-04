@@ -1510,16 +1510,7 @@
                 installBtn.innerHTML = '<span class="icon icon-install"></span>';
                 installBtn.dataset.tooltip = 'Install App';
                 installBtn.style.display = 'flex';
-                installBtn.onclick = () => {
-                    deferredPrompt.prompt();
-                    deferredPrompt.userChoice.then(choice => {
-                        if (choice.outcome === 'accepted') {
-                            installBtn.innerHTML = '<span>Installed!</span>';
-                            setTimeout(hideButton, 2000);
-                        }
-                        deferredPrompt = null;
-                    });
-                };
+                installBtn.onclick = openInstallDialog;
             } else if (mode === 'update') {
                 installBtn.innerHTML = '<span class="icon icon-install"></span>';
                 installBtn.dataset.tooltip = 'Update App';
@@ -1528,6 +1519,7 @@
                     if (swRegistration && swRegistration.waiting) {
                         swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
                         installBtn.innerHTML = '<span>Updating...</span>';
+                        delete installBtn.dataset.tooltip;
                     }
                 };
             }
@@ -1535,6 +1527,16 @@
         
         function hideButton() {
             if (installBtn) installBtn.style.display = 'none';
+        }
+        
+        installBtn.style.display = 'none';
+
+        function openInstallDialog() {
+            document.getElementById('installDialog').style.display = 'flex';
+        }
+        
+        function closeInstallDialog() {
+            document.getElementById('installDialog').style.display = 'none';
         }
         
         function switchPage(page) {
@@ -2166,6 +2168,24 @@
             const user = authCheck.isUserLoggedIn();
         }
         
+        const confirmBtn = document.getElementById('confirmInstallBtn');
+            if (confirmBtn) {
+                confirmBtn.onclick = () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        deferredPrompt.userChoice.then(choice => {
+                            if (choice.outcome === 'accepted') {
+                                installBtn.innerHTML = '<span>Installed!</span>';
+                                delete installBtn.dataset.tooltip;
+                                setTimeout(hideButton, 2000);
+                            }
+                            deferredPrompt = null;
+                        });
+                        closeInstallDialog();
+                    }
+                };
+            }
+            
     </script>
 </body>
 </html>
