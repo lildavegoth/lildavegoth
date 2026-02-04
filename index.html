@@ -8,16 +8,12 @@
     <script src="protections.js"></script>
     <script src="auth-check.js"></script>
     <link rel="stylesheet" href="media.css">
-    <link rel="stylesheet" href="navigation.css">
+    <link rel="stylesheet" href="../navigation.css">
     
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="images/icons/kiraku-home.png">
-    <link rel="apple-touch-icon" href="images/icons/kiraku-home.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Kakoi Kiraku">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="Kakoi Kiraku">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Kakoi Kiraku Home">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1438,18 +1434,21 @@
     <div id="installDialog" class="popup-overlay" style="display: none;">
         <div class="popup-content blur-background" style="max-width: 400px;">
             <div class="popup-header">
-                <h2 id="installTitle">Install App</h2>
-                <button class="close-popup" onclick="document.getElementById('installDialog').style.display='none'">
+                <h2>Install App</h2>
+                <button class="close-popup" onclick="closeInstallDialog()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div style="padding: var(--spacing-lg); text-align: center;">
                 <div class="img ing-kiraku-home" style="width: 80px; height: 80px; margin: 0 auto var(--spacing-md); border-radius: var(--radius-medium); border: 1px solid rgba(255, 255, 255, 0.1);"></div>
-                <p id="installMessage" style="margin-bottom: var(--spacing-lg); color: var(--text-primary); font-size: 1rem;"></p>
+                <h3 style="margin-bottom: var(--spacing-xs);">lildavegoth</h3>
+                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-lg); font-size: 0.95rem; line-height: 1.5;">
+                    Install this app for quick access to all projects, games, and tools. Works offline and loads faster.
+                </p>
                 <button id="confirmInstallBtn" style="width: 100%; padding: var(--spacing-md); background: var(--accent-color); color: var(--bg-black); border: none; border-radius: var(--radius-medium); font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;">
                     Install App
                 </button>
-                <button onclick="document.getElementById('installDialog').style.display='none'" style="width: 100%; padding: var(--spacing-md); background: transparent; color: var(--text-secondary); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-medium); font-weight: 500; font-size: 0.95rem; cursor: pointer; transition: all 0.3s ease; margin-top: var(--spacing-sm);">
+                <button onclick="closeInstallDialog()" style="width: 100%; padding: var(--spacing-md); background: transparent; color: var(--text-secondary); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-medium); font-weight: 500; font-size: 0.95rem; cursor: pointer; transition: all 0.3s ease; margin-top: var(--spacing-sm);">
                     Cancel
                 </button>
             </div>
@@ -1457,85 +1456,7 @@
     </div>
     
     <script>
-        let deferredPrompt = null;
-
-        window.addEventListener('beforeinstallprompt', e => {
-            e.preventDefault();
-            deferredPrompt = e;
-        });
-        
-        function isAppInstalled() {
-            return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-        }
-        
-        function forceCache() {
-            navigator.serviceWorker.ready.then(reg => {
-                if (reg.active) {
-                    reg.active.postMessage({type: 'CACHE_ALL'});
-                }
-            });
-        }
-        
-        function updateInstallDialog() {
-            const title = document.getElementById('installTitle');
-            const message = document.getElementById('installMessage');
-            const confirmBtn = document.getElementById('confirmInstallBtn');
-        
-            if (isAppInstalled()) {
-                title.textContent = 'Already Installed';
-                message.textContent = 'The app is already installed and works offline.';
-                confirmBtn.textContent = 'OK';
-                confirmBtn.onclick = () => {
-                    document.getElementById('installDialog').style.display = 'none';
-                };
-            } else if (deferredPrompt) {
-                title.textContent = 'Install App';
-                message.textContent = 'Add to home screen for offline use and faster loading.';
-                confirmBtn.textContent = 'Install';
-                confirmBtn.onclick = () => {
-                    deferredPrompt.prompt();
-                    deferredPrompt.userChoice.then(() => {
-                        deferredPrompt = null;
-                    });
-                    document.getElementById('installDialog').style.display = 'none';
-                };
-            } else {
-                title.textContent = 'Not Ready Yet';
-                message.textContent = 'Use the site a bit more or reload the page to enable install.';
-                confirmBtn.textContent = 'OK';
-                confirmBtn.onclick = () => {
-                    document.getElementById('installDialog').style.display = 'none';
-                };
-            }
-        }
-
-        window.addEventListener('appinstalled', () => {
-            installPrompt = null;
-            const installBtn = document.getElementById('installAppBtn');
-            if (installBtn) installBtn.style.display = 'none';
-        });
-        
-        if (window.matchMedia('(display-mode: standalone)').matches || 
-            window.matchMedia('(display-mode: fullscreen)').matches) {
-            const installBtn = document.getElementById('installAppBtn');
-            if (installBtn) installBtn.style.display = 'none';
-        }
-        
-        function closeInstallDialog() {
-            document.getElementById('installDialog').style.display = 'none';
-        }
-        
-        function setupInstallButton() {
-            const installBtn = document.getElementById('installAppBtn');
-        
-            if (installBtn) {
-                installBtn.addEventListener('click', () => {
-                    forceCache();
-                    document.getElementById('installDialog').style.display = 'flex';
-                    updateInstallDialog();
-                });
-            }
-        }
+        let deferredPrompt;
         
         function switchPage(page) {
             const currentActivePage = document.querySelector('.page-section.active');
@@ -2059,6 +1980,73 @@
                 });
             }
         }
+
+        function setupInstallButton() {
+            const installBtn = document.getElementById('installAppBtn');
+            let installPrompt;
+            
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                installPrompt = e;
+                if (installBtn) installBtn.style.display = 'flex';
+            });
+            
+            if (installBtn) {
+                installBtn.onclick = async () => {
+                    if (!installPrompt) return;
+                    
+                    // Show loading state
+                    const originalHTML = installBtn.innerHTML;
+                    installBtn.innerHTML = '<span>Caching...</span>';
+                    installBtn.disabled = true;
+                    
+                    // Cache ALL files before install
+                    try {
+                        await cacheAllFiles();
+                        
+                        installPrompt.prompt();
+                        const result = await installPrompt.userChoice;
+                        installPrompt = null;
+                        
+                        if (result.outcome === 'accepted') {
+                            installBtn.innerHTML = '<span>✓ Installed!</span>';
+                        } else {
+                            installBtn.innerHTML = originalHTML;
+                            installBtn.disabled = false;
+                        }
+                    } catch (error) {
+                        installBtn.innerHTML = originalHTML;
+                        installBtn.disabled = false;
+                    }
+                };
+            }
+            
+            window.addEventListener('appinstalled', () => {
+                if (installBtn) {
+                    installBtn.style.display = 'none';
+                }
+                installPrompt = null;
+            });
+            
+            if (installBtn && window.matchMedia('(display-mode: standalone)').matches) {
+                installBtn.style.display = 'none';
+            }
+        }
+        
+        // Function to cache all files
+        async function cacheAllFiles() {
+            if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+                return;
+            }
+            
+            // Send message to Service Worker to cache all files
+            navigator.serviceWorker.controller.postMessage({
+                type: 'CACHE_ALL'
+            });
+            
+            // Wait a bit for caching to complete
+            return new Promise(resolve => setTimeout(resolve, 2000));
+        }
         
         // Share functionality for vertical bar
         function setupVerticalShareButton() {
@@ -2161,7 +2149,11 @@
         });
         
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+            navigator.serviceWorker.register('sw.js', { scope: './' })
+                .then(reg => {
+                })
+                .catch(err => {
+                });
         }
 
         // Auth Check (keep existing functionality)
@@ -2170,67 +2162,6 @@
             
             const user = authCheck.isUserLoggedIn();
         }
-        
-        document.addEventListener('click', function(event) {
-            const popup = document.getElementById('universalPopup');
-            const popupContent = document.querySelector('#universalPopup .popup-content');
-            
-            if (popup.style.display === 'flex' && 
-                popupContent && 
-                !popupContent.contains(event.target)) {
-                
-                const isPopupTrigger = event.target.closest('.project-card[onclick*="openPopup"]') || 
-                                       event.target.closest('#creditsVerticalBtn');
-                
-                if (!isPopupTrigger) {
-                    closeUniversalPopup();
-                }
-            }
-            
-            const installDialog = document.getElementById('installDialog');
-            const installDialogContent = document.querySelector('#installDialog .popup-content');
-            
-            if (installDialog.style.display === 'flex' && 
-                installDialogContent && 
-                !installDialogContent.contains(event.target)) {
-                closeInstallDialog();
-            }
-        });
-        
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                if (document.getElementById('universalPopup').style.display === 'flex') {
-                    closeUniversalPopup();
-                }
-                if (document.getElementById('installDialog').style.display === 'flex') {
-                    closeInstallDialog();
-                }
-            }
-        });
-        
-        document.addEventListener('click', function(event) {
-            const verticalBar = document.getElementById('verticalMoreBar');
-            const overlay = document.getElementById('verticalBarOverlay');
-            const moreButton = document.getElementById('moreButton');
-            const installDialog = document.getElementById('installDialog');
-        
-            if (verticalBar.classList.contains('active') && 
-                !verticalBar.contains(event.target) && 
-                event.target !== moreButton && 
-                !moreButton.contains(event.target)) {
-                verticalBar.classList.remove('active');
-                overlay.classList.remove('active');
-                moreButton.classList.remove('active');
-            }
-        
-            if (installDialog.style.display === 'flex') {
-                const isInstallButton = event.target.closest('#installAppBtn') || 
-                                        event.target.closest('#confirmInstallBtn');
-                if (!isInstallButton && !event.target.closest('.popup-content')) {
-                    closeInstallDialog();
-                }
-            }
-        });
         
     </script>
 </body>
