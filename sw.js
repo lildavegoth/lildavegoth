@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.1.8';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.1.9';
 
 const urlsToCache = [
     // Root
@@ -59,6 +59,9 @@ const urlsToCache = [
     'pages/voidgarden/shared-data.js',
     'pages/voidgarden/shop.html',
     'pages/voidgarden/voidgarden.html'
+    // Bundles
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/webfonts/fa-solid-900.woff2',
 ];
 
 self.addEventListener('install', event => {
