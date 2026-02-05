@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Font Previewer</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            padding: var(--spacing-md);
+        }
+
+        .manga-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .tool-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .tool-description {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .glyph-importer {
+            padding: var(--spacing-lg);
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .import-controls {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .import-seal {
+            background: var(--accent-color);
+            color: black;
+            padding: var(--spacing-sm) var(--spacing-xl);
+            border-radius: var(--radius-medium);
+            cursor: pointer;
+            display: inline-block;
+            font-weight: bold;
+            border: none;
+        }
+
+        .import-seal:hover {
+            background: var(--accent-dark);
+        }
+
+        .clear-seal {
+            background: rgba(255, 107, 107, 0.15);
+            color: #ff6b6b;
+        }
+
+        .clear-seal:hover {
+            color: #ff8888;
+            background: rgba(255, 107, 107, 0.25);
+        }
+
+        #fontUpload {
+            display: none;
+        }
+
+        #fontName {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .arcs-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        @media (min-width: 900px) {
+            .arcs-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .current-arc {
+            background: var(--accent-color);
+            color: black;
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .arc-title {
+            font-size: 2.8rem;
+            font-weight: 900;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .arc-synopsis {
+            font-size: 1rem;
+            font-weight: 400;
+            margin: var(--spacing-md) 0;
+            line-height: 1.6;
+        }
+
+        .additional-synopsis {
+            display: none;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-top: var(--spacing-md);
+            opacity: 0.9;
+        }
+
+        @media (min-width: 900px) {
+            .additional-synopsis {
+                display: block;
+            }
+        }
+
+        .mangaka {
+            margin-bottom: var(--spacing-sm);
+            font-weight: bold;
+        }
+
+        .ink-brush {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+            opacity: 0.25;
+        }
+
+        .ink-brush i:first-child {
+            font-size: 110px;
+            transform: rotate(30deg);
+        }
+
+        .ink-brush i:last-child {
+            font-size: 70px;
+            position: absolute;
+            top: -50px;
+            left: 30px;
+        }
+
+        .recommended-volumes {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .volume-entry {
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .volume-entry:last-child {
+            border-bottom: none;
+        }
+
+        .volume-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .volume-synopsis {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .volume-genres {
+            color: var(--accent-color);
+            font-size: 0.85rem;
+        }
+
+        .narration-panel {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .narration-preview {
+            font-size: 1.6rem;
+            line-height: 1.4;
+            padding: var(--spacing-md);
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--radius-medium);
+            min-height: 80px;
+            margin-bottom: var(--spacing-lg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .comments-input {
+            width: 100%;
+            height: 10px;
+            padding: var(--spacing-md);
+            background: rgba(30, 30, 30, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50px;
+            color: var(--text-primary);
+            font-size: 1.2rem;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="manga-container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <header style="margin-bottom: 30px;" class="fade-in">
+            <div>
+                <h1 class="tool-title">Font Previewer</h1>
+                <p class="tool-description">Import your favorites fonts with text visuals and free input text that you can use for test the fonts with TTF and OTF supports.</p>
+            </div>
+        </header>
+        
+        <div class="glyph-importer">
+            <div class="import-controls">
+                <label for="fontUpload" class="import-seal">Import</label>
+                <button id="clearFont" class="import-seal clear-seal">Clear</button>
+            </div>
+            <input type="file" id="fontUpload" accept=".ttf,.otf">
+            <div id="fontName">No font loaded</div>
+        </div>
+
+        <div id="preview">
+            <div class="arcs-grid">
+                <div class="current-arc">
+                    <div class="arc-title">Berserk</div>
+                    <div class="arc-synopsis">Guts, a lone mercenary, joins the Band of the Hawk, led by the ambitious Griffith. He becomes Griffith's top warrior but later decides to leave to forge his own path. Griffith, shattered by this loss, acts recklessly and is subsequently imprisoned and brutally tortured. A year later, Guts and the Hawks rescue a broken, mutilated Griffith. In his despair, Griffith accidentally activates a demonic relic called a Behelit, triggering an apocalyptic event called the Eclipse. He is offered godlike power by demonic beings called the God Hand, but at the cost of sacrificing his entire band. Griffith accepts, becoming the demon Femto. The Hawks are slaughtered, Casca is brutally raped by Femto, and Guts loses an eye and an arm. The story flashes forward to Guts, now known as the Black Swordsman, embarking on a relentless quest for vengeance against the God Hand and their demonic apostles.</div>
+                    <div class="additional-synopsis">After a year away, Guts returns to find the Band of the Hawk outlawed. He and Casca rescue Griffith, who has been horrifically mutilated and broken. In a moment of despair, Griffith flees and, while attempting suicide, accidentally activates a demonic Behelit with his blood. This triggers the Eclipse, transporting them to a nightmarish realm. There, the God Hand offer Griffith ultimate power in exchange for sacrificing his comrades. Griffith accepts, reborn as the demon Femto. The Hawks are branded and slaughtered by apostles. Femto brutally rapes Casca before Guts, who loses an arm and an eye trying to stop it. Guts alone survives this atrocity, emerging later as the vengeful "Black Swordsman" sworn to destroy the God Hand and their apostles.</div>
+                    <div style="margin-top: 5px;" class="mangaka">Kentaro Miura</div>
+                    <div class="ink-brush">
+                        <i class="fas fa-hand-fist-raised"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                </div>
+
+                <div class="recommended-volumes">
+                    <div class="volume-entry">
+                        <div class="volume-title">One Piece</div>
+                        <div class="volume-synopsis">The undisputed king of manga in terms of sales (over 500 million copies worldwide) and longevity. Its epic world-building, unforgettable characters, and masterfully woven plot exploring themes of freedom and dreams have captivated readers for over 25 years. It's a cultural landmark.</div>
+                        <div class="volume-genres">Adventure, Fantasy, Shounen | <strong>1997</strong></div>
+                    </div>
+                    <div class="volume-entry">
+                        <div class="volume-title">Fullmetal Alchemist</div>
+                        <div class="volume-synopsis">Hailed as the most perfectly crafted shounen manga. It delivers a tight, intelligent plot with zero filler, brilliant character development, consistent internal logic, and a powerful balance of action, humor, and profound philosophical themes. It's consistently satisfying from start to finish.</div>
+                        <div class="volume-genres">Adventure, Fantasy, Steampunk | <strong>2001</strong></div>
+                    </div>
+                    <div class="volume-entry">
+                        <div class="volume-title">Monster</div>
+                        <div class="volume-synopsis">A gripping, mature thriller that explores the nature of evil. With its realistic art, morally complex characters, and a plot that unfolds like a meticulously paced European thriller, Monster is a work of profound psychological depth that will keep you on the edge of your seat.</div>
+                        <div class="volume-genres">Psychological Thriller, Mystery, Seinen | <strong>1994</strong></div>
+                    </div>
+                    <div class="volume-entry">
+                        <div class="volume-title">Vagabond</div>
+                        <div class="volume-synopsis">Based on the life of legendary swordsman Miyamoto Musashi, Vagabond is celebrated as one of the most visually stunning works ever drawn. It transcends its historical setting to deliver a deep, introspective journey on what it means to strive for mastery, purpose, and peace.</div>
+                        <div class="volume-genres">Historical, Philosophical, Seinen | <strong>1998</strong></div>
+                    </div>
+                    <input type="text" id="textInput" class="comments-input" placeholder="Comment here...">
+                </div>
+            </div>
+
+            
+        </div>
+        
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Font Previewer</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        let currentFontUrl = null;
+        let currentStyle = null;
+
+        document.getElementById('fontUpload').addEventListener('change', function(e) {
+            if (!e.target.files.length) return;
+
+            const file = e.target.files[0];
+            const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+            if (ext !== '.ttf' && ext !== '.otf') {
+                alert('Please upload a .ttf or .otf file');
+                return;
+            }
+
+            const url = URL.createObjectURL(file);
+            if (currentFontUrl) URL.revokeObjectURL(currentFontUrl);
+            currentFontUrl = url;
+
+            if (currentStyle) currentStyle.remove();
+
+            const format = ext === '.ttf' ? 'truetype' : 'opentype';
+            const fontFamily = 'PreviewFont';
+
+            const style = document.createElement('style');
+            style.textContent = `
+                @font-face {
+                    font-family: '${fontFamily}';
+                    src: url('${url}') format('${format}');
+                    font-display: swap;
+                }
+                #preview * {
+                    font-family: '${fontFamily}', sans-serif !important;
+                }
+                .comments-input {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif !important;
+                }
+            `;
+            document.head.appendChild(style);
+            currentStyle = style;
+
+            document.getElementById('fontName').textContent = `Preview of ${file.name}`;
+        });
+
+        document.getElementById('clearFont').addEventListener('click', function() {
+            if (currentStyle) {
+                currentStyle.remove();
+                currentStyle = null;
+            }
+            if (currentFontUrl) {
+                URL.revokeObjectURL(currentFontUrl);
+                currentFontUrl = null;
+            }
+            document.getElementById('fontName').textContent = 'No font loaded';
+        });
+
+        document.getElementById('textInput').addEventListener('input', function() {
+        });
+        
+    </script>
+</body>
+</html>
