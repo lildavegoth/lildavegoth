@@ -1,6 +1,6 @@
 # lildavegoth
 
-Welcome mate! Ready for the infinite imaginations? [See more](https://lildavegoth.github.io/lildavegoth/)
+Welcome mate! Ready for the infinite imaginations? [See more](https://kakoi-kiraku-home.vercel.app)
 
 Hello! I'm lildavegoth, a creator and designer focused on giving you ideas that you can't ever imagine, useful digital content and tools.
 
@@ -23,7 +23,7 @@ Hello! I'm lildavegoth, a creator and designer focused on giving you ideas that 
 ---
 
 ### Other Projects
-Beyond **Kakoi Kiraku**, my GitHub hosts a variety of other development projects, tools, apps, games and experiments. [Browse the web page to see more](https://kakoi-kiraku-home.vercel.app/index.html)
+Beyond **Kakoi Kiraku**, my GitHub hosts a variety of other development projects, tools, apps, games and experiments. [Browse the web page to see more](https://kakoi-kiraku-home.vercel.app)
 
 ---
 
