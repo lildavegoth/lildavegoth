@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.3.2';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.3.3';
 const urlsToCache = [
     // Root
     '/',
@@ -24,7 +24,6 @@ const urlsToCache = [
     'pages/dice-generator.html',
     'pages/dictionary-manager.html',
     'page/font-previewer.html',
-    'pages/giveaway.html',
     'pages/html-cleaner.html',
     'pages/html-editor.html',
     'pages/html-generator.html',
