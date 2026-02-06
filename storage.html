@@ -3,249 +3,537 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>lildavegoth | Storage</title>
+    <title>LocalStorage Viewer</title>
     <meta name="color-scheme" content="dark">
-    <link rel="stylesheet" href="media.css">
-    <script src="notification.cssjs"></script>
     <script src="protections.js"></script>
+    <script src="notification.cssjs"></script>
+    <link rel="stylesheet" href="media.css">
+    <link rel="stylesheet" href="navigation.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --accent-color: #C1FC32;
             --accent-dark: #9bc726;
             --bg-black: #000000;
-            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
             --text-primary: #f5f5f7;
             --text-secondary: #a1a1a6;
             --radius-large: 28px;
-            --spacing-sm: 16px;
-            --spacing-md: 24px;
             --spacing-lg: 32px;
+            --spacing-md: 24px;
+            --spacing-sm: 16px;
         }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
+
         body {
             background: var(--bg-black);
             color: var(--text-primary);
             min-height: 100vh;
-            padding: 60px 20px 150px;
+            padding: 40px 20px 100px;
         }
-        .storage-header {
+
+        .main {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            gap: 15px;
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            background: #333;
+            background-size: cover;
+            background-position: center;
+            border-radius: 50%;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+            gap: 15px;
+        }
+
+        .username {
+            font-size: 1.8rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .app-header {
+            padding: var(--spacing-lg) 0;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .app-name {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .clear-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .search-bar {
+            margin-bottom: 30px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 16px 24px;
+            border-radius: 30px;
+            border: none;
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text-primary);
+            font-size: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .search-bar input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .folders {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+
+        .folder-btn {
+            background: #222;
+            color: #aaa;
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 1rem;
+        }
+
+        .folder-btn.active {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .items-info {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 40px;
-            padding: 0 10px;
         }
-        .storage-avatar {
-            width: 40px;
-            height: 40px;
-            background: #333;
-            border-radius: 50%;
+
+        #itemsCount {
+            font-size: 1.2rem;
         }
-        .storage-action-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-primary);
-            font-size: 1.1rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
+
+        .folder-pill {
+            background: var(--accent-color);
+            color: #000;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-weight: 600;
         }
+
         .storage-container {
             display: flex;
             flex-direction: column;
-            align-items: center;
+            gap: 24px;
         }
+
         .storage-card {
             position: relative;
-            width: 100%;
-            max-width: 380px;
-            height: 420px;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: var(--radius-large);
-            padding: var(--spacing-lg);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.7);
+            padding: var(--spacing-sm);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        .card-header {
             display: flex;
-            flex-direction: column;
-            margin-top: -120px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
         }
-        .storage-card:first-of-type {
-            margin-top: 0;
-        }
-        .storage-card-header {
+
+        .tag-and-delete {
             display: flex;
-            justify-content: flex-end;
-            gap: var(--spacing-md);
-            margin-bottom: var(--spacing-sm);
+            align-items: center;
+            gap: 12px;
         }
-        .storage-card-header i {
-            font-size: 1.3rem;
-            opacity: 0.8;
+
+        .storage-tag {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
         }
-        .card-content {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-        .storage-key {
-            font-size: 1.9rem;
-            font-weight: 700;
-            line-height: 1.2;
-            margin-bottom: var(--spacing-sm);
-        }
-        .storage-value {
-            color: inherit;
-            line-height: 1.5;
+
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
             font-size: 1rem;
+            cursor: pointer;
+            padding: 6px;
+            opacity: 0.7;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .delete-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            opacity: 1;
+        }
+
+        .storage-key {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin: 20px 0 12px;
+            padding-right: 50px;
+        }
+
+        .storage-value {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            max-height: 120px;
+            overflow-y: auto;
+            margin-bottom: var(--spacing-sm);
             white-space: pre-wrap;
             word-break: break-all;
         }
-        .storage-card-footer {
+
+        .card-footer {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
+            flex-direction: column;
+            gap: 8px;
         }
-        .storage-info {
-            line-height: 1.3;
-        }
-        .storage-label {
-            font-size: 1rem;
+
+        .due {
+            font-size: 0.95rem;
             opacity: 0.8;
         }
-        .storage-detail {
-            font-size: 1.3rem;
-            font-weight: 600;
+
+        .progress {
+            width: 100%;
+            height: 10px;
+            background: #222;
+            border-radius: 20px;
+            overflow: hidden;
         }
-        .storage-tag {
-            background: rgba(0,0,0,0.4);
-            color: #fff;
-            padding: 8px 20px;
-            border-radius: 30px;
-            font-weight: 500;
-            font-size: 1rem;
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            border-radius: 20px;
         }
-        .dark {
-            background: linear-gradient(135deg, #262626, #111);
-            color: var(--text-primary);
+
+        input[type="file"] {
+            display: none;
         }
-        .dark .storage-card-header i { color: var(--text-primary); }
-        .green {
-            background: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
-            color: #000;
+
+        footer {
+            margin-bottom: -150px;
         }
-        .green .storage-card-header i { color: #000; }
-        .lime {
-            background: linear-gradient(135deg, #e0fc40, #b0e030);
-            color: #000;
+
+        .social-links {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
         }
-        .lime .storage-card-header i { color: #000; }
-        .orange {
-            background: linear-gradient(135deg, #ffb340, #ff9000);
-            color: #000;
-        }
-        .orange .storage-card-header i { color: #000; }
-        .red {
-            background: linear-gradient(135deg, #ff6666, #ee4444);
-            color: #fff;
-        }
-        .red .storage-card-header i { color: #fff; }
-        .red .storage-tag { background: rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
-    <div class="storage-header">
-        <div class="storage-avatar"></div>
-        <button class="storage-action-btn" onclick="if(confirm('Clear all LocalStorage? This cannot be undone.')){localStorage.clear();location.reload();}">
-            Clear All
-            <i class="fas fa-trash-alt"></i>
-        </button>
+    <div class="main">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+
+        <header style="margin-bottom: 50px;" class="fade-in">
+            <div>
+                <h1 class="app-name">Storage</h1>
+                <p class="tagline">Access to all database on Kakoi Kiraku Home pages to clear specific pages data for your account.</p>
+            </div>
+        </header>
+
+        <div class="header">
+            <div class="user-section">
+                <div class="avatar" id="avatar"></div>
+                <div class="username" id="username">User</div>
+            </div>
+            <button class="clear-btn" onclick="if(confirm('Clear all LocalStorage? This cannot be undone.')){localStorage.clear();location.reload();}">
+                Clear All
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search keys or values...">
+        </div>
+
+        <div class="folders" id="folders"></div>
+
+        <div class="items-info">
+            <div id="itemsCount">You have 0 items stored</div>
+            <div class="folder-pill" id="folderPill">All</div>
+        </div>
+
+        <div class="storage-container" id="storageContainer"></div>
+
+        <input type="file" id="avatarInput" accept="image/*">
+
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Storage</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
     </div>
 
-    <div class="storage-container" id="storageContainer"></div>
-
     <script>
-        const container = document.getElementById('storageContainer');
-        const colors = ['dark', 'green', 'lime', 'orange', 'red'];
+        let currentFolder = 'All';
 
-        if (localStorage.length === 0) {
-            const card = document.createElement('div');
-            card.className = 'storage-card dark';
-            const header = document.createElement('div');
-            header.className = 'storage-card-header';
-            header.innerHTML = '<i class="fas fa-share-alt"></i><i class="fas fa-ellipsis-v"></i>';
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            const keyEl = document.createElement('div');
-            keyEl.className = 'storage-key';
-            keyEl.textContent = 'LocalStorage Empty';
-            const valueEl = document.createElement('div');
-            valueEl.className = 'storage-value';
-            valueEl.textContent = 'No data stored yet on this site.';
-            content.appendChild(keyEl);
-            content.appendChild(valueEl);
-            const footer = document.createElement('div');
-            footer.className = 'storage-card-footer';
-            footer.innerHTML = '<div class="storage-info"><div class="storage-label">Characters</div><div class="storage-detail">0</div></div><div class="storage-tag">Empty</div>';
-            card.appendChild(header);
-            card.appendChild(content);
-            card.appendChild(footer);
-            container.appendChild(card);
-        } else {
-            let keys = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                keys.push(localStorage.key(i));
+        const avatar = document.getElementById('avatar');
+        const avatarInput = document.getElementById('avatarInput');
+        const usernameEl = document.getElementById('username');
+
+        let username = localStorage.getItem('username') || 'User';
+        usernameEl.textContent = username;
+
+        let savedAvatar = localStorage.getItem('avatar');
+        if (savedAvatar) avatar.style.backgroundImage = `url(${savedAvatar})`;
+
+        avatar.onclick = () => avatarInput.click();
+
+        avatarInput.onchange = (e) => {
+            if (e.target.files[0]) {
+                let reader = new FileReader();
+                reader.onload = (ev) => {
+                    let data = ev.target.result;
+                    localStorage.setItem('avatar', data);
+                    avatar.style.backgroundImage = `url(${data})`;
+                };
+                reader.readAsDataURL(e.target.files[0]);
             }
+        };
+
+        usernameEl.onclick = () => {
+            let input = document.createElement('input');
+            input.type = 'text';
+            input.value = username;
+            usernameEl.textContent = '';
+            usernameEl.appendChild(input);
+            input.focus();
+            input.select();
+            input.onblur = () => {
+                username = input.value.trim() || 'User';
+                localStorage.setItem('username', username);
+                usernameEl.textContent = username;
+            };
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') input.blur();
+            };
+        };
+
+        function getData() {
+            let keys = [];
+            const excludedKeys = ['username', 'avatar', 'giveaway_settings', 'giveaway_participants', 'giveawayParticipants', 'lastGiveawayWinner', 'giveawayData'];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                let k = localStorage.key(i);
+                if (!excludedKeys.includes(k)) keys.push(k);
+            }
+            
             keys.sort();
+        
+            let folders = new Set(['All']);
+        
+            keys.forEach(k => {
+                let folderName = 'misc';
+                if (k.includes('_')) {
+                    folderName = k.split('_')[0];
+                }
+                folders.add(folderName);
+            });
+        
+            return {keys, folders: Array.from(folders)};
+        }
 
-            keys.forEach((key, index) => {
-                let value = localStorage.getItem(key);
-                let displayValue = value;
-                try {
-                    const parsed = JSON.parse(value);
-                    if (typeof parsed === 'object' && parsed !== null) {
-                        displayValue = JSON.stringify(parsed, null, 2);
-                    }
-                } catch (e) {}
+        function buildFolders(foldersList) {
+            const foldersEl = document.getElementById('folders');
+            foldersEl.innerHTML = '';
 
-                const card = document.createElement('div');
-                card.className = `storage-card ${colors[index % colors.length]}`;
-
-                const header = document.createElement('div');
-                header.className = 'storage-card-header';
-                header.innerHTML = '<i class="fas fa-share-alt"></i><i class="fas fa-ellipsis-v"></i>';
-
-                const content = document.createElement('div');
-                content.className = 'card-content';
-
-                const keyEl = document.createElement('div');
-                keyEl.className = 'storage-key';
-                keyEl.textContent = key;
-
-                const valueEl = document.createElement('div');
-                valueEl.className = 'storage-value';
-                valueEl.textContent = displayValue;
-
-                content.appendChild(keyEl);
-                content.appendChild(valueEl);
-
-                const footer = document.createElement('div');
-                footer.className = 'storage-card-footer';
-                footer.innerHTML = `<div class="storage-info"><div class="storage-label">Characters</div><div class="storage-detail">${displayValue.length}</div></div><div class="storage-tag">Stored</div>`;
-
-                card.appendChild(header);
-                card.appendChild(content);
-                card.appendChild(footer);
-
-                container.appendChild(card);
+            foldersList.forEach(f => {
+                let btn = document.createElement('button');
+                btn.className = 'folder-btn';
+                if (f === currentFolder) btn.classList.add('active');
+                btn.textContent = f;
+                btn.dataset.folder = f;
+                btn.onclick = () => {
+                    currentFolder = f;
+                    document.querySelectorAll('.folder-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    buildCards();
+                };
+                foldersEl.appendChild(btn);
             });
         }
+
+        function buildCards() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const {keys} = getData();
+        
+            let filtered = keys.filter(k => {
+                const excludedKeys = ['giveaway_settings', 'giveaway_participants', 'giveawayParticipants', 'lastGiveawayWinner', 'giveawayData'];
+                if (excludedKeys.includes(k)) return false;
+                
+                let matchesFolder = true;
+                if (currentFolder !== 'All') {
+                    if (currentFolder === 'misc') {
+                        matchesFolder = !k.includes('_');
+                    } else {
+                        matchesFolder = k.startsWith(currentFolder + '_');
+                    }
+                }
+        
+                let matchesSearch = k.toLowerCase().includes(search) || localStorage.getItem(k).toLowerCase().includes(search);
+                return matchesFolder && matchesSearch;
+            });
+            
+            const container = document.getElementById('storageContainer');
+            container.innerHTML = '';
+
+            const countEl = document.getElementById('itemsCount');
+            let plural = filtered.length === 1 ? '' : 's';
+            countEl.textContent = `You have ${filtered.length} item${plural} stored`;
+
+            const pill = document.getElementById('folderPill');
+            pill.textContent = currentFolder;
+
+            if (filtered.length === 0) {
+                pill.style.background = '#333';
+                pill.style.color = '#888';
+
+                let card = document.createElement('div');
+                card.className = 'storage-card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="tag-and-delete">
+                            <div class="storage-tag">Empty</div>
+                        </div>
+                    </div>
+                    <div class="storage-key">No items</div>
+                    <div class="storage-value">No data in this folder.</div>
+                    <div class="card-footer">
+                        <div class="due">Length: 0</div>
+                        <div class="progress"><div class="progress-fill" style="width:0%"></div></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            } else {
+                pill.style.background = 'var(--accent-color)';
+                pill.style.color = '#000';
+
+                filtered.forEach(key => {
+                    let value = localStorage.getItem(key);
+                    let displayValue = value;
+                    let isJSON = false;
+
+                    try {
+                        let parsed = JSON.parse(value);
+                        if (typeof parsed === 'object' && parsed !== null) {
+                            displayValue = JSON.stringify(parsed, null, 2);
+                            isJSON = true;
+                        }
+                    } catch {}
+
+                    let percent = value.length ? Math.min(100, Math.round((value.length / 500) * 100)) : 0;
+
+                    let card = document.createElement('div');
+                    card.className = 'storage-card';
+                    card.innerHTML = `
+                        <div class="card-header">
+                            <div class="tag-and-delete">
+                                <div class="storage-tag">${isJSON ? 'JSON' : 'String'}</div>
+                                <button class="delete-btn" data-key="${key}"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="storage-key">${key}</div>
+                        <div class="storage-value">${displayValue}</div>
+                        <div class="card-footer">
+                            <div class="due">Length: ${value.length}</div>
+                            <div class="progress"><div class="progress-fill" style="width:${percent}%"></div></div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    let k = btn.dataset.key;
+                    if (confirm('Delete this item?')) {
+                        localStorage.removeItem(k);
+                        let {folders} = getData();
+                        buildFolders(folders.sort());
+                        buildCards();
+                        window.showMessage('Deleted successfully');
+                    }
+                };
+            });
+        }
+
+        document.getElementById('searchInput').oninput = buildCards;
+
+        let {folders} = getData();
+        buildFolders(folders.sort());
+        buildCards();
     </script>
 </body>
 </html>
