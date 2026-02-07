@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.3.3';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.3.4';
 const urlsToCache = [
     // Root
     '/',
@@ -91,6 +91,19 @@ const urlsToCache = [
     'images/posters/its-too-late.webp',
     'images/posters/no-longer-priority.webp',
     'images/posters/sickens-me.webp',
+    // Stories for Typing Game
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_1.txt',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_2.txt',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_3.txt',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_4.txt',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/med_story_1.txt',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/med_story_2.txt',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/med_story_3.txt',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/med_story_4.txt',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_1.txt',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_2.txt',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_3.txt',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_4.txt',
     // Bundles
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/webfonts/fa-solid-900.woff2'
