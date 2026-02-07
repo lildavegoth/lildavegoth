@@ -7,7 +7,6 @@
     <meta name="color-scheme" content="dark">
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
-    <link rel="stylesheet" href="../navigation.css">
     <link rel="stylesheet" href="../media.css">
     <style>
         :root {
@@ -26,8 +25,6 @@
             --spacing-md: 24px;
             --spacing-lg: 32px;
             --spacing-xl: 48px;
-            --reading-mode-bg: #0a0a0a;
-            --editing-mode-bg: #1a1a1a;
         }
 
         * {
@@ -117,30 +114,93 @@
             display: flex;
             flex-direction: column;
             min-height: 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-medium);
+            overflow: hidden;
+            background: var(--bg-dark);
+        }
+
+        .editor-wrapper {
+            position: relative;
+            flex: 1;
+            height: calc(100vh - 300px);
+        }
+
+        .line-numbers {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            min-width: 30px;
+            width: auto;
+            padding: var(--spacing-md) 8px var(--spacing-md) 0;
+            text-align: right;
+            color: var(--text-secondary);
+            user-select: none;
+            -webkit-user-select: none;
+            pointer-events: auto;
+            z-index: 10;
+            background: var(--bg-dark);
+            line-height: 1.6;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            overflow: hidden;
+        }
+
+        .line-numbers div {
+            line-height: 1.6;
         }
 
         .text-input {
             width: 100%;
-            height: 600px;
-            padding: var(--spacing-md);
-            background: var(--bg-dark);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: var(--radius-medium);
+            height: calc(100vh - 210px);
+            padding: var(--spacing-md) var(--spacing-md) var(--spacing-md) 70px;
+            background: transparent;
+            border: none;
             color: var(--text-primary);
             font-size: 1rem;
             line-height: 1.6;
             resize: none;
-            transition: all 0.3s ease;
             font-family: 'Courier New', monospace;
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
             overflow-y: auto;
-            max-width: 1200px;
-            margin: 0 auto;
         }
 
         .text-input:focus {
             outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 2px rgba(193, 252, 50, 0.1);
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm);
+            background: rgba(30, 30, 30, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .toolbar button {
+            min-width: 48px;
+            height: 48px;
+            padding: 0;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        .toolbar button:hover {
+            background: var(--accent-color);
+            color: var(--bg-black);
         }
 
         .stats {
@@ -193,14 +253,15 @@
         }
 
         .preview-container {
-            width: 100%;
-            height: 600px;
-            max-width: 1200px;
-            margin: 0 auto;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: var(--radius-medium);
+            width: 375px;
+            height: 667px;
+            max-width: 100%;
+            margin: var(--spacing-md) auto;
+            border: 12px solid #000;
+            border-radius: 40px;
             overflow: hidden;
-            background: var(--bg-dark);
+            background: #000;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
         }
 
         .preview-frame {
@@ -229,25 +290,10 @@
             opacity: 1;
             transform: translateY(0);
         }
-
-        @media (max-width: 768px) {
-            .tool-btn span {
-                display: none;
-            }
-            
-            .tool-btn {
-                padding: 6px 8px;
-            }
-        }
-        
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="../index.html" class="back-link">
-            <i class="fas fa-arrow-left"></i> Back to Home
-        </a>
-        
         <header>
             <div>
                 <h1 class="username">HTML Editor</h1>
@@ -266,7 +312,9 @@
         
         <div class="main-content">
             <div class="editor-container">
-                <textarea class="text-input" id="htmlEditor" spellcheck="false"><!DOCTYPE html>
+                <div class="editor-wrapper">
+                    <div class="line-numbers" id="lineNumbers"></div>
+                    <textarea class="text-input" id="htmlEditor" spellcheck="false"><!DOCTYPE html>
 <html>
 <head>
     <title>HTML Preview | lildavegoth</title>
@@ -276,20 +324,17 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            width: 80%;
             margin: 0 auto;
-            padding: 5px;
+            padding: 20px;
             background: black;
             color: white;
         }
         .container {
             padding: 30px;
             border-radius: 20px;
-            backdrop-filter: blur(10px);
         }
         h1 {
             color: #fff;
-            text-align: left;
         }
         button {
             background: #C1FC32;
@@ -298,30 +343,7 @@
             border: none;
             border-radius: 100px;
             cursor: pointer;
-            margin: 10px;
-        }
-        button:hover {
-            background: #C1FC32;
-            opacity: 50%;
-        }
-        action-btn {
-            flex: 1;
-            padding: var(--spacing-sm);
-            border: none;
-            border-radius: var(--radius-medium);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .action-btn.primary {
-            background: var(--bg-dark);
-            color: var(--text-primary);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 20px;
+            margin: 10px 0;
         }
     </style>
 </head>
@@ -331,14 +353,6 @@
         <p>Edit HTML and see live preview.</p>
         <button onclick="showMessage()">Click Me!</button>
         <p id="demo"></p>
-        <div class="action-btn primary" style="margin-top: -10px; margin-bottom: -10px; padding: 15px;">
-            <h3>Features:</h3>
-            <ul>
-                <li>Live HTML Preview</li>
-                <li>Mobile screen simulation</li>
-                <li>Save and load files</li>
-            </ul>
-        </div>
     </div>
 
     <script>
@@ -348,6 +362,26 @@
     </script>
 </body>
 </html></textarea>
+                </div>
+                
+                <div class="toolbar">
+                    <button title="Undo" onclick="undo()"><i class="fas fa-undo"></i></button>
+                    <button title="Redo" onclick="redo()"><i class="fas fa-redo"></i></button>
+                    <button title="Indent" onclick="indentLines(true)"><i class="fas fa-indent"></i></button>
+                    <button title="Outdent" onclick="indentLines(false)"><i class="fas fa-indent" style="transform: scaleX(-1);"></i></button>
+                    <button title="Format" onclick="formatCode()"><i class="fas fa-code"></i></button>
+                    <button title="Select All" onclick="selectAll()"><i class="fas fa-expand-arrows-alt"></i></button>
+                    <button title="Copy" onclick="copyCode()"><i class="fas fa-copy"></i></button>
+                    <button title="Clear" onclick="clearEditor()"><i class="fas fa-trash-alt"></i></button>
+                    <button title="Load" onclick="loadFile()"><i class="fas fa-folder-open"></i></button>
+                    <button title="Check HTML" onclick="checkHTML()"><i class="fas fa-check-circle"></i></button>
+                    <button title="Paragraph" onclick="insertTag('p')"><i class="fas fa-paragraph"></i></button>
+                    <button title="Heading" onclick="insertTag('h1')"><i class="fas fa-heading"></i></button>
+                    <button title="Div" onclick="insertTag('div')"><i class="fas fa-layer-group"></i></button>
+                    <button title="Link" onclick="insertTag('a')"><i class="fas fa-link"></i></button>
+                    <button title="Image" onclick="insertImg()"><i class="fas fa-image"></i></button>
+                    <button title="Comment" onclick="insertComment()"><i class="fas fa-comment"></i></button>
+                </div>
                 
                 <div class="preview-container" id="previewContainer" style="display: none;">
                     <iframe id="previewFrame" class="preview-frame"></iframe>
@@ -366,28 +400,17 @@
             
             <div class="action-buttons">
                 <button class="action-btn primary" onclick="updatePreview()">
-                    <i class="fas fa-play"></i> Update Preview
+                    <i class="fas fa-sync"></i> Update Preview
                 </button>
                 <button class="action-btn secondary" onclick="saveFile()">
                     <i class="fas fa-save"></i> Save HTML
                 </button>
             </div>
         </div>
-        
-        <footer>
-            <div class="social-links">
-                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
-                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
-            </div>
-            <p>© 2026 lildavegoth | HTML Editor</p>
-            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
-                Mobile-Focused HTML Editing with Live Preview.
-            </p>
-        </footer>
     </div>
     
     <div class="copy-notification" id="copyNotification">
-        <i class="fas fa-check"></i> Code copied!
+        <i class="fas fa-check"></i> Action complete
     </div>
 
     <script>
@@ -404,41 +427,151 @@
         const charCount = document.getElementById('charCount');
         const lineCount = document.getElementById('lineCount');
         const currentMode = document.getElementById('currentMode');
+        const lineNumbers = document.getElementById('lineNumbers');
         
-        let isEditMode = true;
+        let history = [];
+        let historyIndex = -1;
+        let previewTimeout;
+        
+        function saveState() {
+            const current = htmlEditor.value;
+            if (historyIndex >= 0 && history[historyIndex] === current) return;
+            historyIndex++;
+            history = history.slice(0, historyIndex);
+            history.push(current);
+            if (history.length > 100) {
+                history.shift();
+                historyIndex--;
+            }
+        }
+        
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                htmlEditor.value = history[historyIndex];
+                updateAfterChange();
+            }
+        }
+        
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                htmlEditor.value = history[historyIndex];
+                updateAfterChange();
+            }
+        }
+        
+        function updateAfterChange() {
+            updateStats();
+            updateLineNumbers();
+            lineNumbers.scrollTop = htmlEditor.scrollTop;
+            updatePreview();
+        }
         
         document.addEventListener('DOMContentLoaded', function() {
+            saveState();
+            updateLineNumbers();
             updateStats();
             updatePreview();
             
             htmlEditor.addEventListener('input', function() {
+                saveState();
                 updateStats();
+                updateLineNumbers();
+                lineNumbers.scrollTop = htmlEditor.scrollTop;
+                clearTimeout(previewTimeout);
+                previewTimeout = setTimeout(updatePreview, 300);
             });
             
-            document.addEventListener('keydown', function(e) {
-                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                    e.preventDefault();
-                    updatePreview();
-                    showNotification('Preview updated');
+            htmlEditor.addEventListener('scroll', function() {
+                lineNumbers.scrollTop = htmlEditor.scrollTop;
+            });
+            
+            htmlEditor.addEventListener('keydown', handleKeyDown);
+            
+            lineNumbers.addEventListener('click', function(e) {
+                if (e.target.tagName === 'DIV') {
+                    const lineNum = parseInt(e.target.textContent);
+                    const lines = htmlEditor.value.split('\n');
+                    const lineText = lines[lineNum - 1] || '';
+                    
+                    const textArea = document.createElement('textarea');
+                    textArea.value = lineText;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    textArea.setSelectionRange(0, 99999);
+                    
+                    try {
+                        document.execCommand('copy');
+                        showNotification('Line ' + lineNum + ' copied');
+                    } catch (err) {
+                        navigator.clipboard.writeText(lineText).then(() => {
+                            showNotification('Line ' + lineNum + ' copied');
+                        }).catch(() => {
+                            showNotification('Failed to copy');
+                        });
+                    }
+                    
+                    document.body.removeChild(textArea);
                 }
             });
         });
         
+        function handleKeyDown(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                undo();
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+                e.preventDefault();
+                redo();
+                return;
+            }
+            
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const start = htmlEditor.selectionStart;
+                const text = htmlEditor.value;
+                let lineStart = start;
+                while (lineStart > 0 && text[lineStart - 1] !== '\n') lineStart--;
+                let indent = '';
+                let pos = lineStart;
+                while (pos < text.length && text[pos] === ' ') {
+                    indent += ' ';
+                    pos++;
+                }
+                const newText = text.substring(0, start) + '\n' + indent + text.substring(start);
+                htmlEditor.value = newText;
+                htmlEditor.selectionStart = htmlEditor.selectionEnd = start + 1 + indent.length;
+                updateAfterChange();
+            }
+            
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    indentLines(false);
+                } else {
+                    indentLines(true);
+                }
+            }
+        }
+        
         function switchMode(mode) {
             if (mode === 'edit') {
-                isEditMode = true;
                 editModeBtn.classList.add('active');
                 previewModeBtn.classList.remove('active');
-                htmlEditor.style.display = 'block';
                 previewContainer.style.display = 'none';
+                htmlEditor.parentElement.style.display = 'block';
+                document.querySelector('.toolbar').style.display = 'flex';
                 currentMode.textContent = 'Edit HTML';
                 htmlEditor.focus();
             } else {
-                isEditMode = false;
                 previewModeBtn.classList.add('active');
                 editModeBtn.classList.remove('active');
-                htmlEditor.style.display = 'none';
                 previewContainer.style.display = 'block';
+                htmlEditor.parentElement.style.display = 'none';
+                document.querySelector('.toolbar').style.display = 'none';
                 currentMode.textContent = 'Live Preview';
                 updatePreview();
             }
@@ -456,27 +589,46 @@
         
         function updateStats() {
             const text = htmlEditor.value;
-            const chars = text.length;
-            const lines = text.split('\n').length;
-            
-            charCount.textContent = chars;
-            lineCount.textContent = lines;
+            charCount.textContent = text.length;
+            lineCount.textContent = text.split('\n').length;
         }
         
-        function insertTag(before, after) {
-            const start = htmlEditor.selectionStart;
-            const end = htmlEditor.selectionEnd;
-            const selectedText = htmlEditor.value.substring(start, end);
-            
-            htmlEditor.value = htmlEditor.value.substring(0, start) + 
-                              before + selectedText + after + 
-                              htmlEditor.value.substring(end);
-            
-            const newCursorPos = start + before.length + selectedText.length + after.length;
-            htmlEditor.setSelectionRange(newCursorPos, newCursorPos);
-            htmlEditor.focus();
-            
-            updateStats();
+        function updateLineNumbers() {
+            const lines = htmlEditor.value.split('\n').length;
+            let html = '';
+            for (let i = 1; i <= lines; i++) {
+                html += `<div>${i}</div>`;
+            }
+            lineNumbers.innerHTML = html;
+            lineNumbers.scrollTop = htmlEditor.scrollTop;
+        }
+        
+        function indentLines(add) {
+            const textarea = htmlEditor;
+            const startPos = textarea.selectionStart;
+            const endPos = textarea.selectionEnd;
+            const text = textarea.value;
+            let lineStart = text.lastIndexOf('\n', startPos - 1);
+            lineStart = lineStart === -1 ? 0 : lineStart + 1;
+            let lineEnd = text.indexOf('\n', endPos);
+            lineEnd = lineEnd === -1 ? text.length : lineEnd;
+            const selectedText = text.substring(lineStart, lineEnd);
+            const lines = selectedText.split('\n');
+            const indent = '    ';
+            const newLines = lines.map(line => {
+                if (add) return indent + line;
+                if (line.startsWith(indent)) return line.substring(indent.length);
+                const spaces = line.match(/^ */)[0].length;
+                if (spaces >= 4) return line.substring(4);
+                return line;
+            });
+            const newSelected = newLines.join('\n');
+            const delta = newSelected.length - selectedText.length;
+            textarea.value = text.substring(0, lineStart) + newSelected + text.substring(lineEnd);
+            textarea.selectionStart = startPos + (add ? indent.length : Math.max(-4, -delta / lines.length));
+            textarea.selectionEnd = endPos + delta;
+            saveState();
+            updateAfterChange();
         }
         
         function formatCode() {
@@ -484,38 +636,50 @@
             let formatted = '';
             let indent = 0;
             const lines = code.split('\n');
-            
             lines.forEach(line => {
                 const trimmed = line.trim();
-                if (trimmed.startsWith('</')) {
-                    indent--;
-                }
-                
+                if (trimmed.startsWith('</')) indent--;
                 formatted += '    '.repeat(Math.max(0, indent)) + trimmed + '\n';
-                
-                if (trimmed.startsWith('<') && !trimmed.startsWith('</') && !trimmed.includes('/>')) {
-                    if (!trimmed.includes('</')) {
-                        indent++;
-                    }
-                }
+                if (trimmed.startsWith('<') && !trimmed.startsWith('</') && !trimmed.endsWith('/>')) indent++;
             });
-            
-            htmlEditor.value = formatted;
-            updateStats();
+            htmlEditor.value = formatted.trim();
+            saveState();
+            updateAfterChange();
             showNotification('Code formatted');
         }
         
+        function selectAll() {
+            htmlEditor.focus();
+            htmlEditor.select();
+        }
+        
         function copyCode() {
-            navigator.clipboard.writeText(htmlEditor.value);
-            showNotification('Code copied');
+            const textArea = document.createElement('textarea');
+            textArea.value = htmlEditor.value;
+            document.body.appendChild(textArea);
+            textArea.select();
+            textArea.setSelectionRange(0, 99999);
+            
+            try {
+                document.execCommand('copy');
+                showNotification('Code copied');
+            } catch (err) {
+                navigator.clipboard.writeText(htmlEditor.value).then(() => {
+                    showNotification('Code copied');
+                }).catch(() => {
+                    showNotification('Failed to copy');
+                });
+            }
+            
+            document.body.removeChild(textArea);
         }
         
         function clearEditor() {
             if (confirm('Clear editor?')) {
                 htmlEditor.value = '';
-                updateStats();
-                updatePreview();
-                htmlEditor.focus();
+                history = [''];
+                historyIndex = 0;
+                updateAfterChange();
                 showNotification('Editor cleared');
             }
         }
@@ -537,22 +701,66 @@
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.html,.htm,.txt';
-            
             input.onchange = function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
-                
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     htmlEditor.value = e.target.result;
-                    updateStats();
-                    updatePreview();
+                    history = [e.target.result];
+                    historyIndex = 0;
+                    updateAfterChange();
                     showNotification('File loaded');
                 };
                 reader.readAsText(file);
             };
-            
             input.click();
+        }
+        
+        function insertTag(tag) {
+            const start = htmlEditor.selectionStart;
+            const end = htmlEditor.selectionEnd;
+            const selected = htmlEditor.value.substring(start, end);
+            const open = `<${tag}>`;
+            const close = `</${tag}>`;
+            htmlEditor.value = htmlEditor.value.substring(0, start) + open + selected + close + htmlEditor.value.substring(end);
+            htmlEditor.selectionStart = start + open.length;
+            htmlEditor.selectionEnd = start + open.length + selected.length;
+            saveState();
+            updateAfterChange();
+        }
+        
+        function insertImg() {
+            const str = '<img src="" alt="" />';
+            const start = htmlEditor.selectionStart;
+            htmlEditor.value = htmlEditor.value.substring(0, start) + str + htmlEditor.value.substring(start);
+            htmlEditor.selectionStart = htmlEditor.selectionEnd = start + 10;
+            saveState();
+            updateAfterChange();
+        }
+        
+        function insertComment() {
+            const str = '<!--  -->';
+            const start = htmlEditor.selectionStart;
+            htmlEditor.value = htmlEditor.value.substring(0, start) + str + htmlEditor.value.substring(start);
+            htmlEditor.selectionStart = htmlEditor.selectionEnd = start + 5;
+            saveState();
+            updateAfterChange();
+        }
+        
+        function checkHTML() {
+            const html = htmlEditor.value.trim();
+            if (!html) {
+                showNotification('Empty code');
+                return;
+            }
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const error = doc.querySelector('parsererror');
+            if (error) {
+                showNotification('HTML has errors');
+            } else {
+                showNotification('HTML is valid');
+            }
         }
         
         function showNotification(message) {
