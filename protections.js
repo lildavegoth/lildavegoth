@@ -2,11 +2,23 @@
     'use strict';
     
     const currentHost = window.location.hostname;
-    const githubHost = 'lildavegoth.github.io';
-    const vercelUrl = 'https://kakoi-kiraku-home.vercel.app/';
+    const currentPath = window.location.pathname;
     
-    if (currentHost === githubHost) {
-        window.location.href = vercelUrl;
+    if (currentHost === 'lildavegoth.github.io') {
+        const basePath = '/lildavegoth';
+        const vercelBase = 'https://kakoi-kiraku-home.vercel.app';
+        
+        let newPath = currentPath;
+        
+        if (currentPath.startsWith(basePath)) {
+            newPath = currentPath.replace(basePath, '');
+        }
+        
+        if (newPath === '' || newPath === '/') {
+            window.location.href = vercelBase + '/';
+        } else {
+            window.location.href = vercelBase + newPath;
+        }
     }
     
     if ('serviceWorker' in navigator) {
