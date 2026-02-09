@@ -1,6 +1,14 @@
 (function() {
     'use strict';
     
+    const currentHost = window.location.hostname;
+    const githubHost = 'lildavegoth.github.io';
+    const vercelUrl = 'https://kakoi-kiraku-home.vercel.app/';
+    
+    if (currentHost === githubHost) {
+        window.location.href = vercelUrl;
+    }
+    
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
             navigator.serviceWorker.register('./sw.js').then(function() {
