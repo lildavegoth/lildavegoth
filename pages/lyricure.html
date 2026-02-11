@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lyricure | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md) 0;
+        }
+
+        .title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent-color), #e8f8b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: var(--spacing-sm);
+            transition: opacity 0.3s ease;
+        }
+
+        .icon-btn:hover {
+            opacity: 0.7;
+        }
+
+        .search-wrapper {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .search-box {
+            display: flex;
+            gap: var(--spacing-xs);
+            align-items: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 14px 16px;
+            border-radius: var(--radius-medium);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .search-btn {
+            background: var(--accent-color);
+            color: var(--bg-black);
+            border: none;
+            padding: 14px 20px;
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-btn i {
+            font-size: 1.3rem;
+        }
+
+        .search-btn:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+        }
+
+        .search-btn:active {
+            transform: translateY(0);
+        }
+
+        .results-container {
+            min-height: 400px;
+        }
+
+        .initial-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .initial-icon {
+            font-size: 4rem;
+            margin-bottom: var(--spacing-md);
+            color: var(--accent-color);
+            opacity: 0.3;
+        }
+
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(193, 252, 50, 0.2);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .error-state {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-lg);
+            text-align: center;
+            color: #ff6b6b;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .suggestions-container {
+            max-width: 700px;
+            margin: 0 auto;
+            animation: fadeIn 0.5s ease;
+            text-align: center;
+        }
+
+        .suggestions-container h3 {
+            margin-bottom: var(--spacing-lg);
+            color: var(--text-primary);
+        }
+
+        .suggestion-item {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-lg);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .suggestion-item:hover {
+            background: rgba(193, 252, 50, 0.15);
+            border-color: var(--accent-color);
+            transform: translateY(-4px);
+        }
+
+        .suggestion-item strong {
+            font-size: 1.3rem;
+            color: var(--accent-color);
+        }
+
+        .lyrics-display {
+            max-width: 700px;
+            margin: 0 auto;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .lyrics-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            max-height: 70vh;
+            overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .lyrics-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        .song-info {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .artist-name {
+            color: var(--accent-color);
+        }
+
+        .song-title-info {
+            color: var(--text-primary);
+        }
+
+        .lyrics-body {
+            text-align: left;
+        }
+
+        .lyrics-block {
+            margin-bottom: var(--spacing-lg);
+            line-height: 1.8;
+            font-size: 1.3rem;
+        }
+
+        .section-break {
+            text-align: left;
+            margin: var(--spacing-lg) 0;
+            font-size: 1.8rem;
+            color: var(--accent-color);
+            opacity: 0.4;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .title {
+                font-size: 1.8rem;
+            }
+
+            .song-info {
+                font-size: 1.7rem;
+            }
+
+            .lyrics-block {
+                font-size: 1.2rem;
+            }
+
+            .section-break {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .lyrics-block {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <app-header class="fade-in">
+            <div>
+                <h1 class="username">Lyricure</h1>
+                <p class="tagline">Find lyrics in the worlds for you favorites songs</p>
+            </div>
+        </app-header>
+
+        <div class="search-wrapper">
+            <div class="search-box">
+                <input type="text" id="searchInput" class="search-input" placeholder="Artist - Song title" autofocus>
+                <button id="searchBtn" class="search-btn"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+
+        <div class="results-container">
+            <div id="initialState" class="initial-state">
+                <h2 style="margin-bottom: var(--spacing-xs); color: var(--text-primary);">Search for Lyrics</h2>
+                <p style="color: var(--text-secondary); max-width: 400px;">Type artist - song title to find lyrics.</p>
+                <p style="color: var(--text-secondary); max-width: 400px; margin-top: 100px;">All the searched songs will be cached to your browser localStorage, to delete them, you must go to Storage page in Home Page.</p>
+            </div>
+
+            <div id="loadingState" class="loading-state" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p style="color: var(--accent-color);">Searching lyrics...</p>
+            </div>
+
+            <div id="errorState" class="error-state" style="display: none;"></div>
+
+            <div id="suggestionsState" class="suggestions-container" style="display: none;">
+                <h3>Did you mean one of these?</h3>
+                <div id="suggestionsList"></div>
+            </div>
+
+            <div id="lyricsDisplay" class="lyrics-display" style="display: none;">
+                <div class="lyrics-content">
+                    <div class="song-info">
+                        <span id="displayArtistName" class="artist-name"></span> - <span id="displaySongTitle" class="song-title-info"></span>
+                    </div>
+                    <div id="displayLyrics" class="lyrics-body"></div>
+                </div>
+            </div>
+        </div>
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Lyricure</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const initialState = document.getElementById('initialState');
+        const loadingState = document.getElementById('loadingState');
+        const errorState = document.getElementById('errorState');
+        const suggestionsState = document.getElementById('suggestionsState');
+        const suggestionsList = document.getElementById('suggestionsList');
+        const lyricsDisplay = document.getElementById('lyricsDisplay');
+        const displayArtistName = document.getElementById('displayArtistName');
+        const displaySongTitle = document.getElementById('displaySongTitle');
+        const displayLyrics = document.getElementById('displayLyrics');
+
+        function showState(state) {
+            initialState.style.display = 'none';
+            loadingState.style.display = 'none';
+            errorState.style.display = 'none';
+            suggestionsState.style.display = 'none';
+            lyricsDisplay.style.display = 'none';
+            
+            if (state === 'initial') initialState.style.display = 'flex';
+            if (state === 'loading') loadingState.style.display = 'flex';
+            if (state === 'error') errorState.style.display = 'block';
+            if (state === 'suggestions') suggestionsState.style.display = 'block';
+            if (state === 'lyrics') lyricsDisplay.style.display = 'block';
+        }
+
+        function toTitleCase(str) {
+            return str.trim().split(' ').map(word => word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : '').join(' ');
+        }
+        
+        function getCache() {
+            const cache = localStorage.getItem('lyricure_cache');
+            return cache ? JSON.parse(cache) : { items: [] };
+        }
+        
+        function setCache(artist, song, lyrics) {
+            const cache = getCache();
+            const key = `${artist}_${song}`.toLowerCase().replace(/\s+/g, '_');
+            const existingIndex = cache.items.findIndex(item => item.key === key);
+            const newItem = { key, artist, song, lyrics, timestamp: Date.now() };
+            if (existingIndex !== -1) cache.items[existingIndex] = newItem;
+            else cache.items.push(newItem);
+            localStorage.setItem('lyricure_cache', JSON.stringify(cache));
+        }
+        
+        function getCachedLyrics(artist, song) {
+            const cache = getCache();
+            const key = `${artist}_${song}`.toLowerCase().replace(/\s+/g, '_');
+            const item = cache.items.find(item => item.key === key);
+            if (item && Date.now() - item.timestamp < 86400000) return item.lyrics;
+            if (item) {
+                cache.items = cache.items.filter(i => i.key !== key);
+                localStorage.setItem('lyricure_cache', JSON.stringify(cache));
+            }
+            return null;
+        }
+        
+        async function getLyricsOvh(artist, song) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(
+                    `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(song)}`,
+                    { signal: controller.signal }
+                );
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.lyrics || null;
+                }
+                return null;
+            } catch {
+                return null;
+            }
+        }
+
+        async function getLyricsLrclib(artist, song) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(
+                    `https://lrclib.net/api/get?artist_name=${encodeURIComponent(artist)}&track_name=${encodeURIComponent(song)}`,
+                    { signal: controller.signal }
+                );
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.plainLyrics || null;
+                }
+                return null;
+            } catch {
+                return null;
+            }
+        }
+
+        async function getSuggestions(term) {
+            if (!term) return [];
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(
+                    `https://api.lyrics.ovh/suggest/${encodeURIComponent(term)}`,
+                    { signal: controller.signal }
+                );
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.data || [];
+                }
+                return [];
+            } catch {
+                return [];
+            }
+        }
+
+        async function searchLyrics() {
+            const query = searchInput.value.trim();
+            
+            if (!query) {
+                showState('error');
+                errorState.innerHTML = '<p>Please enter artist - song title</p>';
+                return;
+            }
+            
+            showState('loading');
+            
+            let artist = '';
+            let song = '';
+            
+            const dashIndex = query.lastIndexOf(' - ');
+            if (dashIndex !== -1) {
+                artist = query.substring(0, dashIndex).trim();
+                song = query.substring(dashIndex + 3).trim();
+            }
+            
+            let lyrics = null;
+            if (lyrics && lyrics.trim()) {
+                setCache(artist, song, lyrics);
+            }
+            
+            if (lyrics && lyrics.trim()) {
+                const rawLyrics = lyrics.trim();
+                const blocks = rawLyrics.split(/\n\n+/);
+                
+                const lyricsHtml = blocks
+                    .filter(block => block.trim() !== '')
+                    .map(block => `<div class="lyrics-block">${block.split('\n').join('<br>')}</div>`)
+                    .join('<div class="section-break"><i class="fas fa-music"></i></div>');
+                
+                displayArtistName.textContent = toTitleCase(artist);
+                displaySongTitle.textContent = toTitleCase(song);
+                displayLyrics.innerHTML = lyricsHtml;
+                showState('lyrics');
+                displayLyrics.scrollTop = 0;
+            } else {
+                const suggestions = await getSuggestions(query);
+                
+                if (suggestions.length > 0) {
+                    suggestionsList.innerHTML = '';
+                    suggestions.slice(0, 10).forEach(item => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.classList.add('suggestion-item');
+                        
+                        const titleElem = document.createElement('strong');
+                        titleElem.textContent = item.title;
+                        itemDiv.appendChild(titleElem);
+                        
+                        const artistName = item.artist.name || item.artist;
+                        itemDiv.appendChild(document.createTextNode(' by ' + artistName));
+                        
+                        itemDiv.onclick = () => {
+                            searchInput.value = `${artistName} - ${item.title}`;
+                            searchLyrics();
+                        };
+                        
+                        suggestionsList.appendChild(itemDiv);
+                    });
+                    showState('suggestions');
+                } else {
+                    showState('error');
+                    errorState.innerHTML = `
+                        <p>Lyrics could not be fetched or are not available for this song.</p>
+                        <p style="margin-top: 10px; font-size: 0.9rem;">Try different spelling or format: Artist - Song title</p>
+                    `;
+                }
+            }
+        }
+
+        searchBtn.addEventListener('click', searchLyrics);
+        
+        searchInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') searchLyrics();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            searchInput.focus();
+            const cache = getCache();
+            const now = Date.now();
+            cache.items = cache.items.filter(item => now - item.timestamp <= 86400000);
+            localStorage.setItem('lyricure_cache', JSON.stringify(cache));
+        });
+        
+    </script>
+</body>
+</html>

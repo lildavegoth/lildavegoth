@@ -2228,7 +2228,9 @@
                     { id: 'streak_30', name: 'Monthly Champion', desc: '30 day check-in streak', reward: 250, icon: '👑' },
                     { id: 'full_collection', name: 'Complete Set', desc: 'Collect all items', reward: 100, icon: '🏆' },
                     { id: 'real_collector', name: 'Real Collector', desc: 'Collects 1000 Items', reward: 2500, icon: '💎' },
-					{ id: 'mythical_hunter', name: 'Mythical Hunter', desc: 'Get a mythical item', reward: 500, icon: '👁️' },
+                    { id: 'mythical_hunter', name: 'Mythical Hunter', desc: 'Get a mythical item', reward: 500, icon: '👁️' },
+                    { id: 'item_maxer', name: 'Item Maxer', desc: 'Max out a collectible', reward: 200, icon: '📦' },
+                    { id: 'all_items_maxed', name: 'Completionist', desc: 'Max out all collectibles', reward: 1000, icon: '🏆' }
                 ];
 
                 this.shopItems = [
@@ -2298,6 +2300,7 @@
                         this.username = data.username ?? 'Player';
                         this.nameTags = data.nameTags ?? 0;
 						this.mythicalPityCounter = data.mythicalPityCounter || 0;
+						this.checkStreakContinuity();
                         
                         if (this.profilePic) {
                             const profilePic = document.getElementById('profilePic');
@@ -2793,10 +2796,12 @@
             }
 
             renderCalendar() {
+                this.checkStreakContinuity();
                 const container = document.getElementById('monthContainer');
                 const yearTitle = document.getElementById('yearTitle');
                 const checkinBtn = document.getElementById('checkinBtn');
                 const today = new Date();
+                const yesterday = new Date(today);
                 const currentYear = today.getFullYear();
                 const currentMonth = today.getMonth();
                 
@@ -2861,26 +2866,31 @@
                     return;
                 }
                 
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayKey = `${yesterday.getFullYear()}-${yesterday.getMonth()}-${yesterday.getDate()}`;
+                
+                if (this.checkinData[yesterdayKey]) {
+                    this.streak++;
+                } else {
+                    this.streak = 1;
+                }
+                
                 const reward = this.getDayReward(today.getDate());
                 
                 this.checkinData[dateKey] = true;
                 this.coins += reward;
                 this.addXP(25);
                 
-                this.streak++;
                 this.checkStreakAchievements();
                 
                 this.renderCalendar();
                 this.updateUI();
+                this.saveGameData();
                 window.showMessage(`Daily check-in! +${reward} coins`, 'success');
                 this.createConfetti();
             }
-
-            getDayReward(day) {
-                if (day % 7 === 0) return 100;
-                return 25 + Math.floor(Math.random() * 25);
-            }
-
+            
             checkStreakAchievements() {
                 if (this.streak >= 7 && !this.achievements['streak_7']) {
                     this.unlockAchievement('streak_7');
@@ -2889,7 +2899,23 @@
                     this.unlockAchievement('streak_30');
                 }
             }
+            
+            checkStreakContinuity() {
+                if (this.streak === 0) return;
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayKey = `${yesterday.getFullYear()}-${yesterday.getMonth()}-${yesterday.getDate()}`;
+                if (!this.checkinData[yesterdayKey] && !this.checkinData[`${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`]) {
+                    this.streak = 0;
+                }
+            }
 
+            getDayReward(day) {
+                if (day % 7 === 0) return 100;
+                return 25 + Math.floor(Math.random() * 25);
+            }
+            
             renderCollection() {
                 const grid = document.getElementById('collectionGrid');
                 const achievementsList = document.getElementById('achievementsList');
@@ -3270,6 +3296,10 @@
 			        return true;
 			    }, pullTimeout);
 			}
+			
+			showMythicalNotification(item) {
+                window.showMessage(`MYTHICAL! You found ${item.name}!`, 'success');
+            }
             
             doMultiPull(isAutoPull = false) {
 			    const items = [];

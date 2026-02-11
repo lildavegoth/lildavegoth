@@ -8,7 +8,6 @@
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
-    <link rel="stylesheet" href="../navigation.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -275,17 +274,12 @@
             background: rgba(126, 80, 181, 0.2);
         }
         
-        .date.has-event.has-plan {
-            border: 2px double;
-            border-color: rgba(193, 252, 50, 0.3) rgba(126, 80, 181, 0.5);
+        .calendar {
+            margin: var(--spacing-md) 0;
         }
         
         .date.has-event.has-plan:hover {
-            background: linear-gradient(45deg, rgba(193, 252, 50, 0.1), rgba(126, 80, 181, 0.1));
-        }
-
-        .calendar {
-            margin: var(--spacing-md) 0;
+            background: rgba(255, 198, 46, 0.2);
         }
 
         .weekdays {
@@ -457,7 +451,7 @@
             min-height: 140px;
             padding-bottom: 45px;
         }
-
+        
         .plan-date {
             font-size: 11px;
             color: var(--text-secondary);
@@ -482,6 +476,78 @@
             gap: 16px;
             flex: 1;
             margin-bottom: 5px;
+        }
+        
+        .plan-pin {
+            position: absolute;
+            bottom: 3px;
+            left: 3px;
+            padding: 0;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .plan-pin i {
+            font-size: 14px;
+            color: var(--text-secondary);
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+        
+        .plan-pin:hover i {
+            color: var(--accent-color);
+        }
+        
+        .plan-pin.pinned i {
+            color: var(--accent-color);
+            transform: rotate(45deg);
+        }
+        
+        .plan-item.pinned {
+            border: 1px solid var(--accent-color);
+        }
+        
+        .plan-expand {
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 500;
+            padding: 3px 12px;
+            display: inline-block;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            position: absolute;
+            bottom: 11px;
+            right: 148px;
+        }
+        
+        .plan-expand:hover {
+            color: var(--accent-color);
+            background: rgba(193, 252, 50, 0.15);
+        }
+        
+        .plan-item.collapsed {
+            min-height: 60px;
+            padding-bottom: 35px;
+            padding-top: 20px;
+        }
+        
+        .plan-desc-collapsed {
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 100px;
         }
         
         .plan-edit {
@@ -741,6 +807,9 @@
             font-family: inherit;
             color: var(--text-primary);
             cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
         }
         
         .popup-date-input:hover {
@@ -753,10 +822,8 @@
         }
         
         .popup-date-input::-webkit-calendar-picker-indicator {
-            filter: invert(0.8);
-            cursor: pointer;
-            padding: 4px;
-            border-radius: 4px;
+            display: none;
+            -webkit-appearance: none;
         }
         
         .popup-date-input::-webkit-calendar-picker-indicator:hover {
@@ -764,10 +831,7 @@
         }
         
         .popup-date-input::-moz-calendar-picker-indicator {
-            filter: invert(0.8);
-            cursor: pointer;
-            padding: 4px;
-            border-radius: 4px;
+            display: none;
         }
         
         .popup-date-input::-moz-calendar-picker-indicator:hover {
@@ -806,6 +870,24 @@
                 <p class="tagline">Plan and manage your monthly schedule</p>
             </div>
         </header>
+        
+        <div class="popup-overlay" id="deleteConfirmPopup">
+            <div class="popup-window">
+                <div class="popup-header">
+                    <div class="popup-title">Delete Plan</div>
+                    <div class="popup-subtitle">Are you sure you want to delete this plan?</div>
+                </div>
+                
+                <div class="popup-body">
+                    <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;" id="deletePlanPreview"></p>
+                </div>
+                
+                <div class="popup-footer">
+                    <button class="popup-btn popup-btn-primary" id="deleteConfirmBtn">Delete</button>
+                    <button class="popup-btn popup-btn-secondary" id="deleteCancelBtn">Cancel</button>
+                </div>
+            </div>
+        </div>
         
         <div class="calendar-grid">
             <div class="project-card fade-in delay-1">
@@ -943,63 +1025,31 @@
 
     <script>
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        let worldEvents = {};
         
-        const worldEvents = {
-            '1-1': { name: 'New Year\'s Day', country: 'Global', id: 'GLOBAL' },
-            '1-2': { name: 'Bank Holiday (New Year\'s Day)', country: 'Indonesia', id: 'ID' },
-            '1-20': { name: 'Inauguration Day', country: 'United States', id: 'US' },
-            '1-26': { name: 'Australia Day', country: 'Australia', id: 'AU' },
-            '2-1': { name: 'National Foundry Day', country: 'Japan', id: 'JP' },
-            '2-8': { name: 'Isra Mi\'raj', country: 'Indonesia', id: 'ID' },
-            '2-10': { name: 'Chinese New Year', country: 'China', id: 'CN' },
-            '2-11': { name: 'National Foundation Day', country: 'Japan', id: 'JP' },
-            '2-14': { name: 'Valentine\'s Day', country: 'Global', id: 'GLOBAL' },
-            '3-1': { name: 'Independence Movement Day', country: 'South Korea', id: 'KR' },
-            '3-8': { name: 'International Women\'s Day', country: 'Global', id: 'GLOBAL' },
-            '3-11': { name: 'Nyepi (Balinese New Year)', country: 'Indonesia', id: 'ID' },
-            '3-17': { name: 'St. Patrick\'s Day', country: 'Ireland', id: 'IE' },
-            '3-21': { name: 'Nowruz (Persian New Year)', country: 'Iran', id: 'IR' },
-            '3-28': { name: 'Good Friday', country: 'Global', id: 'GLOBAL' },
-            '4-1': { name: 'Easter Monday', country: 'Global', id: 'GLOBAL' },
-            '4-2': { name: 'Idul Fitri Holiday', country: 'Indonesia', id: 'ID' },
-            '4-3': { name: 'Idul Fitri', country: 'Indonesia', id: 'ID' },
-            '4-4': { name: 'Idul Fitri Holiday', country: 'Indonesia', id: 'ID' },
-            '4-5': { name: 'Idul Fitri Holiday', country: 'Indonesia', id: 'ID' },
-            '4-22': { name: 'Earth Day', country: 'Global', id: 'GLOBAL' },
-            '4-25': { name: 'ANZAC Day', country: 'Australia', id: 'AU' },
-            '5-1': { name: 'Labour Day', country: 'Global', id: 'GLOBAL' },
-            '5-5': { name: 'Children\'s Day', country: 'Japan', id: 'JP' },
-            '5-7': { name: 'Waisak Day', country: 'Indonesia', id: 'ID' },
-            '5-16': { name: 'Ascension Day of Jesus Christ', country: 'Global', id: 'GLOBAL' },
-            '5-25': { name: 'Idul Adha', country: 'Indonesia', id: 'ID' },
-            '5-26': { name: 'Memorial Day', country: 'United States', id: 'US' },
-            '6-1': { name: 'Pancasila Day', country: 'Indonesia', id: 'ID' },
-            '6-11': { name: 'Queen\'s Official Birthday', country: 'United Kingdom', id: 'UK' },
-            '6-19': { name: 'Juneteenth', country: 'United States', id: 'US' },
-            '6-26': { name: 'Islamic New Year', country: 'Indonesia', id: 'ID' },
-            '7-1': { name: 'Canada Day', country: 'Canada', id: 'CA' },
-            '7-4': { name: 'Independence Day', country: 'United States', id: 'US' },
-            '7-7': { name: 'Bank Holiday (Idul Adha)', country: 'Indonesia', id: 'ID' },
-            '7-14': { name: 'Bastille Day', country: 'France', id: 'FR' },
-            '8-15': { name: 'Independence Day', country: 'India', id: 'IN' },
-            '8-17': { name: 'Independence Day', country: 'Indonesia', id: 'ID' },
-            '9-2': { name: 'National Day', country: 'Vietnam', id: 'VN' },
-            '9-5': { name: 'Prophet Muhammad\'s Birthday', country: 'Indonesia', id: 'ID' },
-            '10-5': { name: 'Constitution Day', country: 'Thailand', id: 'TH' },
-            '10-31': { name: 'Halloween', country: 'Global', id: 'GLOBAL' },
-            '11-11': { name: 'Armistice Day', country: 'Global', id: 'GLOBAL' },
-            '11-30': { name: 'Bonifacio Day', country: 'Philippines', id: 'PH' },
-            '12-1': { name: 'World AIDS Day', country: 'Global', id: 'GLOBAL' },
-            '12-24': { name: 'Christmas Eve (Bank Holiday)', country: 'Global', id: 'GLOBAL' },
-            '12-25': { name: 'Christmas Day', country: 'Global', id: 'GLOBAL' },
-            '12-26': { name: 'Boxing Day / Bank Holiday', country: 'Global', id: 'GLOBAL' },
-            '12-31': { name: 'New Year\'s Eve', country: 'Global', id: 'GLOBAL' }
+        const countryFlags = {
+            'US': '🇺🇸', 'ID': '🇮🇩', 'CN': '🇨🇳', 'JP': '🇯🇵',
+            'AU': '🇦🇺', 'CA': '🇨🇦', 'UK': '🇬🇧', 'IE': '🇮🇪',
+            'FR': '🇫🇷', 'IR': '🇮🇷', 'KR': '🇰🇷', 'IN': '🇮🇳',
+            'VN': '🇻🇳', 'TH': '🇹🇭', 'PH': '🇵🇭', 'GLOBAL': '🌍'
         };
-    
+        
         let currentMonth = new Date().getMonth();
         let currentYear = new Date().getFullYear();
         let plans = JSON.parse(localStorage.getItem('monthPlans')) || [];
-    
+        let deleteIndex = -1;
+        
+        const EVENT_URL = 'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Calendar/world-events.json';
+        
+        fetch(EVENT_URL)
+            .then(response => response.json())
+            .then(data => {
+                worldEvents = data;
+                renderCalendar();
+                renderWorldEvents();
+            });
+        
         function updateMonthPicker() {
             const monthPicker = document.getElementById('monthPicker');
             const year = String(currentYear).padStart(4, '0');
@@ -1009,7 +1059,7 @@
             const monthText = monthNames[currentMonth];
             monthPicker.setAttribute('data-display', `${monthText} ${currentYear}`);
         }
-    
+        
         document.getElementById('monthPicker').addEventListener('change', (e) => {
             const [year, month] = e.target.value.split('-');
             currentYear = parseInt(year);
@@ -1022,7 +1072,7 @@
             renderWorldEvents();
             renderPlans();
         });
-    
+        
         document.getElementById('prevMonth').addEventListener('click', () => {
             if (currentMonth === 0) {
                 currentMonth = 11;
@@ -1032,6 +1082,7 @@
             }
             renderCalendar();
             renderWorldEvents();
+            renderPlans();
             updateMonthPicker();
             
             const monthPicker = document.getElementById('monthPicker');
@@ -1048,28 +1099,27 @@
             }
             renderCalendar();
             renderWorldEvents();
+            renderPlans();
             updateMonthPicker();
             
             const monthPicker = document.getElementById('monthPicker');
             const monthText = monthNames[currentMonth];
             monthPicker.setAttribute('data-display', `${monthText} ${currentYear}`);
         });
-    
+        
         function renderCalendar() {
             const datesContainer = document.getElementById('datesContainer');
-            const monthYear = document.getElementById('monthYear');
             datesContainer.innerHTML = '';
-    
+        
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
-            const today = new Date();
-    
+        
             for (let i = 0; i < firstDay; i++) {
                 const emptyDate = document.createElement('div');
                 emptyDate.className = 'date empty';
                 datesContainer.appendChild(emptyDate);
             }
-    
+        
             for (let day = 1; day <= lastDay; day++) {
                 const dateDiv = document.createElement('div');
                 
@@ -1078,49 +1128,34 @@
                 
                 const hasPlan = plans.some(p => {
                     const planDate = new Date(p.date);
-                    planDate.setHours(0, 0, 0, 0);
                     const compareDate = new Date(currentYear, currentMonth, day);
-                    compareDate.setHours(0, 0, 0, 0);
-                    return planDate.getTime() === compareDate.getTime();
+                    return planDate.toDateString() === compareDate.toDateString();
                 });
                 
-                const now = new Date();
-                const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                todayDate.setHours(0, 0, 0, 0);
-                const compareDate = new Date(currentYear, currentMonth, day);
-                compareDate.setHours(0, 0, 0, 0);
-                const isToday = todayDate.getTime() === compareDate.getTime();
+                const isToday = new Date().toDateString() === new Date(currentYear, currentMonth, day).toDateString();
                 
                 if (hasEvent && hasPlan) {
                     dateDiv.className = 'date has-content has-event has-plan';
-                    const dayNumber = document.createElement('div');
-                    dayNumber.className = 'day-number';
-                    dayNumber.textContent = day;
-                    dateDiv.appendChild(dayNumber);
+                    dateDiv.style.borderColor = '#C1FC32';
                 } else if (hasEvent) {
                     dateDiv.className = 'date has-content has-event';
-                    const dayNumber = document.createElement('div');
-                    dayNumber.className = 'day-number';
-                    dayNumber.textContent = day;
-                    dateDiv.appendChild(dayNumber);
                 } else if (hasPlan) {
                     dateDiv.className = 'date has-content has-plan';
-                    const dayNumber = document.createElement('div');
-                    dayNumber.className = 'day-number';
-                    dayNumber.textContent = day;
-                    dateDiv.appendChild(dayNumber);
                 } else {
                     dateDiv.className = 'date';
-                    dateDiv.textContent = day;
                 }
                 
                 if (isToday) {
                     dateDiv.classList.add('today');
                 }
                 
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'day-number';
+                dayNumber.textContent = day;
+                dateDiv.appendChild(dayNumber);
+                
                 dateDiv.addEventListener('click', () => {
                     const selectedDate = new Date(currentYear, currentMonth, day);
-                    selectedDate.setHours(12, 0, 0, 0);
                     const year = selectedDate.getFullYear();
                     const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
                     const dayNum = String(selectedDate.getDate()).padStart(2, '0');
@@ -1139,18 +1174,11 @@
                 datesContainer.appendChild(dateDiv);
             }
         }
-    
-        const countryFlags = {
-            'US': '🇺🇸', 'ID': '🇮🇩', 'CN': '🇨🇳', 'JP': '🇯🇵',
-            'AU': '🇦🇺', 'CA': '🇨🇦', 'UK': '🇬🇧', 'IE': '🇮🇪',
-            'FR': '🇫🇷', 'IR': '🇮🇷', 'KR': '🇰🇷', 'IN': '🇮🇳',
-            'VN': '🇻🇳', 'TH': '🇹🇭', 'PH': '🇵🇭', 'GLOBAL': '🌍'
-        };
-
+        
         function renderWorldEvents() {
             const eventsContainer = document.getElementById('worldEventsContainer');
             eventsContainer.innerHTML = '';
-    
+        
             const monthEvents = [];
             for (let day = 1; day <= 31; day++) {
                 const eventKey = `${currentMonth + 1}-${day}`;
@@ -1161,12 +1189,12 @@
                     });
                 }
             }
-    
+        
             if (monthEvents.length === 0) {
                 eventsContainer.innerHTML = '<div class="event-item">No world events this month</div>';
                 return;
             }
-    
+        
             monthEvents.forEach(event => {
                 const eventDiv = document.createElement('div');
                 eventDiv.className = 'event-item';
@@ -1175,16 +1203,29 @@
                 eventsContainer.appendChild(eventDiv);
             });
         }
-    
+        
         function savePlans() {
             localStorage.setItem('monthPlans', JSON.stringify(plans));
         }
-    
+        
+        function dateCompare(a, b) {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateB - dateA;
+        }
+        
         function renderPlans() {
             const plansContainer = document.getElementById('plansContainer');
             plansContainer.innerHTML = '';
             
             let filteredPlans = [...plans];
+            filteredPlans = filteredPlans.filter(plan => {
+                const planDate = new Date(plan.date);
+                return planDate.getMonth() === currentMonth && planDate.getFullYear() === currentYear;
+            });
+            
+            const searchInput = document.getElementById('planSearch');
+            const searchTerm = searchInput.value.toLowerCase().trim();
             
             if (searchTerm) {
                 filteredPlans = filteredPlans.filter(plan => 
@@ -1192,41 +1233,94 @@
                 );
             }
             
-            const sortedPlans = filteredPlans.sort((a, b) => {
-                const dateA = new Date(a.date);
-                const dateB = new Date(b.date);
-                dateA.setHours(0, 0, 0, 0);
-                dateB.setHours(0, 0, 0, 0);
-                return dateA - dateB;
-            });
+            const pinnedPlans = filteredPlans
+                .filter(p => p.pinned)
+                .sort(dateCompare);
+                
+            const nonPinnedIncomplete = filteredPlans
+                .filter(p => !p.pinned && !p.completed)
+                .sort(dateCompare);
+                
+            const nonPinnedCompleted = filteredPlans
+                .filter(p => !p.pinned && p.completed)
+                .sort(dateCompare);
+                
+            const displayPlans = [...pinnedPlans, ...nonPinnedIncomplete, ...nonPinnedCompleted];
             
-            if (sortedPlans.length === 0) {
-                const noResults = searchTerm 
+            if (displayPlans.length === 0) {
+                const message = searchTerm 
                     ? `No plans found for "${searchTerm}"`
                     : 'No plans yet. Add one!';
-                plansContainer.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 13px;">${noResults}</div>`;
+                plansContainer.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 13px;">${message}</div>`;
                 return;
             }
         
-            sortedPlans.forEach((plan, index) => {
+            displayPlans.forEach((plan, index) => {
+                const originalIndex = plans.indexOf(plan);
+                
                 const planItem = document.createElement('div');
-                planItem.className = 'plan-item';
+                planItem.className = `plan-item ${plan.pinned ? 'pinned' : ''}`;
         
                 const planDate = new Date(plan.date);
-                planDate.setHours(0, 0, 0, 0);
                 const dateStr = planDate.toLocaleDateString('en-US', { 
                     month: 'short', 
                     day: 'numeric', 
                     year: 'numeric' 
                 });
         
+                const isExpanded = plan.expanded !== false;
+                if (isExpanded) {
+                    planItem.innerHTML = `
+                        <div class="plan-date">${dateStr}</div>
+                        <div class="plan-content">
+                            <div class="plan-desc">${plan.description.replace(/\n/g, '<br>')}</div>
+                        </div>
+                    `;
+                    planItem.classList.remove('collapsed');
+                } else {
+                    const firstLine = plan.description.split('\n')[0];
+                    const shortDesc = firstLine.length > 60 ? firstLine.substring(0, 60) + '...' : firstLine;
+                    planItem.innerHTML = `
+                        <div class="plan-desc-collapsed">${shortDesc}</div>
+                    `;
+                    planItem.classList.add('collapsed');
+                }
+                
+                const pinBtn = document.createElement('button');
+                pinBtn.className = `plan-pin ${plan.pinned ? 'pinned' : ''}`;
+                pinBtn.innerHTML = '<i class="fas fa-thumbtack"></i>';
+                pinBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    plan.pinned = !plan.pinned;
+                    savePlans();
+                    renderPlans();
+                    renderCalendar();
+                });
+                
+                const expandBtn = document.createElement('button');
+                expandBtn.className = 'plan-expand';
+                expandBtn.innerHTML = plan.expanded ? '<i class="fas fa-chevron-up"></i>' : '<i class="fas fa-chevron-down"></i>';
+                expandBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const wasExpanded = plan.expanded;
+                    plan.expanded = !plan.expanded;
+                    
+                    if (!wasExpanded && plan.expanded) {
+                        planItem.classList.add('expand-animation');
+                    } else if (wasExpanded && !plan.expanded) {
+                        planItem.classList.add('collapse-animation');
+                    }
+                    
+                    savePlans();
+                    renderPlans();
+                });
+                
                 const editBtn = document.createElement('button');
                 editBtn.className = 'plan-edit';
                 editBtn.textContent = 'Edit';
                 editBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    e.preventDefault();
-                    openEditPopup(index, plan);
+                    openEditPopup(originalIndex, plan);
                 });
         
                 const deleteBtn = document.createElement('button');
@@ -1234,8 +1328,12 @@
                 deleteBtn.textContent = 'Delete';
                 deleteBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    e.preventDefault();
-                    deletePlan(index);
+                    deleteIndex = originalIndex;
+                    const previewText = plan.description.length > 50 
+                        ? plan.description.substring(0, 50) + '...' 
+                        : plan.description;
+                    document.getElementById('deletePlanPreview').innerHTML = `"${previewText}"<br><span style="font-size: 12px; color: var(--text-secondary);">${dateStr}</span>`;
+                    document.getElementById('deleteConfirmPopup').classList.add('show');
                 });
         
                 const checkbox = document.createElement('input');
@@ -1249,25 +1347,47 @@
                 checkboxCustom.addEventListener('click', () => {
                     checkbox.checked = !checkbox.checked;
                     checkboxCustom.classList.toggle('checked');
+                    const wasCompleted = plan.completed;
                     plan.completed = checkbox.checked;
+                    
+                    if (!wasCompleted && plan.completed) {
+                        plan.expanded = false;
+                        planItem.classList.add('collapse-animation');
+                    } else if (wasCompleted && !plan.completed) {
+                        plan.expanded = true;
+                        planItem.classList.add('expand-animation');
+                    }
+                    
                     savePlans();
+                    renderPlans();
                 });
         
                 checkbox.addEventListener('change', () => {
                     checkboxCustom.classList.toggle('checked', checkbox.checked);
+                    const wasCompleted = plan.completed;
                     plan.completed = checkbox.checked;
+                    
+                    if (!wasCompleted && plan.completed) {
+                        plan.expanded = false;
+                        planItem.classList.add('collapse-animation');
+                        setTimeout(() => {
+                            planItem.classList.remove('collapse-animation');
+                        }, 200);
+                    } else if (wasCompleted && !plan.completed) {
+                        plan.expanded = true;
+                        planItem.classList.add('expand-animation');
+                        setTimeout(() => {
+                            planItem.classList.remove('expand-animation');
+                        }, 200);
+                    }
+                    
                     savePlans();
+                    renderPlans();
                 });
-        
-                planItem.innerHTML = `
-                    <div class="plan-date">${dateStr}</div>
-                    <div class="plan-content">
-                        <div class="plan-desc">${plan.description.replace(/\n/g, '<br>')}</div>
-                    </div>
-                `;
-        
+                
                 const buttonsContainer = document.createElement('div');
-                buttonsContainer.className = 'plan-buttons';
+                buttonsContainer.appendChild(pinBtn);
+                buttonsContainer.appendChild(expandBtn);
                 buttonsContainer.appendChild(editBtn);
                 buttonsContainer.appendChild(deleteBtn);
                 buttonsContainer.appendChild(checkbox);
@@ -1277,19 +1397,24 @@
                 plansContainer.appendChild(planItem);
             });
         }
-    
-        function deletePlan(index) {
-            if (editingIndex === index) {
-                editingIndex = -1;
-                document.getElementById('editPopupOverlay').classList.remove('show');
+        
+        function deletePlan() {
+            if (deleteIndex >= 0 && deleteIndex < plans.length) {
+                if (editingIndex === deleteIndex) {
+                    editingIndex = -1;
+                    document.getElementById('editPopupOverlay').classList.remove('show');
+                }
+                
+                plans.splice(deleteIndex, 1);
+                savePlans();
+                renderPlans();
+                renderCalendar();
+                window.showMessage('Plan has been deleted');
             }
-            
-            plans.splice(index, 1);
-            savePlans();
-            renderPlans();
-            renderCalendar();
+            deleteIndex = -1;
+            document.getElementById('deleteConfirmPopup').classList.remove('show');
         }
-    
+        
         function initializeCalendar() {
             renderCalendar();
             renderWorldEvents();
@@ -1298,7 +1423,7 @@
         }
         
         let editingIndex = -1;
-
+        
         function openEditPopup(index, plan) {
             editingIndex = index;
             
@@ -1318,31 +1443,8 @@
             document.getElementById('editPopupPlanDesc').focus();
         }
         
-        let searchTerm = '';
-
-        function searchPlans() {
-            const searchInput = document.getElementById('planSearch');
-            searchTerm = searchInput.value.toLowerCase().trim();
-            renderPlans();
-        }
+        document.getElementById('planSearch').addEventListener('input', renderPlans);
         
-        function deletePlan(index) {
-            if (editingIndex === index) {
-                editingIndex = -1;
-                document.getElementById('editPopupOverlay').classList.remove('show');
-            }
-            
-            plans.splice(index, 1);
-            savePlans();
-            renderPlans();
-            renderCalendar();
-            
-            document.getElementById('planSearch').value = '';
-            searchTerm = '';
-        }
-    
-        initializeCalendar();
-    
         document.getElementById('popupAddBtn').addEventListener('click', () => {
             const dateInput = document.getElementById('popupPlanDate').value;
             const description = document.getElementById('popupPlanDesc').value.trim();
@@ -1354,7 +1456,10 @@
         
             plans.push({
                 date: dateInput,
-                description: description
+                description: description,
+                completed: false,
+                pinned: false,
+                expanded: true
             });
         
             savePlans();
@@ -1411,7 +1516,19 @@
             }
         });
         
-        document.getElementById('planSearch').addEventListener('input', searchPlans);
+        document.getElementById('deleteConfirmBtn').addEventListener('click', deletePlan);
+        
+        document.getElementById('deleteCancelBtn').addEventListener('click', () => {
+            deleteIndex = -1;
+            document.getElementById('deleteConfirmPopup').classList.remove('show');
+        });
+        
+        document.getElementById('deleteConfirmPopup').addEventListener('click', (e) => {
+            if (e.target.id === 'deleteConfirmPopup') {
+                deleteIndex = -1;
+                document.getElementById('deleteConfirmPopup').classList.remove('show');
+            }
+        });
         
         document.getElementById('importExportBtn').addEventListener('click', () => {
             document.getElementById('importExportPopup').classList.add('show');
@@ -1489,6 +1606,8 @@
             
             reader.readAsText(file);
         });
+        
+        initializeCalendar();
         
     </script>
 </body>
