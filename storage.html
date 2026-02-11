@@ -190,6 +190,9 @@
             border-radius: var(--radius-large);
             padding: var(--spacing-sm);
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .card-header {
@@ -288,6 +291,29 @@
             gap: 15px;
             margin-bottom: 10px;
         }
+        
+        .storage-key {
+            word-break: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin: 20px 0 12px;
+            padding-right: 50px;
+        }
+        
+        .storage-value {
+            word-break: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            max-height: 120px;
+            overflow-y: auto;
+            margin-bottom: var(--spacing-sm);
+            white-space: pre-wrap;
+        }
+        
     </style>
 </head>
 <body>
@@ -453,18 +479,18 @@
             
             const container = document.getElementById('storageContainer');
             container.innerHTML = '';
-
+        
             const countEl = document.getElementById('itemsCount');
             let plural = filtered.length === 1 ? '' : 's';
             countEl.textContent = `You have ${filtered.length} item${plural} stored`;
-
+        
             const pill = document.getElementById('folderPill');
             pill.textContent = currentFolder;
-
+        
             if (filtered.length === 0) {
                 pill.style.background = '#333';
                 pill.style.color = '#888';
-
+        
                 let card = document.createElement('div');
                 card.className = 'storage-card';
                 card.innerHTML = `
@@ -484,32 +510,45 @@
             } else {
                 pill.style.background = 'var(--accent-color)';
                 pill.style.color = '#000';
-
+        
                 filtered.forEach(key => {
                     let value = localStorage.getItem(key);
                     let displayValue = value;
                     let isJSON = false;
-
-                    try {
-                        let parsed = JSON.parse(value);
-                        if (typeof parsed === 'object' && parsed !== null) {
-                            displayValue = JSON.stringify(parsed, null, 2);
-                            isJSON = true;
+                    let isBase64 = false;
+        
+                    if (typeof value === 'string' && value.length > 500 && value.startsWith('data:image')) {
+                        displayValue = '[Base64 Image] ' + value.substring(0, 40) + '...';
+                        isBase64 = true;
+                    } else {
+                        try {
+                            let parsed = JSON.parse(value);
+                            if (typeof parsed === 'object' && parsed !== null) {
+                                displayValue = JSON.stringify(parsed, null, 2);
+                                if (displayValue.length > 300) {
+                                    displayValue = displayValue.substring(0, 300) + '...';
+                                }
+                                isJSON = true;
+                            }
+                        } catch {
+                            if (value.length > 300) {
+                                displayValue = value.substring(0, 300) + '...';
+                            }
                         }
-                    } catch {}
-
+                    }
+        
                     let percent = value.length ? Math.min(100, Math.round((value.length / 500) * 100)) : 0;
-
+        
                     let card = document.createElement('div');
                     card.className = 'storage-card';
                     card.innerHTML = `
                         <div class="card-header">
                             <div class="tag-and-delete">
-                                <div class="storage-tag">${isJSON ? 'JSON' : 'String'}</div>
+                                <div class="storage-tag">${isBase64 ? 'Base64' : (isJSON ? 'JSON' : 'String')}</div>
                                 <button class="delete-btn" data-key="${key}"><i class="fas fa-trash"></i></button>
                             </div>
                         </div>
-                        <div class="storage-key">${key}</div>
+                        <div class="storage-key">${key.length > 50 ? key.substring(0, 50) + '...' : key}</div>
                         <div class="storage-value">${displayValue}</div>
                         <div class="card-footer">
                             <div class="due">Length: ${value.length}</div>
@@ -519,7 +558,16 @@
                     container.appendChild(card);
                 });
             }
-
+      
+            function hideBase64Images() {
+                document.querySelectorAll('.storage-value').forEach(el => {
+                    let text = el.textContent;
+                    if (text.includes('data:image') && text.length > 500) {
+                        el.textContent = '[Base64 Image] ' + text.substring(0, 40) + '...';
+                    }
+                });
+            }
+        
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -529,17 +577,23 @@
                         let {folders} = getData();
                         buildFolders(folders.sort());
                         buildCards();
+                        hideBase64Images();
                         window.showMessage('Deleted successfully');
                     }
                 };
             });
         }
-
-        document.getElementById('searchInput').oninput = buildCards;
+        
+        document.getElementById('searchInput').oninput = () => {
+            buildCards();
+            hideBase64Images();
+        };
 
         let {folders} = getData();
         buildFolders(folders.sort());
         buildCards();
+        hideBase64Images();
+        
     </script>
 </body>
 </html>

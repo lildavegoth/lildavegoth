@@ -360,6 +360,30 @@
             margin-top: var(--spacing-xs);
             text-align: center;
         }
+        
+        .profile-photo-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        
+        .profile-photo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent-color);
+            transition: opacity 0.3s ease;
+        }
+        
+        .profile-photo:hover {
+            opacity: 0.8;
+        }
+        
+        .profile-photo-input {
+            display: none;
+        }
 
     </style>
 </head>
@@ -370,44 +394,64 @@
         </a>
         
         <!-- Header -->
-        <header>
-            <div class="logo">
+        <app-header class="fade-in">
+            <div>
                 <h1 class="username">Account</h1>
+                <p class="tagline">Login to your account to access premium and exclusive contents</p>
             </div>
-            <p class="tagline">User ID Key Authentication</p>
-        </header>
+        </app-header>
+        
+        <div class="profile-photo-wrapper" id="profilePhotoWrapper">
+            <div class="profile-photo img img-avatar" alt="Profile" class="profile-photo" id="profilePhoto"></div>
+            <input type="file" id="profilePhotoInput" class="profile-photo-input" accept="image/*">
+        </div>
+        <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                <div>
+                    <div id="displayUsername" style="font-size: 1.5rem; font-weight: 600; cursor: pointer; display: inline-block; padding: 4px 12px; border-radius: 20px; transition: background 0.2s;" onclick="enableUsernameEdit()">
+                        Loading...
+                    </div>
+                    <input type="text" id="editUsernameInput" style="display: none; font-size: 1.5rem; font-weight: 600; background: rgba(255,255,255,0.05); border: 1px solid var(--accent-color); border-radius: 20px; padding: 4px 12px; color: var(--text-primary); text-align: center; width: auto; margin: 0 auto;" onblur="saveUsername()" onkeypress="if(event.key==='Enter') saveUsername()">
+                </div>
+                <div>
+                    <div id="displayUserID" style="color: var(--text-secondary); font-size: 0.9rem; font-family: monospace; cursor: pointer; display: inline-block; padding: 4px 12px;" onclick="enableUserIdEdit()">
+                        Loading...
+                    </div>
+                    <input type="text" id="editUserIdInput" style="display: none; font-size: 0.9rem; font-family: monospace; background: rgba(255,255,255,0.05); border: 1px solid var(--accent-color); border-radius: 20px; padding: 4px 12px; color: var(--text-primary); text-align: center; width: auto; margin: 0 auto;" onblur="saveUserId()" onkeypress="if(event.key==='Enter') saveUserId()">
+                </div>
+                <a href="pages/routine-quest.html" style="text-decoration: none; margin-top: 8px; display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bg-dark); border-radius: 50px;">
+                    <i class="fas fa-fire" style="color: var(--accent-color); font-size: 0.9rem;"></i>
+                    <span id="streakNumberDisplay" style="color: var(--accent-color); font-size: 1.0rem; font-weight: 600;">0</span>
+                </a>
+            </div>
+        </div>
 
         <!-- User Info (shown when logged in) -->
         <div class="user-info blur-background" id="userInfo">
-            <div class="user-header">
-                <div class="user-avatar" id="userAvatar">U</div>
-                <div>
-                    <div class="user-name" id="userDisplayName">User</div>
-                    <div class="user-id" id="userId">ID: #0000</div>
-                </div>
-            </div>
-            
             <p class="form-subtitle" style="text-align: left; margin-bottom: var(--spacing-md);">
-                You're signed in! Your data is saved locally in your browser. You can now access all features across the site.
+                You're signed in! Your data is saved locally in your browser. You can now access all features across the pages.
             </p>
             
-            <!-- ID Key Display -->
             <div class="id-key-display" id="idKeyDisplay">
                 <div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 4px;">Your ID Key:</div>
-                <div id="idKeyText">Loading...</div>
-                <div class="key-actions">
-                    <button class="action-button" id="downloadKeyBtn">Download</button>
+                <div id="idKeyText" style="font-family: monospace; word-break: break-all;">Loading...</div>
+                <div style="display: flex; align-items: center; gap: var(--spacing-sm); margin-top: var(--spacing-sm);">
+                    <button class="action-button" id="downloadKeyBtn" style="flex: 0; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;" title="Download ID Key">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button class="action-button" id="showKeyBtn" style="flex: 0; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;" title="Show ID Key">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-button" id="logoutBtn" style="flex: 1; background: rgba(255,50,50,0.1); color: #ff6b6b; border-color: rgba(255,50,50,0.3);">
+                        Sign Out
+                    </button>
                 </div>
             </div>
             
             <p class="form-subtitle" style="text-align: left; margin-bottom: var(--spacing-md);">
-                Keep your ID Key safe and don't you ever lose it, or you'll not be able to login to your account at all!
+                Keep your UserID Key safe and don't you ever lose it, or you'll not be able to login to your account at all cause i don't have your UserID Key and i can't bring it back cause the UserID is encrypted!
             </p>
             
-            <div class="user-actions">
-                <a href="index.html" class="action-button primary">Go to Homepage</a>
-                <button class="action-button" id="logoutBtn">Sign Out</button>
-            </div>
         </div>
 
         <!-- Sign In Form -->
@@ -549,47 +593,208 @@
             localStorage.setItem('users', JSON.stringify(users));
         }
         
-        // Show user info after login
         function showUserInfo(user) {
-            // Hide forms
             document.getElementById('signInForm').style.display = 'none';
             document.getElementById('signUpForm').style.display = 'none';
             
-            // Show user info
             const userInfo = document.getElementById('userInfo');
             userInfo.classList.add('active');
             
-            // Set user info
-            document.getElementById('userDisplayName').textContent = user.username;
-            document.getElementById('userId').textContent = 'ID: ' + user.id;
-            document.getElementById('userAvatar').textContent = user.username.charAt(0).toUpperCase();
-            
-            // Generate and show ID Key
             const idKey = generateIdKey(user);
-            document.getElementById('idKeyText').textContent = idKey;
+            updateIdKeyDisplay(idKey);
             document.getElementById('idKeyDisplay').classList.add('active');
             
-            // Save current user
             localStorage.setItem('currentUser', JSON.stringify(user));
             
-            // Save user to users list if not already there
             const users = getAllUsers();
             const existingUser = users.find(u => u.id === user.id);
             if (!existingUser) {
                 users.push(user);
                 saveUsers(users);
             }
+            
+            updateStreakNumberDisplay();
+            updateProfileDisplay();
         }
         
-        // Initialize page
+        function enableUserIdEdit() {
+            const streak = getUserStreak();
+            if (streak < 15) {
+                window.showMessage(`Cannot change UserID. Required: 15+ day streak (Current: ${streak} days)`);
+                return;
+            }
+            
+            const displayIdEl = document.getElementById('displayUserID');
+            const inputIdEl = document.getElementById('editUserIdInput');
+            if (displayIdEl.style.display !== 'none') {
+                displayIdEl.style.display = 'none';
+                inputIdEl.style.display = 'inline-block';
+                inputIdEl.value = displayIdEl.textContent === 'Sign in to view ID' ? '' : displayIdEl.textContent;
+                inputIdEl.focus();
+            }
+        }
+        
+        function saveUserId() {
+            const displayIdEl = document.getElementById('displayUserID');
+            const inputIdEl = document.getElementById('editUserIdInput');
+            const newUserId = inputIdEl.value.trim();
+            
+            if (newUserId) {
+                if (newUserId.length < 6) {
+                    window.showMessage('UserID must be more than 6 characters');
+                    inputIdEl.focus();
+                    return;
+                }
+                
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                if (currentUser) {
+                    currentUser.id = newUserId;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    const users = getAllUsers();
+                    const userIndex = users.findIndex(u => u.id === currentUser.id);
+                    if (userIndex !== -1) {
+                        users[userIndex].id = newUserId;
+                        saveUsers(users);
+                    }
+                    
+                    displayIdEl.textContent = newUserId;
+                }
+            }
+            
+            displayIdEl.style.display = 'inline-block';
+            inputIdEl.style.display = 'none';
+        }
+        
+        function generateUserId() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let part1 = '';
+            let part2 = '';
+            for (let i = 0; i < 9; i++) part1 += chars.charAt(Math.floor(Math.random() * chars.length));
+            for (let i = 0; i < 9; i++) part2 += chars.charAt(Math.floor(Math.random() * chars.length));
+            return part1 + '_' + part2;
+        }
+        
+        function enableUsernameEdit() {
+            const streak = getUserStreak();
+            if (streak < 15) {
+                window.showMessage(`Cannot change username. Required: 15+ day streak (Current: ${streak} days)`);
+                return;
+            }
+            
+            const displayEl = document.getElementById('displayUsername');
+            const inputEl = document.getElementById('editUsernameInput');
+            if (displayEl.style.display !== 'none') {
+                displayEl.style.display = 'none';
+                inputEl.style.display = 'inline-block';
+                inputEl.value = displayEl.textContent === 'Guest' ? '' : displayEl.textContent;
+                inputEl.focus();
+            }
+        }
+        
+        function saveUsername() {
+            const displayEl = document.getElementById('displayUsername');
+            const inputEl = document.getElementById('editUsernameInput');
+            const newUsername = inputEl.value.trim();
+            
+            if (newUsername) {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                if (currentUser) {
+                    currentUser.username = newUsername;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    const users = getAllUsers();
+                    const userIndex = users.findIndex(u => u.id === currentUser.id);
+                    if (userIndex !== -1) {
+                        users[userIndex].username = newUsername;
+                        saveUsers(users);
+                    }
+                    
+                    displayEl.textContent = newUsername;
+                }
+            }
+            
+            displayEl.style.display = 'inline-block';
+            inputEl.style.display = 'none';
+        }
+        
+        function updateProfileDisplay() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            const displayNameEl = document.getElementById('displayUsername');
+            const displayIdEl = document.getElementById('displayUserID');
+            const editNameInput = document.getElementById('editUsernameInput');
+            const editIdInput = document.getElementById('editUserIdInput');
+            
+            if (currentUser) {
+                displayNameEl.textContent = currentUser.username;
+                displayIdEl.textContent = currentUser.id;
+                displayNameEl.style.display = 'inline-block';
+                displayIdEl.style.display = 'inline-block';
+                editNameInput.style.display = 'none';
+                editIdInput.style.display = 'none';
+            } else {
+                displayNameEl.textContent = 'Guest';
+                displayIdEl.textContent = 'Sign in to view ID';
+                displayNameEl.style.display = 'inline-block';
+                displayIdEl.style.display = 'inline-block';
+                editNameInput.style.display = 'none';
+                editIdInput.style.display = 'none';
+            }
+        }
+        
+        function getUserStreak() {
+            try {
+                const gameData = localStorage.getItem('routineGame');
+                if (!gameData) return 0;
+                
+                const data = JSON.parse(gameData);
+                return data.streak || 0;
+            } catch (error) {
+                return 0;
+            }
+        }
+        
+        function updateStreakNumberDisplay() {
+            const streak = getUserStreak();
+            const streakEl = document.getElementById('streakNumberDisplay');
+            if (streakEl) {
+                streakEl.textContent = streak;
+            }
+        }
+                
+        let currentIdKey = '';
+
+        function toggleKeyVisibility() {
+            const keyText = document.getElementById('idKeyText');
+            const showBtn = document.getElementById('showKeyBtn');
+            
+            if (keyText.textContent === '••••••') {
+                keyText.textContent = currentIdKey;
+                showBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                showBtn.title = 'Hide ID Key';
+            } else {
+                keyText.textContent = '••••••';
+                showBtn.innerHTML = '<i class="fas fa-eye"></i>';
+                showBtn.title = 'Show ID Key';
+            }
+        }
+        
+        function updateIdKeyDisplay(key) {
+            currentIdKey = key;
+            document.getElementById('idKeyText').textContent = '••••••';
+            const showBtn = document.getElementById('showKeyBtn');
+            showBtn.innerHTML = '<i class="fas fa-eye"></i>';
+            showBtn.title = 'Show ID Key';
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             
             if (currentUser) {
                 showUserInfo(currentUser);
+                updateProfileDisplay();
             }
             
-            // Setup file input display
             const fileInput = document.getElementById('importKeyFile');
             const fileNameDisplay = document.getElementById('fileName');
             
@@ -600,6 +805,34 @@
                     fileNameDisplay.textContent = 'No file selected';
                 }
             });
+            
+            const profilePhoto = document.getElementById('profilePhoto');
+            const profileInput = document.getElementById('profilePhotoInput');
+            const profileWrapper = document.getElementById('profilePhotoWrapper');
+            
+            const savedPhoto = localStorage.getItem('profilePhoto');
+            if (savedPhoto) {
+                profilePhoto.style.backgroundImage = `url(${savedPhoto})`;
+            }
+            
+            profileWrapper.addEventListener('click', function() {
+                profileInput.click();
+            });
+            
+            profileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        profilePhoto.style.backgroundImage = `url(${event.target.result})`;
+                        localStorage.setItem('profilePhoto', event.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            updateProfileDisplay();
+            updateStreakNumberDisplay();
         });
         
         // Switch between sign in and sign up forms
@@ -701,7 +934,6 @@
             reader.readAsText(file);
         });
         
-        // Download ID Key
         document.getElementById('downloadKeyBtn').addEventListener('click', function() {
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             if (!currentUser) return;
@@ -719,31 +951,31 @@
             URL.revokeObjectURL(url);
             
             const btn = document.getElementById('downloadKeyBtn');
-            const originalText = btn.textContent;
-            btn.textContent = 'Downloaded!';
             btn.style.background = 'rgba(193, 252, 50, 0.2)';
             
             setTimeout(function() {
-                btn.textContent = originalText;
+                window.showMessage('ID Key has been downloaded')
                 btn.style.background = '';
             }, 2000);
         });
         
-        // Logout functionality
         document.getElementById('logoutBtn').addEventListener('click', function() {
             localStorage.removeItem('currentUser');
             
-            // Hide user info
             document.getElementById('userInfo').classList.remove('active');
             
-            // Show sign in form
             document.getElementById('signInForm').style.display = 'block';
             document.getElementById('signUpForm').style.display = 'none';
             
-            // Reset file input
             document.getElementById('importKeyFile').value = '';
             document.getElementById('fileName').textContent = 'No file selected';
+            
+            updateProfileDisplay();
+            updateStreakNumberDisplay();
         });
+        
+        document.getElementById('showKeyBtn').addEventListener('click', toggleKeyVisibility);
+        
     </script>
 </body>
 </html> 

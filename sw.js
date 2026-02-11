@@ -1,9 +1,9 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.3.4';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.3.5';
 const urlsToCache = [
     // Root
     '/',
     'account.html',
-    'auth.js',
+    'auth-check.js',
     'browser-homepage.html',
     'giveaway.html',
     'index.html',
@@ -29,7 +29,10 @@ const urlsToCache = [
     'pages/html-generator.html',
     'pages/icon-pack.html',
     'pages/image-to-base64.html',
+    'pages/journal.html',
+    'pages/kiraku-store.html',
     'pages/links-vault.html',
+    'pages/lyricure.html',
     'pages/markdown-editor.html',
     'pages/mockups-generator.html',
     'pages/movies-gallery.html',
@@ -91,6 +94,10 @@ const urlsToCache = [
     'images/posters/its-too-late.webp',
     'images/posters/no-longer-priority.webp',
     'images/posters/sickens-me.webp',
+    // Products
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Kiraku%20Store/products.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Kiraku%20Store/owned.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Kiraku%20Store/kuriihara-preview.webp',
     // Stories for Typing Game
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_1.txt',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_2.txt',
@@ -104,6 +111,8 @@ const urlsToCache = [
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_2.txt',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_3.txt',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_4.txt',
+    // Calendar
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Calendar/world-events.json',
     // Bundles
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/webfonts/fa-solid-900.woff2'

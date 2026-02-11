@@ -451,7 +451,303 @@
     
     document.head.appendChild(selectionStyle);
     
-    // Force Rounded Scrollbars for Chrome Android
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', init);
+    
+    function init() {
+        console.log('FastNav initialized');
+        
+        // Extract current page ID from URL
+        currentPage = getCurrentPageId();
+        
+        if (CONFIG.useSpa) {
+            setupSpaNavigation();
+        } else {
+            setupFastTraditionalNav();
+        }
+        
+        // Preload linked pages in background
+        if (CONFIG.preloadPages) {
+            preloadLinkedPages();
+        }
+    }
+    
+    // ==================== SPA MODE ====================
+    function setupSpaNavigation() {
+        // Hide original body content, show in SPA container
+        const originalContent = document.body.innerHTML;
+        document.body.innerHTML = `
+            <div id="spa-container">
+                <div id="page-${currentPage}" class="spa-page active">
+                    ${originalContent}
+                </div>
+            </div>
+            <div id="spa-loading" style="display:none;">Loading...</div>
+        `;
+        
+        // Intercept ALL link clicks
+        document.addEventListener('click', handleSpaClick);
+        
+        // Handle browser back/forward
+        window.addEventListener('popstate', handlePopState);
+    }
+    
+    function handleSpaClick(e) {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+        
+        const href = link.getAttribute('href');
+        
+        // Skip external links and anchors
+        if (href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) {
+            return;
+        }
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Remove .html extension for page ID
+        const pageId = href.replace('.html', '').replace('./', '') || 'index';
+        
+        // Load the page
+        loadSpaPage(pageId, href);
+    }
+    
+    async function loadSpaPage(pageId, url) {
+        // Show loading indicator
+        showLoading(true);
+        
+        try {
+            let content;
+            
+            // Check cache first
+            if (pageCache.has(pageId)) {
+                content = pageCache.get(pageId);
+            } else {
+                // Fetch the page
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to load');
+                
+                const html = await response.text();
+                
+                // Extract body content (remove head, scripts, etc)
+                const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+                content = bodyMatch ? bodyMatch[1] : html;
+                
+                // Cache it
+                pageCache.set(pageId, content);
+                trimCache();
+            }
+            
+            // Create new page container
+            const newPage = document.createElement('div');
+            newPage.id = `page-${pageId}`;
+            newPage.className = 'spa-page';
+            newPage.innerHTML = content;
+            
+            // Add to container
+            const container = document.getElementById('spa-container');
+            const oldPage = container.querySelector('.active');
+            
+            container.appendChild(newPage);
+            
+            // Animate transition
+            setTimeout(() => {
+                if (oldPage) oldPage.classList.remove('active');
+                newPage.classList.add('active');
+                
+                // Update URL without reload
+                window.history.pushState({pageId}, '', url);
+                
+                // Update current page
+                currentPage = pageId;
+                
+                // Remove old page after animation
+                setTimeout(() => {
+                    if (oldPage && oldPage.id !== `page-${pageId}`) {
+                        oldPage.remove();
+                    }
+                    showLoading(false);
+                    
+                    // Reinitialize scripts for new page
+                    initScripts(newPage);
+                }, CONFIG.transitionSpeed);
+            }, 10);
+            
+        } catch (error) {
+            console.error('Failed to load page:', error);
+            showLoading(false);
+            // Fallback to traditional navigation
+            window.location.href = url;
+        }
+    }
+    
+    // ==================== FAST TRADITIONAL MODE ====================
+    function setupFastTraditionalNav() {
+        // Add fast-click handler
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a[href$=".html"]');
+            if (!link || link.href.startsWith('http')) return;
+            
+            const url = link.getAttribute('href');
+            
+            // Check cache for instant preview
+            if (pageCache.has(url)) {
+                e.preventDefault();
+                showLoading(true);
+                
+                // Quick navigation with cached preview
+                setTimeout(() => {
+                    window.location.href = url;
+                }, 50);
+            }
+        });
+        
+        // Accelerate page transitions
+        if ('connection' in navigator) {
+            document.body.classList.add(
+                navigator.connection.saveData ? 'save-data' : 'no-save-data'
+            );
+        }
+    }
+    
+    // ==================== UTILITY FUNCTIONS ====================
+    function getCurrentPageId() {
+        const path = window.location.pathname;
+        const page = path.split('/').pop().replace('.html', '') || 'index';
+        return page;
+    }
+    
+    function showLoading(show) {
+        const loader = document.getElementById('spa-loading') || 
+                      (() => {
+                          const div = document.createElement('div');
+                          div.id = 'spa-loading';
+                          div.style.cssText = `
+                              position: fixed;
+                              top: 0;
+                              left: 0;
+                              width: 100%;
+                              height: 3px;
+                              background: linear-gradient(90deg, #007aff, #00c6ff);
+                              z-index: 9999;
+                              display: none;
+                              animation: loading 1s infinite;
+                          `;
+                          document.body.appendChild(div);
+                          
+                          // Add animation
+                          const style = document.createElement('style');
+                          style.textContent = `
+                              @keyframes loading {
+                                  0% { transform: translateX(-100%); }
+                                  100% { transform: translateX(100%); }
+                              }
+                          `;
+                          document.head.appendChild(style);
+                          return div;
+                      })();
+        
+        loader.style.display = show ? 'block' : 'none';
+    }
+    
+    async function preloadLinkedPages() {
+        // Find all internal links
+        const links = Array.from(document.querySelectorAll('a[href$=".html"]'))
+            .map(link => link.getAttribute('href'))
+            .filter(href => !href.startsWith('http'))
+            .slice(0, CONFIG.cacheSize);
+        
+        // Preload in background
+        for (const url of links) {
+            if (!pageCache.has(url)) {
+                try {
+                    const response = await fetch(url);
+                    const html = await response.text();
+                    pageCache.set(url, html);
+                    console.log('Preloaded:', url);
+                } catch (e) {
+                    // Silent fail - network might be offline
+                }
+            }
+        }
+    }
+    
+    function trimCache() {
+        if (pageCache.size > CONFIG.cacheSize) {
+            const firstKey = pageCache.keys().next().value;
+            pageCache.delete(firstKey);
+        }
+    }
+    
+    function handlePopState(event) {
+        if (event.state && event.state.pageId) {
+            loadSpaPage(event.state.pageId, `${event.state.pageId}.html`);
+        }
+    }
+    
+    function initScripts(container) {
+        // Reinitialize any scripts in the new page
+        const scripts = container.querySelectorAll('script');
+        scripts.forEach(oldScript => {
+            const newScript = document.createElement('script');
+            
+            // Copy all attributes
+            Array.from(oldScript.attributes).forEach(attr => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+            
+            // Copy inline script content
+            if (oldScript.textContent) {
+                newScript.textContent = oldScript.textContent;
+            }
+            
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
+        
+        // Dispatch event for page-specific initialization
+        container.dispatchEvent(new Event('pageinit', { bubbles: true }));
+    }
+    
+    // Add SPA styles
+    const spaStyles = `
+        .spa-page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            min-height: 100vh;
+            opacity: 0;
+            transform: translateX(10px);
+            transition: opacity ${CONFIG.transitionSpeed}ms ease, 
+                        transform ${CONFIG.transitionSpeed}ms ease;
+            pointer-events: none;
+        }
+        .spa-page.active {
+            opacity: 1;
+            transform: translateX(0);
+            position: relative;
+            pointer-events: all;
+        }
+        .save-data .image {
+            opacity: 0.8;
+            filter: blur(0.5px);
+        }
+    `;
+    
+    // Inject styles
+    const styleEl = document.createElement('style');
+    styleEl.textContent = spaStyles;
+    document.head.appendChild(styleEl);
+    
+    // Make functions available globally (optional)
+    window.FastNav = {
+        clearCache: () => pageCache.clear(),
+        preloadPage: (url) => preloadPage(url),
+        navigateTo: (pageId) => loadSpaPage(pageId, `${pageId}.html`)
+    };
+    
+        // Force Rounded Scrollbars for Cromite Android
     document.addEventListener('DOMContentLoaded', function() {
         const scrollbarCSS = document.createElement('style');
         scrollbarCSS.textContent = `
@@ -660,14 +956,6 @@
                 thumb.style.background = color;
             });
         };
-    });
-    
-    document.addEventListener('click',function(e){
-        const l=e.target.closest('a');
-        if(l&&l.href&&l.href.includes('.html')){
-        e.preventDefault();
-        window.location.href=l.href.replace('.html','');
-        }
     });
     
 })();
