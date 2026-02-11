@@ -451,14 +451,6 @@
     
     document.head.appendChild(selectionStyle);
     
-    document.addEventListener('click',function(e){
-      const l=e.target.closest('a');
-      if(l&&l.href&&l.href.includes('.html')){
-        e.preventDefault();
-        window.location.href=l.href.replace('.html','');
-      }
-    });
-    
     // Force Rounded Scrollbars for Chrome Android
     document.addEventListener('DOMContentLoaded', function() {
         const scrollbarCSS = document.createElement('style');
@@ -668,6 +660,14 @@
                 thumb.style.background = color;
             });
         };
+    });
+    
+    document.addEventListener('click',function(e){
+        const l=e.target.closest('a');
+        if(l&&l.href&&l.href.includes('.html')){
+        e.preventDefault();
+        window.location.href=l.href.replace('.html','');
+        }
     });
     
 })();
