@@ -974,9 +974,7 @@
                 .disclaimer-card,
                 .tool-option,
                 .credits-person,
-                .search-suggestions,
-                [class*="blur"],
-                [class*="backdrop"] {
+                .search-suggestions {
                     backdrop-filter: none !important;
                     -webkit-backdrop-filter: none !important;
                     background: rgba(30, 30, 30, 0.95) !important;
@@ -989,10 +987,6 @@
                 
                 .popup-content {
                     background: rgb(30, 30, 30) !important;
-                }
-                
-                .project-card:hover {
-                    background: rgba(40, 40, 40, 0.95) !important;
                 }
             `;
             document.head.appendChild(style);
