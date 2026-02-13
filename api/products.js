@@ -1,4 +1,6 @@
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  
   try {
     const [productsRes, ownedRes] = await Promise.all([
       fetch(process.env.PRODUCTS_URL),
@@ -10,7 +12,7 @@ export default async function handler(req, res) {
     
     res.setHeader('Cache-Control', 's-maxage=3600');
     res.status(200).json({ products, owned });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch data' });
+  } catch {
+    res.status(500).json({ products: [], owned: {} });
   }
 }
