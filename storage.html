@@ -346,37 +346,6 @@
             gap: 12px;
         }
         
-        .select-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 1.2rem;
-            padding: 6px;
-            border-radius: 50%;
-            width: 34px;
-            height: 34px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .select-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-        
-        #deleteFab {
-            transition: transform 0.2s;
-        }
-        
-        #deleteFab:hover {
-            transform: scale(1.1);
-        }
-        
-        #deleteFab:active {
-            transform: scale(0.95);
-        }
-        
     </style>
 </head>
 <body>
@@ -430,28 +399,22 @@
         </footer>
     </div>
     
-    <div id="deleteFab" style="display:none; position:fixed; bottom:30px; right:30px; background:var(--accent-color); color:#000; width:60px; height:35px; border-radius:20px; align-items:center; justify-content:center; cursor:pointer; z-index:1000;">
-        <i class="fas fa-trash" style="font-size:17px;"></i>
-        <span class="fab-count" style="position:absolute; top:-5px; right:-5px; background:#ff4444; color:white; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">0</span>
-    </div>
-
     <script>
         let currentFolder = 'All';
         let pinnedItems = JSON.parse(localStorage.getItem('pinnedItems') || '[]');
-        let selectedItems = [];
-
+    
         const avatar = document.getElementById('avatar');
         const avatarInput = document.getElementById('avatarInput');
         const usernameEl = document.getElementById('username');
-
+    
         let username = localStorage.getItem('username') || 'User';
         usernameEl.textContent = username;
-
+    
         let savedAvatar = localStorage.getItem('avatar');
         if (savedAvatar) avatar.style.backgroundImage = `url(${savedAvatar})`;
-
+    
         avatar.onclick = () => avatarInput.click();
-
+    
         avatarInput.onchange = (e) => {
             if (e.target.files[0]) {
                 let reader = new FileReader();
@@ -463,7 +426,7 @@
                 reader.readAsDataURL(e.target.files[0]);
             }
         };
-
+    
         usernameEl.onclick = () => {
             let input = document.createElement('input');
             input.type = 'text';
@@ -481,22 +444,19 @@
                 if (e.key === 'Enter') input.blur();
             };
         };
-
+    
         function getData() {
             let keys = [];
-            const excludedKeys = ['giveaway_settings', 'giveaway_participants', 'giveawayParticipants', 'lastGiveawayWinner', 'giveawayData', 'showDescription', 'hideSettingsButton', 'showSearchBar', 'bodyPosition', 'showBanner', 'showQuickLinks', 'pinnedItems', 'app_hash_v2', 'app_salt_v2'];
+            const excludedKeys = ['username', 'avatar', 'giveaway_settings', 'giveaway_participants', 'giveawayParticipants', 'lastGiveawayWinner', 'giveawayData', 'showDescription', 'hideSettingsButton', 'showSearchBar', 'bodyPosition', 'showBanner', 'showQuickLinks', 'pinnedItems', 'app_hash_v2', 'app_salt_v2'];
             
             for (let i = 0; i < localStorage.length; i++) {
                 let k = localStorage.key(i);
                 if (!excludedKeys.includes(k)) keys.push(k);
             }
             
-            keys.sort((a, b) => {
-                return 0;
-            });
+            keys.sort((a, b) => a.localeCompare(b));
             
             let folders = new Set(['All']);
-            
             keys.forEach(k => {
                 let folderName = 'misc';
                 if (k.includes('_')) {
@@ -505,7 +465,14 @@
                 folders.add(folderName);
             });
             
-            return {keys, folders: Array.from(folders)};
+            let folderList = Array.from(folders);
+            folderList.sort((a, b) => {
+                if (a === 'All') return -1;
+                if (b === 'All') return 1;
+                return a.localeCompare(b);
+            });
+            
+            return {keys, folders: folderList};
         }
         
         function savePinnedItems() {
@@ -526,51 +493,10 @@
             return pinnedItems.includes(key);
         }
         
-        function toggleSelect(key) {
-            if (selectedItems.includes(key)) {
-                selectedItems = selectedItems.filter(item => item !== key);
-            } else {
-                selectedItems.push(key);
-            }
-            updateFabButton();
-            buildCards();
-        }
-        
-        function isSelected(key) {
-            return selectedItems.includes(key);
-        }
-        
-        function updateFabButton() {
-            let fab = document.getElementById('deleteFab');
-            if (selectedItems.length > 0) {
-                fab.style.display = 'flex';
-                fab.querySelector('.fab-count').textContent = selectedItems.length;
-            } else {
-                fab.style.display = 'none';
-            }
-        }
-        
-        function deleteSelected() {
-            if (selectedItems.length === 0) return;
-            if (confirm(`Delete ${selectedItems.length} selected item${selectedItems.length === 1 ? '' : 's'}?`)) {
-                selectedItems.forEach(key => {
-                    localStorage.removeItem(key);
-                });
-                selectedItems = [];
-                let {folders} = getData();
-                buildFolders(folders.sort((a, b) => {
-                    return 0;
-                }));
-                buildCards();
-                hideBase64Images();
-                updateFabButton();
-            }
-        }
-
         function buildFolders(foldersList) {
             const foldersEl = document.getElementById('folders');
             foldersEl.innerHTML = '';
-
+    
             foldersList.forEach(f => {
                 let btn = document.createElement('button');
                 btn.className = 'folder-btn';
@@ -602,15 +528,12 @@
             if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
             return (bytes / 1048576).toFixed(1) + 'MB';
         }
-
+    
         function buildCards() {
             const search = document.getElementById('searchInput').value.toLowerCase();
             const {keys} = getData();
             
             let filtered = keys.filter(k => {
-                const excludedKeys = ['username', 'avatar', 'giveaway_settings', 'giveaway_participants', 'giveawayParticipants', 'lastGiveawayWinner', 'giveawayData', 'showDescription', 'hideSettingsButton', 'showSearchBar', 'bodyPosition', 'showBanner', 'showQuickLinks', 'pinnedItems', 'app_hash_v2', 'app_salt_v2'];
-                if (excludedKeys.includes(k)) return false;
-                
                 let matchesFolder = true;
                 if (currentFolder !== 'All') {
                     if (currentFolder === 'misc') {
@@ -641,11 +564,11 @@
         
             const pill = document.getElementById('folderPill');
             pill.textContent = currentFolder;
-        
+            
             if (filtered.length === 0) {
                 pill.style.background = '#333';
                 pill.style.color = '#888';
-        
+                
                 let card = document.createElement('div');
                 card.className = 'storage-card';
                 card.innerHTML = `
@@ -662,13 +585,10 @@
                     </div>
                 `;
                 container.appendChild(card);
-                if (isPinned(key)) {
-                    card.style.border = '1px solid var(--accent-color)';
-                }
             } else {
                 pill.style.background = 'var(--accent-color)';
                 pill.style.color = '#000';
-        
+                
                 filtered.forEach(key => {
                     let value = localStorage.getItem(key);
                     let displayValue = value;
@@ -703,10 +623,10 @@
                         <div class="card-header">
                             <div class="tag-and-delete">
                                 <div class="storage-tag">${isBase64 ? 'Base64' : (isJSON ? 'JSON' : 'String')}</div>
+                                <button class="delete-btn" data-key="${key}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </div>
-                            <button class="select-btn" data-key="${key}" style="background:transparent; border:none; color:${isSelected(key) ? 'var(--accent-color)' : 'var(--text-secondary)'}; cursor:pointer; font-size:1.2rem; padding:6px; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; margin-right:-170px;">
-                                <i class="${isSelected(key) ? 'fas fa-circle' : 'far fa-circle'}"></i>
-                            </button>
                             <button class="pin-btn" data-key="${key}" style="background:transparent; border:none; color:${isPinned(key) ? 'var(--accent-color)' : 'var(--text-secondary)'}; cursor:pointer; font-size:1.2rem; margin-top:2px;">
                                 <i class="fas fa-thumbtack"></i>
                             </button>
@@ -722,36 +642,18 @@
                     if (isPinned(key)) {
                         card.style.border = '1px solid var(--accent-color)';
                     }
-                    if (isSelected(key)) {
-                        card.style.border = '1px solid var(--accent-color)';
-                    }
                 });
             }
-      
-            function hideBase64Images() {
-                document.querySelectorAll('.storage-value').forEach(el => {
-                    let text = el.textContent;
-                    if (text.includes('data:image') && text.length > 500) {
-                        el.textContent = '[Base64 Image] ' + text.substring(0, 40) + '...';
-                    }
-                });
-            }
-        
+            
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
                     let k = btn.dataset.key;
                     if (confirm('Delete this item?')) {
                         localStorage.removeItem(k);
-                        selectedItems = selectedItems.filter(item => item !== k);
-                        updateFabButton();
-                        let totalSize = getTotalStorageSize();
-                        let formattedSize = formatSize(totalSize);
-                        countEl.textContent = `${filtered.length - 1} item${plural} and ${formattedSize} used of total data stored`;
                         let {folders} = getData();
-                        buildFolders(folders.sort());
+                        buildFolders(folders);
                         buildCards();
-                        hideBase64Images();
                         window.showMessage('Deleted successfully');
                     }
                 };
@@ -764,32 +666,15 @@
                     togglePin(k);
                 };
             });
-            
-            document.querySelectorAll('.select-btn').forEach(btn => {
-                btn.onclick = (e) => {
-                    e.stopPropagation();
-                    let k = btn.dataset.key;
-                    toggleSelect(k);
-                };
-            });
         }
         
         document.getElementById('searchInput').oninput = () => {
             buildCards();
-            hideBase64Images();
         };
-        
-        document.getElementById('deleteFab').onclick = () => {
-            deleteSelected();
-        };
-
+    
         let {folders} = getData();
-        buildFolders(folders.sort((a, b) => {
-            return 0;
-        }));
+        buildFolders(folders);
         buildCards();
-        hideBase64Images();
-        
     </script>
 </body>
 </html>
