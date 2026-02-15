@@ -247,8 +247,10 @@
             padding: 6px 10px;
             font-size: 0.85rem;
             cursor: pointer;
-            margin-right: 8px;
             text-align: center;
+            width: 100%;
+            margin-bottom: 8px;
+            display: block;
         }
 
         .status-select:focus {
@@ -325,66 +327,73 @@
             background: rgba(193, 252, 50, 0.3);
         }
 
-        .modal-overlay {
+        .popup-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 1.0);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-            backdrop-filter: blur(10px);
-            padding: var(--spacing-sm);
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
         }
-
-        .modal-overlay.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .modal {
-            background: var(--bg-dark);
+        
+        .popup-content {
+            background: var(--bg-card);
             border-radius: var(--radius-large);
-            padding: var(--spacing-lg);
-            width: 100%;
+            width: 90%;
             max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
-            border: 2px solid var(--accent-color);
-            box-shadow: 0 0 50px rgba(193, 252, 50, 0.3);
-            animation: modalAppear 0.3s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
-
-        @keyframes modalAppear {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        .modal-header {
-            margin-bottom: var(--spacing-lg);
+        
+        .popup-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-
-        .modal-title {
+        
+        .popup-header h2 {
             font-size: 1.5rem;
-            color: var(--accent-color);
+            font-weight: 600;
+        }
+        
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .close-popup:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
         }
 
         .form-group {
@@ -562,10 +571,12 @@
             gap: var(--spacing-sm);
             margin-bottom: var(--spacing-md);
             overflow-x: auto;
-            padding-bottom: 8px;
+            padding: 12px 4px 20px 4px;
             scrollbar-width: none;
             -ms-overflow-style: none;
             margin-bottom: -20px;
+            position: relative;
+            z-index: 5;
         }
         
         .folders-container::-webkit-scrollbar {
@@ -575,6 +586,7 @@
         }
 
         .folder-tab {
+            position: relative;
             padding: 10px 20px;
             background: var(--bg-dark);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -585,6 +597,27 @@
             transition: all 0.3s ease;
             white-space: nowrap;
             flex-shrink: 0;
+            overflow: visible;
+            z-index: 10;
+        }
+
+        .folder-counter {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #7E50B5;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            pointer-events: none;
         }
 
         .folder-tab:hover {
@@ -598,6 +631,7 @@
             color: #000;
             font-weight: bold;
             border-color: var(--accent-color);
+            z-index: 15;
         }
 
         .add-folder-btn {
@@ -618,6 +652,79 @@
 
         .add-folder-btn:hover {
             background: rgba(193, 252, 50, 0.2);
+        }
+        
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: saturate(180%) blur(20px);
+            scrollbar-width: none;
+        }
+        
+        .search-suggestions::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .search-suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+        
+        .search-suggestion-item:hover {
+            background: rgba(193, 252, 50, 0.1);
+        }
+        
+        .search-suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        #filterBtn.active {
+            color: var(--accent-color);
+        }
+        
+        #filterBtn.active i {
+            color: var(--accent-color);
+        }
+        
+        #filterBtn i {
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+        }
+        
+        .suggestion-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+        
+        .suggestion-description {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .suggestion-category {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-top: 4px;
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
         }
     </style>
 </head>
@@ -646,6 +753,26 @@
                 </button>
             </div>
         </header>
+        
+        <div class="search-container" style="margin-bottom: var(--spacing-xs); margin-top: -40px; position: relative;">
+            <div style="position: relative;">
+                <input type="text" id="projectSearch" placeholder="Search projects in current folder..." 
+                       style="width: 100%; padding: 12px 44px 12px 16px; border-radius: var(--radius-medium); 
+                              background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); 
+                              color: var(--text-primary); font-size: 0.95rem; outline: none;">
+                <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); 
+                            color: var(--text-secondary); pointer-events: none;">
+                    <i class="fas fa-search" style="color: var(--accent-color); margin-right: 5px;"></i>
+                </div>
+                <button id="filterBtn" style="position: absolute; right: 44px; top: 50%; transform: translateY(-50%); 
+                        background: transparent; border: none; color: var(--text-secondary); 
+                        cursor: pointer; padding: 8px; display: flex; align-items: center; 
+                        transition: all 0.3s ease; border-radius: 4px;">
+                    <i class="fas fa-filter" style="font-size: 1.05rem;"></i>
+                </button>
+            </div>
+            <div class="search-suggestions" id="projectSearchSuggestions"></div>
+        </div>
 
         <div class="folders-container" id="foldersContainer"></div>
         
@@ -681,28 +808,26 @@
         </footer>
     </div>
     
-    <div class="modal-overlay" id="singleModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 class="modal-title" id="modalTitle"></h2>
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" onclick="closeUniversalPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            
-            <div class="form-group">
-                <p style="color: var(--text-primary); font-size: 1rem; line-height: 1.5;" id="modalMessage"></p>
-            </div>
-            
-            <div class="modal-actions" id="modalActions"></div>
+            <div class="modal-body" id="popupContent" style="padding: var(--spacing-md); overflow-y: auto;"></div>
         </div>
     </div>
 
     <script>
         const KEY = "projectFolders"
-        
         let folders = JSON.parse(localStorage.getItem(KEY)) || []
         let currentFolderId = null
         let rowToDeleteIndex = -1
         let importedDataToConfirm = []
-                        
+        let filterActive = false
+                                
         const body = document.getElementById("tableBody")
         const addRowBtnTop = document.getElementById("addRowBtnTop")
         const addRowBtnBottom = document.getElementById("addRowBtnBottom")
@@ -710,20 +835,286 @@
         const exportBtn = document.getElementById("exportBtn")
         const importBtn = document.getElementById("importBtn")
         const foldersContainer = document.getElementById("foldersContainer")
-                        
-        function save() {
-            localStorage.setItem(KEY, JSON.stringify(folders))
+                
+        let searchTimeout
+        
+        function openUniversalPopup(title, contentHTML) {
+            const popup = document.getElementById('universalPopup')
+            const titleEl = document.getElementById('popupTitle')
+            const contentEl = document.getElementById('popupContent')
+            titleEl.textContent = title
+            contentEl.innerHTML = contentHTML
+            popup.style.display = 'flex'
         }
-                        
+        
+        function closeUniversalPopup() {
+            document.getElementById('universalPopup').style.display = 'none'
+        }
+        
+        function showModal(title, message, buttons) {
+            let buttonsHTML = '<div style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-lg); flex-wrap: wrap;">'
+            buttons.forEach(button => {
+                buttonsHTML += `<button class="${button.class}" onclick="(${button.action})(); closeUniversalPopup();">${button.text}</button>`
+            })
+            buttonsHTML += '</div>'
+            const contentHTML = `<p style="color: var(--text-primary); font-size: 1rem; line-height: 1.5; margin-bottom: var(--spacing-md);">${message}</p>${buttonsHTML}`
+            openUniversalPopup(title, contentHTML)
+        }
+        
+        function showModalWithInput(title, message, buttonText, inputPlaceholder = "Folder name", inputValue = "") {
+            const contentHTML = `
+                <p style="color: var(--text-primary); font-size: 1rem; line-height: 1.5; margin-bottom: var(--spacing-md);">${message}</p>
+                <input type="text" id="modalInput" class="form-input" placeholder="${inputPlaceholder}" value="${inputValue}" style="margin-bottom: var(--spacing-md);">
+                <div style="display: flex; gap: var(--spacing-sm);">
+                    <button class="btn" onclick="closeUniversalPopup()">Cancel</button>
+                    <button class="btn primary" id="modalActionBtn">${buttonText}</button>
+                </div>
+            `
+            openUniversalPopup(title, contentHTML)
+            setTimeout(() => {
+                document.getElementById('modalInput').focus()
+                document.getElementById('modalInput').select()
+            }, 100)
+        }
+        
+        function showEditModal(title, message, buttonText, folder) {
+            const contentHTML = `
+                <p style="color: var(--text-primary); font-size: 1rem; line-height: 1.5; margin-bottom: var(--spacing-md);">${message}</p>
+                <input type="text" id="modalInput" class="form-input" placeholder="Folder name" value="${folder.name}" style="margin-bottom: var(--spacing-md);">
+                <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
+                    <button class="btn danger" onclick="closeUniversalPopup(); deleteFolder('${folder.id}')">Delete</button>
+                    <button class="btn" onclick="closeUniversalPopup()">Cancel</button>
+                    <button class="btn primary" id="modalActionBtn">${buttonText}</button>
+                </div>
+            `
+            openUniversalPopup(title, contentHTML)
+            setTimeout(() => {
+                document.getElementById('modalInput').focus()
+                document.getElementById('modalInput').select()
+            }, 100)
+        }
+        
+        document.addEventListener('click', function(e) {
+            if (e.target.id === 'modalActionBtn') {
+                const input = document.getElementById('modalInput')
+                if (!input) return
+                const title = document.getElementById('popupTitle').textContent
+                if (title === "Add Folder") {
+                    createFolder(input)
+                } else if (title === "Edit Folder") {
+                    const folderId = document.querySelector('.btn.danger')?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1]
+                    if (folderId) updateFolder(folderId, input)
+                }
+            }
+        })
+        
+        function setupProjectSearch() {
+            const searchInput = document.getElementById('projectSearch')
+            const suggestionsContainer = document.getElementById('projectSearchSuggestions')
+            const filterBtn = document.getElementById("filterBtn")
+            filterBtn.onclick = () => {
+                filterActive = !filterActive
+                if (filterActive) {
+                    filterBtn.classList.add('active')
+                } else {
+                    filterBtn.classList.remove('active')
+                    filterBtn.style.background = 'transparent'
+                    filterBtn.style.border = 'none'
+                }
+                render()
+                renderFolders()
+            }
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout)
+                    showProjectSuggestions(this.value)
+                })
+                
+                const searchIcon = searchInput.parentElement.querySelector('.fa-search')
+                if (searchIcon) {
+                    searchIcon.style.pointerEvents = 'auto'
+                    searchIcon.addEventListener('click', function() {
+                        suggestionsContainer.style.display = 'none'
+                        performProjectSearch()
+                    })
+                }
+                
+                searchInput.addEventListener('keypress', function(event) {
+                    if (event.key === 'Enter') {
+                        suggestionsContainer.style.display = 'none'
+                        performProjectSearch()
+                    }
+                })
+                
+                searchInput.addEventListener('focus', function() {
+                    if (this.value.trim()) {
+                        showProjectSuggestions(this.value)
+                    }
+                })
+                
+                document.addEventListener('click', function(event) {
+                    if (!searchInput.contains(event.target) && !suggestionsContainer.contains(event.target)) {
+                        suggestionsContainer.style.display = 'none'
+                    }
+                })
+                
+                suggestionsContainer.addEventListener('click', function(event) {
+                    const suggestionItem = event.target.closest('.search-suggestion-item')
+                    if (suggestionItem) {
+                        selectProjectSuggestion(suggestionItem)
+                    }
+                })
+                
+                document.addEventListener('keydown', function(event) {
+                    if (event.key === 'Escape' && suggestionsContainer.style.display === 'block') {
+                        suggestionsContainer.style.display = 'none'
+                    }
+                })
+            }
+        }
+                
+        function showProjectSuggestions(searchTerm) {
+            const suggestionsContainer = document.getElementById('projectSearchSuggestions')
+            
+            if (!searchTerm.trim() || !currentFolderId) {
+                suggestionsContainer.style.display = 'none'
+                return
+            }
+            
+            let data = getCurrentData()
+            
+            if (filterActive) {
+                data = data.filter(p => p.status === "Pending" || p.status === "In Progress")
+            }
+            
+            const term = searchTerm.toLowerCase()
+            const suggestions = []
+            
+            data.forEach((project, index) => {
+                if (project.name.toLowerCase().includes(term) || 
+                    project.notes.toLowerCase().includes(term) ||
+                    project.tasks.some(t => t.text.toLowerCase().includes(term))) {
+                    
+                    let taskCount = project.tasks.length
+                    let doneCount = project.tasks.filter(t => t.done).length
+                    
+                    suggestions.push({
+                        name: project.name || 'Untitled Project',
+                        status: project.status,
+                        tasks: `${doneCount}/${taskCount} tasks`,
+                        index: index,
+                        pinned: project.pinned
+                    })
+                }
+            })
+            
+            if (suggestions.length === 0) {
+                suggestionsContainer.innerHTML = `
+                    <div class="search-suggestion-item">
+                        <div class="suggestion-title">No projects found</div>
+                        <div class="suggestion-description">Try different keywords</div>
+                    </div>
+                `
+            } else {
+                suggestionsContainer.innerHTML = suggestions.slice(0, 5).map(item => `
+                    <div class="search-suggestion-item" data-project-index="${item.index}">
+                        <div class="suggestion-title">${item.name}</div>
+                        <div class="suggestion-description">${item.tasks} • ${item.status}</div>
+                        <div class="suggestion-category">${item.pinned ? '📌 Pinned' : 'Project'}</div>
+                    </div>
+                `).join('')
+            }
+            
+            suggestionsContainer.style.display = 'block'
+        }
+                
+        function selectProjectSuggestion(suggestionItem) {
+            const projectIndex = suggestionItem.getAttribute('data-project-index')
+            if (projectIndex) {
+                document.getElementById('projectSearchSuggestions').style.display = 'none'
+                scrollToProject(parseInt(projectIndex))
+            }
+        }
+                
+        function performProjectSearch() {
+            const searchInput = document.getElementById('projectSearch')
+            const searchTerm = searchInput.value.trim().toLowerCase()
+            
+            document.getElementById('projectSearchSuggestions').style.display = 'none'
+            
+            if (!searchTerm || !currentFolderId) return
+            
+            const data = getCurrentData()
+            let searchData = data
+            
+            if (filterActive) {
+                searchData = data.filter(p => p.status === "Pending" || p.status === "In Progress")
+            }
+            
+            for (let i = 0; i < searchData.length; i++) {
+                const project = searchData[i]
+                if (project.name.toLowerCase().includes(searchTerm) || 
+                    project.notes.toLowerCase().includes(searchTerm) ||
+                    project.tasks.some(t => t.text.toLowerCase().includes(searchTerm))) {
+                    scrollToProject(data.indexOf(project))
+                    break
+            }
+            }
+        }
+                
+        function scrollToProject(originalIndex) {
+            render()
+            
+            setTimeout(() => {
+                const rows = document.querySelectorAll('#tableBody tr')
+                let foundRow = null
+                
+                const data = getCurrentData()
+                const projectAtOriginalIndex = data[originalIndex]
+                
+                if (projectAtOriginalIndex) {
+                    const sortedData = [...data].sort((a, b) => {
+                        if (a.pinned && !b.pinned) return -1
+                        if (!a.pinned && b.pinned) return 1
+                        const nameA = a.name.toLowerCase()
+                        const nameB = b.name.toLowerCase()
+                        if (nameA < nameB) return -1
+                        if (nameA > nameB) return 1
+                        return 0
+                    })
+                    
+                    const sortedIndex = sortedData.indexOf(projectAtOriginalIndex)
+                    
+                    if (sortedIndex !== -1 && rows[sortedIndex]) {
+                        foundRow = rows[sortedIndex]
+                    }
+                }
+                
+                if (foundRow) {
+                    foundRow.style.transition = 'background 0.3s ease'
+                    foundRow.style.background = 'rgba(193, 252, 50, 0.15)'
+                    foundRow.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    
+                    setTimeout(() => {
+                        foundRow.style.background = ''
+                        if (nameInput) {
+                            nameInput.style.border = ''
+                        }
+                    }, 2000)
+                }
+            }, 100)
+        }
+                                
         function getCurrentFolder() {
             return folders.find(f => f.id === currentFolderId)
         }
-                        
+                                
         function getCurrentData() {
             const folder = getCurrentFolder()
             return folder ? folder.data : []
         }
-                        
+                                
         function setCurrentData(data) {
             const folder = getCurrentFolder()
             if (folder) {
@@ -731,7 +1122,7 @@
                 save()
             }
         }
-                        
+                                
         function rowTemplate(project, index) {
             const tr = document.createElement("tr")
             
@@ -808,9 +1199,7 @@
             notesTd.appendChild(notesInput)
             
             const actionTd = document.createElement("td")
-            const controls = document.createElement("div")
-            controls.className = "row-controls"
-            
+
             const status = document.createElement("select")
             status.className = "status-select"
             ;["Pending", "In Progress", "Completed", "Deprecated"].forEach(v => {
@@ -825,10 +1214,16 @@
                 save()
                 render()
             }
+            status.style.marginBottom = "8px"
+            status.style.width = "100%"
+            
+            const controls = document.createElement("div")
+            controls.className = "row-controls"
+            controls.style.justifyContent = "flex-start"
             
             const pinBtn = document.createElement("button")
             pinBtn.className = project.pinned ? "row-btn pinned" : "row-btn"
-            pinBtn.innerHTML = project.pinned ? '<i class="fas fa-thumbtack"></i>' : '<i class="fas fa-thumbtack"></i>'
+            pinBtn.innerHTML = '<i class="fas fa-thumbtack"></i>'
             pinBtn.title = project.pinned ? "Unpin Project" : "Pin Project"
             pinBtn.onclick = (e) => {
                 e.stopPropagation()
@@ -844,13 +1239,13 @@
                 e.stopPropagation()
                 rowToDeleteIndex = index
                 showModal("Delete Project", "Delete this project?", [
-                    { class: "btn", text: "Cancel", action: hideModal },
+                    { class: "btn", text: "Cancel", action: closeUniversalPopup },
                     { class: "btn danger", text: "Delete", action: deleteRow }
                 ])
             }
             
-            controls.append(status, pinBtn, del)
-            actionTd.appendChild(controls)
+            controls.append(pinBtn, del)
+            actionTd.append(status, controls)
             
             tr.append(nameTd, tasksTd, notesTd, actionTd)
             setTimeout(() => {
@@ -859,7 +1254,7 @@
             
             return tr
         }
-        
+                
         function updateStatusColor(nameInput, status) {
             const colors = {
                 "Pending": "#D9C181",
@@ -868,13 +1263,8 @@
                 "Deprecated": "#C42833"
             }
             nameInput.style.color = colors[status] || "var(--text-primary)"
-            status.onchange = e => {
-                project.status = e.target.value
-                save()
-                updateStatusColor(nameInput, project.status)
-            }
         }
-                        
+                                
         function render() {
             body.innerHTML = ""
             
@@ -883,7 +1273,13 @@
             }
             
             const data = getCurrentData()
-            const sortedData = [...data].sort((a, b) => {
+            
+            let filteredData = data
+            if (filterActive) {
+                filteredData = data.filter(p => p.status === "Pending" || p.status === "In Progress")
+            }
+            
+            const sortedData = [...filteredData].sort((a, b) => {
                 if (a.pinned && !b.pinned) return -1
                 if (!a.pinned && b.pinned) return 1
                 
@@ -900,23 +1296,41 @@
                 body.appendChild(rowTemplate(p, originalIndex))
             })
         }
-        
+                
         function renderFolders() {
             foldersContainer.innerHTML = ""
             
             folders.forEach(folder => {
                 const tab = document.createElement("div")
                 tab.className = folder.id === currentFolderId ? "folder-tab active" : "folder-tab"
-                tab.textContent = folder.name
+                
+                const folderName = document.createElement("span")
+                folderName.textContent = folder.name
+                tab.appendChild(folderName)
+                
+                let count = folder.data ? folder.data.length : 0
+                if (currentFolderId === folder.id && filterActive) {
+                    count = folder.data ? folder.data.filter(p => p.status === "Pending" || p.status === "In Progress").length : 0
+                }
+                
+                if (count > 0) {
+                    const counter = document.createElement("span")
+                    counter.className = "folder-counter"
+                    counter.textContent = count > 99 ? "99+" : count
+                    tab.appendChild(counter)
+                }
+                
                 tab.onclick = () => {
                     currentFolderId = folder.id
                     renderFolders()
                     render()
                 }
+                
                 tab.ondblclick = (e) => {
                     e.stopPropagation()
                     editFolder(folder)
                 }
+                
                 foldersContainer.appendChild(tab)
             })
             
@@ -926,48 +1340,16 @@
             addFolderBtn.onclick = addFolder
             foldersContainer.appendChild(addFolderBtn)
         }
-        
+                
+        function save() {
+            localStorage.setItem(KEY, JSON.stringify(folders))
+            renderFolders()
+        }
+                
         function addFolder() {
             showModalWithInput("Add Folder", "Enter folder name:", "Create")
         }
-        
-        function showModalWithInput(title, message, buttonText) {
-            document.getElementById("modalTitle").textContent = title
-            document.getElementById("modalMessage").textContent = message
-            
-            const input = document.createElement("input")
-            input.className = "form-input"
-            input.placeholder = "Folder name"
-            input.style.marginTop = "10px"
-            document.getElementById("modalMessage").appendChild(input)
-            
-            const modalActions = document.getElementById("modalActions")
-            modalActions.innerHTML = ""
-            
-            const cancelBtn = document.createElement("button")
-            cancelBtn.className = "btn"
-            cancelBtn.textContent = "Cancel"
-            cancelBtn.onclick = hideModal
-            
-            const actionBtn = document.createElement("button")
-            actionBtn.className = "btn primary"
-            actionBtn.textContent = buttonText
-            
-            if (title === "Add Folder") {
-                actionBtn.onclick = () => createFolder(input)
-            }
-            
-            input.onkeypress = (e) => {
-                if (e.key === "Enter") actionBtn.click()
-            }
-            
-            modalActions.appendChild(cancelBtn)
-            modalActions.appendChild(actionBtn)
-            
-            document.getElementById("singleModal").classList.add("active")
-            input.focus()
-        }
-        
+                
         function createFolder(input) {
             const name = input.value.trim()
             if (name) {
@@ -981,57 +1363,15 @@
                 save()
                 renderFolders()
                 render()
-                hideModal()
+                closeUniversalPopup()
                 window.showMessage('Folder created')
             }
         }
-        
+                
         function editFolder(folder) {
             showEditModal("Edit Folder", "Edit folder name:", "Save", folder)
         }
-        
-        function showEditModal(title, message, buttonText, folder) {
-            document.getElementById("modalTitle").textContent = title
-            document.getElementById("modalMessage").textContent = message
-            
-            const input = document.createElement("input")
-            input.className = "form-input"
-            input.placeholder = "Folder name"
-            input.value = folder.name
-            input.style.marginTop = "10px"
-            document.getElementById("modalMessage").appendChild(input)
-            
-            const modalActions = document.getElementById("modalActions")
-            modalActions.innerHTML = ""
-            
-            const deleteBtn = document.createElement("button")
-            deleteBtn.className = "btn danger"
-            deleteBtn.textContent = "Delete Folder"
-            deleteBtn.onclick = () => deleteFolder(folder.id)
-            
-            const cancelBtn = document.createElement("button")
-            cancelBtn.className = "btn"
-            cancelBtn.textContent = "Cancel"
-            cancelBtn.onclick = hideModal
-            
-            const saveBtn = document.createElement("button")
-            saveBtn.className = "btn primary"
-            saveBtn.textContent = buttonText
-            saveBtn.onclick = () => updateFolder(folder.id, input)
-            
-            input.onkeypress = (e) => {
-                if (e.key === "Enter") saveBtn.click()
-            }
-            
-            modalActions.appendChild(deleteBtn)
-            modalActions.appendChild(cancelBtn)
-            modalActions.appendChild(saveBtn)
-            
-            document.getElementById("singleModal").classList.add("active")
-            input.focus()
-            input.select()
-        }
-        
+                
         function updateFolder(folderId, input) {
             const name = input.value.trim()
             if (name) {
@@ -1040,65 +1380,54 @@
                     folder.name = name
                     save()
                     renderFolders()
-                    hideModal()
+                    closeUniversalPopup()
                 }
             }
         }
-        
+                
         function deleteFolder(folderId) {
             const folderIndex = folders.findIndex(f => f.id === folderId)
             if (folderIndex !== -1) {
-                showModal("Delete Folder", `Delete folder "${folders[folderIndex].name}" and all its projects?`, [
-                    { class: "btn", text: "Cancel", action: hideModal },
-                    { class: "btn danger", text: "Delete", action: () => {
-                        folders.splice(folderIndex, 1)
-                        if (currentFolderId === folderId) {
-                            currentFolderId = folders.length > 0 ? folders[0].id : null
-                        }
-                        save()
-                        renderFolders()
-                        render()
-                        hideModal()
-                        window.showMessage('Folder deleted')
-                    }}
-                ])
+                const folderName = folders[folderIndex].name
+                const contentHTML = `
+                    <p style="color: var(--text-primary); font-size: 1rem; line-height: 1.5; margin-bottom: var(--spacing-md);">Delete "${folderName}" and all its projects? This action cannot be undone and recovered unless you have a backup.</p>
+                    <div style="display: flex; gap: var(--spacing-sm);">
+                        <button class="btn" onclick="closeUniversalPopup()">Cancel</button>
+                        <button class="btn danger" onclick="confirmDeleteFolder('${folderId}')">Delete</button>
+                    </div>
+                `
+                openUniversalPopup("Delete", contentHTML)
             }
         }
         
-        function showModal(title, message, buttons) {
-            document.getElementById("modalTitle").textContent = title
-            document.getElementById("modalMessage").textContent = message
-            
-            const modalActions = document.getElementById("modalActions")
-            modalActions.innerHTML = ""
-            
-            buttons.forEach(button => {
-                const btn = document.createElement("button")
-                btn.className = button.class
-                btn.textContent = button.text
-                btn.onclick = button.action
-                modalActions.appendChild(btn)
-            })
-            
-            document.getElementById("singleModal").classList.add("active")
+        function confirmDeleteFolder(folderId) {
+            const folderIndex = folders.findIndex(f => f.id === folderId)
+            if (folderIndex !== -1) {
+                folders.splice(folderIndex, 1)
+                if (currentFolderId === folderId) {
+                    currentFolderId = folders.length > 0 ? folders[0].id : null
+                }
+                save()
+                renderFolders()
+                render()
+                closeUniversalPopup()
+                window.showMessage('Folder deleted')
+            }
         }
-        
-        function hideModal() {
-            document.getElementById("singleModal").classList.remove("active")
-        }
-        
+                
         function deleteRow() {
             if (rowToDeleteIndex !== -1) {
                 const data = getCurrentData()
                 data.splice(rowToDeleteIndex, 1)
                 setCurrentData(data)
                 render()
-                hideModal()
+                renderFolders()
+                closeUniversalPopup()
                 rowToDeleteIndex = -1
                 window.showMessage('Project has been deleted')
             }
         }
-        
+                
         function encryptData(data) {
             try {
                 const jsonString = JSON.stringify(data)
@@ -1107,7 +1436,7 @@
                 return null
             }
         }
-        
+                
         function decryptData(encryptedString) {
             try {
                 const jsonString = decodeURIComponent(escape(atob(encryptedString)))
@@ -1116,7 +1445,7 @@
                 return null
             }
         }
-        
+                
         function exportData() {
             const exportData = {
                 version: '1.2',
@@ -1149,7 +1478,7 @@
             document.body.removeChild(a)
             URL.revokeObjectURL(url)
         }
-        
+                
         function importData() {
             const fileInput = document.createElement('input')
             fileInput.type = 'file'
@@ -1178,7 +1507,7 @@
                             showModal("Import Confirmation", "How would you like to import the data?", [
                                 { class: "btn", text: "Cancel", action: () => {
                                     importedDataToConfirm = []
-                                    hideModal()
+                                    closeUniversalPopup()
                                 }},
                                 { class: "btn", text: "Merge", action: mergeImport },
                                 { class: "btn danger", text: "Replace All", action: replaceImport }
@@ -1196,7 +1525,23 @@
             
             fileInput.click()
         }
-        
+                
+        function replaceImport() {
+            folders = importedDataToConfirm.map(folder => ({
+                ...folder,
+                data: folder.data.map(project => ({
+                    ...project,
+                    pinned: project.pinned || false
+                }))
+            }))
+            save()
+            renderFolders()
+            render()
+            importedDataToConfirm = []
+            closeUniversalPopup()
+            window.showMessage('Projects replaced successfully')
+        }
+                
         function mergeImport() {
             const existingIds = new Set(folders.map(f => f.id))
             
@@ -1210,48 +1555,33 @@
             renderFolders()
             render()
             importedDataToConfirm = []
-            hideModal()
+            closeUniversalPopup()
             window.showMessage('Projects merged successfully')
         }
-        
-        function replaceImport() {
-            folders = importedDataToConfirm.map(folder => ({
-                ...folder,
-                data: folder.data.map(project => ({
-                    ...project,
-                    pinned: project.pinned || false
-                }))
-            }))
-            save()
-            renderFolders()
-            render()
-            importedDataToConfirm = []
-            hideModal()
-            window.showMessage('Projects replaced successfully')
-        }
-                        
+                                
         clearBtn.onclick = () => {
             if (!currentFolderId) {
                 window.showMessage('Please select a folder first')
                 return
             }
             
-            showModal("Confirm Clear All", "This will permanently delete all projects and tasks in current folder. This action cannot be undone.", [
-                { class: "btn", text: "Cancel", action: hideModal },
+            showModal("Confirm Clear All", "This will permanently delete all projects and tasks in current folder. This actions cannot be undone and recovered unless you have a backup.", [
+                { class: "btn", text: "Cancel", action: closeUniversalPopup },
                 { class: "btn danger", text: "Clear All", action: () => {
                     setCurrentData([])
                     render()
-                    hideModal()
+                    renderFolders()
+                    closeUniversalPopup()
                     window.showMessage('All Projects has been deleted')
                 }}
             ])
         }
-        
+                
         exportBtn.onclick = exportData
         importBtn.onclick = importData
         addRowBtnTop.onclick = addNewRow
         addRowBtnBottom.onclick = addNewRow
-        
+                
         if (folders.length === 0) {
             renderFolders()
         } else {
@@ -1259,7 +1589,9 @@
             renderFolders()
             render()
         }
-        
+                
+        setupProjectSearch()
+                
         function addNewRow() {
             if (!currentFolderId) {
                 window.showMessage('Please select a folder first')
@@ -1277,6 +1609,7 @@
             data.push(newProject)
             setCurrentData(data)
             render()
+            renderFolders()
             
             setTimeout(() => {
                 const rows = document.querySelectorAll('#tableBody tr')
@@ -1290,12 +1623,11 @@
                 })
             }, 100)
         }
-        
+                
         function autoResizeTextarea(textarea) {
             textarea.style.height = 'auto'
             textarea.style.height = (textarea.scrollHeight) + 'px'
         }
-        
     </script>
 </body>
 </html>

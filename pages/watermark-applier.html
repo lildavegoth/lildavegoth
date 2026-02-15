@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watermark Applier | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-sm);
+        }
+
+        .tool-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-md);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            width: 100%;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .io-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-md);
+        }
+
+        @media (min-width: 768px) {
+            .io-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: var(--spacing-lg);
+            }
+        }
+
+        .io-section {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xs);
+            padding: 0 4px;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .character-count {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px;
+            border-radius: 20px;
+            min-width: 65px;
+            text-align: center;
+        }
+
+        .preview-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: var(--spacing-md);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: var(--spacing-xs);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .preview-content {
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-sm);
+            position: relative;
+        }
+
+        .watermark-canvas {
+            max-width: 100%;
+            max-height: 280px;
+            width: auto;
+            height: auto;
+            border-radius: var(--radius-small);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+        }
+
+        .preview-placeholder {
+            color: var(--text-secondary);
+            text-align: center;
+            padding: var(--spacing-md);
+            font-size: 0.9rem;
+        }
+
+        .preview-error {
+            color: #ff6b6b;
+            text-align: center;
+            padding: var(--spacing-md);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .watermark-wrapper {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .watermark-input {
+            flex: 1;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-medium);
+            padding: 12px 14px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            width: 100%;
+        }
+
+        .watermark-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .apply-btn {
+            background: var(--accent-color);
+            color: var(--bg-black);
+            border: none;
+            border-radius: 100px;
+            width: 44px;
+            height: 44px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .apply-btn:hover {
+            background: var(--accent-dark);
+        }
+
+        .apply-btn:active {
+            transform: translateY(1px);
+        }
+
+        .button-row {
+            display: flex;
+            gap: 8px;
+            margin-top: var(--spacing-sm);
+            width: 100%;
+        }
+
+        .button-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: var(--spacing-sm);
+            width: 100%;
+        }
+
+        .icon-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 10px;
+            border: none;
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 44px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .icon-btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: var(--bg-black);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .info-box {
+            text-align: center;
+            padding: var(--spacing-md);
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--radius-medium);
+            height: 100%;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .info-box i {
+            font-size: 2.5rem;
+            color: var(--accent-color);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .info-box p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 480px) {
+            .tool-card {
+                padding: 14px;
+                border-radius: 20px;
+            }
+            
+            .apply-btn {
+                width: 44px;
+            }
+            
+            .preview-content {
+                min-height: 200px;
+            }
+            
+            .watermark-canvas {
+                max-height: 200px;
+            }
+            
+            .icon-btn {
+                padding: 10px 8px;
+                font-size: 0.85rem;
+            }
+        }
+
+        .icon-btn, .apply-btn {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i> Back To Home
+        </a>
+        
+        <app-header class="fade-in">
+            <div>
+                <h1 class="username">Watermark Applier</h1>
+                <p class="tagline">Add a tiled diagonal watermark to your image that covers the entire picture</p>
+            </div>
+        </app-header>
+
+        <div class="tool-card">
+            <div class="io-grid">
+                <div class="io-section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            Your watermark text here
+                        </div>
+                    </div>
+                    
+                    <div class="watermark-wrapper">
+                        <input type="text" class="watermark-input" id="watermarkText" value="lildavegoth" placeholder="Your Watermark" maxlength="17">
+                        <button class="apply-btn" id="applyWatermarkBtn">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="section-header" style="margin-top: 4px;">
+                        <div class="section-title">
+                            Original size
+                        </div>
+                        <div class="character-count" id="fileInfo">No file</div>
+                        <div class="section-title">
+                            Size result
+                        </div>
+                        <div class="character-count" id="outputCount">—</div>
+                    </div>
+                    
+                    <div class="preview-container">
+                        <div class="preview-content" id="previewContent">
+                            <div class="preview-placeholder" id="previewPlaceholder">
+                                <div>Import an image to see preview</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: -10px;" class="button-row">
+                        <label class="icon-btn btn-secondary">
+                            <input type="file" id="imageInput" accept="image/*">
+                            <i class="fas fa-cloud-upload-alt"></i> Select Image
+                        </label>
+                        <button class="icon-btn btn-secondary" id="clearBtn">
+                            <i class="fas fa-undo-alt"></i> Clear
+                        </button>
+                    </div>
+
+                    <div class="button-col">
+                        <button class="icon-btn btn-primary btn-full" id="saveImageBtn">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Watermark Applier</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const watermarkInput = document.getElementById('watermarkText');
+        const applyWatermarkBtn = document.getElementById('applyWatermarkBtn');
+        const previewContent = document.getElementById('previewContent');
+        const previewPlaceholder = document.getElementById('previewPlaceholder');
+        const fileInfo = document.getElementById('fileInfo');
+        const outputCount = document.getElementById('outputCount');
+        const clearBtn = document.getElementById('clearBtn');
+        const saveImageBtn = document.getElementById('saveImageBtn');
+
+        let currentBase64 = '';
+        let currentFileName = 'watermarked.png';
+        let currentImage = null;
+
+        imageInput.addEventListener('change', handleImageUpload);
+        applyWatermarkBtn.addEventListener('click', applyWatermark);
+        clearBtn.addEventListener('click', clearAll);
+        saveImageBtn.addEventListener('click', downloadWatermarked);
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+        
+            if (file.size > 5 * 1024 * 1024) {
+                showError('Image Too Large (Max 5MB)');
+                return;
+            }
+        
+            fileInfo.textContent = `${(file.size / 1024).toFixed(1)} Kb`;
+            currentFileName = file.name.replace(/\.[^/.]+$/, '') + '.png';
+            
+            let text = watermarkInput.value || 'lildavegoth';
+            if (text.length > 17) {
+                text = text.substring(0, 17);
+                watermarkInput.value = text;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    currentImage = img;
+                    drawWatermarkOnCanvas(img, text);
+                };
+                img.src = e.target.result;
+            };
+            reader.onerror = () => window.showMessage('Failed To Read File');
+            reader.readAsDataURL(file);
+            window.showMessage('Image imported');
+        }
+
+        function applyWatermark() {
+            if (!currentImage) return;
+            
+            let text = watermarkInput.value || 'lildavegoth';
+            if (text.length > 17) {
+                text = text.substring(0, 17);
+                watermarkInput.value = text;
+            }
+            
+            previewContent.innerHTML = '';
+            previewPlaceholder.classList.remove('hidden');
+            currentBase64 = '';
+            
+            setTimeout(() => {
+                drawWatermarkOnCanvas(currentImage, text);
+            }, 10);
+            window.showMessage('Watermark updated');
+        }
+
+        function drawWatermarkOnCanvas(img, text) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.lineWidth = 2;
+
+            const txt = text || 'lildavegoth';
+            const diagonal = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
+            const stepX = 280;
+            const stepY = 180;
+
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(45 * Math.PI / 180);
+            ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+            for (let y = -diagonal; y < diagonal; y += stepY) {
+                for (let x = -diagonal; x < diagonal; x += stepX) {
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.strokeText(txt, 0, 0);
+                    ctx.fillText(txt, 0, 0);
+                    ctx.restore();
+                }
+            }
+
+            ctx.restore();
+
+            currentBase64 = canvas.toDataURL('image/png');
+            updatePreview(currentBase64);
+        }
+
+        function updatePreview(dataURL) {
+            previewContent.innerHTML = '';
+            previewPlaceholder.classList.add('hidden');
+
+            const imgEl = document.createElement('img');
+            imgEl.src = dataURL;
+            imgEl.className = 'watermark-canvas';
+            imgEl.alt = 'Watermarked';
+            previewContent.appendChild(imgEl);
+
+            const sizeInKb = Math.round((dataURL.length * 0.75) / 1024);
+            outputCount.textContent = sizeInKb + ' Kb';
+        }
+
+        function downloadWatermarked() {
+            if (!currentBase64) return;
+            const a = document.createElement('a');
+            a.href = currentBase64;
+            a.download = currentFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.showMessage('Watermarked image has been successfully downloaded');
+        }
+
+        function clearAll() {
+            imageInput.value = '';
+            currentBase64 = '';
+            currentImage = null;
+            previewContent.innerHTML = '';
+            previewPlaceholder.classList.remove('hidden');
+            fileInfo.textContent = 'No File';
+            outputCount.textContent = '—';
+            window.showMessage('Cleared. Import new image to start watermarking');
+        }
+
+    </script>
+</body>
+</html>

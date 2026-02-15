@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabilist | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../notification.cssjs"></script>
+    <script src="../protections.js"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            padding: var(--spacing-md);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            padding: var(--spacing-lg) var(--spacing-md);
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border-radius: var(--radius-large);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .tabs {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            overflow-x: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            padding-bottom: 4px;
+        }
+
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 8px 20px;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            border: none;
+            transition: 0.2s;
+            position: relative;
+        }
+
+        .tab.active {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: 600;
+        }
+
+        .add-btn {
+            margin-left: auto;
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex;
+        }
+
+        .control-btn {
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-medium);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .control-btn.danger:hover {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+            border-color: rgba(220, 53, 69, 0.3);
+        }
+
+        .control-btn.success:hover {
+            background: rgba(25, 135, 84, 0.2);
+            color: #20c997;
+            border-color: #20c997;
+        }
+
+        .undo-btn {
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-medium);
+            color: var(--accent-color);
+            padding: 8px 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .undo-btn:hover:not(:disabled) {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+        }
+
+        .undo-btn:disabled {
+            opacity: 0.3;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+
+        .table-wrapper {
+            border-radius: var(--radius-large);
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .table-scroll {
+            max-height: 480px;
+            overflow: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-color) var(--bg-dark);
+        }
+
+        .table-scroll::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        .table-scroll::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        
+        .table-scroll::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+            table-layout: auto;
+        }
+
+        thead th {
+            text-align: left;
+            padding: var(--spacing-md);
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            position: sticky;
+            top: 0;
+            background: #1e1e1e;
+            z-index: 10;
+            min-width: 160px;
+            cursor: pointer;
+        }
+
+        thead th:last-child {
+            border-right: none;
+            min-width: 100px;
+        }
+
+        tbody td {
+            padding: var(--spacing-sm);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            vertical-align: top;
+            background: rgba(0,0,0,0.2);
+        }
+
+        tbody td:last-child {
+            border-right: none;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .add-col-th {
+            width: 60px;
+            min-width: 60px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .add-action {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.6rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .add-action:hover {
+            color: var(--accent-color);
+        }
+
+        .cell-textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            padding: 4px 0;
+            outline: none;
+            font-family: inherit;
+            resize: none;
+            overflow-y: auto;
+            min-height: 60px;
+            line-height: 1.4;
+            display: block;
+        }
+
+        .cell-textarea:focus {
+            background: rgba(193, 252, 50, 0.1);
+            border-radius: 8px;
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
+        }
+
+        .row-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .row-btn {
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .row-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .row-btn.pinned {
+            background: rgba(193, 252, 50, 0.2);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .row-btn.delete:hover {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+            border-color: rgba(220, 53, 69, 0.3);
+        }
+
+        .add-row-wrapper {
+            padding: var(--spacing-md) 0;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .add-row-btn {
+            color: var(--accent-color);
+            font-weight: 600;
+            font-size: 1rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-popup:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .popup-body {
+            padding: var(--spacing-md);
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .popup-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-lg);
+        }
+        
+        .popup-actions .btn {
+            flex: 1;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: center;
+        }
+        
+        .btn.primary {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: bold;
+        }
+        
+        .btn.danger {
+            background: rgba(220,53,69,0.2);
+            color: #ff6b6b;
+            border-color: rgba(220,53,69,0.3);
+        }
+        
+        .btn:hover {
+            background: rgba(193,252,50,0.1);
+            border-color: var(--accent-color);
+        }
+
+        .confirmation-message {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: var(--text-primary);
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <app-header class="fade-in">
+            <div>
+                <h1 class="username">Tabilist</h1>
+                <p class="tagline">All in one store for all lildavegoth paid contents</p>
+            </div>
+        </app-header>
+        
+        <div class="page-header">
+            <div class="tabs" id="tabs-container"></div>
+        </div>
+    
+        <div class="toolbar">
+            <button class="control-btn success" id="exportBtn">
+                <i class="fas fa-file-export"></i> Export
+            </button>
+            <button class="control-btn" id="importBtn">
+                <i class="fas fa-file-import"></i> Import
+            </button>
+            <button class="control-btn danger" id="clearBtn">
+                <i class="fas fa-trash"></i> Clear All
+            </button>
+            <button class="undo-btn" id="undoBtn" disabled>
+                <i class="fas fa-undo"></i> Undelete
+            </button>
+        </div>
+    
+        <div class="table-wrapper">
+            <div class="table-scroll">
+                <table>
+                    <thead><tr id="header-row"></tr></thead>
+                    <tbody id="data-body"></tbody>
+                </table>
+            </div>
+            <div class="add-row-wrapper">
+                <button id="add-row-btn" class="add-row-btn">+ Add Row</button>
+            </div>
+        </div>
+        
+        <footer style="margin-bottom: 100px;">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Tabilist</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+    
+    <div class="popup-overlay" id="universalPopup">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" onclick="closeUniversalPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="popup-body" id="popupBody"></div>
+        </div>
+    </div>
+    
+    <script>
+        let folders = [];
+        let currentFolder = 0;
+        let editingTarget = null;
+        let deleteHistory = [];
+        const MAX_HISTORY = 5;
+    
+        const tabsContainer = document.getElementById('tabs-container');
+        const addFolderBtn = document.createElement('button');
+        addFolderBtn.className = 'add-btn';
+        addFolderBtn.id = 'add-folder-btn';
+        addFolderBtn.textContent = '+ Add Folder';
+    
+        const headerRow = document.getElementById('header-row');
+        const dataBody = document.getElementById('data-body');
+        const addRowBtn = document.getElementById('add-row-btn');
+        const undoBtn = document.getElementById('undoBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const importBtn = document.getElementById('importBtn');
+        const clearBtn = document.getElementById('clearBtn');
+    
+        const popup = document.getElementById('universalPopup');
+        const popupTitle = document.getElementById('popupTitle');
+        const popupBody = document.getElementById('popupBody');
+    
+        function openPopup(title, content) {
+            popupTitle.textContent = title;
+            popupBody.innerHTML = content;
+            popup.style.display = 'flex';
+        }
+    
+        function closeUniversalPopup() {
+            popup.style.display = 'none';
+            editingTarget = null;
+        }
+    
+        function saveData() {
+            localStorage.setItem('folders', JSON.stringify(folders));
+            localStorage.setItem('currentFolder', currentFolder);
+        }
+    
+        function showAddFolderPopup() {
+            const content = `
+                <div class="form-group">
+                    <label class="form-label">Folder name</label>
+                    <input type="text" id="popupFolderInput" class="form-input" placeholder="Enter name" autocomplete="off">
+                </div>
+                <div class="popup-actions">
+                    <button class="btn" onclick="closeUniversalPopup()">Cancel</button>
+                    <button class="btn primary" id="createFolderBtn">Create</button>
+                </div>
+            `;
+            openPopup('Add Folder', content);
+            setTimeout(() => {
+                const input = document.getElementById('popupFolderInput');
+                const createBtn = document.getElementById('createFolderBtn');
+                if (input) input.focus();
+                if (createBtn) {
+                    createBtn.onclick = () => {
+                        const name = document.getElementById('popupFolderInput').value.trim();
+                        if (name) {
+                            folders.push({
+                                name: name,
+                                columns: ['Name'],
+                                rows: []
+                            });
+                            currentFolder = folders.length - 1;
+                            saveData();
+                            renderTabs();
+                            renderTable();
+                            closeUniversalPopup();
+                            window.showMessage('Folder created');
+                        }
+                    };
+                }
+            }, 100);
+        }
+    
+        function showEditFolderPopup(index) {
+            const folder = folders[index];
+            const content = `
+                <div class="form-group">
+                    <label class="form-label">Folder name</label>
+                    <input type="text" id="popupFolderInput" class="form-input" value="${folder.name}" autocomplete="off">
+                </div>
+                <div class="popup-actions">
+                    <button class="btn danger" id="deleteFolderBtn">Delete</button>
+                    <button class="btn" onclick="closeUniversalPopup()">Cancel</button>
+                    <button class="btn primary" id="saveFolderBtn">Save</button>
+                </div>
+            `;
+            openPopup('Edit Folder', content);
+            setTimeout(() => {
+                const input = document.getElementById('popupFolderInput');
+                const deleteBtn = document.getElementById('deleteFolderBtn');
+                const saveBtn = document.getElementById('saveFolderBtn');
+                if (input) { input.focus(); input.select(); }
+                if (deleteBtn) {
+                    deleteBtn.onclick = () => {
+                        if (folders.length > 1) {
+                            folders.splice(index, 1);
+                            if (currentFolder >= folders.length) currentFolder = folders.length - 1;
+                            if (currentFolder < 0) currentFolder = 0;
+                            saveData();
+                            renderTabs();
+                            renderTable();
+                            closeUniversalPopup();
+                            window.showMessage('Folder deleted');
+                        } else {
+                            window.showMessage('Cannot delete the only folder');
+                        }
+                    };
+                }
+                if (saveBtn) {
+                    saveBtn.onclick = () => {
+                        const newName = document.getElementById('popupFolderInput').value.trim();
+                        if (newName) {
+                            folders[index].name = newName;
+                            saveData();
+                            renderTabs();
+                            renderTable();
+                            closeUniversalPopup();
+                            window.showMessage('Folder renamed');
+                        }
+                    };
+                }
+            }, 100);
+        }
+    
+        function showEditColumnPopup(colIndex) {
+            const folder = folders[currentFolder];
+            const content = `
+                <div class="form-group">
+                    <label class="form-label">Column name</label>
+                    <input type="text" id="popupColumnInput" class="form-input" value="${folder.columns[colIndex]}" autocomplete="off">
+                </div>
+                <div class="popup-actions">
+                    <button class="btn danger" id="deleteColumnBtn">Delete</button>
+                    <button class="btn" onclick="closeUniversalPopup()">Cancel</button>
+                    <button class="btn primary" id="saveColumnBtn">Save</button>
+                </div>
+            `;
+            openPopup('Edit Column', content);
+            setTimeout(() => {
+                const input = document.getElementById('popupColumnInput');
+                const deleteBtn = document.getElementById('deleteColumnBtn');
+                const saveBtn = document.getElementById('saveColumnBtn');
+                if (input) { input.focus(); input.select(); }
+                if (deleteBtn) {
+                    deleteBtn.onclick = () => {
+                        folder.columns.splice(colIndex, 1);
+                        folder.rows.forEach(row => row.splice(colIndex, 1));
+                        saveData();
+                        renderTable();
+                        closeUniversalPopup();
+                        window.showMessage('Column deleted');
+                    };
+                }
+                if (saveBtn) {
+                    saveBtn.onclick = () => {
+                        const newName = document.getElementById('popupColumnInput').value.trim() || 'Untitled';
+                        folder.columns[colIndex] = newName;
+                        saveData();
+                        renderTable();
+                        closeUniversalPopup();
+                        window.showMessage('Column renamed');
+                    };
+                }
+            }, 100);
+        }
+    
+        function showAddColumnPopup() {
+            const content = `
+                <div class="form-group">
+                    <label class="form-label">Column name</label>
+                    <input type="text" id="popupColumnInput" class="form-input" placeholder="Enter name" autocomplete="off">
+                </div>
+                <div class="popup-actions">
+                    <button class="btn" onclick="closeUniversalPopup()">Cancel</button>
+                    <button class="btn primary" id="createColumnBtn">Create</button>
+                </div>
+            `;
+            openPopup('Add Column', content);
+            setTimeout(() => {
+                const input = document.getElementById('popupColumnInput');
+                const createBtn = document.getElementById('createColumnBtn');
+                if (input) input.focus();
+                if (createBtn) {
+                    createBtn.onclick = () => {
+                        const folder = folders[currentFolder];
+                        const newName = document.getElementById('popupColumnInput').value.trim() || 'New Column';
+                        folder.columns.push(newName);
+                        folder.rows.forEach(row => row.push(''));
+                        saveData();
+                        renderTable();
+                        closeUniversalPopup();
+                        window.showMessage('Column added');
+                    };
+                }
+            }, 100);
+        }
+    
+        function showDeleteRowConfirmation(originalIndex) {
+            const folder = folders[currentFolder];
+            const content = `
+                <div class="confirmation-message">Are you sure you want to delete this row?</div>
+                <div class="popup-actions">
+                    <button class="btn" onclick="closeUniversalPopup()">Cancel</button>
+                    <button class="btn danger" id="confirmDeleteBtn">Delete</button>
+                </div>
+            `;
+            openPopup('Delete Row', content);
+            setTimeout(() => {
+                const deleteBtn = document.getElementById('confirmDeleteBtn');
+                if (deleteBtn) {
+                    deleteBtn.onclick = () => {
+                        const deletedRow = JSON.parse(JSON.stringify(folder.rows[originalIndex]));
+                        deleteHistory.unshift({
+                            row: deletedRow,
+                            index: originalIndex,
+                            folderId: currentFolder
+                        });
+                        if (deleteHistory.length > MAX_HISTORY) deleteHistory.pop();
+                        folder.rows.splice(originalIndex, 1);
+                        saveData();
+                        renderTable();
+                        closeUniversalPopup();
+                        undoBtn.disabled = deleteHistory.length === 0;
+                        window.showMessage('Row deleted');
+                    };
+                }
+            }, 100);
+        }
+    
+        function showClearAllConfirmation() {
+            const content = `
+                <div class="confirmation-message">This will permanently delete all rows in current folder. This action cannot be undone.</div>
+                <div class="popup-actions">
+                    <button class="btn" onclick="closeUniversalPopup()">Cancel</button>
+                    <button class="btn danger" id="confirmClearBtn">Clear All</button>
+                </div>
+            `;
+            openPopup('Clear All', content);
+            setTimeout(() => {
+                const clearBtn = document.getElementById('confirmClearBtn');
+                if (clearBtn) {
+                    clearBtn.onclick = () => {
+                        const folder = folders[currentFolder];
+                        folder.rows = [];
+                        saveData();
+                        renderTable();
+                        closeUniversalPopup();
+                        window.showMessage('All rows cleared');
+                    };
+                }
+            }, 100);
+        }
+    
+        function undoDelete() {
+            if (deleteHistory.length > 0) {
+                const action = deleteHistory.shift();
+                const folder = folders[action.folderId];
+                if (folder) {
+                    folder.rows.splice(action.index, 0, action.row);
+                    saveData();
+                    renderTable();
+                    undoBtn.disabled = deleteHistory.length === 0;
+                    window.showMessage('Undo successful');
+                }
+            }
+        }
+    
+        function encryptData(data) {
+            try {
+                const jsonString = JSON.stringify(data);
+                return btoa(unescape(encodeURIComponent(jsonString)));
+            } catch {
+                return null;
+            }
+        }
+    
+        function decryptData(encryptedString) {
+            try {
+                const jsonString = decodeURIComponent(escape(atob(encryptedString)));
+                return JSON.parse(jsonString);
+            } catch {
+                return null;
+            }
+        }
+    
+        function exportData() {
+            const exportData = {
+                version: '1.0',
+                exportedAt: new Date().toISOString(),
+                folders: folders.map(folder => ({
+                    ...folder,
+                    rows: folder.rows.map(row => ({
+                        ...row,
+                        pinned: row.pinned || false
+                    }))
+                }))
+            };
+            const encryptedData = encryptData(exportData);
+            if (!encryptedData) {
+                window.showMessage('Export failed');
+                return;
+            }
+            const timestamp = new Date().toISOString().split('T')[0];
+            const filename = `tabilist-backup-${timestamp}.json`;
+            const blob = new Blob([encryptedData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    
+        function importData() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json';
+            fileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const encryptedContent = e.target.result;
+                        const decryptedData = decryptData(encryptedContent);
+                        if (decryptedData && decryptedData.folders) {
+                            folders = decryptedData.folders.map(folder => ({
+                                ...folder,
+                                rows: folder.rows.map(row => ({
+                                    ...row,
+                                    pinned: row.pinned || false
+                                }))
+                            }));
+                            currentFolder = 0;
+                            saveData();
+                            renderTabs();
+                            renderTable();
+                            window.showMessage('Import successful');
+                        } else {
+                            window.showMessage('Invalid backup file');
+                        }
+                    } catch {
+                        window.showMessage('Failed to read file');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            fileInput.click();
+        }
+    
+        function renderTabs() {
+            tabsContainer.innerHTML = '';
+            folders.forEach((folder, index) => {
+                const tab = document.createElement('button');
+                tab.className = 'tab' + (index === currentFolder ? ' active' : '');
+                tab.textContent = folder.name;
+                tab.addEventListener('click', () => {
+                    currentFolder = index;
+                    renderTabs();
+                    renderTable();
+                    saveData();
+                });
+                tab.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    showEditFolderPopup(index);
+                });
+                tabsContainer.appendChild(tab);
+            });
+            tabsContainer.appendChild(addFolderBtn);
+        }
+    
+        function renderTable() {
+            const folder = folders[currentFolder];
+            headerRow.innerHTML = '';
+            dataBody.innerHTML = '';
+    
+            folder.columns.forEach((colName, colIndex) => {
+                const th = document.createElement('th');
+                th.textContent = colName;
+                th.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    showEditColumnPopup(colIndex);
+                });
+                headerRow.appendChild(th);
+            });
+    
+            const addColTh = document.createElement('th');
+            addColTh.className = 'add-col-th';
+            const addColBtn = document.createElement('button');
+            addColBtn.className = 'add-action';
+            addColBtn.innerHTML = '<i class="fas fa-plus"></i>';
+            addColBtn.addEventListener('click', showAddColumnPopup);
+            addColTh.appendChild(addColBtn);
+            headerRow.appendChild(addColTh);
+    
+            const rowsWithIndex = folder.rows.map((row, idx) => ({ row, originalIndex: idx }));
+            
+            rowsWithIndex.sort((a, b) => {
+                if (a.row.pinned && !b.row.pinned) return -1;
+                if (!a.row.pinned && b.row.pinned) return 1;
+                return b.originalIndex - a.originalIndex;
+            });
+    
+            rowsWithIndex.forEach(({ row, originalIndex }) => {
+                const tr = document.createElement('tr');
+                
+                folder.columns.forEach((_, colIndex) => {
+                    const td = document.createElement('td');
+                    const textarea = document.createElement('textarea');
+                    textarea.className = 'cell-textarea';
+                    textarea.value = row[colIndex] || '';
+                    textarea.addEventListener('input', () => {
+                        folder.rows[originalIndex][colIndex] = textarea.value;
+                        saveData();
+                    });
+                    textarea.addEventListener('blur', () => {
+                        folder.rows[originalIndex][colIndex] = textarea.value;
+                        saveData();
+                    });
+                    td.appendChild(textarea);
+                    tr.appendChild(td);
+                });
+    
+                const actionTd = document.createElement('td');
+                const controls = document.createElement('div');
+                controls.className = 'row-controls';
+    
+                const pinBtn = document.createElement('button');
+                pinBtn.className = row.pinned ? 'row-btn pinned' : 'row-btn';
+                pinBtn.innerHTML = '<i class="fas fa-thumbtack"></i>';
+                pinBtn.onclick = () => {
+                    folder.rows[originalIndex].pinned = !folder.rows[originalIndex].pinned;
+                    saveData();
+                    renderTable();
+                    window.showMessage(row.pinned ? 'Row pinned' : 'Row unpinned');
+                };
+    
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'row-btn delete';
+                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                deleteBtn.onclick = () => {
+                    showDeleteRowConfirmation(originalIndex);
+                };
+    
+                controls.appendChild(pinBtn);
+                controls.appendChild(deleteBtn);
+                actionTd.appendChild(controls);
+                tr.appendChild(actionTd);
+    
+                dataBody.appendChild(tr);
+            });
+    
+            document.querySelectorAll('.cell-textarea').forEach(ta => {
+                ta.style.height = 'auto';
+                ta.style.height = (ta.scrollHeight) + 'px';
+                ta.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = (this.scrollHeight) + 'px';
+                });
+            });
+        }
+    
+        addFolderBtn.addEventListener('click', showAddFolderPopup);
+        addRowBtn.addEventListener('click', () => {
+            const folder = folders[currentFolder];
+            const newRow = new Array(folder.columns.length).fill('');
+            newRow.pinned = false;
+            folder.rows.push(newRow);
+            renderTable();
+            saveData();
+            window.showMessage('Row added');
+        });
+    
+        undoBtn.addEventListener('click', undoDelete);
+        
+        exportBtn.addEventListener('click', exportData);
+        importBtn.addEventListener('click', importData);
+        
+        clearBtn.addEventListener('click', () => {
+            if (folders[currentFolder].rows.length > 0) {
+                showClearAllConfirmation();
+            } else {
+                window.showMessage('No rows to clear');
+            }
+        });
+    
+        function loadData() {
+            const saved = localStorage.getItem('folders');
+            if (saved) {
+                folders = JSON.parse(saved);
+                currentFolder = parseInt(localStorage.getItem('currentFolder')) || 0;
+                if (folders.length === 0 || !folders[currentFolder]) {
+                    folders = [{ name: "All", columns: ['Name'], rows: [] }];
+                    currentFolder = 0;
+                }
+                folders.forEach(f => {
+                    f.rows.forEach(r => { if (r.pinned === undefined) r.pinned = false; });
+                });
+            } else {
+                folders = [{ name: "All", columns: ['Name'], rows: [] }];
+            }
+            renderTabs();
+            renderTable();
+        }
+    
+        document.addEventListener('DOMContentLoaded', loadData);
+        window.closeUniversalPopup = closeUniversalPopup;
+    </script>
+</body>
+</html>

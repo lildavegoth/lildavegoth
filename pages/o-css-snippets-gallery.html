@@ -356,116 +356,26 @@
     </div>
     
     <script>
-        // CSS Snippets data
-        const snippets = [
-            {
-                id: "1",
-                title: "Wider Table",
-                description: "Make tables wider then before by ignoring screen width! Responsive with text wrapping and proper spacing. Includes horizontal scrolling for wide tables and ensures text wraps properly in cells instead of overflowing.",
-                code: `.markdown-reading-view .markdown-preview-view table {
-    width: auto !important;
-    min-width: auto !important;
-    max-width: none !important;
-    table-layout: auto !important;
-    border-collapse: collapse !important;
-    margin: 0.5em 0 !important;
-}
-
-.markdown-reading-view .markdown-preview-view td,
-.markdown-reading-view .markdown-preview-view th {
-    min-width: 50px !important;
-    width: auto !important;
-    max-width: none !important;
-    padding: 5px 5px !important;
-    border: 1px solid var(--background-modifier-border) !important;
-    white-space: nowrap !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    vertical-align: top !important;
-    text-align: left !important;
-}
-
-.markdown-reading-view .markdown-preview-view th {
-    font-weight: bold !important;
-}
-
-.markdown-reading-view .markdown-preview-view > div {
-    overflow-x: auto !important;
-    overflow-y: visible !important;
-}
-
-.markdown-source-view .cm-table-widget table,
-.cm-embed-block.cm-table-widget table {
-    width: max-content !important;
-    min-width: min(1100px, 100%) !important;
-    max-width: 100% !important;
-    table-layout: auto !important;
-    border-collapse: collapse !important;
-    border-spacing: 0 !important;
-    font-size: inherit !important;
-    font-family: inherit !important;
-    line-height: inherit !important;
-}
-
-.markdown-source-view .cm-table-widget,
-.cm-embed-block.cm-table-widget {
-    position: relative !important;
-    display: inline-block !important;
-}
-
-.markdown-source-view .cm-table-widget th,
-.cm-embed-block.cm-table-widget th {
-    font-weight: bold !important;
-}
-
-.markdown-source-view .cm-table-widget .table-column-resize-handle,
-.cm-embed-block.cm-table-widget .table-column-resize-handle,
-.markdown-source-view .cm-table-widget .table-row-controls,
-.cm-embed-block.cm-table-widget .table-row-controls,
-.markdown-source-view .cm-table-widget .table-column-controls,
-.cm-embed-block.cm-table-widget .table-column-controls {
-    position: absolute !important;
-    z-index: 100 !important;
-    display: block !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-}
-
-.markdown-source-view .cm-table-widget .selected-row,
-.cm-embed-block.cm-table-widget .selected-row,
-.markdown-source-view .cm-table-widget .selected-column,
-.cm-embed-block.cm-table-widget .selected-column {
-    background-color: rgba(var(--interactive-accent-rgb), 0.1) !important;
-}`,
-                createdAt: "2026-01-17"
-            },
-            {
-                id: "2",
-                title: "Hide Scrollbar",
-                description: "Remove Scrollbar display for some purposes such a Plugin usage.",
-                code: `/* Hide scrollbar for Obsidian mobile */
-.view-content ::-webkit-scrollbar {
-    display: none;
-}
-
-/* Ensure scrolling still works */
-.view-content {
-    -webkit-overflow-scrolling: touch;
-}`,
-                createdAt: "2026-01-20"
-            },
-        ];
-
         const snippetsGrid = document.getElementById('snippetsGrid');
         const searchInput = document.getElementById('searchInput');
-
-        document.addEventListener('DOMContentLoaded', function() {
-            renderSnippets(snippets);
+        let snippets = [];
+    
+        document.addEventListener('DOMContentLoaded', async function() {
+            await fetchSnippets();
             searchInput.addEventListener('input', function() {
                 performSearch(this.value);
             });
         });
+        
+        async function fetchSnippets() {
+            try {
+                const response = await fetch('https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Obsidian%20CSS%20Snippets%20Gallery/css-snippets.json');
+                snippets = await response.json();
+                renderSnippets(snippets);
+            } catch {
+                renderSnippets([]);
+            }
+        }
         
         function sortNewestFirst(snippetsList) {
             return snippetsList.sort((a, b) => {
@@ -474,10 +384,21 @@
                 return dateB - dateA;
             });
         }
-
+    
         function renderSnippets(snippetsToRender) {
             const sortedSnippets = sortNewestFirst([...snippetsToRender]);
             snippetsGrid.innerHTML = '';
+            
+            if (sortedSnippets.length === 0) {
+                snippetsGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <h3>No snippets found</h3>
+                        <p>Try adjusting your search</p>
+                    </div>
+                `;
+                return;
+            }
             
             sortedSnippets.forEach(snippet => {
                 const snippetCard = document.createElement('div');
@@ -531,7 +452,7 @@
                 });
             });
         }
-
+    
         function copyToClipboard(id) {
             const snippet = snippets.find(s => s.id === id);
             if (!snippet) return;
@@ -540,7 +461,7 @@
                 .then(() => {
                     window.showMessage('CSS copied to clipboard!');
                 })
-                .catch(err => {
+                .catch(() => {
                     const textArea = document.createElement('textarea');
                     textArea.value = snippet.code;
                     document.body.appendChild(textArea);
@@ -550,7 +471,7 @@
                     window.showMessage('CSS copied to clipboard!');
                 });
         }
-
+    
         function downloadSnippet(id) {
             const snippet = snippets.find(s => s.id === id);
             if (!snippet) return;
@@ -568,7 +489,7 @@
             
             window.showMessage(`Downloaded ${fileName}`);
         }
-
+    
         function performSearch(searchTerm) {
             const term = searchTerm.toLowerCase().trim();
             
@@ -584,12 +505,6 @@
             });
             
             renderSnippets(filteredSnippets);
-        }
-
-        function setupEventListeners() {
-            searchInput.addEventListener('input', function() {
-                performSearch(this.value);
-            });
         }
     </script>
 </body>
