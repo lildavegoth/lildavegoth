@@ -314,6 +314,69 @@
             white-space: pre-wrap;
         }
         
+        .pin-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 6px;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .pin-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .tag-and-delete {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .select-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 6px;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .select-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        #deleteFab {
+            transition: transform 0.2s;
+        }
+        
+        #deleteFab:hover {
+            transform: scale(1.1);
+        }
+        
+        #deleteFab:active {
+            transform: scale(0.95);
+        }
+        
     </style>
 </head>
 <body>
@@ -334,7 +397,7 @@
                 <div class="avatar" id="avatar"></div>
                 <div class="username" id="username">User</div>
             </div>
-            <button class="clear-btn" onclick="if(confirm('Clear all LocalStorage? This cannot be undone.')){localStorage.clear();location.reload();}">
+            <button class="clear-btn" style="color: red;" onclick="if(confirm('Clear all LocalStorage? This cannot be undone.')){localStorage.clear();location.reload();}">
                 Clear All
                 <i class="fas fa-trash-alt"></i>
             </button>
@@ -347,7 +410,7 @@
         <div class="folders" id="folders"></div>
 
         <div class="items-info">
-            <div id="itemsCount">You have 0 items stored</div>
+            <div id="itemsCount">0 data stored</div>
             <div class="folder-pill" id="folderPill">All</div>
         </div>
 
@@ -366,9 +429,16 @@
             </p>
         </footer>
     </div>
+    
+    <div id="deleteFab" style="display:none; position:fixed; bottom:30px; right:30px; background:var(--accent-color); color:#000; width:60px; height:35px; border-radius:20px; align-items:center; justify-content:center; cursor:pointer; z-index:1000;">
+        <i class="fas fa-trash" style="font-size:17px;"></i>
+        <span class="fab-count" style="position:absolute; top:-5px; right:-5px; background:#ff4444; color:white; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">0</span>
+    </div>
 
     <script>
         let currentFolder = 'All';
+        let pinnedItems = JSON.parse(localStorage.getItem('pinnedItems') || '[]');
+        let selectedItems = [];
 
         const avatar = document.getElementById('avatar');
         const avatarInput = document.getElementById('avatarInput');
@@ -414,17 +484,19 @@
 
         function getData() {
             let keys = [];
-            const excludedKeys = ['username', 'avatar', 'giveaway_settings', 'giveaway_participants', 'giveawayParticipants', 'lastGiveawayWinner', 'giveawayData'];
+            const excludedKeys = ['giveaway_settings', 'giveaway_participants', 'giveawayParticipants', 'lastGiveawayWinner', 'giveawayData', 'showDescription', 'hideSettingsButton', 'showSearchBar', 'bodyPosition', 'showBanner', 'showQuickLinks', 'pinnedItems', 'app_hash_v2', 'app_salt_v2'];
             
             for (let i = 0; i < localStorage.length; i++) {
                 let k = localStorage.key(i);
                 if (!excludedKeys.includes(k)) keys.push(k);
             }
             
-            keys.sort();
-        
+            keys.sort((a, b) => {
+                return 0;
+            });
+            
             let folders = new Set(['All']);
-        
+            
             keys.forEach(k => {
                 let folderName = 'misc';
                 if (k.includes('_')) {
@@ -432,8 +504,67 @@
                 }
                 folders.add(folderName);
             });
-        
+            
             return {keys, folders: Array.from(folders)};
+        }
+        
+        function savePinnedItems() {
+            localStorage.setItem('pinnedItems', JSON.stringify(pinnedItems));
+        }
+        
+        function togglePin(key) {
+            if (pinnedItems.includes(key)) {
+                pinnedItems = pinnedItems.filter(item => item !== key);
+            } else {
+                pinnedItems.push(key);
+            }
+            savePinnedItems();
+            buildCards();
+        }
+        
+        function isPinned(key) {
+            return pinnedItems.includes(key);
+        }
+        
+        function toggleSelect(key) {
+            if (selectedItems.includes(key)) {
+                selectedItems = selectedItems.filter(item => item !== key);
+            } else {
+                selectedItems.push(key);
+            }
+            updateFabButton();
+            buildCards();
+        }
+        
+        function isSelected(key) {
+            return selectedItems.includes(key);
+        }
+        
+        function updateFabButton() {
+            let fab = document.getElementById('deleteFab');
+            if (selectedItems.length > 0) {
+                fab.style.display = 'flex';
+                fab.querySelector('.fab-count').textContent = selectedItems.length;
+            } else {
+                fab.style.display = 'none';
+            }
+        }
+        
+        function deleteSelected() {
+            if (selectedItems.length === 0) return;
+            if (confirm(`Delete ${selectedItems.length} selected item${selectedItems.length === 1 ? '' : 's'}?`)) {
+                selectedItems.forEach(key => {
+                    localStorage.removeItem(key);
+                });
+                selectedItems = [];
+                let {folders} = getData();
+                buildFolders(folders.sort((a, b) => {
+                    return 0;
+                }));
+                buildCards();
+                hideBase64Images();
+                updateFabButton();
+            }
         }
 
         function buildFolders(foldersList) {
@@ -455,13 +586,29 @@
                 foldersEl.appendChild(btn);
             });
         }
+        
+        function getTotalStorageSize() {
+            let total = 0;
+            for (let i = 0; i < localStorage.length; i++) {
+                let key = localStorage.key(i);
+                let value = localStorage.getItem(key);
+                total += key.length + value.length;
+            }
+            return total;
+        }
+        
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + 'B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
+            return (bytes / 1048576).toFixed(1) + 'MB';
+        }
 
         function buildCards() {
             const search = document.getElementById('searchInput').value.toLowerCase();
             const {keys} = getData();
-        
+            
             let filtered = keys.filter(k => {
-                const excludedKeys = ['giveaway_settings', 'giveaway_participants', 'giveawayParticipants', 'lastGiveawayWinner', 'giveawayData'];
+                const excludedKeys = ['username', 'avatar', 'giveaway_settings', 'giveaway_participants', 'giveawayParticipants', 'lastGiveawayWinner', 'giveawayData', 'showDescription', 'hideSettingsButton', 'showSearchBar', 'bodyPosition', 'showBanner', 'showQuickLinks', 'pinnedItems', 'app_hash_v2', 'app_salt_v2'];
                 if (excludedKeys.includes(k)) return false;
                 
                 let matchesFolder = true;
@@ -472,17 +619,25 @@
                         matchesFolder = k.startsWith(currentFolder + '_');
                     }
                 }
-        
+                
                 let matchesSearch = k.toLowerCase().includes(search) || localStorage.getItem(k).toLowerCase().includes(search);
                 return matchesFolder && matchesSearch;
             });
             
+            filtered.sort((a, b) => {
+                if (isPinned(a) && !isPinned(b)) return -1;
+                if (!isPinned(a) && isPinned(b)) return 1;
+                return 0;
+            });
+            
             const container = document.getElementById('storageContainer');
             container.innerHTML = '';
-        
+            
             const countEl = document.getElementById('itemsCount');
             let plural = filtered.length === 1 ? '' : 's';
-            countEl.textContent = `You have ${filtered.length} item${plural} stored`;
+            let totalSize = getTotalStorageSize();
+            let formattedSize = formatSize(totalSize);
+            countEl.textContent = `${filtered.length} item${plural} and ${formattedSize} used of total data stored`;
         
             const pill = document.getElementById('folderPill');
             pill.textContent = currentFolder;
@@ -507,6 +662,9 @@
                     </div>
                 `;
                 container.appendChild(card);
+                if (isPinned(key)) {
+                    card.style.border = '1px solid var(--accent-color)';
+                }
             } else {
                 pill.style.background = 'var(--accent-color)';
                 pill.style.color = '#000';
@@ -545,8 +703,13 @@
                         <div class="card-header">
                             <div class="tag-and-delete">
                                 <div class="storage-tag">${isBase64 ? 'Base64' : (isJSON ? 'JSON' : 'String')}</div>
-                                <button class="delete-btn" data-key="${key}"><i class="fas fa-trash"></i></button>
                             </div>
+                            <button class="select-btn" data-key="${key}" style="background:transparent; border:none; color:${isSelected(key) ? 'var(--accent-color)' : 'var(--text-secondary)'}; cursor:pointer; font-size:1.2rem; padding:6px; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; margin-right:-170px;">
+                                <i class="${isSelected(key) ? 'fas fa-circle' : 'far fa-circle'}"></i>
+                            </button>
+                            <button class="pin-btn" data-key="${key}" style="background:transparent; border:none; color:${isPinned(key) ? 'var(--accent-color)' : 'var(--text-secondary)'}; cursor:pointer; font-size:1.2rem; margin-top:2px;">
+                                <i class="fas fa-thumbtack"></i>
+                            </button>
                         </div>
                         <div class="storage-key">${key.length > 50 ? key.substring(0, 50) + '...' : key}</div>
                         <div class="storage-value">${displayValue}</div>
@@ -556,6 +719,12 @@
                         </div>
                     `;
                     container.appendChild(card);
+                    if (isPinned(key)) {
+                        card.style.border = '1px solid var(--accent-color)';
+                    }
+                    if (isSelected(key)) {
+                        card.style.border = '1px solid var(--accent-color)';
+                    }
                 });
             }
       
@@ -574,6 +743,11 @@
                     let k = btn.dataset.key;
                     if (confirm('Delete this item?')) {
                         localStorage.removeItem(k);
+                        selectedItems = selectedItems.filter(item => item !== k);
+                        updateFabButton();
+                        let totalSize = getTotalStorageSize();
+                        let formattedSize = formatSize(totalSize);
+                        countEl.textContent = `${filtered.length - 1} item${plural} and ${formattedSize} used of total data stored`;
                         let {folders} = getData();
                         buildFolders(folders.sort());
                         buildCards();
@@ -582,15 +756,37 @@
                     }
                 };
             });
+            
+            document.querySelectorAll('.pin-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    let k = btn.dataset.key;
+                    togglePin(k);
+                };
+            });
+            
+            document.querySelectorAll('.select-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    let k = btn.dataset.key;
+                    toggleSelect(k);
+                };
+            });
         }
         
         document.getElementById('searchInput').oninput = () => {
             buildCards();
             hideBase64Images();
         };
+        
+        document.getElementById('deleteFab').onclick = () => {
+            deleteSelected();
+        };
 
         let {folders} = getData();
-        buildFolders(folders.sort());
+        buildFolders(folders.sort((a, b) => {
+            return 0;
+        }));
         buildCards();
         hideBase64Images();
         

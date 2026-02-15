@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.3.5';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.3.6';
 const urlsToCache = [
     // Root
     '/',
@@ -20,6 +20,7 @@ const urlsToCache = [
     'pages/appflowy-json-converter.html',
     'pages/app-list.html',
     'pages/calendar.html',
+    'pages/code-comparator.html',
     'pages/color-detector.html',
     'pages/dice-generator.html',
     'pages/dictionary-manager.html',
@@ -53,6 +54,7 @@ const urlsToCache = [
     'pages/typing-game.html',
     'pages/userscripts-gallery.html',
     'pages/wallet.html',
+    'pages/watermark-applier.html',
     'pages/weather.html',
     'pages/yaml-validator.html',
     'pages/youtube-thumbnail-grabber.html',
@@ -87,6 +89,11 @@ const urlsToCache = [
     // Icons
     'images/icons/browser-homepage.webp',
     'images/icons/kiraku-home.png',
+    // Index
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/pages.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/popup-pages.json',
+    // Obsidian CSS Snippets Gallery
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Obsidian%20CSS%20Snippets%20Gallery/css-snippets.json',
     // Posters
     'images/posters/again-n-again.webp',
     'images/posters/dear-god.webp',
@@ -94,10 +101,6 @@ const urlsToCache = [
     'images/posters/its-too-late.webp',
     'images/posters/no-longer-priority.webp',
     'images/posters/sickens-me.webp',
-    // Products
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Kiraku%20Store/products.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Kiraku%20Store/owned.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Kiraku%20Store/kuriihara-preview.webp',
     // Stories for Typing Game
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_1.txt',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_2.txt',
@@ -111,6 +114,8 @@ const urlsToCache = [
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_2.txt',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_3.txt',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_4.txt',
+    // UserScripts Gallery
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/UserScripts%20Gallery/userscripts.json',
     // Calendar
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Calendar/world-events.json',
     // Bundles

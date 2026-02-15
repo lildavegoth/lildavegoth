@@ -747,7 +747,7 @@
         navigateTo: (pageId) => loadSpaPage(pageId, `${pageId}.html`)
     };
     
-        // Force Rounded Scrollbars for Cromite Android
+    // Force Rounded Scrollbars
     document.addEventListener('DOMContentLoaded', function() {
         const scrollbarCSS = document.createElement('style');
         scrollbarCSS.textContent = `
