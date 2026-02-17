@@ -4,29 +4,33 @@ on:
   push:
     branches: [ homepage ]
   schedule:
-    # Run once a week on Sunday
     - cron: '0 0 * * 0'
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   sitemap:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # This is important!
+    
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Generate sitemap
         uses: cicirello/generate-sitemap@v1
         with:
           base-url-path: https://kakoi-kiraku-home.vercel.app/
           path-to-root: ./
-          additional-extensions: html json js css png webp
+          additional-extensions: html json js css cssjs png webp jpg
           exclude-paths: /node_modules / .git
           
       - name: Commit and push
         run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@github.com'
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add sitemap.xml
-          git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update sitemap"
+          git diff --quiet && git diff --staged --quiet || git commit -m "🤖 Auto-update sitemap"
           git push
