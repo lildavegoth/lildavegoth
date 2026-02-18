@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Sitemap XML Generator | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            padding: var(--spacing-sm);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .username {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .domain-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+            align-items: center;
+        }
+
+        .domain-input {
+            flex: 1 1 200px;
+            padding: 14px var(--spacing-md);
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 1rem;
+            outline: none;
+            min-width: 200px;
+        }
+
+        .domain-input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .editor-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        @media (max-width: 640px) {
+            .editor-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .editor-box {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .editor-header {
+            padding: var(--spacing-sm);
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .editor-title {
+            font-weight: 600;
+        }
+
+        .editor-buttons {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 1rem;
+            touch-action: manipulation;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--accent-color);
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            padding: var(--spacing-md);
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+        }
+
+        textarea:focus {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .options {
+            display: flex;
+            justify-content: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .options-list {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .option-row {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-small);
+            transition: all 0.3s;
+            cursor: pointer;
+            flex-wrap: wrap;
+        }
+
+        .option-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .option-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(193, 252, 50, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .option-text {
+            flex: 1;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .option-row.active .option-text {
+            color: var(--accent-color);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .toggle-checkbox {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-secondary);
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        .toggle-checkbox:checked + .toggle-slider {
+            background-color: rgba(193, 252, 50, 0.2);
+        }
+
+        .toggle-checkbox:checked + .toggle-slider:before {
+            transform: translateX(26px);
+            background-color: var(--accent-color);
+        }
+
+        .stat-info {
+            margin-left: 15px;
+            margin-bottom: 10px;
+        }
+
+        .stat-info h3 {
+            font-size: 1.8rem;
+        }
+
+        .stat-info p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            width: 100%;
+            max-width: 400px;
+            justify-content: center;
+        }
+
+        .action-btn {
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-small);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            flex: 1 1 120px;
+            min-height: 48px;
+            touch-action: manipulation;
+        }
+
+        .action-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .action-btn.primary {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: 600;
+            border-color: var(--accent-color);
+        }
+
+        .action-btn.primary:hover {
+            background: var(--accent-dark);
+            border-color: var(--accent-dark);
+        }
+
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        textarea::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        textarea::-webkit-scrollbar-thumb {
+            background: rgba(193, 252, 50, 0.3);
+            border-radius: 4px;
+        }
+
+        @media (max-width: 480px) {
+            .username {
+                font-size: 1.8rem;
+            }
+            .domain-row button {
+                width: 100%;
+            }
+            .editor-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        <header>
+            <h1 class="username">Sitemap XML Generator</h1>
+            <p class="tagline">Generate sitemap.xml from .html URLs found in .json, .txt, .html .js files</p>
+        </header>
+
+        <div class="domain-row">
+            <input type="text" id="domainInput" class="domain-input" placeholder="https://example.com" value="https://example.com">
+            <button class="action-btn" style="flex: 0 1 auto;" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-upload"></i> Upload Files
+            </button>
+        </div>
+
+        <input type="file" id="fileInput" accept=".json,.txt,.html,.js" multiple style="display: none;">
+
+        <div class="editor-container">
+            <div class="editor-box">
+                <div class="editor-header">
+                    <div class="editor-title">Extracted .html URLs</div>
+                    <div class="editor-buttons">
+                        <button class="icon-btn" onclick="clearInput()" title="Clear">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="icon-btn" onclick="loadSample()" title="Load Sample">
+                            <i class="fas fa-file-code"></i>
+                        </button>
+                    </div>
+                </div>
+                <textarea id="inputUrls" placeholder="URLs containing .html will appear here..."></textarea>
+            </div>
+
+            <div class="editor-box">
+                <div class="editor-header">
+                    <div class="editor-title">Sitemap XML</div>
+                    <div class="editor-buttons">
+                        <button class="icon-btn" onclick="clearOutput()" title="Clear">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="icon-btn" onclick="copyOutput()" title="Copy">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <textarea id="outputXml" placeholder="Generated sitemap.xml will appear here..." readonly></textarea>
+            </div>
+        </div>
+
+        <!-- New row for robots.txt -->
+        <div style="margin-top: var(--spacing-md);">
+            <div class="editor-box">
+                <div class="editor-header">
+                    <div class="editor-title">Robots.txt</div>
+                    <div class="editor-buttons">
+                        <button class="icon-btn" onclick="clearRobots()" title="Clear">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="icon-btn" onclick="copyRobots()" title="Copy">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <textarea id="outputRobots" placeholder="Generated robots.txt will appear here..." readonly></textarea>
+            </div>
+        </div>
+
+        <div style="margin-top: 25px;" class="options">
+            <div class="options-list">
+                <div class="stat-info">
+                    <h3 id="urlCount">0</h3>
+                    <p>URLs found</p>
+                </div>
+            
+                <div class="option-row">
+                    <div class="option-icon">
+                        <i class="fas fa-calendar"></i>
+                    </div>
+                    <div class="option-text">LastMod</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="includeLastmod" class="toggle-checkbox" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <div class="option-row">
+                    <div class="option-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="option-text">Priority</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="includePriority" class="toggle-checkbox" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <div class="option-row">
+                    <div class="option-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="option-text">Changefreq</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="includeChangefreq" class="toggle-checkbox" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <!-- New toggle for including robots.txt in download -->
+                <div class="option-row">
+                    <div class="option-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="option-text">Include robots.txt (ZIP)</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="includeRobots" class="toggle-checkbox">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <div class="button-container">
+                <button class="action-btn primary" onclick="generateSitemap()">
+                    <i class="fas fa-sitemap"></i>
+                    Generate
+                </button>
+                <button class="action-btn" onclick="downloadOutput()">
+                    <i class="fas fa-download"></i>
+                    Download
+                </button>
+            </div>
+        </div>
+        
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Sitemap XML Generator</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const inputUrls = document.getElementById('inputUrls');
+        const outputXml = document.getElementById('outputXml');
+        const outputRobots = document.getElementById('outputRobots');
+        const urlCount = document.getElementById('urlCount');
+        const fileInput = document.getElementById('fileInput');
+        const domainInput = document.getElementById('domainInput');
+        const includeLastmod = document.getElementById('includeLastmod');
+        const includePriority = document.getElementById('includePriority');
+        const includeChangefreq = document.getElementById('includeChangefreq');
+        const includeRobots = document.getElementById('includeRobots');
+        const optionRows = document.querySelectorAll('.option-row');
+
+        function updateOptionStyles() {
+            optionRows[0].classList.toggle('active', includeLastmod.checked);
+            optionRows[1].classList.toggle('active', includePriority.checked);
+            optionRows[2].classList.toggle('active', includeChangefreq.checked);
+            optionRows[3].classList.toggle('active', includeRobots.checked);
+        }
+        updateOptionStyles();
+        includeLastmod.addEventListener('change', updateOptionStyles);
+        includePriority.addEventListener('change', updateOptionStyles);
+        includeChangefreq.addEventListener('change', updateOptionStyles);
+        includeRobots.addEventListener('change', updateOptionStyles);
+
+        optionRows.forEach((row, index) => {
+            row.addEventListener('click', () => {
+                const checkbox = row.querySelector('.toggle-checkbox');
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+            });
+        });
+
+        fileInput.addEventListener('change', function(event) {
+            const files = Array.from(event.target.files);
+            if (!files.length) return;
+            let allUrls = new Set();
+            let pending = files.length;
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    extractHtmlUrls(content).forEach(url => allUrls.add(url));
+                    pending--;
+                    if (pending === 0) {
+                        inputUrls.value = Array.from(allUrls).join('\n');
+                        generateSitemap();
+                        window.showMessage('Files processed');
+                    }
+                };
+                reader.readAsText(file);
+            });
+            event.target.value = '';
+        });
+
+        function extractHtmlUrls(text) {
+            const regex = /[\w\-\/.:?=&%]+\.html[\w\-\/.:?=&%]*/g;
+            const matches = text.match(regex) || [];
+            return matches.map(s => s.trim()).filter(s => s.includes('.html'));
+        }
+
+        function clearInput() {
+            inputUrls.value = '';
+            updateUrlCount();
+            window.showMessage('Input cleared');
+        }
+
+        function clearOutput() {
+            outputXml.value = '';
+            window.showMessage('Output cleared');
+        }
+
+        function clearRobots() {
+            outputRobots.value = '';
+            window.showMessage('Robots cleared');
+        }
+
+        function copyOutput() {
+            copyText(outputXml, 'XML');
+        }
+
+        function copyRobots() {
+            copyText(outputRobots, 'Robots');
+        }
+
+        function copyText(element, name) {
+            if (!element.value.trim()) {
+                window.showMessage('Nothing to copy');
+                return;
+            }
+            const text = element.value;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => window.showMessage(name + ' copied!')).catch(() => fallbackCopy(text));
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            ta.style.top = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try {
+                document.execCommand('copy');
+                window.showMessage('Copied!');
+            } catch (err) {
+                window.showMessage('Copy failed');
+            }
+            document.body.removeChild(ta);
+        }
+
+        function downloadOutput() {
+            if (!outputXml.value.trim()) {
+                window.showMessage('No XML to download');
+                return;
+            }
+
+            if (!includeRobots.checked) {
+                const blob = new Blob([outputXml.value], { type: 'application/xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'sitemap.xml';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                window.showMessage('Download started');
+                return;
+            }
+
+            const zip = new JSZip();
+            zip.file('sitemap.xml', outputXml.value);
+            if (outputRobots.value.trim()) {
+                zip.file('robots.txt', outputRobots.value);
+            } else {
+                window.showMessage('Robots.txt is empty, generating default');
+                const domain = domainInput.value.trim().replace(/\/$/, '') || 'https://example.com';
+                zip.file('robots.txt', generateRobotsTxt(domain));
+            }
+            zip.generateAsync({ type: 'blob' }).then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'sitemap_and_robots.zip';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                window.showMessage('ZIP download started');
+            });
+        }
+
+        function loadSample() {
+            const sample = `https://example.com/about.html
+https://example.com/contact.html
+https://example.com/blog/post.html
+/services/web-design.html
+/products/item.html
+https://example.com/index.html`;
+            inputUrls.value = sample;
+            generateSitemap();
+            window.showMessage('Sample loaded');
+        }
+
+        function generateSitemap() {
+            if (!inputUrls.value.trim()) {
+                window.showMessage('No URLs to process');
+                return;
+            }
+            const lines = inputUrls.value.split('\n')
+                .map(line => line.trim())
+                .filter(line => line && line.includes('.html'));
+            const domain = domainInput.value.trim().replace(/\/$/, '');
+            const urls = [];
+            lines.forEach(line => {
+                if (line.startsWith('http://') || line.startsWith('https://')) {
+                    urls.push(line);
+                } else if (domain) {
+                    urls.push(domain + '/' + line.replace(/^\//, ''));
+                } else {
+                    urls.push(line);
+                }
+            });
+            const uniqueUrls = [...new Set(urls)];
+            updateUrlCount(uniqueUrls.length);
+
+            let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+            xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+            uniqueUrls.forEach(url => {
+                xml += '  <url>\n    <loc>' + escapeXml(url) + '</loc>\n';
+                if (includeLastmod.checked) {
+                    const today = new Date().toISOString().split('T')[0];
+                    xml += '    <lastmod>' + today + '</lastmod>\n';
+                }
+                if (includePriority.checked) {
+                    let priority = '0.8';
+                    if (url.includes('index.html')) priority = '1.0';
+                    xml += '    <priority>' + priority + '</priority>\n';
+                }
+                if (includeChangefreq.checked) xml += '    <changefreq>weekly</changefreq>\n';
+                xml += '  </url>\n';
+            });
+            xml += '</urlset>';
+            outputXml.value = xml;
+
+            const domainClean = domain || 'https://example.com';
+            outputRobots.value = generateRobotsTxt(domainClean);
+            window.showMessage('Sitemap & Robots generated');
+        }
+
+        function generateRobotsTxt(domain) {
+            const base = domain.replace(/\/$/, '');
+            const sitemapUrl = base + '/sitemap.xml';
+            return `# Allow all crawlers – comprehensive list of search engine bots
+# Last updated: 2026-02-18
+
+# Global search engines
+User-agent: *
+Allow: /
+
+# Google
+User-agent: Googlebot
+Allow: /
+User-agent: Googlebot-Image
+Allow: /
+User-agent: Googlebot-News
+Allow: /
+User-agent: Googlebot-Video
+Allow: /
+User-agent: AdsBot-Google
+Allow: /
+
+# Bing (also powers Yahoo, DuckDuckGo, and others)
+User-agent: Bingbot
+Allow: /
+User-agent: MSNBot
+Allow: /
+User-agent: MSNBot-Media
+Allow: /
+User-agent: AdIdxBot
+Allow: /
+
+# Yandex (Russia)
+User-agent: Yandex
+Allow: /
+User-agent: YandexImages
+Allow: /
+User-agent: YandexVideo
+Allow: /
+User-agent: YandexMedia
+Allow: /
+User-agent: YandexBlogs
+Allow: /
+User-agent: YandexFavicons
+Allow: /
+User-agent: YandexWebmaster
+Allow: /
+User-agent: YandexPagechecker
+Allow: /
+User-agent: YandexImageResizer
+Allow: /
+User-agent: YandexDirect
+Allow: /
+User-agent: YandexMetrika
+Allow: /
+
+# Baidu (China)
+User-agent: Baiduspider
+Allow: /
+User-agent: Baiduspider-image
+Allow: /
+User-agent: Baiduspider-video
+Allow: /
+User-agent: Baiduspider-news
+Allow: /
+User-agent: Baiduspider-favo
+Allow: /
+
+# DuckDuckGo (privacy-focused, uses its own crawler for snippets)
+User-agent: DuckDuckBot
+Allow: /
+User-agent: DuckDuckGo-Favicons-Bot
+Allow: /
+
+# StartPage (privacy meta-search, also has its own bot for cached pages)
+User-agent: StartPagebot
+Allow: /
+
+# Seznam (Czech Republic)
+User-agent: SeznamBot
+Allow: /
+User-agent: SeznamBot-Public
+Allow: /
+User-agent: SeznamBot-Mobile
+Allow: /
+User-agent: SeznamNewsBot
+Allow: /
+User-agent: SeznamEmailProxy
+Allow: /
+
+# Naver (South Korea)
+User-agent: Yeti
+Allow: /
+User-agent: NaverBot
+Allow: /
+User-agent: NaverBot-News
+Allow: /
+User-agent: NaverBlog
+Allow: /
+
+# Sogou (China)
+User-agent: Sogou web spider
+Allow: /
+User-agent: Sogou News Spider
+Allow: /
+User-agent: Sogou Pic Spider
+Allow: /
+User-agent: Sogou Video Spider
+Allow: /
+
+# 360 (Qihoo 360, China)
+User-agent: 360Spider
+Allow: /
+
+# Yisou (China, Alibaba)
+User-agent: YisouSpider
+Allow: /
+
+# Applebot (Apple’s crawler for Siri and Spotlight)
+User-agent: Applebot
+Allow: /
+User-agent: Applebot-Facebook
+Allow: /
+
+# Facebook (crawler for link previews)
+User-agent: facebookexternalhit
+Allow: /
+User-agent: Facebot
+Allow: /
+
+# Twitter (crawler for card previews)
+User-agent: Twitterbot
+Allow: /
+
+# LinkedIn (crawler for link previews)
+User-agent: LinkedInBot
+Allow: /
+
+# Pinterest (crawler for pin previews)
+User-agent: Pinterestbot
+Allow: /
+
+# Slack (crawler for link unfurling)
+User-agent: Slackbot
+Allow: /
+User-agent: Slack-ImgProxy
+Allow: /
+
+# Telegram (crawler for link previews)
+User-agent: TelegramBot
+Allow: /
+
+# Discord (crawler for link previews)
+User-agent: Discordbot
+Allow: /
+
+# WhatsApp (crawler for link previews)
+User-agent: WhatsApp
+Allow: /
+
+# SEO and analytics tools (often index content)
+User-agent: AhrefsBot
+Allow: /
+User-agent: AhrefsSiteAudit
+Allow: /
+User-agent: SEMrushBot
+Allow: /
+User-agent: MJ12bot
+Allow: /
+User-agent: Majestic-12
+Allow: /
+User-agent: DotBot
+Allow: /
+User-agent: rogerbot
+Allow: /
+User-agent: Screaming Frog SEO Spider
+Allow: /
+User-agent: SeobilityBot
+Allow: /
+User-agent: SiteAuditBot
+Allow: /
+User-agent: LinkpadBot
+Allow: /
+
+# Internet Archive (Wayback Machine)
+User-agent: ia_archiver
+Allow: /
+User-agent: archive.org_bot
+Allow: /
+
+# Common open-source crawlers
+User-agent: wget
+Allow: /
+User-agent: curl
+Allow: /
+User-agent: python-requests
+Allow: /
+User-agent: Go-http-client
+Allow: /
+
+# Sitemap location
+Sitemap: ${sitemapUrl}`;
+        }
+
+        function escapeXml(unsafe) {
+            return unsafe.replace(/[<>&'"]/g, c => {
+                switch(c) {
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '&': return '&amp;';
+                    case '\'': return '&apos;';
+                    case '"': return '&quot;';
+                    default: return c;
+                }
+            });
+        }
+
+        function updateUrlCount(count) {
+            if (count !== undefined) urlCount.textContent = count;
+            else {
+                const lines = inputUrls.value.split('\n').filter(l => l.trim() && l.includes('.html')).length;
+                urlCount.textContent = lines;
+            }
+        }
+
+        inputUrls.addEventListener('input', updateUrlCount);
+        window.addEventListener('load', () => {
+            updateUrlCount();
+            if (typeof window.showMessage === 'function') {
+                window.showMessage('Ready to generate');
+            }
+            const domain = domainInput.value.trim().replace(/\/$/, '') || 'https://example.com';
+            outputRobots.value = generateRobotsTxt(domain);
+        });
+        
+        domainInput.addEventListener('input', () => {
+            const domain = domainInput.value.trim().replace(/\/$/, '') || 'https://example.com';
+            outputRobots.value = generateRobotsTxt(domain);
+        });
+        
+    </script>
+</body>
+</html>
