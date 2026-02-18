@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.3.6';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.3.7';
 const urlsToCache = [
     // Root
     '/',
@@ -47,6 +47,7 @@ const urlsToCache = [
     'pages/private-storage.html',
     'pages/projects-task.html',
     'pages/routine-quest.html',
+    'pages/sitemapxml-generator.html',
     'pages/svg-color-changer.html',
     'pages/svg-optimizer.html',
     'pages/svg-rasterizer.html',
@@ -89,6 +90,8 @@ const urlsToCache = [
     // Icons
     'images/icons/browser-homepage.webp',
     'images/icons/kiraku-home.png',
+    // Articles
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Articles/articles.json',
     // Index
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/pages.json',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/popup-pages.json',
