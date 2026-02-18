@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Profile Card Maker</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+            padding-bottom: 90px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            flex: 1;
+        }
+
+        .blur-background {
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            background-color: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-large);
+        }
+
+        .section-header {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .maker-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-md);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            border-radius: var(--radius-small);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+            outline: none;
+            font-size: 16px;
+        }
+
+        .button-row {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .action-btn {
+            padding: 12px 20px;
+            background: var(--accent-color);
+            color: var(--bg-black);
+            border: none;
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            font-weight: 600;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+            flex: 1 1 0;
+        }
+
+        .profile-card {
+            width: 100%;
+            max-width: 300px;
+            background: var(--bg-black);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 0 auto;
+            position: relative;
+            box-shadow: none;
+        }
+
+        .profile-img {
+            width: 100%;
+            height: 250px;
+            background-size: cover;
+            background-position: top center;
+            background-repeat: no-repeat;
+            display: block;
+        }
+
+        .profile-info {
+            padding: 16px;
+            background: transparent;
+        }
+
+        .profile-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .profile-name i {
+            color: var(--accent-color);
+        }
+
+        .profile-title {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .profile-stats {
+            display: flex;
+            align-items: center;
+            margin-top: 12px;
+            gap: 20px;
+        }
+
+        .stat {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat i {
+            color: var(--text-secondary);
+        }
+
+        .follow-btn {
+            margin-left: auto;
+            background-color: var(--accent-color);
+            color: var(--bg-black);
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .follow-btn.followed {
+            background-color: var(--accent-color);
+        }
+
+        .settings-menu {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .settings-menu.active {
+            display: block;
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .settings-header h3 {
+            color: var(--text-primary);
+            font-size: 1.3rem;
+        }
+
+        .close-settings {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .close-settings:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--accent-color);
+        }
+
+        .settings-content {
+            padding: var(--spacing-md);
+        }
+
+        .setting-item {
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .toggle-setting {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+        }
+
+        .toggle-setting span {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: var(--text-secondary);
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--accent-color);
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+            background-color: var(--bg-black);
+        }
+
+        .settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 999;
+            display: none;
+            pointer-events: auto;
+        }
+
+        .settings-overlay.active {
+            display: block;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 16px;
+            }
+
+            .section-title {
+                font-size: 1.6rem;
+            }
+
+            .profile-card {
+                max-width: 280px;
+            }
+
+            .profile-img {
+                height: 220px;
+            }
+
+            .maker-grid {
+                gap: 12px;
+            }
+
+            .blur-background {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <a style="margin-left: 20px; margin-top: 20px;" href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <app-header class="fade-in">
+            <div>
+                <h1 class="username">Profile Card Maker</h1>
+                <p class="tagline">Create and generate Profile Card for sharing or use it in your videos as overlay</p>
+            </div>
+        </app-header>
+        
+        <section id="home-page">
+            <div class="maker-grid">
+                <div class="blur-background" style="padding: var(--spacing-lg);">
+                    <input id="name" class="input-field" type="text" placeholder="Name" value="Kakoi Kiraku">
+                    <input id="title" class="input-field" type="text" placeholder="Description" value="Conveys the Idea of a Protected and Inspiring Space for Creative Expression.">
+                    <input id="image" type="file" accept="image/*" style="display: none;">
+                    <input id="follower" class="input-field" type="text" placeholder="Follower Value" value="666">
+                    <input id="post" class="input-field" type="text" placeholder="Post Value" value="42">
+                    <div class="button-row">
+                        <button class="action-btn" onclick="document.getElementById('image').click()">
+                            <i class="fas fa-upload"></i> Upload Image
+                        </button>
+                        <button class="action-btn" id="clearImageBtn">
+                            <i class="fas fa-trash-alt"></i> Clear Image
+                        </button>
+                    </div>
+                    <div class="button-row" style="margin-top: 8px;">
+                        <button class="action-btn" id="settingsBtn">
+                            <i class="fas fa-cog"></i> Settings
+                        </button>
+                        <button class="action-btn" id="downloadBtn">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                    </div>
+                </div>
+                <div class="blur-background" style="padding: var(--spacing-lg); display: flex; align-items: center; justify-content: center; min-height: 400px;">
+                    <div id="card-preview" class="profile-card"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="settings-menu" id="settingsMenu">
+        <div class="settings-header">
+            <h3>Settings</h3>
+            <button class="close-settings" id="closeSettings">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="settings-content">
+            <div class="setting-item">
+                <div class="toggle-setting">
+                    <span>Followed state</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="followedToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-overlay" id="settingsOverlay"></div>
+    
+    <footer>
+        <div class="social-links">
+            <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+            <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+        </div>
+        <p>© 2026 lildavegoth | Profile Card Maker</p>
+        <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+            Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+        </p>
+    </footer>
+    
+    <script>
+        let imageSrc = '';
+        let followedEnabled = false;
+        function updatePreview() {
+            const name = document.getElementById('name').value || 'Kakoi Kiraku';
+            const title = document.getElementById('title').value || 'Conveys the Idea of a Protected and Inspiring Space for Creative Expression.';
+            const follower = document.getElementById('follower').value || '666';
+            const post = document.getElementById('post').value || '42';
+            const preview = document.getElementById('card-preview');
+            const imgHtml = imageSrc ? `<div class="profile-img" style="background-image: url('${imageSrc}');"></div>` : `<div style="width:100%;height:250px;background:#000000;display:flex;align-items:center;justify-content:center;color:#a1a1a6;font-size:0.9rem;">Upload image</div>`;
+            let rightElement;
+            if (followedEnabled) {
+                rightElement = `<button class="follow-btn followed"><i class="fas fa-check"></i> Followed</button>`;
+            } else {
+                rightElement = `<button class="follow-btn">Follow +</button>`;
+            }
+            preview.innerHTML = `
+                ${imgHtml}
+                <div class="profile-info">
+                    <h2 class="profile-name">${name} <i class="fas fa-check-circle"></i></h2>
+                    <p class="profile-title">${title}</p>
+                    <div class="profile-stats">
+                        <span class="stat"><i class="fas fa-user"></i> ${follower}</span>
+                        <span class="stat"><i class="fas fa-comment"></i> ${post}</span>
+                        ${rightElement}
+                    </div>
+                </div>
+            `;
+        }
+        document.getElementById('image').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    imageSrc = ev.target.result;
+                    updatePreview();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                imageSrc = '';
+                updatePreview();
+            }
+        });
+        document.getElementById('clearImageBtn').addEventListener('click', function() {
+            document.getElementById('image').value = '';
+            imageSrc = '';
+            updatePreview();
+        });
+        document.getElementById('name').addEventListener('input', updatePreview);
+        document.getElementById('title').addEventListener('input', updatePreview);
+        document.getElementById('follower').addEventListener('input', updatePreview);
+        document.getElementById('post').addEventListener('input', updatePreview);
+        document.getElementById('followedToggle').addEventListener('change', function(e) {
+            followedEnabled = e.target.checked;
+            updatePreview();
+        });
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            html2canvas(document.getElementById('card-preview'), { scale: 2, backgroundColor: null }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'profile-card.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        });
+
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsMenu = document.getElementById('settingsMenu');
+        const settingsOverlay = document.getElementById('settingsOverlay');
+        const closeSettings = document.getElementById('closeSettings');
+
+        function openSettings() {
+            settingsMenu.classList.add('active');
+            settingsOverlay.classList.add('active');
+        }
+
+        function closeSettingsMenu() {
+            settingsMenu.classList.remove('active');
+            settingsOverlay.classList.remove('active');
+        }
+
+        settingsBtn.addEventListener('click', openSettings);
+        closeSettings.addEventListener('click', closeSettingsMenu);
+        settingsOverlay.addEventListener('click', closeSettingsMenu);
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && settingsMenu.classList.contains('active')) {
+                closeSettingsMenu();
+            }
+        });
+
+        updatePreview();
+    </script>
+</body>
+</html>
