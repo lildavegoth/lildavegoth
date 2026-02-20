@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Downloads Task</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+        
+        .task-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .task-card:active {
+            transform: scale(0.97);
+        }
+        
+        .pill-btn {
+            padding: 11px 22px;
+            border-radius: 9999px;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-pill {
+            padding: 10px 24px;
+            border-radius: 9999px;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .tab-active {
+            background-color: var(--accent-color);
+            color: #111827;
+        }
+        
+        .sort-button {
+            padding: 9px 20px;
+            border-radius: 9999px;
+            background: #1f1f1f;
+            border: 1px solid #333;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        
+        .badge {
+            padding: 4px 13px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 9999px;
+        }
+        
+        .scroll-tabs {
+            scrollbar-width: none;
+        }
+        
+        .scroll-tabs::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+        }
+        
+        .popup-hidden {
+            display: none !important;
+        }
+        
+        .popup-content {
+            background: #1f1f1f;
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 420px;
+            overflow: hidden;
+        }
+        
+        .popup-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 28px;
+            line-height: 1;
+            cursor: pointer;
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            padding: 14px 16px;
+            border-radius: 16px;
+            margin-bottom: 14px;
+            font-size: 15.5px;
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-select {
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .search-wrapper {
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 44px 12px 16px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+        }
+        
+        .search-icon-wrapper {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: auto;
+        }
+        
+        .search-icon {
+            color: var(--accent-color);
+        }
+        
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 10000;
+            display: none;
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            pointer-events: auto;
+            will-change: transform;
+        }
+        
+        .search-suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background-color 0.15s ease;
+            pointer-events: auto;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .search-suggestion-item:hover {
+            background: rgba(193, 252, 50, 0.1);
+        }
+        
+        .search-suggestion-item:active {
+            background: rgba(193, 252, 50, 0.2);
+        }
+        
+        .search-suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .suggestion-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+        
+        .suggestion-description {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .suggestion-category {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-top: 4px;
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .search-suggestions::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .alpha-header {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #d4d4d8;
+            letter-spacing: -0.02em;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 0.25rem;
+        }
+        
+        .check-icon-small {
+            font-size: 0.65rem;
+        }
+        
+        .clear-btn {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .clear-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+        
+        .badge-status {
+            background: rgba(193,252,50,0.15);
+            color: #C1FC32;
+        }
+        
+        .badge-edit {
+            background: rgba(193,252,50,0.15);
+            color: #C1FC32;
+            padding: 0.25rem 1rem;
+        }
+        
+        .hidden-file-input {
+            display: none;
+        }
+        
+        .scroll-top-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--accent-color);
+            color: black;
+            border: none;
+            border-radius: 999px;
+            padding: 6px 24px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .scroll-top-btn.show {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        
+        .scroll-top-btn:active {
+            transform: scale(0.97);
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <app-header>
+            <h1 class="username">Downloads Task</h1>
+            <p class="tagline">Manage and organize your downloads task for better downloads list and histories</p>
+        </app-header>
+    
+        <div class="flex gap-3 mt-5">
+            <button onclick="showTaskPopup(false)" class="pill-btn flex-1 bg-[#C1FC32] text-black font-semibold">New Task</button>
+            <button onclick="showFolderPopup()" class="pill-btn flex-1 bg-zinc-800 text-white font-semibold">New Folder</button>
+        </div>
+        <div class="flex gap-3 mt-3">
+            <button onclick="importTasks()" class="pill-btn flex-1 bg-zinc-800 text-white font-semibold">Import</button>
+            <button onclick="exportTasks()" class="pill-btn flex-1 bg-zinc-800 text-white font-semibold">Export</button>
+        </div>
+        <div class="mt-3">
+            <button onclick="showClearAllPopup()" class="pill-btn w-full clear-btn font-semibold">Clear All</button>
+        </div>
+    
+        <div class="mt-7">
+            <div class="flex gap-3 overflow-x-auto scroll-tabs pb-4" id="tabs-container"></div>
+        </div>
+
+        <div class="search-container">
+            <div class="search-wrapper">
+                <input type="text" id="globalSearch" placeholder="Search tasks..." class="search-input">
+                <div class="search-icon-wrapper">
+                    <i onclick="performSearch()" class="fas fa-search search-icon"></i>
+                </div>
+            </div>
+            <div class="search-suggestions" id="searchSuggestions"></div>
+        </div>
+
+        <div class="flex items-center justify-between mt-2 mb-4">
+            <span class="text-xl font-semibold">Tasks</span>
+            <button onclick="toggleSort()" id="sortButton" class="sort-button">A-Z Sorted</button>
+        </div>
+
+        <div id="tasks-container" class="space-y-4"></div>
+
+        <div id="universalPopup" class="popup-overlay popup-hidden">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h2 id="popupTitle" class="text-xl font-semibold">New Task</h2>
+                    <button class="close-popup" onclick="closeUniversalPopup()">×</button>
+                </div>
+                <div class="p-6">
+                    <input type="text" id="taskTitle" class="form-input" placeholder="Task title">
+                    <input type="text" id="taskDownloadUrl" class="form-input" placeholder="Download URL (optional)">
+                    <select id="taskCategory" class="form-select"></select>
+                    <input type="text" id="taskStatus" class="form-input" placeholder="Status (optional)">
+                    <input type="text" id="taskSourceUrl" class="form-input" placeholder="Source URL (optional)">
+                    <textarea id="taskNotes" class="form-textarea" placeholder="Notes or description (optional)"></textarea>
+    
+                    <div id="newActions" class="flex gap-3 mt-8">
+                        <button onclick="closeUniversalPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-zinc-400 font-medium">Cancel</button>
+                        <button onclick="saveTask()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold">Create Task</button>
+                    </div>
+                    <div id="editActions" class="hidden flex gap-3 mt-8">
+                        <button onclick="showDeletePopup()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium">Delete</button>
+                        <button onclick="closeUniversalPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-zinc-400 font-medium">Cancel</button>
+                        <button onclick="saveTask()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold">Update</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <div id="folderPopup" class="popup-overlay popup-hidden">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h2 class="text-xl font-semibold">New Folder</h2>
+                    <button class="close-popup" onclick="closeFolderPopup()">×</button>
+                </div>
+                <div class="p-6">
+                    <input type="text" id="folderName" class="form-input" placeholder="Folder name">
+                    <div class="flex gap-3 mt-8">
+                        <button onclick="closeFolderPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-zinc-400 font-medium">Cancel</button>
+                        <button onclick="createFolder()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold">Create Folder</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <div id="editFolderPopup" class="popup-overlay popup-hidden">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h2 class="text-xl font-semibold">Edit Folder</h2>
+                    <button class="close-popup" onclick="closeEditFolderPopup()">×</button>
+                </div>
+                <div class="p-6">
+                    <input type="text" id="editFolderName" class="form-input" placeholder="Folder name">
+                    <div class="flex gap-3 mt-8">
+                        <button onclick="showDeleteFolderPopup()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium">Delete</button>
+                        <button onclick="closeEditFolderPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-zinc-400 font-medium">Cancel</button>
+                        <button onclick="renameFolder()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold">Rename</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <div id="deletePopup" class="popup-overlay popup-hidden">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h2 class="text-xl font-semibold">Confirm Delete</h2>
+                    <button class="close-popup" onclick="closeDeletePopup()">×</button>
+                </div>
+                <div class="p-8 text-center">
+                    <p class="text-zinc-400 mb-8">Delete this task permanently?</p>
+                    <div class="flex gap-3">
+                        <button onclick="closeDeletePopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-zinc-400 font-medium">Cancel</button>
+                        <button onclick="confirmDelete()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <div id="deleteFolderPopup" class="popup-overlay popup-hidden">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h2 class="text-xl font-semibold">Delete Folder</h2>
+                    <button class="close-popup" onclick="closeDeleteFolderPopup()">×</button>
+                </div>
+                <div class="p-8 text-center">
+                    <p class="text-zinc-400 mb-8">Delete this folder and all its tasks?</p>
+                    <div class="flex gap-3">
+                        <button onclick="closeDeleteFolderPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-zinc-400 font-medium">Cancel</button>
+                        <button onclick="confirmDeleteFolder()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <div id="clearAllPopup" class="popup-overlay popup-hidden">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h2 class="text-xl font-semibold">Clear All Tasks</h2>
+                    <button class="close-popup" onclick="closeClearAllPopup()">×</button>
+                </div>
+                <div class="p-8 text-center">
+                    <p class="text-zinc-400 mb-8">Delete all tasks from all folders?</p>
+                    <div class="flex gap-3">
+                        <button onclick="closeClearAllPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-zinc-400 font-medium">Cancel</button>
+                        <button onclick="confirmClearAll()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium">Clear All</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer class="fade-in">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Downloads Task</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+
+        <input type="file" id="importFile" class="hidden-file-input" onchange="handleImportFile(this)">
+        
+        <button id="scrollTopBtn" class="scroll-top-btn">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || []
+        let categories = JSON.parse(localStorage.getItem('categories')) || ["All"]
+        let currentTab = "All"
+        let currentSort = "az"
+        let editingId = null
+        let editingFolder = null
+
+        function saveData() {
+            localStorage.setItem('tasks', JSON.stringify(tasks))
+            localStorage.setItem('categories', JSON.stringify(categories))
+        }
+
+        function sortCategories() {
+            const others = categories.filter(c => c !== "All").sort((a,b) => a.localeCompare(b))
+            categories = ["All", ...others]
+        }
+
+        function renderTabs() {
+            const container = document.getElementById("tabs-container")
+            let html = ""
+            const sorted = ["All", ...categories.filter(c => c !== "All").sort((a,b) => a.localeCompare(b))]
+            sorted.forEach(cat => {
+                const active = cat === currentTab ? "tab-active" : "bg-zinc-900 text-zinc-400"
+                html += `<button onclick="switchTab('${cat}')" ondblclick="editFolder('${cat}')" class="tab-pill ${active}">${cat}</button>`
+            })
+            container.innerHTML = html
+        }
+
+        function renderTasks() {
+            let filtered = currentTab === "All" ? tasks : tasks.filter(t => t.category === currentTab)
+            let sorted = [...filtered].sort((a,b) => {
+                if(a.priority !== b.priority) return b.priority - a.priority
+                if(currentSort === "newest") return b.id - a.id
+                return a.title.localeCompare(b.title)
+            })
+            const container = document.getElementById("tasks-container")
+            if(sorted.length === 0) {
+                container.innerHTML = `<div class="py-20 text-center text-zinc-500"><i class="fa-solid fa-inbox text-6xl mb-4 block"></i><p>No tasks found</p></div>`
+                return
+            }
+            let html = ""
+            if (currentSort === "az") {
+                let currentLetter = ""
+                sorted.forEach(task => {
+                    const firstLetter = task.title.charAt(0).toUpperCase()
+                    if (firstLetter !== currentLetter) {
+                        currentLetter = firstLetter
+                        html += `<div class="alpha-header">${firstLetter}</div>`
+                    }
+                    html += renderTaskCard(task)
+                })
+            } else {
+                sorted.forEach(task => {
+                    html += renderTaskCard(task)
+                })
+            }
+            container.innerHTML = html
+        }
+
+        function renderTaskCard(task) {
+            const checkedClass = task.checked ? 'bg-[rgba(193,252,50,0.15)] border-[rgba(193,252,50,0.3)]' : 'bg-zinc-900 border-zinc-800'
+            const pinColor = task.priority ? "text-[#C1FC32]" : "text-zinc-500"
+            const statusBadge = (task.status && task.status.trim() !== "" && !task.checked) 
+                ? `<span class="badge badge-status">${task.status}</span>` 
+                : ""
+            const sourceBadge = (task.sourceUrl && task.sourceUrl.trim() !== "" && !task.checked) 
+                ? `<span onclick="event.stopPropagation(); window.open('${task.sourceUrl}', '_blank')" class="badge badge-status cursor-pointer">Source</span>` 
+                : ""
+            const notesHtml = (task.notes && task.notes.trim() !== "" && !task.checked) 
+                ? `<div class="text-sm text-zinc-400 mt-2 line-clamp-2">${task.notes}</div>` 
+                : ""
+
+            let rightColumnHtml = ""
+            if (statusBadge === "" && sourceBadge === "") {
+                rightColumnHtml = `
+                    <div class="flex flex-row items-center gap-2">
+                        <button onclick="showTaskPopup(true,${task.id});event.stopImmediatePropagation()" class="badge badge-edit">Edit</button>
+                        <i onclick="togglePriority(${task.id});event.stopImmediatePropagation()" class="fa-solid fa-thumbtack text-xl cursor-pointer ${pinColor}"></i>
+                    </div>
+                `
+            } else {
+                rightColumnHtml = `
+                    <div class="flex flex-col justify-between items-end h-full">
+                        <i onclick="togglePriority(${task.id});event.stopImmediatePropagation()" class="fa-solid fa-thumbtack text-xl cursor-pointer ${pinColor}"></i>
+                        <button onclick="showTaskPopup(true,${task.id});event.stopImmediatePropagation()" class="badge badge-edit">Edit</button>
+                    </div>
+                `
+            }
+
+            return `
+                <div id="task-${task.id}" class="task-card ${checkedClass} rounded-3xl p-5 border flex gap-4">
+                    <div onclick="toggleCheck(${task.id});event.stopImmediatePropagation()" class="w-6 h-6 rounded-2xl border-2 ${task.checked ? 'bg-[#C1FC32] border-[#C1FC32]' : 'border-zinc-600'} flex items-center justify-center cursor-pointer flex-shrink-0 mt-0.5">
+                        ${task.checked ? '<i class="fa-solid fa-check text-black check-icon-small"></i>' : ''}
+                    </div>
+                    <div class="flex-1 pt-0.5 ${task.url ? 'cursor-pointer' : ''}" onclick="openTaskLink('${task.url}')">
+                        <div class="${task.checked ? 'line-through text-zinc-400' : 'font-medium text-white'} text-[17px]">${task.title}</div>
+                        ${notesHtml}
+                        <div class="mt-3 flex items-center gap-2 flex-wrap">
+                            ${statusBadge}
+                            ${sourceBadge}
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0">
+                        ${rightColumnHtml}
+                    </div>
+                </div>`
+        }
+
+        function openTaskLink(url) {
+            if(url && url.trim()) window.open(url, '_blank')
+        }
+
+        function switchTab(tab) {
+            currentTab = tab
+            renderTabs()
+            renderTasks()
+        }
+
+        function toggleCheck(id) {
+            const task = tasks.find(t => t.id === id)
+            task.checked = !task.checked
+            saveData()
+            renderTasks()
+        }
+
+        function togglePriority(id) {
+            const task = tasks.find(t => t.id === id)
+            task.priority = !task.priority
+            saveData()
+            renderTasks()
+        }
+
+        function showTaskPopup(isEdit, id = null) {
+            editingId = isEdit ? id : null
+            document.getElementById("popupTitle").textContent = isEdit ? "Edit Task" : "New Task"
+            document.getElementById("editActions").classList.toggle("hidden", !isEdit)
+            document.getElementById("newActions").classList.toggle("hidden", isEdit)
+
+            const select = document.getElementById("taskCategory")
+            select.innerHTML = ""
+            categories.filter(c => c !== "All").forEach(cat => {
+                const opt = document.createElement("option")
+                opt.value = cat
+                opt.textContent = cat
+                select.appendChild(opt)
+            })
+
+            if(isEdit) {
+                const task = tasks.find(t => t.id === id)
+                document.getElementById("taskTitle").value = task.title
+                document.getElementById("taskDownloadUrl").value = task.url || ""
+                document.getElementById("taskCategory").value = task.category
+                document.getElementById("taskStatus").value = task.status || ""
+                document.getElementById("taskSourceUrl").value = task.sourceUrl || ""
+                document.getElementById("taskNotes").value = task.notes || ""
+            } else {
+                document.getElementById("taskTitle").value = ""
+                document.getElementById("taskDownloadUrl").value = ""
+                document.getElementById("taskCategory").value = categories.length > 1 ? categories[1] : "Anime"
+                document.getElementById("taskStatus").value = ""
+                document.getElementById("taskSourceUrl").value = ""
+                document.getElementById("taskNotes").value = ""
+            }
+            document.getElementById("universalPopup").classList.remove('popup-hidden')
+        }
+
+        function saveTask() {
+            const title = document.getElementById("taskTitle").value.trim()
+            if(!title) return
+            const downloadUrl = document.getElementById("taskDownloadUrl").value.trim()
+            const category = document.getElementById("taskCategory").value
+            const status = document.getElementById("taskStatus").value.trim()
+            const sourceUrl = document.getElementById("taskSourceUrl").value.trim()
+            const notes = document.getElementById("taskNotes").value.trim()
+
+            if(editingId) {
+                const task = tasks.find(t => t.id === editingId)
+                task.title = title
+                task.url = downloadUrl
+                task.category = category
+                task.status = status
+                task.sourceUrl = sourceUrl
+                task.notes = notes
+                window.showMessage('Task updated successfully')
+            } else {
+                tasks.unshift({
+                    id: Date.now(),
+                    title: title,
+                    url: downloadUrl,
+                    category: category,
+                    status: status,
+                    sourceUrl: sourceUrl,
+                    notes: notes,
+                    checked: false,
+                    priority: false
+                })
+                window.showMessage('Task created successfully')
+            }
+            saveData()
+            closeUniversalPopup()
+            renderTasks()
+        }
+
+        function showFolderPopup() {
+            document.getElementById("folderName").value = ""
+            document.getElementById("folderPopup").classList.remove('popup-hidden')
+        }
+
+        function createFolder() {
+            const name = document.getElementById("folderName").value.trim()
+            if(name && !categories.includes(name)) {
+                categories.push(name)
+                sortCategories()
+                renderTabs()
+                saveData()
+                window.showMessage('New folder added')
+            }
+            closeFolderPopup()
+        }
+
+        function closeFolderPopup() {
+            document.getElementById("folderPopup").classList.add('popup-hidden')
+        }
+
+        function editFolder(cat) {
+            if(cat === "All") return
+            editingFolder = cat
+            document.getElementById("editFolderName").value = cat
+            document.getElementById("editFolderPopup").classList.remove('popup-hidden')
+        }
+
+        function renameFolder() {
+            const newName = document.getElementById("editFolderName").value.trim()
+            if(!newName || newName === editingFolder || categories.includes(newName)) {
+                closeEditFolderPopup()
+                return
+            }
+            const oldName = editingFolder
+            categories = categories.map(c => c === oldName ? newName : c)
+            tasks.forEach(task => {
+                if(task.category === oldName) task.category = newName
+            })
+            sortCategories()
+            saveData()
+            renderTabs()
+            renderTasks()
+            window.showMessage('Folder renamed')
+            closeEditFolderPopup()
+        }
+
+        function showDeleteFolderPopup() {
+            document.getElementById("deleteFolderPopup").classList.remove('popup-hidden')
+        }
+
+        function confirmDeleteFolder() {
+            const oldName = editingFolder
+            tasks = tasks.filter(t => t.category !== oldName)
+            categories = categories.filter(c => c !== oldName)
+            if(currentTab === oldName) currentTab = "All"
+            sortCategories()
+            saveData()
+            renderTabs()
+            renderTasks()
+            window.showMessage('Folder deleted')
+            closeDeleteFolderPopup()
+            closeEditFolderPopup()
+        }
+
+        function closeDeleteFolderPopup() {
+            document.getElementById("deleteFolderPopup").classList.add('popup-hidden')
+        }
+
+        function closeEditFolderPopup() {
+            document.getElementById("editFolderPopup").classList.add('popup-hidden')
+        }
+
+        function showDeletePopup() {
+            document.getElementById("deletePopup").classList.remove('popup-hidden')
+        }
+
+        function confirmDelete() {
+            tasks = tasks.filter(t => t.id !== editingId)
+            saveData()
+            closeDeletePopup()
+            closeUniversalPopup()
+            renderTasks()
+            window.showMessage('Task deleted successfully')
+        }
+
+        function closeDeletePopup() {
+            document.getElementById("deletePopup").classList.add('popup-hidden')
+        }
+
+        function closeUniversalPopup() {
+            document.getElementById("universalPopup").classList.add('popup-hidden')
+        }
+
+        function toggleSort() {
+            currentSort = currentSort === "newest" ? "az" : "newest"
+            document.getElementById("sortButton").textContent = currentSort === "newest" ? "Newest First" : "A-Z Sorted"
+            renderTasks()
+        }
+
+        let searchTimeout
+        let suggestionHighlightTimer = null
+        const SUGGESTION_LIMIT = 8
+        const DEBOUNCE_DELAY = 150
+
+        function setupSearchDebounce() {
+            const searchInput = document.getElementById('globalSearch')
+            const suggestionsContainer = document.getElementById('searchSuggestions')
+
+            searchInput.addEventListener('input', function(event) {
+                event.stopPropagation()
+                clearTimeout(searchTimeout)
+                const value = this.value
+                searchTimeout = setTimeout(() => {
+                    showSearchSuggestions(value)
+                }, DEBOUNCE_DELAY)
+            }, { passive: true })
+
+            searchInput.addEventListener('keydown', function(event) {
+                if(event.key === 'Enter') {
+                    event.preventDefault()
+                    suggestionsContainer.style.display = 'none'
+                    performSearch()
+                }
+                if(event.key === 'Escape') {
+                    event.preventDefault()
+                    suggestionsContainer.style.display = 'none'
+                }
+            })
+
+            suggestionsContainer.addEventListener('click', handleSuggestionClick, { capture: false })
+
+            document.addEventListener('click', function(event) {
+                const isSearchInput = searchInput.contains(event.target)
+                const isSuggestionsContainer = suggestionsContainer.contains(event.target)
+                if(!isSearchInput && !isSuggestionsContainer) {
+                    hideSuggestions()
+                }
+            }, { capture: true })
+
+            searchInput.addEventListener('focus', function() {
+                if(this.value.trim()) {
+                    showSearchSuggestions(this.value)
+                }
+            }, { passive: true })
+        }
+
+        function handleSuggestionClick(event) {
+            const item = event.target.closest('.search-suggestion-item')
+            if(item && item.hasAttribute('data-id')) {
+                event.stopPropagation()
+                event.preventDefault()
+                selectSuggestion(item)
+            }
+        }
+
+        function showSearchSuggestions(term) {
+            const container = document.getElementById('searchSuggestions')
+            
+            if(!term || !term.trim()) {
+                hideSuggestions()
+                return
+            }
+
+            const termLower = term.toLowerCase()
+            const matches = filterTasksBatch(termLower)
+
+            renderSuggestionsList(container, matches)
+            container.style.display = 'block'
+        }
+
+        function filterTasksBatch(termLower) {
+            const filtered = []
+            const maxItems = SUGGESTION_LIMIT
+
+            for(let i = 0; i < tasks.length && filtered.length < maxItems; i++) {
+                const task = tasks[i]
+                const titleMatch = task.title.toLowerCase().includes(termLower)
+                const statusMatch = task.status && task.status.toLowerCase().includes(termLower)
+                
+                if(titleMatch || statusMatch) {
+                    filtered.push(task)
+                }
+            }
+
+            return filtered
+        }
+
+        function renderSuggestionsList(container, matches) {
+            if(matches.length === 0) {
+                container.innerHTML = `<div class="search-suggestion-item"><div class="suggestion-title">No results found</div><div class="suggestion-description">Try different keywords</div></div>`
+                return
+            }
+
+            const fragment = document.createDocumentFragment()
+
+            matches.slice(0, SUGGESTION_LIMIT).forEach(task => {
+                const div = document.createElement('div')
+                div.className = 'search-suggestion-item'
+                div.setAttribute('data-id', task.id)
+                div.setAttribute('role', 'option')
+                div.setAttribute('aria-selected', 'false')
+                
+                const titleDiv = document.createElement('div')
+                titleDiv.className = 'suggestion-title'
+                titleDiv.textContent = task.title
+
+                const descDiv = document.createElement('div')
+                descDiv.className = 'suggestion-description'
+                descDiv.textContent = `${task.status || 'No status'} • ${task.category}`
+
+                div.appendChild(titleDiv)
+                div.appendChild(descDiv)
+                fragment.appendChild(div)
+            })
+
+            container.innerHTML = ''
+            container.appendChild(fragment)
+        }
+
+        function hideSuggestions() {
+            const container = document.getElementById('searchSuggestions')
+            container.style.display = 'none'
+            container.innerHTML = ''
+        }
+
+        function selectSuggestion(item) {
+            const idAttr = item.getAttribute('data-id')
+            if(!idAttr) return
+
+            const id = Number(idAttr)
+            const task = tasks.find(t => t.id === id)
+
+            if(!task) return
+
+            document.getElementById('globalSearch').value = task.title
+            hideSuggestions()
+
+            if(currentTab !== task.category) {
+                currentTab = task.category
+                renderTabs()
+            }
+
+            renderTasks()
+            highlightTaskCard(id)
+        }
+
+        function highlightTaskCard(taskId) {
+            requestAnimationFrame(() => {
+                const card = document.getElementById(`task-${taskId}`)
+                if(card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    
+                    clearTimeout(suggestionHighlightTimer)
+                    const originalColor = card.style.borderColor
+                    card.style.borderColor = '#C1FC32'
+                    card.style.transition = 'border-color 0.3s ease'
+
+                    suggestionHighlightTimer = setTimeout(() => {
+                        card.style.borderColor = originalColor
+                    }, 2500)
+                }
+            })
+        }
+
+        function performSearch() {
+            const term = document.getElementById('globalSearch').value.trim().toLowerCase()
+            if(!term) return
+
+            const matches = filterTasksBatch(term)
+            
+            if(matches.length === 0) return
+
+            const firstTask = matches[0]
+            
+            if(currentTab !== firstTask.category) {
+                currentTab = firstTask.category
+                renderTabs()
+            }
+
+            renderTasks()
+            highlightTaskCard(firstTask.id)
+        }
+
+        function importTasks() {
+            document.getElementById('importFile').click()
+        }
+
+        function capitalizeFolderName(name) {
+            return name.split(/[.\-_]/).map(part => 
+                part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+            ).join(' ')
+        }
+
+        function handleImportFile(input) {
+            const file = input.files[0]
+            if (!file) return
+            
+            const folderName = capitalizeFolderName(file.name.replace(/\.[^/.]+$/, ""))
+            if (!categories.includes(folderName) && folderName !== "All") {
+                categories.push(folderName)
+                sortCategories()
+            }
+            
+            const reader = new FileReader()
+            reader.onload = (e) => {
+                const content = e.target.result
+                const lines = content.split('\n')
+                const newTasks = []
+                
+                lines.forEach(line => {
+                    const trimmed = line.trim()
+                    if (!trimmed) return
+                    
+                    const isChecked = trimmed.startsWith('- [x]')
+                    const isUnchecked = trimmed.startsWith('- [ ]')
+                    if (!isChecked && !isUnchecked) return
+                    
+                    const priority = trimmed.includes('Priority')
+                    
+                    let rest = trimmed.substring(5).trim()
+                    
+                    let title = ''
+                    let downloadUrl = ''
+                    let sourceUrl = ''
+                    let status = ''
+                    
+                    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g
+                    let match
+                    let firstLink = null
+                    let linkIndex = -1
+                    
+                    while ((match = linkRegex.exec(rest)) !== null) {
+                        if (firstLink === null) {
+                            firstLink = { text: match[1], url: match[2], index: match.index }
+                            linkIndex = match.index
+                        }
+                    }
+                    
+                    if (firstLink) {
+                        title = firstLink.text
+                        downloadUrl = firstLink.url
+                        
+                        let afterFirst = rest.substring(firstLink.index + firstLink.text.length + firstLink.url.length + 4)
+                        const pipeIndex = afterFirst.indexOf('|')
+                        if (pipeIndex !== -1) {
+                            afterFirst = afterFirst.substring(pipeIndex + 1).trim()
+                            const sourceMatch = afterFirst.match(/\[Source\]\(([^)]+)\)/)
+                            if (sourceMatch) {
+                                sourceUrl = sourceMatch[1]
+                            }
+                            
+                            const statusWords = ['Ongoing', 'Not Released', 'Unreleased', 'NSFW']
+                            for (let word of statusWords) {
+                                if (afterFirst.includes(word)) {
+                                    status = word
+                                    break
+                                }
+                            }
+                        }
+                    } else {
+                        const pipeIndex = rest.indexOf('|')
+                        if (pipeIndex !== -1) {
+                            title = rest.substring(0, pipeIndex).trim()
+                            let afterPipe = rest.substring(pipeIndex + 1).trim()
+                            const sourceMatch = afterPipe.match(/\[Source\]\(([^)]+)\)/)
+                            if (sourceMatch) {
+                                sourceUrl = sourceMatch[1]
+                            }
+                            const statusWords = ['Ongoing', 'Not Released', 'Unreleased', 'NSFW']
+                            for (let word of statusWords) {
+                                if (afterPipe.includes(word)) {
+                                    status = word
+                                    break
+                                }
+                            }
+                        } else {
+                            title = rest
+                        }
+                    }
+                    
+                    if (title) {
+                        newTasks.push({
+                            id: Date.now() + Math.random(),
+                            title: title,
+                            url: downloadUrl,
+                            category: folderName,
+                            status: status,
+                            sourceUrl: sourceUrl,
+                            notes: '',
+                            checked: isChecked,
+                            priority: priority
+                        })
+                    }
+                })
+                
+                if (newTasks.length > 0) {
+                    tasks = [...newTasks, ...tasks]
+                    saveData()
+                    renderTabs()
+                    renderTasks()
+                    window.showMessage(`Imported ${newTasks.length} tasks into "${folderName}"`)
+                }
+                input.value = ''
+            }
+            reader.readAsText(file)
+        }
+
+        function exportTasks() {
+            let mdContent = ''
+            tasks.forEach(task => {
+                const checkmark = task.checked ? '- [x]' : '- [ ]'
+                let line = `${checkmark} [${task.title}]`
+                if (task.url) {
+                    line = `${checkmark} [${task.title}](${task.url})`
+                }
+                if (task.sourceUrl) {
+                    line += ` | [Source](${task.sourceUrl})`
+                }
+                if (task.status) {
+                    line += ` | ${task.status}`
+                }
+                if (task.priority) {
+                    line += ` Priority`
+                }
+                mdContent += line + '\n'
+            })
+            const blob = new Blob([mdContent], { type: 'text/markdown' })
+            const a = document.createElement('a')
+            a.href = URL.createObjectURL(blob)
+            a.download = 'tasks_export.md'
+            a.click()
+            URL.revokeObjectURL(a.href)
+            window.showMessage('Tasks exported')
+        }
+
+        function showClearAllPopup() {
+            document.getElementById("clearAllPopup").classList.remove('popup-hidden')
+        }
+
+        function closeClearAllPopup() {
+            document.getElementById("clearAllPopup").classList.add('popup-hidden')
+        }
+
+        function confirmClearAll() {
+            tasks = []
+            saveData()
+            renderTasks()
+            closeClearAllPopup()
+            window.showMessage('All tasks cleared')
+        }
+        
+        const scrollBtn = document.getElementById('scrollTopBtn');
+    
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                scrollBtn.classList.add('show');
+            } else {
+                scrollBtn.classList.remove('show');
+            }
+        });
+    
+        scrollBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        window.onload = () => {
+            if(categories.length === 1 && categories[0] === "All") {
+                categories = ["All"]
+            } else {
+                sortCategories()
+            }
+            renderTabs()
+            renderTasks()
+            setupSearchDebounce()
+        }
+        
+    </script>
+</body>
+</html>
