@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.3.8';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.3.9';
 const urlsToCache = [
     // Root
     '/',
@@ -126,6 +126,16 @@ const urlsToCache = [
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/webfonts/fa-solid-900.woff2'
 ];
 
+// JSON Dynamic Content
+const STALE_WHILE_REVALIDATE_URLS = [
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Articles/articles.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/pages.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/popup-pages.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Obsidian%20CSS%20Snippets%20Gallery/css-snippets.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/UserScripts%20Gallery/userscripts.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Calendar/world-events.json'
+];
+
 self.addEventListener('install', event => {
     self.skipWaiting();
     event.waitUntil(
@@ -156,27 +166,53 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
-    
+
+    const requestUrl = new URL(event.request.url);
+    const requestPath = requestUrl.origin + requestUrl.pathname;
+
+    if (STALE_WHILE_REVALIDATE_URLS.includes(requestPath)) {
+        event.respondWith(
+            caches.open(CACHE_NAME).then(async cache => {
+                const cachedResponse = await cache.match(event.request);
+                const fetchUrl = event.request.url + '?t=' + Date.now();
+                const fetchPromise = fetch(fetchUrl, { cache: 'no-cache' })
+                    .then(networkResponse => {
+                        if (networkResponse && networkResponse.status === 200) {
+                            cache.put(event.request, networkResponse.clone());
+                        }
+                        return networkResponse;
+                    })
+                    .catch(() => {
+                    });
+
+                return cachedResponse || fetchPromise;
+            })
+        );
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request).then(response => {
             if (response) {
                 return response;
             }
-            
-            return fetch(event.request).then(response => {
-                if (!response || response.status !== 200 || response.type !== 'basic') {
+
+            return fetch(event.request)
+                .then(response => {
+                    if (!response || response.status !== 200 || response.type !== 'basic') {
+                        return response;
+                    }
+
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, responseToCache);
+                    });
+
                     return response;
-                }
-                
-                const responseToCache = response.clone();
-                caches.open(CACHE_NAME).then(cache => {
-                    cache.put(event.request, responseToCache);
+                })
+                .catch(() => {
+                    return caches.match('index.html');
                 });
-                
-                return response;
-            });
-        }).catch(() => {
-            return caches.match('index.html');
         })
     );
 });
