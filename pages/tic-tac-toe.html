@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 360px;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .timer {
+            background-color: var(--bg-dark);
+            color: var(--accent-color);
+            font-size: 22px;
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 50px;
+            letter-spacing: 3px;
+        }
+
+        .wins {
+            background-color: var(--bg-dark);
+            color: var(--accent-color);
+            font-size: 22px;
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 50px;
+        }
+
+        .difficulty {
+            display: flex;
+            background-color: #27272a;
+            border-radius: 50px;
+            padding: 6px;
+            margin-bottom: var(--spacing-lg);
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .diff-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .diff-btn.active {
+            background-color: var(--accent-color);
+            color: #000;
+            font-weight: 700;
+        }
+
+        .guide {
+            color: var(--text-secondary);
+            font-size: 17px;
+            margin: 8px 0 20px;
+            text-align: center;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            max-width: 100%;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .cell {
+            aspect-ratio: 1 / 1;
+            background-color: #27272a;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .cell:hover {
+            background-color: #3f3f46;
+        }
+
+        .cell.disabled {
+            cursor: not-allowed;
+        }
+
+        .x {
+            color: #f4f4f5;
+        }
+
+        .o {
+            color: var(--accent-color);
+        }
+
+        .status {
+            text-align: center;
+            margin: 28px 0 12px;
+            font-size: 24px;
+            font-weight: 600;
+            min-height: 34px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
+            color: #000;
+            border: none;
+            padding: 16px 52px;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 8px;
+            display: none;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <app-header class="fade-in">
+            <div>
+                <h1 class="username">Tic-Tac-Toe</h1>
+                <p class="tagline">Play a classic Tic-Tac-Toe against AI</p>
+            </div>
+        </app-header>
+        
+        <div class="header">
+            <div class="timer" id="timer">00:00</div>
+            <div class="wins">Wins: <span id="winCount">0</span></div>
+        </div>
+
+        <div class="difficulty" id="difficulty">
+            <button class="diff-btn active" data-diff="easy">Easy</button>
+            <button class="diff-btn" data-diff="normal">Normal</button>
+            <button class="diff-btn" data-diff="hard">Hard</button>
+        </div>
+
+        <div class="guide" id="guide">Tap any square to start playing as X</div>
+        
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+
+        <button id="restart" class="restart-btn">Restart Game</button>
+        
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Tic-Tac-Toe</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        let boardState = Array(9).fill(null)
+        let currentPlayer = "X"
+        let gameActive = true
+        let timerInterval = null
+        let seconds = 0
+        let difficulty = "normal"
+        let playerWins = 0
+
+        const cells = document.querySelectorAll(".cell")
+        const timerEl = document.getElementById("timer")
+        const statusEl = document.getElementById("status")
+        const restartBtn = document.getElementById("restart")
+        const winCountEl = document.getElementById("winCount")
+        const guideEl = document.getElementById("guide")
+        const diffButtons = document.querySelectorAll(".diff-btn")
+
+        const xSVG = `<svg width="88" height="88" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="18" x2="82" y2="82" stroke="currentColor" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/><line x1="82" y1="18" x2="18" y2="82" stroke="currentColor" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+        const oSVG = `<svg width="88" height="88" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="33" stroke="currentColor" stroke-width="15" fill="none"/></svg>`
+
+        function loadWins() {
+            const saved = localStorage.getItem("ticTacToePlayerWins")
+            if (saved) {
+                playerWins = parseInt(saved)
+                winCountEl.textContent = playerWins
+            }
+        }
+
+        function saveWins() {
+            localStorage.setItem("ticTacToePlayerWins", playerWins)
+        }
+
+        function startTimer() {
+            if (timerInterval) return
+            timerInterval = setInterval(() => {
+                seconds++
+                let min = Math.floor(seconds / 60)
+                let sec = seconds % 60
+                timerEl.textContent = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
+            }, 1000)
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval)
+            timerInterval = null
+        }
+
+        function hideGuide() {
+            guideEl.style.display = "none"
+        }
+
+        function resetGame() {
+            boardState = Array(9).fill(null)
+            currentPlayer = "X"
+            gameActive = true
+            seconds = 0
+            timerEl.textContent = "00:00"
+            stopTimer()
+            statusEl.textContent = ""
+            restartBtn.style.display = "none"
+            guideEl.style.display = "block"
+            
+            cells.forEach(cell => {
+                cell.innerHTML = ""
+                cell.classList.remove("x", "o", "disabled")
+            })
+        }
+
+        function checkWin(player) {
+            const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
+            return wins.some(combo => combo.every(i => boardState[i] === player))
+        }
+
+        function isDraw() {
+            return boardState.every(cell => cell !== null)
+        }
+
+        function makeMove(index, player) {
+            boardState[index] = player
+            const cell = cells[index]
+            cell.classList.add(player.toLowerCase())
+            cell.classList.add("disabled")
+            cell.innerHTML = player === "X" ? xSVG : oSVG
+
+            if (checkWin(player)) {
+                gameActive = false
+                stopTimer()
+                restartBtn.style.display = "block"
+                if (player === "X") {
+                    playerWins++
+                    winCountEl.textContent = playerWins
+                    saveWins()
+                    window.showMessage("You Win!")
+                } else {
+                    window.showMessage("AI Wins")
+                }
+                return true
+            }
+
+            if (isDraw()) {
+                gameActive = false
+                stopTimer()
+                restartBtn.style.display = "block"
+                window.showMessage("Draw Game")
+                return true
+            }
+            return false
+        }
+
+        function aiEasy() {
+            const empty = boardState.map((v,i) => v === null ? i : null).filter(v => v !== null)
+            return empty[Math.floor(Math.random() * empty.length)]
+        }
+
+        function aiNormal() {
+            const empty = boardState.map((v,i) => v === null ? i : null).filter(v => v !== null)
+            
+            for (let i of empty) {
+                boardState[i] = "O"
+                if (checkWin("O")) {
+                    boardState[i] = null
+                    return i
+                }
+                boardState[i] = null
+            }
+
+            for (let i of empty) {
+                boardState[i] = "X"
+                if (checkWin("X")) {
+                    boardState[i] = null
+                    return i
+                }
+                boardState[i] = null
+            }
+
+            return empty[Math.floor(Math.random() * empty.length)]
+        }
+
+        function minimax(newBoard, isMaximizing) {
+            if (checkWin("O")) return 10
+            if (checkWin("X")) return -10
+            if (newBoard.every(cell => cell !== null)) return 0
+
+            if (isMaximizing) {
+                let bestScore = -Infinity
+                for (let i = 0; i < 9; i++) {
+                    if (!newBoard[i]) {
+                        newBoard[i] = "O"
+                        let score = minimax(newBoard, false)
+                        newBoard[i] = null
+                        bestScore = Math.max(score, bestScore)
+                    }
+                }
+                return bestScore
+            } else {
+                let bestScore = Infinity
+                for (let i = 0; i < 9; i++) {
+                    if (!newBoard[i]) {
+                        newBoard[i] = "X"
+                        let score = minimax(newBoard, true)
+                        newBoard[i] = null
+                        bestScore = Math.min(score, bestScore)
+                    }
+                }
+                return bestScore
+            }
+        }
+
+        function aiHard() {
+            let bestScore = -Infinity
+            let move = -1
+            for (let i = 0; i < 9; i++) {
+                if (!boardState[i]) {
+                    boardState[i] = "O"
+                    let score = minimax(boardState, false)
+                    boardState[i] = null
+                    if (score > bestScore) {
+                        bestScore = score
+                        move = i
+                    }
+                }
+            }
+            return move
+        }
+
+        function aiMove() {
+            if (!gameActive) return
+
+            let moveIndex
+            if (difficulty === "easy") moveIndex = aiEasy()
+            else if (difficulty === "normal") moveIndex = aiNormal()
+            else moveIndex = aiHard()
+
+            if (moveIndex !== undefined) {
+                setTimeout(() => {
+                    makeMove(moveIndex, "O")
+                    currentPlayer = "X"
+                    statusEl.textContent = ""
+                }, 380)
+            }
+        }
+
+        function handleCellClick(e) {
+            if (!gameActive) {
+                window.showMessage("Game is over, restart the game to start again")
+                return
+            }
+
+            const index = parseInt(e.target.dataset.index)
+            if (boardState[index] || currentPlayer !== "X") return
+
+            if (seconds === 0) {
+                startTimer()
+                hideGuide()
+            }
+
+            const gameEnded = makeMove(index, "X")
+            if (!gameEnded) {
+                currentPlayer = "O"
+                statusEl.textContent = "AI is thinking..."
+                aiMove()
+            }
+        }
+
+        diffButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
+                diffButtons.forEach(b => b.classList.remove("active"))
+                btn.classList.add("active")
+                difficulty = btn.dataset.diff
+            })
+        })
+
+        cells.forEach(cell => {
+            cell.addEventListener("click", handleCellClick)
+        })
+
+        restartBtn.addEventListener("click", resetGame)
+
+        window.onload = () => {
+            loadWins()
+            resetGame()
+        }
+        
+    </script>
+</body>
+</html>
