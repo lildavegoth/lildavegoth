@@ -662,7 +662,7 @@
 </head>
 <body>
     <div class="music-player-container">
-        <a style="margin-bottom: 10px;" href="../index.html" class="back-link fade-in">
+        <a style="margin-bottom: 20px;" href="../index.html" class="back-link fade-in">
             <i class="fas fa-arrow-left"></i> Back to Home
         </a>
         
@@ -1218,8 +1218,6 @@
             const song = queue[currentIndex];
             audioPlayer.src = song.url;
             audioPlayer.load();
-            isPlaying = true;
-            updatePlayButton();
             currentSongTitle.textContent = song.title;
             
             if (song.albumArt) {
@@ -1234,14 +1232,7 @@
             updateListDisplay();
             updatePlayerControls();
             
-            if (Notification.permission === 'granted') {
-                updateNotification(song);
-            }
-            
-            audioPlayer.play().then(() => {
-                isPlaying = true;
-                updatePlayButton();
-            }).catch(() => {
+            audioPlayer.play().catch(() => {
                 isPlaying = false;
                 updatePlayButton();
             });
@@ -1258,24 +1249,9 @@
             
             if (isPlaying) {
                 audioPlayer.pause();
-                isPlaying = false;
-                if (mediaNotification) {
-                    mediaNotification.close();
-                    mediaNotification = null;
-                }
             } else {
-                audioPlayer.play().then(() => {
-                    isPlaying = true;
-                    updatePlayButton();
-                    if (queue[currentIndex] && Notification.permission === 'granted') {
-                        updateNotification(queue[currentIndex]);
-                    }
-                }).catch(() => {
-                    isPlaying = false;
-                    updatePlayButton();
-                });
+                audioPlayer.play().catch(() => {});
             }
-            updatePlayButton();
         }
         
         function prevSong() {
@@ -1334,8 +1310,6 @@
             }
             
             if (nextIndex === 0 && !shuffle && repeat === 'none') {
-                isPlaying = false;
-                updatePlayButton();
                 audioPlayer.pause();
                 audioPlayer.currentTime = 0;
                 progress.style.width = '0%';
@@ -1344,10 +1318,6 @@
                 musicIcon.style.display = 'flex';
                 coverImage.style.display = 'none';
                 currentIndex = -1;
-                if (mediaNotification) {
-                    mediaNotification.close();
-                    mediaNotification = null;
-                }
                 return;
             }
             
@@ -1369,6 +1339,8 @@
                 originalQueue.splice(index, 1);
                 
                 if (queue.length === 0) {
+                    audioPlayer.pause();
+                    audioPlayer.src = '';
                     currentIndex = -1;
                     isPlaying = false;
                     updatePlayButton();
@@ -1502,6 +1474,23 @@
             });
         }
         
+        audioPlayer.addEventListener('play', () => {
+            isPlaying = true;
+            updatePlayButton();
+            if (queue[currentIndex] && Notification.permission === 'granted') {
+                updateNotification(queue[currentIndex]);
+            }
+        });
+        
+        audioPlayer.addEventListener('pause', () => {
+            isPlaying = false;
+            updatePlayButton();
+            if (mediaNotification) {
+                mediaNotification.close();
+                mediaNotification = null;
+            }
+        });
+        
         window.addEventListener('DOMContentLoaded', () => {
             musicIcon.style.display = 'flex';
             coverImage.style.display = 'none';
@@ -1521,6 +1510,8 @@
                         URL.revokeObjectURL(song.url);
                     });
                     
+                    audioPlayer.pause();
+                    audioPlayer.src = '';
                     queue = [];
                     originalQueue = [];
                     currentIndex = -1;
