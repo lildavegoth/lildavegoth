@@ -1,0 +1,55 @@
+name: Build Cordova Android APK
+
+on:
+  push:
+    branches: [ homepage ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Cordova
+        run: npm install -g cordova
+
+      - name: Add Android platform
+        run: |
+          cordova platform rm android --no-fetch || true
+          cordova platform add android --no-fetch
+
+      - name: Add plugins for full features
+        run: |
+          cordova plugin add cordova-plugin-file
+          cordova plugin add cordova-plugin-local-notification
+          cordova plugin add cordova-plugin-device
+          cordova plugin add cordova-plugin-inappbrowser
+          cordova plugin add cordova-plugin-android-permissions
+          cordova plugin add cordova-plugin-camera
+          cordova plugin add cordova-plugin-media-capture
+
+      - name: Build debug APK
+        run: cordova build android --debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: lildavegoth-debug-apk
+          path: platforms/android/app/build/outputs/apk/debug/app-debug.apk
