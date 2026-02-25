@@ -27,6 +27,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # Install Android API 35 platform (required for windowOptOutEdgeToEdgeEnforcement)
+      - name: Install Android SDK 35
+        run: |
+          yes | sdkmanager "platforms;android-35"
+
       - name: Install Cordova
         run: npm install -g cordova
 
@@ -35,6 +40,11 @@ jobs:
           mkdir -p www
           mv *.html *.css *.js *.json sw.js robots.txt sitemap.xml www/ 2>/dev/null || true
           mv images pages www/ 2>/dev/null || true
+
+          # Generate config.xml with proper indentation.
+          # YAML indentation adds 10 spaces before each line.
+          # We remove exactly 10 spaces from each line with sed,
+          # leaving the desired indentation (0 for xml decl, 4 for children, etc.)
           cat > config.xml << 'EOF'
           <?xml version='1.0' encoding='utf-8'?>
           <widget id="com.lildavegoth.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
@@ -48,7 +58,7 @@ jobs:
               <allow-intent href="mailto:*" />
               <platform name="android">
                   <preference name="android-minSdkVersion" value="24" />
-                  <preference name="android-targetSdkVersion" value="34" />
+                  <preference name="android-targetSdkVersion" value="35" />
                   <preference name="AndroidXEnabled" value="true" />
                   <config-file target="AndroidManifest.xml" parent="/manifest" xmlns:android="http://schemas.android.com/apk/res/android">
                       <uses-permission android:name="android.permission.INTERNET" />
@@ -66,6 +76,7 @@ jobs:
               </platform>
           </widget>
           EOF
+          # Remove the 10 spaces added by YAML indentation, preserving the XML indentation
           sed -i 's/^          //' config.xml
 
       - name: Add Android platform
