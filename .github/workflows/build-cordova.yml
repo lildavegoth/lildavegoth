@@ -60,7 +60,7 @@ jobs:
                   <preference name="android-minSdkVersion" value="24" />
                   <preference name="android-targetSdkVersion" value="35" />
                   <preference name="AndroidXEnabled" value="true" />
-                  <config-file target="AndroidManifest.xml" parent="/manifest" xmlns:android="http://schemas.android.com/apk/res/android">
+                  <config-file target="AndroidManifest.xml" parent="/manifest" xmlns:android="http://schemas.android.com/apk/android">
                       <uses-permission android:name="android.permission.INTERNET" />
                       <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
                       <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
@@ -80,61 +80,90 @@ jobs:
           EOF
           sed -i 's/^          //' config.xml
 
-      - name: Auto‑patch export functions for Cordova
+      - name: Auto‑patch export functions for Cordova (Node.js)
         run: |
-          # This step injects Cordova‑specific export code into any file containing "exportData()"
-          # It replaces the browser Blob/download code with a platform‑aware version.
-          find www -name "*.html" -o -name "*.js" | while read file; do
-            if grep -q "exportData(" "$file"; then
-              echo "Patching $file for Cordova export support"
-              # Backup original
-              cp "$file" "$file.bak"
-              # Insert platform check before the existing Blob code
-              # We'll replace the whole function body with a new one that checks for window.cordova.
-              # This is a simplistic example – adjust the pattern to match your exact function.
-              sed -i '/exportData(/ {
-                :a
-                N
-                /}/! ba
-                s/exportData([^)]*)[[:space:]]*{[^}]*}/exportData() {
-                  const data = { /* your data object */ };
-                  const jsonStr = JSON.stringify(data, null, 2);
-                  const fileName = `routine-quest-backup-${Date.now()}.rqsave`;
-              
-                  if (window.cordova) {
-                    window.resolveLocalFileSystemURL(
-                      cordova.file.externalDataDirectory,
-                      function(dir) {
-                        dir.getFile(fileName, { create: true }, function(fileEntry) {
-                          fileEntry.createWriter(function(fileWriter) {
-                            fileWriter.onwriteend = function() {
-                              cordova.plugins.fileOpener2.open(
-                                fileEntry.toURL(),
-                                "text/plain",
-                                { error: function(e) { console.error("Error opening file", e); } }
-                              );
-                              window.showMessage("File saved!", "success");
-                            };
-                            fileWriter.write(jsonStr);
-                          }, function(err) { window.showMessage("Error writing file", "error"); });
-                        });
-                      },
-                      function(err) { window.showMessage("Error accessing storage", "error"); }
-                    );
-                  } else {
-                    // Original browser code
-                    const blob = new Blob([jsonStr], { type: "text/plain" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = fileName;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    window.showMessage("Data exported successfully!", "success");
-                  }
-                }/g' "$file"
-            fi
-          done
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          function patchFile(filePath) {
+            let content = fs.readFileSync(filePath, 'utf8');
+            // Match exportData function definitions (simple pattern)
+            const exportRegex = /exportData\s*\(\s*\)\s*\{([\s\S]*?)\}/g;
+            let match;
+            let modified = false;
+
+            while ((match = exportRegex.exec(content)) !== null) {
+              const fullMatch = match[0];
+              const body = match[1];
+
+              // Skip if already patched (contains cordova check)
+              if (fullMatch.includes('window.cordova')) continue;
+
+              // Create new function body with platform check
+              const newBody = `{
+                const data = { /* your data object */ };
+                const jsonStr = JSON.stringify(data, null, 2);
+                const fileName = \`routine-quest-backup-\${Date.now()}.rqsave\`;
+
+                if (window.cordova) {
+                  window.resolveLocalFileSystemURL(
+                    cordova.file.externalDataDirectory,
+                    function(dir) {
+                      dir.getFile(fileName, { create: true }, function(fileEntry) {
+                        fileEntry.createWriter(function(fileWriter) {
+                          fileWriter.onwriteend = function() {
+                            cordova.plugins.fileOpener2.open(
+                              fileEntry.toURL(),
+                              "text/plain",
+                              { error: function(e) { console.error("Error opening file", e); } }
+                            );
+                            window.showMessage("File saved!", "success");
+                          };
+                          fileWriter.write(jsonStr);
+                        }, function(err) { window.showMessage("Error writing file", "error"); });
+                      });
+                    },
+                    function(err) { window.showMessage("Error accessing storage", "error"); }
+                  );
+                } else {
+                  // Original browser code
+                  const blob = new Blob([jsonStr], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = fileName;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  window.showMessage("Data exported successfully!", "success");
+                }
+              }`;
+
+              content = content.replace(fullMatch, `exportData() ${newBody}`);
+              modified = true;
+            }
+
+            if (modified) {
+              fs.writeFileSync(filePath, content, 'utf8');
+              console.log(`Patched: ${filePath}`);
+            }
+          }
+
+          function walkDir(dir) {
+            const files = fs.readdirSync(dir);
+            for (const file of files) {
+              const fullPath = path.join(dir, file);
+              const stat = fs.statSync(fullPath);
+              if (stat.isDirectory()) {
+                walkDir(fullPath);
+              } else if (file.endsWith('.html') || file.endsWith('.js')) {
+                patchFile(fullPath);
+              }
+            }
+          }
+
+          walkDir('www');
+          EOF
 
       - name: Add Android platform
         run: |
@@ -151,7 +180,6 @@ jobs:
           cordova plugin add cordova-plugin-camera
           cordova plugin add cordova-plugin-media-capture
           cordova plugin add cordova-plugin-splashscreen
-          # Add file opener plugin for export
           cordova plugin add cordova-plugin-file-opener2
 
       - name: Build debug APK
