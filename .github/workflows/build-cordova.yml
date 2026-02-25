@@ -44,10 +44,6 @@ jobs:
           # Download icon and create splash resources
           curl -L -o icon.png "https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/images/icons/kiraku-home.png"
           
-          # Create a simple splash screen background (a centered icon on black)
-          # For proper splash, we'll use the new preference with a background color
-          # No additional images needed – the system will center the icon.
-
           # Generate config.xml with proper indentation and fixes
           cat > config.xml << 'EOF'
           <?xml version='1.0' encoding='utf-8'?>
@@ -93,9 +89,12 @@ jobs:
           const fs = require('fs');
           const path = require('path');
 
-          // This function safely replaces the browser download code with Cordova file plugin code
+          // Helper to escape backticks for embedding in a template literal
+          function escapeBackticks(str) {
+            return str.replace(/`/g, '\\`');
+          }
+
           function patchExportFunction(content) {
-            // Look for the export function – this pattern matches typical export functions
             const exportRegex = /exportData\s*\(\s*\)\s*\{([\s\S]*?)(\n\s*\})/g;
             let match;
             let modified = false;
@@ -104,46 +103,49 @@ jobs:
               const fullMatch = match[0];
               const body = match[1];
 
-              // Skip if already patched (contains cordova check)
               if (fullMatch.includes('window.cordova')) continue;
 
-              // Build a new function body that checks for Cordova
+              // New Cordova-specific code block
+              const cordovaCode = `
+                // Cordova export: write file to Downloads
+                let dataToSave;
+                // Try to capture data from the original scope
+                if (typeof data !== 'undefined') dataToSave = data;
+                else if (typeof this !== 'undefined') dataToSave = this;
+                else dataToSave = {};
+
+                const jsonStr = JSON.stringify(dataToSave, null, 2);
+                const fileName = \`export-\${Date.now()}.json\`;
+
+                window.resolveLocalFileSystemURL(
+                  cordova.file.externalRootDirectory + 'Download/',
+                  function(dir) {
+                    dir.getFile(fileName, { create: true }, function(fileEntry) {
+                      fileEntry.createWriter(function(fileWriter) {
+                        fileWriter.onwriteend = function() {
+                          if (cordova.plugins && cordova.plugins.fileOpener2) {
+                            cordova.plugins.fileOpener2.open(
+                              fileEntry.toURL(),
+                              'application/json',
+                              { error: function(e) { console.error('Error opening file', e); } }
+                            );
+                          }
+                          if (window.showMessage) window.showMessage('File saved to Downloads', 'success');
+                        };
+                        fileWriter.write(jsonStr);
+                      }, function(err) { if (window.showMessage) window.showMessage('Error writing file', 'error'); });
+                    }, function(err) { if (window.showMessage) window.showMessage('Error creating file', 'error'); });
+                  },
+                  function(err) { if (window.showMessage) window.showMessage('Error accessing Downloads', 'error'); }
+                );
+              `;
+
               const newBody = `exportData() {
                 if (window.cordova) {
-                  // Cordova export: write file to Downloads
-                  const data = this; // or the data object used in original code
-                  // We'll need to construct the data object properly – this is a placeholder.
-                  // Ideally, we would extract the data object from the original body.
-                  // For simplicity, we assume the original function builds a `data` object.
-                  // If not, you may need to manually adjust each app.
-                  const jsonStr = JSON.stringify(data, null, 2);
-                  const fileName = \`export-\${Date.now()}.json\`;
-
-                  window.resolveLocalFileSystemURL(
-                    cordova.file.externalRootDirectory + 'Download/',
-                    function(dir) {
-                      dir.getFile(fileName, { create: true }, function(fileEntry) {
-                        fileEntry.createWriter(function(fileWriter) {
-                          fileWriter.onwriteend = function() {
-                            // Optional: open the file
-                            if (cordova.plugins && cordova.plugins.fileOpener2) {
-                              cordova.plugins.fileOpener2.open(
-                                fileEntry.toURL(),
-                                'application/json',
-                                { error: function(e) { console.error('Error opening file', e); } }
-                              );
-                            }
-                            if (window.showMessage) window.showMessage('File saved to Downloads', 'success');
-                          };
-                          fileWriter.write(jsonStr);
-                        }, function(err) { if (window.showMessage) window.showMessage('Error writing file', 'error'); });
-                      }, function(err) { if (window.showMessage) window.showMessage('Error creating file', 'error'); });
-                    },
-                    function(err) { if (window.showMessage) window.showMessage('Error accessing Downloads', 'error'); }
-                  );
+                  ${escapeBackticks(cordovaCode)}
                 } else {
                   // Original browser code
-                  ${body}
+                  ${escapeBackticks(body)}
                 }
               }`;
 
