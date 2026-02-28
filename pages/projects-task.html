@@ -8,7 +8,6 @@
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
-    <link rel="stylesheet" href="../navigation.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -242,27 +241,24 @@
         .status-select {
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: var(--radius-small);
+            border-radius: 20px;
             color: var(--text-primary);
-            padding: 6px 10px;
+            padding: 4px 12px;
             font-size: 0.85rem;
             cursor: pointer;
             text-align: center;
-            width: 100%;
+            width: auto;
+            min-width: unset;
             margin-bottom: 8px;
-            display: block;
+            display: inline-block;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
         }
 
         .status-select:focus {
             outline: none;
             border-color: var(--accent-color);
-        }
-        
-        .status-select {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background: transparent;
         }
 
         .add-row-btn {
@@ -459,8 +455,8 @@
             gap: 8px;
             max-height: 120px;
             overflow-y: auto;
-            padding-right: 4px;
-            margin-right: 2px;
+            padding-right: 12px;
+            margin-right: 4px;
         }
 
         .task-item {
@@ -784,7 +780,7 @@
                             <th style="min-width: 200px;">Project Name</th>
                             <th style="min-width: 320px;">Tasks</th>
                             <th style="min-width: 300px;">Notes</th>
-                            <th style="min-width: 180px;">Status & Actions</th>
+                            <th style="min-width: 140px;">Status & Actions</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -1098,9 +1094,6 @@
                     
                     setTimeout(() => {
                         foundRow.style.background = ''
-                        if (nameInput) {
-                            nameInput.style.border = ''
-                        }
                     }, 2000)
                 }
             }, 100)
@@ -1134,6 +1127,10 @@
                 project.name = e.target.value
                 save()
             }
+            nameInput.addEventListener('focus', function() { this.dataset.original = this.value })
+            nameInput.addEventListener('blur', function() {
+                if (this.value !== this.dataset.original) window.showMessage('Changes saved')
+            })
             updateStatusColor(nameInput, project.status)
             nameTd.appendChild(nameInput)
             
@@ -1161,8 +1158,13 @@
                 text.value = t.text
                 text.oninput = e => {
                     t.text = e.target.value
+                    autoResizeTextarea(e.target)
                     save()
                 }
+                text.addEventListener('focus', function() { this.dataset.original = this.value })
+                text.addEventListener('blur', function() {
+                    if (this.value !== this.dataset.original) window.showMessage('Changes saved')
+                })
                 
                 const remove = document.createElement("button")
                 remove.className = "task-remove-btn"
@@ -1196,6 +1198,10 @@
                 project.notes = e.target.value
                 save()
             }
+            notesInput.addEventListener('focus', function() { this.dataset.original = this.value })
+            notesInput.addEventListener('blur', function() {
+                if (this.value !== this.dataset.original) window.showMessage('Changes saved')
+            })
             notesTd.appendChild(notesInput)
             
             const actionTd = document.createElement("td")
@@ -1215,7 +1221,6 @@
                 render()
             }
             status.style.marginBottom = "8px"
-            status.style.width = "100%"
             
             const controls = document.createElement("div")
             controls.className = "row-controls"
