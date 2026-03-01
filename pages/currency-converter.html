@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Calculator | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="../navigation.css">
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+            padding-bottom: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xs);
+            position: relative;
+            min-height: calc(100vh - 90px);
+        }
+        
+        .header {
+            background: var(--accent-color);
+            color: #000000;
+            padding: 20px 20px;
+            max-width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: var(--radius-large);
+            margin-left: auto;
+            margin-right: auto;
+            cursor: pointer;
+        }
+        
+        .header-left {
+            line-height: 1.25;
+        }
+        
+        .header-title {
+            font-size: 15px;
+            font-weight: 600;
+        }
+        
+        .header-currency {
+            font-size: 17px;
+            font-weight: 600;
+        }
+        
+        .header-icon {
+            background: #000000;
+            width: 42px;
+            height: 34px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .display {
+            padding: 52px 30px 40px;
+            text-align: right;
+            background: #000000;
+            width: 100%;
+            max-width: 440px;
+            margin: 0 auto;
+            border-radius: var(--radius-large);
+        }
+        
+        .main-amount {
+            font-size: 48px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .secondary-amount {
+            font-size: 21px;
+            color: #aaaaaa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .keypad {
+            padding: 0 10px 10px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 13px;
+        }
+        
+        .key {
+            aspect-ratio: 1 / 1;
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        
+        .key:active {
+            transform: scale(0.92);
+        }
+        
+        .key.number {
+            background: #1f1f1f;
+            color: #ffffff;
+        }
+        
+        .key.number:active {
+            background: #2d2d2d;
+        }
+        
+        .key.special {
+            background: var(--accent-color);
+            color: #000000;
+        }
+        
+        .key.special:active {
+            background: #9bc726;
+        }
+        
+        .circle-dot {
+            font-size: 38px;
+            line-height: 1;
+        }
+        
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .currency-option {
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: var(--radius-small);
+        }
+        
+        .currency-option:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        
+        .currency-option .flag {
+            font-size: 28px;
+            width: 36px;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a style="margin-top: 20px;" href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        <app-header>
+            <h1 class="username">Currency Converter</h1>
+            <p style="margin-bottom: 20px;" class="tagline">Calculate your currency before converting into a real money</p>
+        </app-header>
+        <div class="header" id="currencyHeader">
+            <div class="header-left">
+                <div class="header-title">Select Currency</div>
+                <div class="header-currency" id="headerPair">
+                    USD
+                    <svg viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform: scaleX(-1); height: 1.2em; width: auto; vertical-align: top;">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    IDR
+                </div>
+            </div>
+            <div class="header-icon">
+                <svg width="32" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="transform: scaleX(-1);">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </div>
+        </div>
+        <div class="display">
+            <div class="main-amount" id="main">USD 0.00</div>
+            <div class="secondary-amount" id="secondary">IDR 0.00</div>
+        </div>
+        <div class="keypad">
+            <div class="key number" data-val="1">1</div>
+            <div class="key number" data-val="2">2</div>
+            <div class="key number" data-val="3">3</div>
+            <div class="key number" data-val="4">4</div>
+            <div class="key number" data-val="5">5</div>
+            <div class="key number" data-val="6">6</div>
+            <div class="key number" data-val="7">7</div>
+            <div class="key number" data-val="8">8</div>
+            <div class="key number" data-val="9">9</div>
+            <div class="key special circle-dot" data-val=".">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="black" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="8"/>
+                </svg>
+            </div>
+            <div class="key number" data-val="0">0</div>
+            <div class="key special" id="back">
+                <svg width="32" height="26" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </div>
+        </div>
+        <footer class="fade-in">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Currency Converter</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" onclick="closeUniversalPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tools-grid" id="popupContent"></div>
+        </div>
+    </div>
+    
+    <script>
+        let amount = "0";
+        let fromCurrency = "USD";
+        let toCurrency = "IDR";
+        let exchangeRate = 15800;
+        const currencies = [
+            {code:"AED",name:"UAE Dirham",flag:"🇦🇪"},
+            {code:"AUD",name:"Australian Dollar",flag:"🇦🇺"},
+            {code:"BRL",name:"Brazilian Real",flag:"🇧🇷"},
+            {code:"CAD",name:"Canadian Dollar",flag:"🇨🇦"},
+            {code:"CHF",name:"Swiss Franc",flag:"🇨🇭"},
+            {code:"CNY",name:"Chinese Yuan",flag:"🇨🇳"},
+            {code:"EUR",name:"Euro",flag:"🇪🇺"},
+            {code:"GBP",name:"British Pound",flag:"🇬🇧"},
+            {code:"IDR",name:"Indonesian Rupiah",flag:"🇮🇩"},
+            {code:"INR",name:"Indian Rupee",flag:"🇮🇳"},
+            {code:"JPY",name:"Japanese Yen",flag:"🇯🇵"},
+            {code:"KRW",name:"South Korean Won",flag:"🇰🇷"},
+            {code:"MXN",name:"Mexican Peso",flag:"🇲🇽"},
+            {code:"MYR",name:"Malaysian Ringgit",flag:"🇲🇾"},
+            {code:"PHP",name:"Philippine Peso",flag:"🇵🇭"},
+            {code:"PLN",name:"Polish Zloty",flag:"🇵🇱"},
+            {code:"RUB",name:"Russian Ruble",flag:"🇷🇺"},
+            {code:"SAR",name:"Saudi Riyal",flag:"🇸🇦"},
+            {code:"SGD",name:"Singapore Dollar",flag:"🇸🇬"},
+            {code:"THB",name:"Thai Baht",flag:"🇹🇭"},
+            {code:"TRY",name:"Turkish Lira",flag:"🇹🇷"},
+            {code:"USD",name:"US Dollar",flag:"🇺🇸"},
+            {code:"VND",name:"Vietnamese Dong",flag:"🇻🇳"},
+            {code:"ZAR",name:"South African Rand",flag:"🇿🇦"}
+        ].sort((a,b) => a.code.localeCompare(b.code));
+        
+        function updateHeader() {
+            document.getElementById("headerPair").innerHTML = fromCurrency + `
+                <svg viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform: scaleX(-1); height: 1.2em; width: auto; vertical-align: top;">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            ` + toCurrency;
+        }
+        
+        function update() {
+            let val = parseFloat(amount) || 0;
+            document.getElementById("main").textContent = fromCurrency + " " + val.toFixed(2);
+            let converted = val * exchangeRate;
+            document.getElementById("secondary").textContent = toCurrency + " " + converted.toLocaleString("en-US", {minimumFractionDigits: 2});
+        }
+        
+        async function updateRate() {
+            if (fromCurrency === toCurrency) {
+                exchangeRate = 1;
+                update();
+                return;
+            }
+            let success = false;
+            try {
+                let response = await fetch("https://api.frankfurter.app/latest?from=" + fromCurrency + "&to=" + toCurrency);
+                if (response.ok) {
+                    let data = await response.json();
+                    exchangeRate = data.rates[toCurrency];
+                    success = true;
+                }
+            } catch(e) {}
+            if (!success) {
+                try {
+                    let f = fromCurrency.toLowerCase();
+                    let t = toCurrency.toLowerCase();
+                    let response = await fetch("https://cdn.jsdelivr.net/gh/fawazahmed0/currency-api@1/latest/currencies/" + f + "/" + t + ".json");
+                    if (response.ok) {
+                        let data = await response.json();
+                        exchangeRate = data[f][t];
+                        success = true;
+                    }
+                } catch(e) {}
+            }
+            if (!success && fromCurrency === "USD" && toCurrency === "IDR") {
+                exchangeRate = 15800;
+            } else if (!success) {
+                exchangeRate = 1;
+            }
+            update();
+        }
+        
+        function closeUniversalPopup() {
+            document.getElementById("universalPopup").style.display = "none";
+        }
+        
+        let selectingMode = "from";
+        function openCurrencyPopup() {
+            selectingMode = "from";
+            showCurrencySelector();
+        }
+        
+        function showCurrencySelector() {
+            let popup = document.getElementById("universalPopup");
+            let title = document.getElementById("popupTitle");
+            let content = document.getElementById("popupContent");
+            title.textContent = selectingMode === "from" ? "Select From Currency" : "Select To Currency";
+            let headerBox = "";
+            if (selectingMode === "from") {
+            let curr = currencies.find(c => c.code === fromCurrency);
+            headerBox = `
+            <div style="background: var(--accent-color); color: #000000; padding: 18px 20px; border-radius: 28px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <div style="line-height:1.25;">
+                    <div style="font-size:14px;font-weight:600;">CURRENT FROM</div>
+                    <div style="font-size:19px;font-weight:600;">${fromCurrency}</div>
+                </div>
+                <div style="background:#000000;width:60px;height:60px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:26px;">
+                    ${curr.flag}
+                </div>
+            </div>
+            `;
+            } else {
+            let curr = currencies.find(c => c.code === toCurrency);
+            headerBox = `
+            <div style="background: var(--accent-color); color: #000000; padding: 18px 20px; border-radius: 28px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <div style="line-height:1.25;">
+                    <div style="font-size:14px;font-weight:600;">CURRENT TO</div>
+                    <div style="font-size:19px;font-weight:600;">${toCurrency}</div>
+                </div>
+                <div style="background:#000000;width:60px;height:60px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:26px;">
+                    ${curr.flag}
+                </div>
+            </div>
+            `;
+            }
+            let items = "";
+            currencies.forEach(c => {
+                items += `
+                    <div class="currency-option" onclick="selectCurrency('${c.code}')">
+                        <span class="flag">${c.flag}</span>
+                        <div>
+                            <strong>${c.code}</strong>
+                            <p style="font-size:0.9rem;color:#aaa;margin-top:2px;">${c.name}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            content.innerHTML = `
+                <div style="padding:20px;">
+                    ${headerBox}
+                    <input type="text" id="searchInput" placeholder="Search currency..." 
+                           onkeyup="filterCurrencies()" 
+                           style="width:100%;padding:14px 16px;border-radius:50px;background:#252525;border:1px solid #444;color:white;font-size:16px;margin-bottom:16px;">
+                    <div id="currencyList" style="max-height:380px;overflow-y:auto;display:grid;gap:6px;grid-template-columns:1fr;">
+                        ${items}
+                    </div>
+                </div>
+            `;
+            popup.style.display = "flex";
+        }
+        
+        function selectCurrency(code) {
+            if (selectingMode === "from") {
+                fromCurrency = code;
+                selectingMode = "to";
+                showCurrencySelector();
+            } else {
+                toCurrency = code;
+                closeUniversalPopup();
+                updateHeader();
+                updateRate();
+            }
+        }
+        
+        function filterCurrencies() {
+            let search = document.getElementById("searchInput").value.toUpperCase();
+            let options = document.querySelectorAll(".currency-option");
+            options.forEach(option => {
+                if (option.textContent.toUpperCase().includes(search)) {
+                    option.style.display = "flex";
+                } else {
+                    option.style.display = "none";
+                }
+            });
+        }
+        
+        document.querySelectorAll(".key[data-val]").forEach(k => {
+            k.addEventListener("click", () => {
+                if (amount.length > 11) return;
+                if (k.getAttribute("data-val") === "." && amount.includes(".")) return;
+                if (amount === "0" && k.getAttribute("data-val") !== ".") amount = "";
+                amount += k.getAttribute("data-val");
+                update();
+            });
+        });
+        
+        document.getElementById("back").addEventListener("click", () => {
+            amount = amount.slice(0, -1);
+            if (!amount) amount = "0";
+            update();
+        });
+        
+        document.getElementById("currencyHeader").addEventListener("click", openCurrencyPopup);
+        updateHeader();
+        updateRate();
+        update();
+        
+    </script>
+</body>
+</html>
