@@ -8,6 +8,7 @@ Hello! I'm lildavegoth, a creator and designer focused on giving you ideas that 
 **Kakoi Kiraku** is my creative hub for design resources and tutorials.
 
 ---
+![Screenshot](https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/images/screenshots.webp)
 
 **What You'll Find** — ✦
 - **App Icon Packs**: A curated collection of black dark app icons designed for modern interfaces. Each icon is crafted with attention to detail and consistency across the pack.
