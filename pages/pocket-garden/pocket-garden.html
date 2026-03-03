@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pocket Garden | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../../protections.js"></script>
+    <script src="../../notification.cssjs"></script>
+    <link rel="stylesheet" href="../../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-xs) var(--spacing-md);
+            position: relative;
+            min-height: calc(100vh - 90px);
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+        }
+
+        .badge-group {
+            display: flex;
+            gap: var(--spacing-xs);
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.05);
+            padding: 6px 14px;
+            border-radius: 40px;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-weight: 600;
+        }
+
+        .money-badge {
+            color: #FFD700;
+        }
+
+        .seed-badge {
+            color: var(--accent-color);
+        }
+
+        .badge .value {
+            font-weight: 700;
+            margin-left: 2px;
+        }
+
+        .badge.phase .value {
+            color: var(--accent-color);
+        }
+
+        .badge.growth .value {
+            color: #60a5fa;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .folder-tab {
+            position: relative;
+            padding: 10px 20px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-secondary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+            overflow: visible;
+            z-index: 10;
+        }
+
+        .folder-tab:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .folder-tab.active {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: bold;
+            border-color: var(--accent-color);
+            z-index: 15;
+        }
+
+        .pot-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .pot {
+            width: 300px;
+            height: 200px;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            overflow: hidden;
+            background-size: contain;
+            background-position: center bottom;
+            background-repeat: no-repeat;
+            transition: background-image 0.2s;
+            image-rendering: pixelated;
+        }
+
+        .plant-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        .plant-img {
+            image-rendering: pixelated;
+            width: 300px;
+            height: 200.001px;
+            object-fit: contain;
+            transition: transform 0.1s ease;
+            pointer-events: none;
+        }
+
+        .plant-img.squish {
+            transform: scale(0.9);
+        }
+        
+        .decor-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .decor-grid-item {
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .decor-grid-item img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            image-rendering: pixelated;
+            border-radius: 25px;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .decor-grid-item .item-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 2px;
+        }
+        
+        .decor-grid-item .item-price {
+            color: #FFD700;
+            font-size: 0.9rem;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .decor-grid-item .buy-btn {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            max-width: 120px;
+        }
+        
+        .decor-grid-item .buy-btn:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        .decoration-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 300px;
+            height: 200px;
+            object-fit: contain;
+            image-rendering: pixelated;
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            margin: var(--spacing-lg) 0;
+        }
+
+        .btn {
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-primary);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-primary {
+            background: rgba(193, 252, 50, 0.15);
+            border-color: rgba(193, 252, 50, 0.3);
+            color: var(--accent-color);
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+        }
+
+        .dead-message {
+            color: #ef4444;
+            font-weight: 700;
+            font-size: 1.1rem;
+            text-align: center;
+            margin-top: var(--spacing-sm);
+        }
+
+        .panel {
+            margin-top: var(--spacing-md);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .shop-grid, .storage-grid {
+            display: block;
+        }
+
+        .scrollable-list {
+            max-height: 360px;
+            overflow-y: auto;
+            padding-right: 4px;
+            padding-bottom: 16px;
+            padding-left: 8px;
+        }
+
+        .shop-section {
+            margin-bottom: 24px;
+        }
+
+        .shop-section h3 {
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+            padding-left: 12px;
+            position: relative;
+        }
+
+        .shop-section h3::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--accent-color);
+            border-radius: 4px;
+        }
+
+        .shop-card {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            height: 70px;
+            gap: var(--spacing-md);
+            padding: var(--spacing-sm);
+            margin-bottom: var(--spacing-xs);
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: var(--radius-medium);
+        }
+
+        .shop-card .item-info {
+            flex: 1;
+        }
+
+        .shop-card .item-name {
+            font-weight: 600;
+        }
+
+        .shop-card .item-price {
+            color: #FFD700;
+            font-size: 0.9rem;
+        }
+        
+        .wood-bed-board-img {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 65px;
+            margin-right: -35px;
+            margin-left: -20px;
+            image-rendering: pixelated;
+            object-fit: cover;
+            border-radius: 25px;
+            flex-shrink: 0;
+        }
+        
+        .flowery-hanger-img {
+            width: 100px;
+            height: 100px;
+            margin-bottom: -25px;
+            margin-right: -35px;
+            margin-left: -20px;
+            image-rendering: pixelated;
+            object-fit: cover;
+            border-radius: 25px;
+            flex-shrink: 0;
+        }
+
+        .shop-card .buy-btn {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .shop-card .buy-btn:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        .seed-preview {
+            width: 100px;
+            height: 100px;
+            margin-bottom: -120px;
+            margin-right: -40px;
+            margin-left: -20px;
+            background-size: cover;
+            background-position: center;
+            image-rendering: pixelated;
+            border-radius: 25px;
+            flex-shrink: 0;
+        }
+
+        .storage-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            width: 100%;
+            height: 70px;
+            margin-bottom: var(--spacing-xs);
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: var(--radius-medium);
+        }
+
+        .storage-item .item-info {
+            flex: 1;
+        }
+
+        .storage-item .flower-name {
+            font-weight: 600;
+            max-width: 120px;
+        }
+
+        .storage-item .flower-value {
+            color: #FFD700;
+            font-size: 0.9rem;
+        }
+
+        .storage-item .sell-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-primary);
+            padding: 6px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .storage-item-img {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 15px;
+            margin-right: -40px;
+            margin-left: -15px;
+            image-rendering: pixelated;
+            object-fit: cover;
+            border-radius: 25px;
+            flex-shrink: 0;
+        }
+
+        hr {
+            border: none;
+            height: 1px;
+            background: rgba(255,255,255,0.1);
+            margin: var(--spacing-md) 0;
+        }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .pill-button {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-primary);
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pill-button:hover {
+            background: rgba(193,252,50,0.2);
+            border-color: var(--accent-color);
+        }
+
+        .bundle-section {
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .bundle-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a style="margin-top: 20px;" href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+
+        <app-header>
+            <h1 class="username">Pocket Garden</h1>
+            <p class="tagline">Your own portable piece of nature, and a moment of calm</p>
+        </app-header>
+
+        <div class="top-bar">
+            <div class="badge-group">
+                <div class="badge money-badge">
+                    <i class="fas fa-coins"></i>
+                    <span id="moneyDisplay">250</span>
+                </div>
+                <div class="badge seed-badge">
+                    <i class="fas fa-seedling"></i>
+                    <span id="seedDisplay">5</span>
+                </div>
+            </div>
+            <div class="badge-group">
+                <div class="badge phase">
+                    Phase<span class="value" id="stageDisplay">empty</span>
+                </div>
+                <div class="badge growth">
+                    Growth<span class="value" id="growthDisplay">0m</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="folder-tab active" id="tabGarden">Garden</button>
+            <button class="folder-tab" id="tabShop">Shop</button>
+            <button class="folder-tab" id="tabStorage">Storage</button>
+        </div>
+
+        <div id="gardenPanel">
+            <div class="pot-area">
+                <div class="pot" id="pot">
+                    <div class="plant-container" id="plantContainer"></div>
+                    <img src="" alt="Decoration" class="decoration-img" id="decorationImg">
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="waterBtn">Water</button>
+                <button class="btn" id="plantSeedBtn">Plant</button>
+                <button class="btn btn-primary hidden" id="harvestBtn">Harvest</button>
+            </div>
+        </div>
+
+        <div id="shopPanel" class="panel hidden">
+            <div class="glass-panel">
+                <h2 style="text-align: left; margin-bottom: var(--spacing-lg);">Garden Shop</h2>
+                <div class="scrollable-list" id="shopContainer"></div>
+            </div>
+        </div>
+
+        <div id="storagePanel" class="panel hidden">
+            <div class="glass-panel">
+                <div class="header-row">
+                    <h2>Storage</h2>
+                    <button class="pill-button" id="sellAllBtn">Sell All</button>
+                </div>
+                <div class="scrollable-list" id="storageGrid"></div>
+                <div class="bundle-section" id="upgradeBundleSection"></div>
+            </div>
+        </div>
+
+        <footer class="fade-in">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Pocket Garden</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        (function() {
+            const PLANT_IMAGES = {
+                "pothos-hearted": {
+                    seed: "../../pages/pocket-garden/images/plants/pothos-hearted/stage1.png",
+                    grow: "../../pages/pocket-garden/images/plants/pothos-hearted/stage2.png",
+                    flower: "../../pages/pocket-garden/images/plants/pothos-hearted/stage3.png",
+                    dead: "../../pages/pocket-garden/images/plants/dead.png"
+                },
+                "pothos-normal": {
+                    seed: "../../pages/pocket-garden/images/plants/pothos-normal/stage1.png",
+                    grow: "../../pages/pocket-garden/images/plants/pothos-normal/stage2.png",
+                    flower: "../../pages/pocket-garden/images/plants/pothos-normal/stage3.png",
+                    dead: "../../pages/pocket-garden/images/plants/dead.png"
+                }
+            };
+            const EMPTY_IMAGE = "../../pages/pocket-garden/images/plants/empty.png";
+            const POT_IMAGES = {
+                glassy: "../../pages/pocket-garden/images/pots/glassy.png"
+            };
+            const POT_STYLES = [
+                { id: "glassy", name: "Glassy", img: "glassy" }
+            ];
+            const PLANT_TYPES = ["pothos-hearted", "pothos-normal"];
+            const GROWTH_STAGES = [0, 180000, 480000];
+            const WATER_TIMEOUT = 18000000;
+            const DEATH_TIMEOUT = 259200000;
+            const WATERING_SKIP = [0, 5, 30, 120, 300, 600];
+
+            const DECORATIONS = [
+                { id: 'wood-bed-board', name: 'Wood Bed Board', price: 200, image: '../../pages/pocket-garden/images/decorations/wood-bed-board.png' },
+                { id: 'flowery-hanger', name: 'Flowery Hanger', price: 230, image: '../../pages/pocket-garden/images/decorations/flowery-hanger.png' }
+            ];
+
+            let money = 250;
+            let seedCount = 5;
+            let plantedAt = null;
+            let lastWatered = null;
+            let totalHydratedTime = 0;
+            let lastHydratedCheck = null;
+            let wateredOnce = false;
+            let currentPlantType = null;
+            let ownedPots = ["glassy"];
+            let currentPot = "glassy";
+            let storage = [];
+            let lastStage = -1;
+            let lastActiveTimestamp = Date.now();
+            let clickerLevel = 0;
+            let wateringLevel = 0;
+            let autoClickerEnabled = false;
+            let ownedDecorations = [];
+            let activeDecoration = null;
+
+            function saveGame() {
+                localStorage.setItem("pocketGarden", JSON.stringify({
+                    money, seedCount, plantedAt, lastWatered, totalHydratedTime, lastHydratedCheck, wateredOnce, currentPlantType, ownedPots, currentPot, storage, clickerLevel, wateringLevel, autoClickerEnabled, ownedDecorations, activeDecoration
+                }));
+            }
+
+            function loadGame() {
+                const saved = localStorage.getItem("pocketGarden");
+                if (!saved) return;
+                try {
+                    const data = JSON.parse(saved);
+                    money = data.money ?? 250;
+                    seedCount = data.seedCount ?? 5;
+                    plantedAt = data.plantedAt ?? null;
+                    lastWatered = data.lastWatered ?? null;
+                    totalHydratedTime = data.totalHydratedTime ?? 0;
+                    lastHydratedCheck = data.lastHydratedCheck ?? null;
+                    wateredOnce = data.wateredOnce ?? false;
+                    currentPlantType = data.currentPlantType ?? null;
+                    ownedPots = data.ownedPots ?? ["glassy"];
+                    currentPot = data.currentPot ?? "glassy";
+                    storage = data.storage ?? [];
+                    clickerLevel = data.clickerLevel ?? 0;
+                    wateringLevel = data.wateringLevel ?? 0;
+                    autoClickerEnabled = data.autoClickerEnabled ?? false;
+                    if (data.ownedDecorations) {
+                        ownedDecorations = data.ownedDecorations;
+                    } else if (data.hasHangingBoard) {
+                        ownedDecorations = ['wood-bed-board'];
+                        activeDecoration = 'wood-bed-board';
+                    }
+                    activeDecoration = data.activeDecoration ?? (ownedDecorations.length ? ownedDecorations[0] : null);
+                } catch (e) {}
+            }
+
+            function updateHydratedTime() {
+                if (!plantedAt || !lastWatered) return;
+                const now = Date.now();
+                if (lastWatered && (now - lastWatered > DEATH_TIMEOUT)) return;
+                if (lastHydratedCheck && (now - lastWatered <= WATER_TIMEOUT)) {
+                    totalHydratedTime += (now - lastHydratedCheck);
+                }
+                lastHydratedCheck = now;
+            }
+
+            function getStage() {
+                if (!plantedAt) return -1;
+                const now = Date.now();
+                if (lastWatered && (now - lastWatered > DEATH_TIMEOUT)) return -2;
+                if (!lastWatered) return -2;
+                updateHydratedTime();
+                if (totalHydratedTime < GROWTH_STAGES[1]) return 0;
+                if (totalHydratedTime < GROWTH_STAGES[2]) return 1;
+                return 2;
+            }
+
+            function isDead() {
+                if (!plantedAt) return false;
+                const now = Date.now();
+                return (lastWatered && (now - lastWatered > DEATH_TIMEOUT)) || false;
+            }
+
+            function getRemainingMinutes() {
+                if (!plantedAt || isDead()) return 0;
+                const phase = getStage();
+                if (phase === -1 || phase === -2) return 0;
+                const nextStageTime = phase === 0 ? GROWTH_STAGES[1] : phase === 1 ? GROWTH_STAGES[2] : GROWTH_STAGES[2];
+                const remaining = Math.max(0, nextStageTime - totalHydratedTime);
+                return Math.ceil(remaining / 60000);
+            }
+
+            function showClickFeedback(text, x, y) {
+                const el = document.createElement('div');
+                el.innerText = text;
+                el.style.position = 'fixed';
+                el.style.left = x + 'px';
+                el.style.top = y + 'px';
+                el.style.transform = 'translate(-50%, -100%)';
+                el.style.backgroundColor = 'rgba(0,0,0,0.4)';
+                el.style.color = '#C1FC32';
+                el.style.padding = '8px 16px';
+                el.style.borderRadius = '30px';
+                el.style.fontWeight = 'bold';
+                el.style.pointerEvents = 'none';
+                el.style.zIndex = '9999';
+                el.style.transition = 'opacity 0.6s';
+                el.style.opacity = '1';
+                el.style.whiteSpace = 'nowrap';
+                document.body.appendChild(el);
+                setTimeout(() => {
+                    el.style.opacity = '0';
+                    setTimeout(() => el.remove(), 600);
+                }, 900);
+            }
+
+            function handlePotClick(e) {
+                if (clickerLevel < 1) {
+                    showClickFeedback("Buy clicker bundle first", e.clientX, e.clientY);
+                    return;
+                }
+                if (!plantedAt || isDead()) {
+                    showClickFeedback("No living plant to click", e.clientX, e.clientY);
+                    return;
+                }
+                const skipMs = clickerLevel * 500;
+                totalHydratedTime += skipMs;
+                showClickFeedback(`+${skipMs/1000}s`, e.clientX, e.clientY);
+                refreshUI();
+            }
+
+            function refreshUI() {
+                const phase = getStage();
+                const dead = (phase === -2);
+                const empty = (phase === -1);
+
+                let imgSrc = EMPTY_IMAGE;
+                if (dead) {
+                    imgSrc = currentPlantType ? PLANT_IMAGES[currentPlantType].dead : EMPTY_IMAGE;
+                } else if (!empty && currentPlantType) {
+                    if (phase === 0) imgSrc = PLANT_IMAGES[currentPlantType].seed;
+                    else if (phase === 1) imgSrc = PLANT_IMAGES[currentPlantType].grow;
+                    else if (phase === 2) imgSrc = PLANT_IMAGES[currentPlantType].flower;
+                }
+
+                const plantImg = document.querySelector(".plant-img");
+                if (plantImg) {
+                    if (phase !== lastStage && !empty && !dead) {
+                        plantImg.classList.add("squish");
+                        setTimeout(() => plantImg.classList.remove("squish"), 150);
+                    }
+                    plantImg.src = imgSrc;
+                } else {
+                    document.getElementById("plantContainer").innerHTML = `<img src="${imgSrc}" class="plant-img" alt="plant">`;
+                }
+
+                const decorImg = document.getElementById("decorationImg");
+                if (activeDecoration) {
+                    const decor = DECORATIONS.find(d => d.id === activeDecoration);
+                    if (decor) decorImg.src = decor.image;
+                    else decorImg.src = "";
+                    decorImg.style.display = "block";
+                } else {
+                    decorImg.src = "";
+                    decorImg.style.display = "none";
+                }
+
+                lastStage = phase;
+
+                let stageText = empty ? "Empty" : (dead ? "Dead" : `${phase+1}`);
+                document.getElementById("stageDisplay").innerText = stageText;
+
+                const growthMinutes = getRemainingMinutes();
+                document.getElementById("growthDisplay").innerText = growthMinutes + "m";
+
+                const harvestBtn = document.getElementById("harvestBtn");
+                if (phase === 2 && !dead) harvestBtn.classList.remove("hidden");
+                else harvestBtn.classList.add("hidden");
+
+                const potStyle = POT_STYLES.find(p => p.id === currentPot) || POT_STYLES[4];
+                document.getElementById("pot").style.backgroundImage = `url('${POT_IMAGES[potStyle.img]}')`;
+
+                document.getElementById("moneyDisplay").innerText = money;
+                document.getElementById("seedDisplay").innerText = seedCount;
+
+                saveGame();
+            }
+
+            function waterPlant() {
+                if (!plantedAt) {
+                    if (window.showMessage) window.showMessage("No plant to water");
+                    return;
+                }
+                if (isDead()) {
+                    if (window.showMessage) window.showMessage("It's dead, plant a new seed");
+                    return;
+                }
+                if (wateredOnce) {
+                    if (window.showMessage) window.showMessage("Already watered this plant");
+                    return;
+                }
+                const now = Date.now();
+                if (lastWatered) updateHydratedTime();
+                lastWatered = now;
+                lastHydratedCheck = now;
+                let bonus = 0;
+                if (wateringLevel > 0) {
+                    bonus = WATERING_SKIP[wateringLevel] * 1000;
+                }
+                totalHydratedTime += 60000 + bonus;
+                wateredOnce = true;
+                if (window.showMessage) window.showMessage(`Plant watered (+1 min + ${bonus/1000} sec)`);
+                refreshUI();
+            }
+
+            function plantSeed() {
+                if (seedCount < 1) {
+                    if (window.showMessage) window.showMessage("No seeds available");
+                    return;
+                }
+                if (plantedAt && !isDead()) {
+                    if (window.showMessage) window.showMessage("There's already a living plant");
+                    return;
+                }
+                seedCount--;
+                const now = Date.now();
+                plantedAt = now;
+                lastWatered = now;
+                totalHydratedTime = 0;
+                lastHydratedCheck = now;
+                wateredOnce = false;
+                const randomIndex = Math.floor(Math.random() * PLANT_TYPES.length);
+                currentPlantType = PLANT_TYPES[randomIndex];
+                refreshUI();
+            }
+
+            function harvestPlant() {
+                const phase = getStage();
+                if (phase !== 2 || isDead()) {
+                    if (window.showMessage) window.showMessage("Not ready to harvest");
+                    return;
+                }
+                let displayName = "";
+                let imageFile = "";
+                if (currentPlantType === "pothos-hearted") {
+                    displayName = "Pothos Hearted";
+                    imageFile = "../../pages/pocket-garden/images/plants/pothos-hearted.png";
+                } else if (currentPlantType === "pothos-normal") {
+                    displayName = "Pothos Normal";
+                    imageFile = "../../pages/pocket-garden/images/plants/pothos-normal.png";
+                } else {
+                    displayName = "Unknown";
+                    imageFile = "";
+                }
+                const value = 35 + Math.floor(Math.random()*45);
+                storage.push({ name: displayName, value, image: imageFile });
+                plantedAt = null;
+                lastWatered = null;
+                totalHydratedTime = 0;
+                lastHydratedCheck = null;
+                wateredOnce = false;
+                currentPlantType = null;
+                if (window.showMessage) window.showMessage(`Harvested ${displayName} worth $${value}`);
+                refreshUI();
+                if (!document.getElementById("storagePanel").classList.contains("hidden")) renderStorage();
+            }
+
+            function buySeeds() {
+                if (money < 10) {
+                    if (window.showMessage) window.showMessage("Not enough coins");
+                    return;
+                }
+                money -= 10;
+                seedCount++;
+                refreshUI();
+                renderShop();
+            }
+
+            function buyDecoration(id) {
+                const decor = DECORATIONS.find(d => d.id === id);
+                if (!decor) return;
+                if (ownedDecorations.includes(id)) {
+                    if (window.showMessage) window.showMessage("Already owned");
+                    return;
+                }
+                if (money < decor.price) {
+                    if (window.showMessage) window.showMessage("Not enough coins");
+                    return;
+                }
+                money -= decor.price;
+                ownedDecorations.push(id);
+                refreshUI();
+                renderShop();
+            }
+
+            function useDecoration(id) {
+                if (!ownedDecorations.includes(id)) return;
+                activeDecoration = id;
+                refreshUI();
+                renderShop();
+            }
+
+            function buyClickerBundle() {
+                if (clickerLevel > 0) {
+                    if (window.showMessage) window.showMessage("Already owned");
+                    return;
+                }
+                if (money < 500) {
+                    if (window.showMessage) window.showMessage("Not enough coins");
+                    return;
+                }
+                money -= 500;
+                clickerLevel = 1;
+                if (window.showMessage) window.showMessage("Clicker bundle activated");
+                refreshUI();
+                renderShop();
+                renderUpgradeBundle();
+            }
+
+            function upgradeClicker() {
+                if (clickerLevel < 1) return;
+                if (money < 1000) {
+                    if (window.showMessage) window.showMessage("Not enough coins");
+                    return;
+                }
+                money -= 1000;
+                clickerLevel++;
+                if (window.showMessage) window.showMessage(`Clicker upgraded to level ${clickerLevel}`);
+                refreshUI();
+                renderUpgradeBundle();
+                renderShop();
+            }
+
+            function buyWateringBundle() {
+                if (wateringLevel > 0) {
+                    if (window.showMessage) window.showMessage("Already owned");
+                    return;
+                }
+                if (money < 300) {
+                    if (window.showMessage) window.showMessage("Not enough coins");
+                    return;
+                }
+                money -= 300;
+                wateringLevel = 1;
+                if (window.showMessage) window.showMessage("Watering bundle purchased");
+                refreshUI();
+                renderShop();
+                renderUpgradeBundle();
+            }
+
+            function upgradeWatering() {
+                if (wateringLevel < 1 || wateringLevel >= 5) return;
+                const cost = wateringLevel * 500;
+                if (money < cost) {
+                    if (window.showMessage) window.showMessage("Not enough coins");
+                    return;
+                }
+                money -= cost;
+                wateringLevel++;
+                if (window.showMessage) window.showMessage(`Watering upgraded to level ${wateringLevel}`);
+                refreshUI();
+                renderUpgradeBundle();
+            }
+
+            function buyAutoClicker() {
+                if (autoClickerEnabled) {
+                    if (window.showMessage) window.showMessage("Already owned");
+                    return;
+                }
+                if (money < 1000) {
+                    if (window.showMessage) window.showMessage("Not enough coins");
+                    return;
+                }
+                money -= 1000;
+                autoClickerEnabled = true;
+                if (window.showMessage) window.showMessage("Auto Clicker Bundle activated");
+                refreshUI();
+                renderShop();
+            }
+
+            function sellFlower(index) {
+                money += storage[index].value;
+                if (window.showMessage) window.showMessage(`Sold for $${storage[index].value}`);
+                storage.splice(index, 1);
+                refreshUI();
+                renderStorage();
+            }
+
+            function sellAll() {
+                if (storage.length === 0) {
+                    if (window.showMessage) window.showMessage("Nothing to sell");
+                    return;
+                }
+                let total = 0;
+                storage.forEach(f => total += f.value);
+                money += total;
+                storage = [];
+                if (window.showMessage) window.showMessage(`Sold all for $${total}`);
+                refreshUI();
+                renderStorage();
+            }
+
+            function renderShop() {
+                const container = document.getElementById("shopContainer");
+                let decorationsHtml = '';
+                DECORATIONS.forEach(decor => {
+                    const owned = ownedDecorations.includes(decor.id);
+                    const active = (activeDecoration === decor.id);
+                    let buttonHtml = '';
+                    if (!owned) {
+                        buttonHtml = `<button class="buy-btn" onclick="buyDecoration('${decor.id}')">Buy</button>`;
+                    } else if (active) {
+                        buttonHtml = `<button class="buy-btn" disabled>Applied</button>`;
+                    } else {
+                        buttonHtml = `<button class="buy-btn" onclick="useDecoration('${decor.id}')">Use</button>`;
+                    }
+                    decorationsHtml += `
+                        <div class="decor-grid-item">
+                            <img src="${decor.image}" alt="${decor.name}">
+                            <div class="item-name">${decor.name}</div>
+                            <div class="item-price">$${decor.price}</div>
+                            ${buttonHtml}
+                        </div>
+                    `;
+                });
+
+                let html = `
+                    <div class="shop-section">
+                        <h3>Garden</h3>
+                        <div class="shop-card">
+                            <div class="item-info">
+                                <div class="item-name">Seeds</div>
+                                <div class="item-price">$10</div>
+                            </div>
+                            <button class="buy-btn" onclick="buySeeds()">Buy</button>
+                        </div>
+                    </div>
+                    <div class="shop-section">
+                        <h3>Decorations</h3>
+                        <div class="decor-grid">
+                            ${decorationsHtml}
+                        </div>
+                    </div>
+                    <div class="shop-section">
+                        <h3>Bundles</h3>
+                        <div class="shop-card ${clickerLevel > 0 ? 'owned' : ''}">
+                            <div class="item-info">
+                                <div class="item-name">Clicker Bundle</div>
+                                <div class="item-price">$500</div>
+                            </div>
+                            ${clickerLevel > 0 ? '<button class="buy-btn" disabled>Active</button>' : '<button class="buy-btn" onclick="buyClickerBundle()">Buy</button>'}
+                        </div>
+                        <div class="shop-card ${wateringLevel > 0 ? 'owned' : ''}">
+                            <div class="item-info">
+                                <div class="item-name">Watering Bundle</div>
+                                <div class="item-price">$300</div>
+                            </div>
+                            ${wateringLevel > 0 ? '<button class="buy-btn" disabled>Active</button>' : '<button class="buy-btn" onclick="buyWateringBundle()">Buy</button>'}
+                        </div>
+                        <div class="shop-card ${autoClickerEnabled ? 'owned' : ''}">
+                            <div class="item-info">
+                                <div class="item-name">Auto Clicker Bundle</div>
+                                <div class="item-price">$1000</div>
+                            </div>
+                            ${autoClickerEnabled ? '<button class="buy-btn" disabled>Active</button>' : '<button class="buy-btn" onclick="buyAutoClicker()">Buy</button>'}
+                        </div>
+                    </div>
+                `;
+                container.innerHTML = html;
+            }
+
+            function renderStorage() {
+                const grid = document.getElementById("storageGrid");
+                if (storage.length === 0) {
+                    grid.innerHTML = '<div style="text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">Harvested plants will appear here</div>';
+                } else {
+                    let shtml = "";
+                    storage.forEach((f, i) => {
+                        const imgPath = f.image ? f.image : "";
+                        shtml += `
+                            <div class="storage-item">
+                                <img src="${imgPath}" class="storage-item-img" alt="${f.name}">
+                                <div class="item-info">
+                                    <div class="flower-name">${f.name}</div>
+                                    <div class="flower-value">$${f.value}</div>
+                                </div>
+                                <button class="sell-btn" onclick="sellFlower(${i})">Sell</button>
+                            </div>
+                        `;
+                    });
+                    grid.innerHTML = shtml;
+                }
+                renderUpgradeBundle();
+            }
+
+            function renderUpgradeBundle() {
+                const section = document.getElementById("upgradeBundleSection");
+                let html = '<h3 style="margin-bottom: var(--spacing-sm);">Upgradeable Bundles</h3>';
+                if (clickerLevel > 0) {
+                    const skipSec = (clickerLevel * 0.5).toFixed(1);
+                    html += `
+                        <div class="bundle-card">
+                            <div>
+                                <strong>Clicker Lv.${clickerLevel}</strong><br>
+                                <span style="color:var(--accent-color);">${skipSec}s per click</span>
+                            </div>
+                            <button class="pill-button" onclick="upgradeClicker()">Up $1000</button>
+                        </div>
+                    `;
+                }
+                if (wateringLevel > 0) {
+                    const skipSec = WATERING_SKIP[wateringLevel];
+                    const nextCost = wateringLevel < 5 ? wateringLevel * 500 : 0;
+                    html += `
+                        <div class="bundle-card">
+                            <div>
+                                <strong>Watering Lv.${wateringLevel}</strong><br>
+                                <span style="color:var(--accent-color);">+${skipSec}s per water</span>
+                            </div>
+                            ${wateringLevel < 5 ? `<button class="pill-button" onclick="upgradeWatering()">Up $${nextCost}</button>` : '<button class="pill-button" disabled>Max level</button>'}
+                        </div>
+                    `;
+                }
+                if (clickerLevel === 0 && wateringLevel === 0) {
+                    html += '<div class="bundle-card"><span style="color:var(--text-secondary);">No bundles owned, check Garden Shop</span></div>';
+                }
+                section.innerHTML = html;
+            }
+
+            function showGarden() {
+                document.getElementById("gardenPanel").classList.remove("hidden");
+                document.getElementById("shopPanel").classList.add("hidden");
+                document.getElementById("storagePanel").classList.add("hidden");
+                document.querySelectorAll(".folder-tab").forEach(btn => btn.classList.remove("active"));
+                document.getElementById("tabGarden").classList.add("active");
+                refreshUI();
+            }
+
+            function showShop() {
+                document.getElementById("gardenPanel").classList.add("hidden");
+                document.getElementById("shopPanel").classList.remove("hidden");
+                document.getElementById("storagePanel").classList.add("hidden");
+                document.querySelectorAll(".folder-tab").forEach(btn => btn.classList.remove("active"));
+                document.getElementById("tabShop").classList.add("active");
+                renderShop();
+            }
+
+            function showStorage() {
+                document.getElementById("gardenPanel").classList.add("hidden");
+                document.getElementById("shopPanel").classList.add("hidden");
+                document.getElementById("storagePanel").classList.remove("hidden");
+                document.querySelectorAll(".folder-tab").forEach(btn => btn.classList.remove("active"));
+                document.getElementById("tabStorage").classList.add("active");
+                renderStorage();
+            }
+
+            window.buySeeds = buySeeds;
+            window.sellFlower = sellFlower;
+            window.buyClickerBundle = buyClickerBundle;
+            window.upgradeClicker = upgradeClicker;
+            window.buyWateringBundle = buyWateringBundle;
+            window.upgradeWatering = upgradeWatering;
+            window.buyAutoClicker = buyAutoClicker;
+            window.sellAll = sellAll;
+            window.buyDecoration = buyDecoration;
+            window.useDecoration = useDecoration;
+
+            loadGame();
+            refreshUI();
+
+            document.getElementById("waterBtn").addEventListener("click", waterPlant);
+            document.getElementById("plantSeedBtn").addEventListener("click", plantSeed);
+            document.getElementById("harvestBtn").addEventListener("click", harvestPlant);
+            document.getElementById("tabGarden").addEventListener("click", showGarden);
+            document.getElementById("tabShop").addEventListener("click", showShop);
+            document.getElementById("tabStorage").addEventListener("click", showStorage);
+            document.getElementById("sellAllBtn").addEventListener("click", sellAll);
+            document.getElementById("plantContainer").addEventListener("click", handlePotClick);
+
+            setInterval(() => {
+                lastActiveTimestamp = Date.now();
+                refreshUI();
+            }, 1000);
+
+            document.addEventListener("visibilitychange", () => {
+                const now = Date.now();
+                if (document.visibilityState === "hidden") {
+                    lastActiveTimestamp = now;
+                } else {
+                    const elapsed = now - lastActiveTimestamp;
+                    if (elapsed > 0 && plantedAt && !isDead()) {
+                        if (lastWatered && (now - lastWatered) > DEATH_TIMEOUT) {
+                        } else {
+                            totalHydratedTime += elapsed;
+                            lastHydratedCheck = now;
+                        }
+                    }
+                    lastActiveTimestamp = now;
+                    refreshUI();
+                }
+            });
+
+            if (autoClickerEnabled) {
+                setInterval(() => {
+                    if (autoClickerEnabled && clickerLevel > 0 && plantedAt && !isDead()) {
+                        totalHydratedTime += clickerLevel * 500;
+                        refreshUI();
+                    }
+                }, 10000);
+            }
+        })();
+        
+    </script>
+</body>
+</html>
