@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.4.0';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.5.0';
 const urlsToCache = [
     // Root
     '/',
@@ -17,7 +17,6 @@ const urlsToCache = [
     // Pages
     'pages/2048.html',
     'pages/appflowy-json-converter.html',
-    'pages/app-list.html',
     'pages/calendar.html',
     'pages/code-comparator.html',
     'pages/color-detector.html',
@@ -29,6 +28,7 @@ const urlsToCache = [
     'pages/html-cleaner.html',
     'pages/html-editor.html',
     'pages/html-generator.html',
+    'pages/icon-list',
     'pages/icon-pack.html',
     'pages/image-to-base64.html',
     'pages/journal.html',
@@ -67,7 +67,6 @@ const urlsToCache = [
     'pages/voidgarden/shared-data.js',
     'pages/voidgarden/shop.html',
     'pages/voidgarden/voidgarden.html',
-    // Voidgarden Images
     'pages/voidgarden/images/carrot-grow.png',
     'pages/voidgarden/images/carrot-ready.png',
     'pages/voidgarden/images/carrot-seed.png',
@@ -88,16 +87,8 @@ const urlsToCache = [
     'images/left-side.webp',
     'images/right-side.webp',
     'images/screenshots.webp',
-    // Icons
     'images/icons/browser-homepage.webp',
     'images/icons/kiraku-home.png',
-    // Articles
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Articles/articles.json',
-    // Index
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/pages.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/popup-pages.json',
-    // Obsidian CSS Snippets Gallery
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Obsidian%20CSS%20Snippets%20Gallery/css-snippets.json',
     // Posters
     'images/posters/again-n-again.webp',
     'images/posters/dear-god.webp',
@@ -105,7 +96,15 @@ const urlsToCache = [
     'images/posters/its-too-late.webp',
     'images/posters/no-longer-priority.webp',
     'images/posters/sickens-me.webp',
-    // Stories for Typing Game
+    // Blob Storage
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Articles/articles.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/pages.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/popup-pages.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/javascript.js',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Obsidian%20CSS%20Snippets%20Gallery/css-snippets.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/UserScripts%20Gallery/userscripts.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Calendar/world-events.json',
+    // Stories
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_1.txt',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_2.txt',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_3.txt',
@@ -118,20 +117,16 @@ const urlsToCache = [
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_2.txt',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_3.txt',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_4.txt',
-    // UserScripts Gallery
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/UserScripts%20Gallery/userscripts.json',
-    // Calendar
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Calendar/world-events.json',
     // Bundles
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/webfonts/fa-solid-900.woff2'
 ];
 
-// JSON Dynamic Content
 const STALE_WHILE_REVALIDATE_URLS = [
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Articles/articles.json',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/pages.json',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/popup-pages.json',
+    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/javascript.js',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Obsidian%20CSS%20Snippets%20Gallery/css-snippets.json',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/UserScripts%20Gallery/userscripts.json',
     'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Calendar/world-events.json'
@@ -168,8 +163,8 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
 
-    const requestUrl = new URL(event.request.url);
-    const requestPath = requestUrl.origin + requestUrl.pathname;
+    const url = new URL(event.request.url);
+    const requestPath = url.origin + url.pathname;
 
     if (STALE_WHILE_REVALIDATE_URLS.includes(requestPath)) {
         event.respondWith(
@@ -183,38 +178,41 @@ self.addEventListener('fetch', event => {
                         }
                         return networkResponse;
                     })
-                    .catch(() => {
-                    });
-
+                    .catch(() => {});
                 return cachedResponse || fetchPromise;
             })
         );
         return;
     }
 
-    event.respondWith(
-        caches.match(event.request).then(response => {
-            if (response) {
-                return response;
-            }
-
-            return fetch(event.request)
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request)
                 .then(response => {
-                    if (!response || response.status !== 200 || response.type !== 'basic') {
-                        return response;
+                    if (response && response.status === 200) {
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME).then(cache => {
+                            cache.put(event.request, responseToCache);
+                        });
                     }
+                    return response;
+                })
+                .catch(() => caches.match(event.request).then(cached => cached || caches.match('index.html')))
+        );
+        return;
+    }
 
+    event.respondWith(
+        caches.match(event.request)
+            .then(cached => cached || fetch(event.request).then(response => {
+                if (response && response.status === 200) {
                     const responseToCache = response.clone();
                     caches.open(CACHE_NAME).then(cache => {
                         cache.put(event.request, responseToCache);
                     });
-
-                    return response;
-                })
-                .catch(() => {
-                    return caches.match('index.html');
-                });
-        })
+                }
+                return response;
+            }))
     );
 });
 
