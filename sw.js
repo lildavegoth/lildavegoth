@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.5.0';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.5.1';
 const urlsToCache = [
     // Root
     '/',
@@ -60,6 +60,20 @@ const urlsToCache = [
     'pages/weather.html',
     'pages/yaml-validator.html',
     'pages/youtube-thumbnail-grabber.html',
+    // Pocket Garden
+    'pages/pocket-garden/pocket-garden.html',
+    'pages/pocket-garden/images/decorations/flowery-hanger.png',
+    'pages/pocket-garden/images/decorations/wood-bed-board.png',
+    'pages/pocket-garden/images/plants/empty.png',
+    'pages/pocket-garden/images/plants/pothos-hearted.png',
+    'pages/pocket-garden/images/plants/pothos-normal.png',
+    'pages/pocket-garden/images/plants/pothos-hearted/stage1.png',
+    'pages/pocket-garden/images/plants/pothos-hearted/stage2.png',
+    'pages/pocket-garden/images/plants/pothos-hearted/stage3.png',
+    'pages/pocket-garden/images/plants/pothos-normal/stage1.png',
+    'pages/pocket-garden/images/plants/pothos-normal/stage2.png',
+    'pages/pocket-garden/images/plants/pothos-normal/stage3.png',
+    'pages/pocket-garden/images/pots/glassy.png',
     // Voidgarden
     'pages/voidgarden/adventure.html',
     'pages/voidgarden/character.html',
