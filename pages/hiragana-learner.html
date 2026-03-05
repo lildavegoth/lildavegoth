@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hiragana Learner | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <link rel="stylesheet" href="../media.css">
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xs);
+            position: relative;
+            min-height: calc(100vh - 90px);
+        }
+
+        .grid-scroll {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 4px;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .grid-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin-top: 5px;
+        }
+
+        .tile {
+            background-color: #1f1f1f;
+            border-radius: 14px;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s;
+            cursor: pointer;
+            user-select: none;
+        }
+        .tile:active {
+            transform: scale(0.94);
+            background-color: #2a2a2a;
+        }
+
+        .jp {
+            font-size: 25px;
+            line-height: 1;
+            margin-top: 6px;
+        }
+
+        .romaji {
+            font-size: 14px;
+            margin-top: 3px;
+            margin-bottom: 3px;
+            color: #aaaaaa;
+        }
+
+        .score-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background-color: var(--accent-color);
+            color: black;
+            font-weight: 600;
+            font-size: 12px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+
+        .home-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 10px;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .home-btn {
+            background-color: #2a2a2a;
+            border: none;
+            color: white;
+            padding: 20px;
+            border-radius: 20px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: transform 0.1s ease, background-color 0.2s;
+            border: 1px solid rgba(255,255,255,0.05);
+            width: 100%;
+        }
+        #homeStartBtn {
+            background: var(--accent-color);
+            color: black;
+        }
+        #homeStartBtn:active {
+            background: var(--accent-dark);
+            transform: scale(0.97);
+        }
+        .home-btn:active {
+            transform: scale(0.97);
+            background-color: #3a3a3a;
+        }
+        .home-btn .btn-text {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .arrow-bg {
+            background: #3a3a3a;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #homeStartBtn .arrow-bg {
+            background: black;
+        }
+        #homeStartBtn .arrow-bg i {
+            color: white;
+        }
+        
+        .home-btn:not(#homeStartBtn) .arrow-bg {
+            background: var(--accent-color);
+        }
+        .home-btn:not(#homeStartBtn) .arrow-bg i {
+            color: black;
+        }
+
+        .learning-section, .achievements-section, .history-section, .hiragana-section {
+            width: 100%;
+            max-width: 600px;
+            animation: fadeSlide 0.3s ease;
+            margin-top: 20px;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .back-to-home-btn {
+            background: transparent;
+            border: 1px solid #444;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .back-to-home-btn:active {
+            transform: scale(0.94);
+            background: #2a2a2a;
+        }
+        .section-title {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+        }
+        .timer {
+            color: var(--accent-color);
+            font-weight: 600;
+            font-size: 1.2rem;
+            background: #1f1f1f;
+            padding: 4px 12px;
+            border-radius: 40px;
+            border: 1px solid #333;
+        }
+        .big-letter {
+            font-size: 5rem;
+            line-height: 1;
+            background: #1f1f1f;
+            padding: 20px 40px;
+            border-radius: 40px;
+            border: 1px solid #333;
+            margin: 20px 0;
+            text-align: center;
+            position: relative;
+            white-space: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+        .big-letter.sentence-mode {
+            font-size: 2.5rem;
+        }
+        .big-letter::-webkit-scrollbar {
+            height: 4px;
+            background: #333;
+            border-radius: 4px;
+        }
+        .big-letter::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 4px;
+        }
+        .hint-romaji {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            margin-top: 8px;
+            text-align: center;
+        }
+        .answer-input {
+            background: #1f1f1f;
+            border: 2px solid #333;
+            border-radius: 40px;
+            padding: 16px 24px;
+            width: 100%;
+            font-size: 1.3rem;
+            color: white;
+            text-align: center;
+            outline: none;
+            margin: 10px 0;
+        }
+        .answer-input:focus {
+            border-color: var(--accent-color);
+        }
+        .check-next-group {
+            display: flex;
+            gap: 12px;
+            margin: 15px 0;
+        }
+        .check-btn, .next-btn {
+            flex: 1;
+            border: none;
+            padding: 16px;
+            border-radius: 40px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.1s ease;
+        }
+        .check-btn:active, .next-btn:active, .action-btn:active {
+            transform: scale(0.96);
+        }
+        .check-btn {
+            background: var(--accent-color);
+            color: black;
+        }
+        .next-btn {
+            background: #2a2a2a;
+            color: white;
+        }
+        .next-btn:disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 101%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .close-popup:active {
+            background: #333;
+        }
+        .tools-grid {
+            padding: var(--spacing-md);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .mode-btn, .difficulty-btn, .action-btn {
+            background: #2a2a2a;
+            border: none;
+            color: white;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 1.2rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.2s, transform 0.1s;
+        }
+        .mode-btn:active, .difficulty-btn:active, .action-btn:active {
+            transform: scale(0.97);
+            background: #3a3a3a;
+        }
+        .mode-btn i, .difficulty-btn i {
+            color: var(--accent-color);
+        }
+        .info-bar {
+            background: #2a2a2a;
+            border: none;
+            color: white;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 1.2rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 4px;
+        }
+        .info-bar i {
+            transition: color 0.2s;
+        }
+        .back-option {
+            background: transparent;
+            border: 1px solid #444;
+            color: white;
+            padding: 14px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: 0.1s;
+            margin-top: 5px;
+        }
+        .back-option:active {
+            background: #2a2a2a;
+            transform: scale(0.97);
+        }
+        .result-summary {
+            text-align: center;
+            font-size: 1.5rem;
+            background: #1f1f1f;
+            padding: 24px;
+            border-radius: 32px;
+        }
+        .letter-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .letter-badge {
+            background: #2a2a2a;
+            padding: 8px 14px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .letter-badge.correct i {
+            color: var(--accent-color);
+        }
+        .letter-badge.wrong i {
+            color: #ff5e5e;
+        }
+
+        .achievements-grid, .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .achievement-card, .history-card {
+            background: #1f1f1f;
+            border-radius: 20px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border: 1px solid #333;
+        }
+        .history-card {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .history-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            font-size: 1rem;
+        }
+        .history-date {
+            color: var(--text-secondary);
+        }
+        .history-correct {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        .clear-all-btn {
+            background: #ff3b30;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        .clear-all-btn:active {
+            transform: scale(0.96);
+            background: #e6352b;
+        }
+        .achievement-info {
+            flex: 1;
+        }
+        .achievement-name {
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+        .achievement-desc {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .achievement-status {
+            font-weight: 600;
+        }
+        .unlocked {
+            color: var(--accent-color);
+        }
+        .locked {
+            color: #666;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a style="margin-top: 20px;" href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <app-header>
+            <h1 class="username">Hiragana Learner</h1>
+            <p style="margin-bottom: 10px;" class="tagline">Learn Hiragana by yourself with your ways</p>
+        </app-header>
+        
+        <div id="homeSection" class="home-buttons">
+            <button class="home-btn" id="homeStartBtn">
+                <span class="btn-text"><i class="fas fa-play"></i> Start Session</span>
+                <span class="arrow-bg"><i class="fas fa-arrow-right"></i></span>
+            </button>
+            <button class="home-btn" id="homeHiraganaBtn">
+                <span class="btn-text"><i class="fas fa-font"></i> Hiragana</span>
+                <span class="arrow-bg"><i class="fas fa-arrow-right"></i></span>
+            </button>
+            <button class="home-btn" id="homeAchievementsBtn">
+                <span class="btn-text"><i class="fas fa-trophy"></i> Achievements</span>
+                <span class="arrow-bg"><i class="fas fa-arrow-right"></i></span>
+            </button>
+            <button class="home-btn" id="homeStorageBtn">
+                <span class="btn-text"><i class="fas fa-box"></i> Storage</span>
+                <span class="arrow-bg"><i class="fas fa-arrow-right"></i></span>
+            </button>
+            <button class="home-btn" id="homeHistoryBtn">
+                <span class="btn-text"><i class="fas fa-history"></i> History</span>
+                <span class="arrow-bg"><i class="fas fa-arrow-right"></i></span>
+            </button>
+        </div>
+
+        <div id="hiraganaSection" class="hiragana-section hidden">
+            <div class="section-header">
+                <span class="section-title"><i class="fas fa-font"></i> Hiragana</span>
+                <button class="back-to-home-btn" id="backFromHiraganaBtn"><i class="fas fa-arrow-left"></i> Home</button>
+            </div>
+            <div class="grid-scroll">
+                <div id="grid" class="grid"></div>
+            </div>
+        </div>
+
+        <div id="learningArea" class="learning-section hidden">
+            <div class="section-header">
+                <span class="learning-progress" id="learningProgress">0/0</span>
+                <span id="timerDisplay" class="timer hidden"></span>
+                <button class="back-to-home-btn" id="backToHomeFromLearningBtn"><i class="fas fa-arrow-left"></i> Home</button>
+            </div>
+            <div id="learningContent"></div>
+        </div>
+
+        <div id="achievementsArea" class="achievements-section hidden">
+            <div class="section-header">
+                <span class="section-title"><i class="fas fa-trophy"></i> Achievements</span>
+                <button class="back-to-home-btn" id="backFromAchievementsBtn"><i class="fas fa-arrow-left"></i> Home</button>
+            </div>
+            <div id="achievementsContent" class="achievements-grid"></div>
+        </div>
+
+        <div id="historyArea" class="history-section hidden">
+            <div class="section-header">
+                <span class="section-title"><i class="fas fa-history"></i> History</span>
+                <button class="back-to-home-btn" id="backFromHistoryBtn"><i class="fas fa-arrow-left"></i> Home</button>
+            </div>
+            <button id="clearHistoryBtn" class="clear-all-btn"><i class="fas fa-trash"></i> Clear All History</button>
+            <div id="historyContent" class="history-list"></div>
+        </div>
+        
+        <footer class="fade-in">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Hiragana Learner</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" id="closePopupBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tools-grid" id="popupContent"></div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            let hiraganaData = [];
+            let userScores = JSON.parse(localStorage.getItem('hiraganaScores') || '{}');
+            let unlockedAchievements = JSON.parse(localStorage.getItem('unlockedAchievements') || '[]');
+            let streak = parseInt(localStorage.getItem('hiraganaStreak') || '0');
+            let lastCheckin = localStorage.getItem('hiraganaLastCheckin') || null;
+            let stars = parseInt(localStorage.getItem('hiraganaStars') || '1');
+            let hintModeEnabled = localStorage.getItem('hintModeEnabled') === 'true';
+            let currentSession = null;
+            let timerInterval = null;
+            let currentMode = 'letter';
+
+            const homeSection = document.getElementById('homeSection');
+            const hiraganaSection = document.getElementById('hiraganaSection');
+            const learningArea = document.getElementById('learningArea');
+            const achievementsArea = document.getElementById('achievementsArea');
+            const historyArea = document.getElementById('historyArea');
+            
+            const gridEl = document.getElementById('grid');
+            const learningContent = document.getElementById('learningContent');
+            const learningProgress = document.getElementById('learningProgress');
+            const timerDisplay = document.getElementById('timerDisplay');
+            
+            const backFromHiraganaBtn = document.getElementById('backFromHiraganaBtn');
+            const backToHomeFromLearningBtn = document.getElementById('backToHomeFromLearningBtn');
+            const backFromAchievementsBtn = document.getElementById('backFromAchievementsBtn');
+            const backFromHistoryBtn = document.getElementById('backFromHistoryBtn');
+            const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+            
+            const homeStartBtn = document.getElementById('homeStartBtn');
+            const homeHiraganaBtn = document.getElementById('homeHiraganaBtn');
+            const homeAchievementsBtn = document.getElementById('homeAchievementsBtn');
+            const homeStorageBtn = document.getElementById('homeStorageBtn');
+            const homeHistoryBtn = document.getElementById('homeHistoryBtn');
+            
+            const popup = document.getElementById('universalPopup');
+            const popupTitle = document.getElementById('popupTitle');
+            const popupContent = document.getElementById('popupContent');
+            const closePopupBtn = document.getElementById('closePopupBtn');
+
+            const easySet = ['a','i','u','e','o','ka','ki','ku','ke','ko'];
+            const mediumSet = ['sa','shi','su','se','so','ta','chi','tsu','te','to','na','ni','nu','ne','no'];
+            const hardSet = ['ha','hi','fu','he','ho','ma','mi','mu','me','mo','ya','yu','yo','ra','ri','ru','re','ro','wa','n'];
+
+            const easySentences = [
+                { jp: 'ねこ', romaji: 'neko' },
+                { jp: 'いぬ', romaji: 'inu' },
+                { jp: 'さくら', romaji: 'sakura' },
+                { jp: 'やま', romaji: 'yama' },
+                { jp: 'かわ', romaji: 'kawa' },
+                { jp: 'あめ', romaji: 'ame' },
+                { jp: 'ほし', romaji: 'hoshi' },
+                { jp: 'つき', romaji: 'tsuki' },
+                { jp: 'たいよう', romaji: 'taiyou' },
+                { jp: 'はな', romaji: 'hana' }
+            ];
+            const mediumSentences = [
+                { jp: 'くるま', romaji: 'kuruma' },
+                { jp: 'とけい', romaji: 'tokei' },
+                { jp: 'でんわ', romaji: 'denwa' },
+                { jp: 'がっこう', romaji: 'gakkou' },
+                { jp: 'せんせい', romaji: 'sensei' },
+                { jp: 'ほんや', romaji: 'honya' },
+                { jp: 'えき', romaji: 'eki' },
+                { jp: 'びょういん', romaji: 'byouin' },
+                { jp: 'こうえん', romaji: 'kouen' },
+                { jp: 'としょかん', romaji: 'toshokan' }
+            ];
+            const hardSentences = [
+                { jp: 'ごはんをたべる', romaji: 'gohan wo taberu' },
+                { jp: 'にほんごをべんきょうする', romaji: 'nihongo wo benkyou suru' },
+                { jp: 'えいがをみる', romaji: 'eiga wo miru' },
+                { jp: 'ともだちとはなす', romaji: 'tomodachi to hanasu' },
+                { jp: 'ほんをよむ', romaji: 'hon wo yomu' },
+                { jp: 'みずをのむ', romaji: 'mizu wo nomu' },
+                { jp: 'てがみをかく', romaji: 'tegami wo kaku' },
+                { jp: 'おんがくをきく', romaji: 'ongaku wo kiku' },
+                { jp: 'しゃしんをとる', romaji: 'shashin wo toru' },
+                { jp: 'ともだちにあう', romaji: 'tomodachi ni au' }
+            ];
+
+            async function loadHiraganaFromAPIs() {
+                const primary = 'https://raw.githubusercontent.com/davidluzgouveia/kana-data/master/kana.json';
+                const secondary = 'https://cdn.jsdelivr.net/gh/davidluzgouveia/kana-data@master/kana.json';
+                const fallback = [
+                    {jp: 'あ', romaji: 'a'},{jp: 'い', romaji: 'i'},{jp: 'う', romaji: 'u'},{jp: 'え', romaji: 'e'},{jp: 'お', romaji: 'o'},
+                    {jp: 'か', romaji: 'ka'},{jp: 'き', romaji: 'ki'},{jp: 'く', romaji: 'ku'},{jp: 'け', romaji: 'ke'},{jp: 'こ', romaji: 'ko'},
+                    {jp: 'さ', romaji: 'sa'},{jp: 'し', romaji: 'shi'},{jp: 'す', romaji: 'su'},{jp: 'せ', romaji: 'se'},{jp: 'そ', romaji: 'so'},
+                    {jp: 'た', romaji: 'ta'},{jp: 'ち', romaji: 'chi'},{jp: 'つ', romaji: 'tsu'},{jp: 'て', romaji: 'te'},{jp: 'と', romaji: 'to'},
+                    {jp: 'な', romaji: 'na'},{jp: 'に', romaji: 'ni'},{jp: 'ぬ', romaji: 'nu'},{jp: 'ね', romaji: 'ne'},{jp: 'の', romaji: 'no'},
+                    {jp: 'は', romaji: 'ha'},{jp: 'ひ', romaji: 'hi'},{jp: 'ふ', romaji: 'fu'},{jp: 'へ', romaji: 'he'},{jp: 'ほ', romaji: 'ho'},
+                    {jp: 'ま', romaji: 'ma'},{jp: 'み', romaji: 'mi'},{jp: 'む', romaji: 'mu'},{jp: 'め', romaji: 'me'},{jp: 'も', romaji: 'mo'},
+                    {jp: 'や', romaji: 'ya'},{jp: 'ゆ', romaji: 'yu'},{jp: 'よ', romaji: 'yo'},{jp: 'ら', romaji: 'ra'},{jp: 'り', romaji: 'ri'},
+                    {jp: 'る', romaji: 'ru'},{jp: 'れ', romaji: 're'},{jp: 'ろ', romaji: 'ro'},{jp: 'わ', romaji: 'wa'},{jp: 'を', romaji: 'wo'},
+                    {jp: 'ん', romaji: 'n'}
+                ];
+                try {
+                    let response = await fetch(primary);
+                    if (!response.ok) throw new Error('primary failed');
+                    let data = await response.json();
+                    hiraganaData = data.hiragana || data; 
+                } catch {
+                    try {
+                        let response2 = await fetch(secondary);
+                        if (!response2.ok) throw new Error('secondary failed');
+                        let data2 = await response2.json();
+                        hiraganaData = data2.hiragana || data2;
+                    } catch {
+                        hiraganaData = fallback;
+                    }
+                }
+                if (!Array.isArray(hiraganaData) || hiraganaData.length === 0) hiraganaData = fallback;
+                renderGrid();
+            }
+
+            function renderGrid() {
+                gridEl.innerHTML = '';
+                hiraganaData.forEach(char => {
+                    const roma = char.romaji || char.roman || char.kana; 
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    const count = userScores[roma] || 0;
+                    tile.innerHTML = `
+                        <span class="jp">${char.jp || char.character || char.kana || ''}</span>
+                        <span class="romaji">${roma}</span>
+                        <span class="score-badge">${count}</span>
+                    `;
+                    gridEl.appendChild(tile);
+                });
+            }
+
+            function updateScore(romaji) {
+                userScores[romaji] = (userScores[romaji] || 0) + 1;
+                localStorage.setItem('hiraganaScores', JSON.stringify(userScores));
+                renderGrid();
+                checkAchievementsAndNotify();
+            }
+
+            function updateCheckinStreak() {
+                const today = new Date().toISOString().split('T')[0];
+                let currentStreak = parseInt(localStorage.getItem('hiraganaStreak') || '0');
+                let last = localStorage.getItem('hiraganaLastCheckin');
+                if (last === today) return;
+                let newStreak = 1;
+                if (last) {
+                    const lastDate = new Date(last);
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdayStr = yesterday.toISOString().split('T')[0];
+                    if (last === yesterdayStr) newStreak = currentStreak + 1;
+                    else newStreak = 1;
+                }
+                localStorage.setItem('hiraganaStreak', newStreak);
+                localStorage.setItem('hiraganaLastCheckin', today);
+                let currentStars = parseInt(localStorage.getItem('hiraganaStars') || '1');
+                if (newStreak % 2 === 0 && newStreak > currentStreak) {
+                    currentStars += 1;
+                    localStorage.setItem('hiraganaStars', currentStars);
+                }
+                streak = newStreak;
+                stars = currentStars;
+                lastCheckin = today;
+            }
+
+            function closePopup() { popup.style.display = 'none'; }
+            closePopupBtn.addEventListener('click', closePopup);
+            window.addEventListener('click', (e) => { if (e.target === popup) closePopup(); });
+
+            function showModeSelection() {
+                popupTitle.innerText = 'Choose your path';
+                popupContent.innerHTML = `
+                    <button class="mode-btn" id="letterModeBtn">
+                        <span><i class="fas fa-font"></i> Letter</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button class="mode-btn" id="sentenceModeBtn">
+                        <span><i class="fas fa-envelope"></i> Sentence</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button class="mode-btn" id="fixerModeBtn" disabled style="opacity:0.5;">
+                        <span><i class="fas fa-tools"></i> Fixer (Soon)</span>
+                        <i class="fas fa-clock"></i>
+                    </button>
+                `;
+                popup.style.display = 'flex';
+                document.getElementById('letterModeBtn').addEventListener('click', () => {
+                    currentMode = 'letter';
+                    closePopup();
+                    showDifficultySelection();
+                });
+                document.getElementById('sentenceModeBtn').addEventListener('click', () => {
+                    currentMode = 'sentence';
+                    closePopup();
+                    showDifficultySelection();
+                });
+            }
+
+            function showDifficultySelection() {
+                popupTitle.innerText = 'Select difficulty';
+                popupContent.innerHTML = `
+                    <button class="difficulty-btn" data-difficulty="easy">
+                        <span><i class="fas fa-seedling"></i> Easy (10 items)</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button class="difficulty-btn" data-difficulty="medium">
+                        <span><i class="fas fa-bolt"></i> Medium (10 items)</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button class="difficulty-btn" data-difficulty="hard">
+                        <span><i class="fas fa-skull"></i> Hard (10 items)</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button class="difficulty-btn" data-difficulty="challenge">
+                        <span><i class="fas fa-hourglass-half"></i> Challenge (1m30s)</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button class="back-option" id="backToModesBtn"><i class="fas fa-arrow-left"></i> Back</button>
+                `;
+                popup.style.display = 'flex';
+                document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const diff = btn.dataset.difficulty;
+                        closePopup();
+                        if (currentMode === 'letter') startLetterLearning(diff);
+                        else startSentenceLearning(diff);
+                    });
+                });
+                document.getElementById('backToModesBtn').addEventListener('click', () => {
+                    showModeSelection();
+                });
+            }
+
+            function startLetterLearning(difficulty) {
+                let selectedRomaji = [];
+                let totalLetters = 0;
+                if (difficulty === 'easy') { selectedRomaji = easySet; totalLetters = 10; }
+                else if (difficulty === 'medium') { selectedRomaji = mediumSet; totalLetters = 15; }
+                else if (difficulty === 'hard') { selectedRomaji = hardSet; totalLetters = 20; }
+                else if (difficulty === 'challenge') {
+                    const allRomaji = hiraganaData.map(c => c.romaji || c.roman || c.kana).filter(Boolean);
+                    const shuffled = [...new Set(allRomaji)].sort(() => Math.random() - 0.5);
+                    selectedRomaji = shuffled.slice(0, 20);
+                    totalLetters = 20;
+                }
+                const selected = hiraganaData
+                    .filter(c => selectedRomaji.includes(c.romaji || c.roman || c.kana))
+                    .map(c => ({ jp: c.jp || c.character || c.kana, romaji: c.romaji || c.roman || c.kana }));
+                const shuffled = selected.sort(() => Math.random() - 0.5);
+                const useHint = hintModeEnabled && (difficulty === 'hard' || difficulty === 'challenge');
+                if (useHint) {
+                    hintModeEnabled = false;
+                    localStorage.setItem('hintModeEnabled', 'false');
+                }
+                currentSession = {
+                    items: shuffled,
+                    currentIndex: 0,
+                    correct: 0,
+                    wrong: 0,
+                    total: shuffled.length,
+                    difficulty: difficulty,
+                    results: [],
+                    timeRemaining: difficulty === 'challenge' ? 90 : null,
+                    timerExpired: false,
+                    useHint: useHint,
+                    type: 'letter'
+                };
+                startLearningUI(difficulty);
+            }
+
+            function startSentenceLearning(difficulty) {
+                let sentences = [];
+                if (difficulty === 'easy') sentences = easySentences;
+                else if (difficulty === 'medium') sentences = mediumSentences;
+                else if (difficulty === 'hard') sentences = hardSentences;
+                else if (difficulty === 'challenge') {
+                    const all = [...easySentences, ...mediumSentences, ...hardSentences];
+                    sentences = all.sort(() => Math.random() - 0.5).slice(0, 10);
+                }
+                const shuffled = sentences.sort(() => Math.random() - 0.5);
+                const useHint = hintModeEnabled && (difficulty === 'hard' || difficulty === 'challenge');
+                if (useHint) {
+                    hintModeEnabled = false;
+                    localStorage.setItem('hintModeEnabled', 'false');
+                }
+                currentSession = {
+                    items: shuffled,
+                    currentIndex: 0,
+                    correct: 0,
+                    wrong: 0,
+                    total: shuffled.length,
+                    difficulty: difficulty,
+                    results: [],
+                    timeRemaining: difficulty === 'challenge' ? 90 : null,
+                    timerExpired: false,
+                    useHint: useHint,
+                    type: 'sentence'
+                };
+                startLearningUI(difficulty);
+            }
+
+            function startLearningUI(difficulty) {
+                homeSection.classList.add('hidden');
+                hiraganaSection.classList.add('hidden');
+                achievementsArea.classList.add('hidden');
+                historyArea.classList.add('hidden');
+                learningArea.classList.remove('hidden');
+                if (difficulty === 'challenge') {
+                    timerDisplay.classList.remove('hidden');
+                    startTimer();
+                } else {
+                    timerDisplay.classList.add('hidden');
+                }
+                renderLearningQuestion();
+            }
+
+            function startTimer() {
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    if (!currentSession || currentSession.timerExpired) return;
+                    currentSession.timeRemaining -= 1;
+                    timerDisplay.innerText = `⏱️ ${currentSession.timeRemaining}s`;
+                    if (currentSession.timeRemaining <= 0) {
+                        clearInterval(timerInterval);
+                        timerExpired();
+                    }
+                }, 1000);
+            }
+
+            function timerExpired() {
+                if (!currentSession) return;
+                currentSession.timerExpired = true;
+                learningContent.innerHTML = `<div class="result-summary">Time's up! Challenge failed. No progress saved.</div>`;
+                document.getElementById('answerInput')?.remove();
+                setTimeout(() => {
+                    goHome();
+                }, 2000);
+            }
+
+            function renderLearningQuestion() {
+                if (currentSession.timerExpired) return;
+                const idx = currentSession.currentIndex;
+                const item = currentSession.items[idx];
+                learningProgress.innerText = `${idx+1}/${currentSession.total}`;
+                const showHint = currentSession.useHint && Math.random() < 0.3;
+                const bigLetterClass = currentSession.type === 'sentence' ? 'big-letter sentence-mode' : 'big-letter';
+                learningContent.innerHTML = `
+                    <div class="${bigLetterClass}">${item.jp}${showHint ? `<div class="hint-romaji">${item.romaji}</div>` : ''}</div>
+                    <input type="text" class="answer-input" id="answerInput" placeholder="romaji" autofocus>
+                    <div class="check-next-group">
+                        <button class="check-btn" id="checkAnswerBtn"><i class="fas fa-check"></i> Check</button>
+                        <button class="next-btn" id="nextLetterBtn" disabled><i class="fas fa-arrow-right"></i> Next</button>
+                    </div>
+                `;
+                const input = document.getElementById('answerInput');
+                const checkBtn = document.getElementById('checkAnswerBtn');
+                const nextBtn = document.getElementById('nextLetterBtn');
+                setTimeout(() => { if (input) input.focus(); }, 100);
+
+                checkBtn.addEventListener('click', () => {
+                    if (currentSession.timerExpired) return;
+                    const answer = input.value.trim().toLowerCase();
+                    const correct = item.romaji.toLowerCase();
+                    const isCorrect = answer === correct;
+                    if (isCorrect) {
+                        currentSession.correct++;
+                        if (currentSession.type === 'letter') updateScore(item.romaji);
+                        window.showMessage('Correct!');
+                    } else {
+                        currentSession.wrong++;
+                        window.showMessage(`Wrong... (${correct})`);
+                    }
+                    currentSession.results.push({ letter: item.jp, romaji: correct, correct: isCorrect });
+                    input.disabled = true;
+                    checkBtn.disabled = true;
+                    nextBtn.disabled = false;
+                });
+
+                nextBtn.addEventListener('click', () => {
+                    if (currentSession.timerExpired) return;
+                    if (currentSession.currentIndex + 1 < currentSession.total) {
+                        currentSession.currentIndex++;
+                        renderLearningQuestion();
+                    } else {
+                        finishLearning();
+                    }
+                });
+
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !checkBtn.disabled) checkBtn.click();
+                });
+            }
+
+            function finishLearning() {
+                if (currentSession.timerExpired) return;
+                if (timerInterval) clearInterval(timerInterval);
+                const s = currentSession;
+                const correctLetters = s.results.filter(r => r.correct).map(r => r.letter);
+                const wrongLetters = s.results.filter(r => !r.correct).map(r => r.letter);
+                const historyEntry = { mode: s.type === 'letter' ? 'Letter' : 'Sentence', difficulty: s.difficulty, correct: s.correct, wrong: s.wrong, date: new Date().toISOString() };
+                let hist = JSON.parse(localStorage.getItem('hiraganaHistory') || '[]');
+                hist.push(historyEntry);
+                localStorage.setItem('hiraganaHistory', JSON.stringify(hist));
+                updateCheckinStreak();
+                learningContent.innerHTML = `
+                    <div class="result-summary">
+                        <div class="letter-list">
+                            ${correctLetters.map(l => `<span class="letter-badge correct"><i class="fas fa-check"></i> ${l}</span>`).join('')}
+                            ${wrongLetters.map(l => `<span class="letter-badge wrong"><i class="fas fa-times"></i> ${l}</span>`).join('')}
+                        </div>
+                        <button class="action-btn" id="newSessionBtn"><span>New session</span> <i class="fas fa-arrow-right"></i></button>
+                    </div>
+                `;
+                document.getElementById('newSessionBtn').addEventListener('click', () => {
+                    goHome();
+                    showDifficultySelection();
+                });
+                checkAchievementsAndNotify();
+            }
+
+            function checkAchievementsAndNotify() {
+                const totalCorrect = Object.values(userScores).reduce((a,b) => a + b, 0);
+                const masteredCount = Object.values(userScores).filter(v => v >= 5).length;
+                const history = JSON.parse(localStorage.getItem('hiraganaHistory') || '[]');
+                const sessionsCount = history.length;
+                const hasHardSession = history.some(h => h.difficulty === 'hard' && h.mode === 'Letter');
+                const challengeCount = history.filter(h => h.difficulty === 'challenge').length;
+                const hundredCorrect = totalCorrect >= 100;
+                const challengerThree = challengeCount >= 3;
+                const sentenceModesCompleted = ['easy','medium','hard'].every(diff => history.some(h => h.mode === 'Sentence' && h.difficulty === diff));
+                const hardSentenceSessions = history.filter(h => h.mode === 'Sentence' && h.difficulty === 'hard').length >= 5;
+
+                const states = {
+                    first_correct: totalCorrect >= 1,
+                    ten_correct: totalCorrect >= 10,
+                    master_five: masteredCount >= 5,
+                    first_session: sessionsCount >= 1,
+                    five_sessions: sessionsCount >= 5,
+                    hard_worker: hasHardSession,
+                    hundred_correct: hundredCorrect,
+                    challenger_three: challengerThree,
+                    dizzy_head: sentenceModesCompleted,
+                    book_eater: hardSentenceSessions
+                };
+                const allOtherUnlocked = Object.keys(states).filter(k => k !== 'all_achievements').every(k => states[k]);
+                states.all_achievements = allOtherUnlocked;
+
+                const achievementNames = {
+                    first_correct: 'First Correct',
+                    ten_correct: '10 Corrects',
+                    master_five: 'Master 5',
+                    first_session: 'First Session',
+                    five_sessions: '5 Sessions',
+                    hard_worker: 'Hard Worker',
+                    hundred_correct: '100 Total Correct',
+                    challenger_three: 'Challenger',
+                    dizzy_head: 'Dizzy Head',
+                    book_eater: 'Book Eater',
+                    all_achievements: 'Unlock All Achievements'
+                };
+
+                const rewardStars = {
+                    first_correct: 1,
+                    ten_correct: 1,
+                    master_five: 1,
+                    first_session: 1,
+                    five_sessions: 1,
+                    hard_worker: 1,
+                    hundred_correct: 1,
+                    challenger_three: 1,
+                    dizzy_head: 1,
+                    book_eater: 1,
+                    all_achievements: 3
+                };
+
+                const newlyUnlocked = [];
+                for (let [id, unlocked] of Object.entries(states)) {
+                    if (unlocked && !unlockedAchievements.includes(id)) {
+                        newlyUnlocked.push(id);
+                        unlockedAchievements.push(id);
+                        let currentStars = parseInt(localStorage.getItem('hiraganaStars') || '1');
+                        currentStars += rewardStars[id];
+                        localStorage.setItem('hiraganaStars', currentStars);
+                        stars = currentStars;
+                    }
+                }
+                if (newlyUnlocked.length > 0) {
+                    localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievements));
+                    newlyUnlocked.forEach(id => {
+                        window.showMessage(`Achievement: ${achievementNames[id]} +${rewardStars[id]}⭐`);
+                    });
+                }
+            }
+
+            function renderAchievements() {
+                const achievementList = [
+                    { id: 'first_correct', name: 'First Correct', desc: 'Get one correct answer' },
+                    { id: 'ten_correct', name: '10 Corrects', desc: 'Get 10 correct answers' },
+                    { id: 'master_five', name: 'Master 5', desc: 'Master 5 letters (score ≥5)' },
+                    { id: 'first_session', name: 'First Session', desc: 'Complete one learning session' },
+                    { id: 'five_sessions', name: '5 Sessions', desc: 'Complete 5 sessions' },
+                    { id: 'hard_worker', name: 'Hard Worker', desc: 'Complete a hard letter session' },
+                    { id: 'hundred_correct', name: '100 Total Correct', desc: 'Get 100 correct answers overall' },
+                    { id: 'challenger_three', name: 'Challenger', desc: 'Complete Challenge difficulty 3 times' },
+                    { id: 'dizzy_head', name: 'Dizzy Head', desc: 'Complete all three Sentence modes' },
+                    { id: 'book_eater', name: 'Book Eater', desc: 'Complete 5 hard Sentence sessions' },
+                    { id: 'all_achievements', name: 'Unlock All Aachievements', desc: 'Unlock every other achievement' }
+                ];
+                achievementsContent.innerHTML = achievementList.map(a => {
+                    const unlocked = unlockedAchievements.includes(a.id);
+                    return `
+                    <div class="achievement-card">
+                        <div class="achievement-info">
+                            <div class="achievement-name">${a.name}</div>
+                            <div class="achievement-desc">${a.desc}</div>
+                        </div>
+                        <div class="achievement-status ${unlocked ? 'unlocked' : 'locked'}">
+                            ${unlocked ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-times-circle"></i>'}
+                        </div>
+                    </div>
+                `}).join('');
+            }
+
+            function renderHistoryList() {
+                const history = JSON.parse(localStorage.getItem('hiraganaHistory') || '[]');
+                if (history.length === 0) {
+                    historyContent.innerHTML = '<div class="history-card" style="text-align:center;">No sessions yet</div>';
+                    return;
+                }
+                historyContent.innerHTML = history.reverse().map((entry, index) => `
+                    <div class="history-card">
+                        <div class="history-row"><span class="history-date">${new Date(entry.date).toLocaleString()}</span></div>
+                        <div class="history-row"><span>Correct: <span class="history-correct">${entry.correct}</span> / ${entry.correct+entry.wrong}</span><span>${entry.mode} ${entry.difficulty}</span></div>
+                    </div>
+                `).join('');
+            }
+
+            function clearHistory() {
+                if (confirm('Clear all history?')) {
+                    localStorage.removeItem('hiraganaHistory');
+                    renderHistoryList();
+                }
+                window.showMessage('All history has been deleted');
+            }
+
+            function showStorageMenu() {
+                streak = parseInt(localStorage.getItem('hiraganaStreak') || '0');
+                stars = parseInt(localStorage.getItem('hiraganaStars') || '1');
+                const streakIconColor = streak >= 2 ? 'var(--accent-color)' : 'white';
+                popupTitle.innerText = 'Storage';
+                popupContent.innerHTML = `
+                    <div class="info-bar">
+                        <span><i class="fas fa-fire" style="color: ${streakIconColor};"></i> Streak</span>
+                        <strong>${streak} days</strong>
+                    </div>
+                    <button class="action-btn" id="useStarBtn" ${stars > 0 ? '' : 'disabled'}>
+                        <span>Use Insight Star</span>
+                        <span>${stars} <i class="fas fa-star"></i></span>
+                    </button>
+                    <p style="color: #aaa; font-size: 0.9rem;">Using an Insight Star enables romaji hints for the next Hard/Challenge session (appears randomly).</p>
+                    <p style="color: #aaa; font-size: 0.9rem;">Insight Stars are earned from achievements and every 2-day check-in streak.</p>
+                `;
+                popup.style.display = 'flex';
+                const useBtn = document.getElementById('useStarBtn');
+                if (useBtn) {
+                    useBtn.addEventListener('click', () => {
+                        let currentStars = parseInt(localStorage.getItem('hiraganaStars') || '1');
+                        if (currentStars > 0) {
+                            currentStars -= 1;
+                            localStorage.setItem('hiraganaStars', currentStars);
+                            localStorage.setItem('hintModeEnabled', 'true');
+                            hintModeEnabled = true;
+                            stars = currentStars;
+                            showStorageMenu();
+                            window.showMessage('Insight Star activated for one session');
+                        }
+                    });
+                }
+            }
+
+            function goHome() {
+                if (timerInterval) clearInterval(timerInterval);
+                homeSection.classList.remove('hidden');
+                hiraganaSection.classList.add('hidden');
+                learningArea.classList.add('hidden');
+                achievementsArea.classList.add('hidden');
+                historyArea.classList.add('hidden');
+                currentSession = null;
+            }
+
+            homeStartBtn.addEventListener('click', () => {
+                showModeSelection();
+            });
+            homeHiraganaBtn.addEventListener('click', () => {
+                homeSection.classList.add('hidden');
+                hiraganaSection.classList.remove('hidden');
+                renderGrid();
+            });
+            homeAchievementsBtn.addEventListener('click', () => {
+                homeSection.classList.add('hidden');
+                achievementsArea.classList.remove('hidden');
+                renderAchievements();
+            });
+            homeStorageBtn.addEventListener('click', () => {
+                showStorageMenu();
+            });
+            homeHistoryBtn.addEventListener('click', () => {
+                homeSection.classList.add('hidden');
+                historyArea.classList.remove('hidden');
+                renderHistoryList();
+            });
+
+            backFromHiraganaBtn.addEventListener('click', goHome);
+            backToHomeFromLearningBtn.addEventListener('click', goHome);
+            backFromAchievementsBtn.addEventListener('click', goHome);
+            backFromHistoryBtn.addEventListener('click', goHome);
+            clearHistoryBtn.addEventListener('click', clearHistory);
+
+            loadHiraganaFromAPIs();
+        })();
+    </script>
+</body>
+</html>
