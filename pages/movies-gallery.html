@@ -7,6 +7,7 @@
     <meta name="color-scheme" content="dark">
     <script src="../protections.js"></script>
     <script src="../auth-check.js"></script>
+    <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -30,19 +31,33 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
+
         body {
             background-color: var(--bg-black);
             color: var(--text-primary);
-            max-width: 420px;
-            margin: 0 auto;
-            padding: 16px;
-            padding-bottom: 30px;
             min-height: 100vh;
             background-image: 
                 radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
                 radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+            padding-bottom: 90px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+            min-height: calc(100vh - 90px);
+        }
+        @media (min-width: 720px) {
+            body {
+                max-width: 1200px;
+                padding: 24px 32px;
+            }
         }
         .header {
             display: flex;
@@ -98,6 +113,24 @@
             outline: none;
             width: 120px;
         }
+        .settings-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        .settings-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--accent-color);
+        }
         .search-container {
             margin-bottom: var(--spacing-md);
             position: relative;
@@ -114,6 +147,12 @@
             color: var(--text-primary);
             font-size: 0.95rem;
             outline: none;
+        }
+        @media (min-width: 720px) {
+            #globalSearch {
+                padding: 16px 52px 16px 20px;
+                font-size: 1.1rem;
+            }
         }
         .search-icon-wrapper {
             position: absolute;
@@ -214,10 +253,38 @@
             font-weight: 600;
         }
         .gallery-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
+            column-count: 2;
+            column-gap: 16px;
             margin-bottom: 30px;
+        }
+        @media (min-width: 720px) {
+            .gallery-grid {
+                column-count: 4;
+                column-gap: 20px;
+            }
+        }
+        .empty-gallery {
+            column-span: all;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            border: 1px dashed var(--border-color);
+            color: var(--text-secondary);
+            text-align: center;
+        }
+        .empty-gallery i {
+            font-size: 48px;
+            color: var(--accent-color);
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+        .empty-gallery p {
+            font-size: 16px;
+            line-height: 1.5;
         }
         .media-card {
             background: var(--bg-card);
@@ -226,28 +293,26 @@
             border: 1px solid var(--border-color);
             transition: all 0.3s ease;
             cursor: pointer;
-            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 16px;
+            break-inside: avoid;
         }
-        .media-card.top-rated-view {
-            border-radius: 30px;
-            min-width: 280px;
-            margin-top: 10px;
+        @media (min-width: 720px) {
+            .media-card {
+                margin-bottom: 20px;
+            }
         }
         .media-card:hover {
             transform: translateY(-6px);
             border-color: var(--accent-color);
             background: var(--bg-card-hover);
         }
-        .media-image {
-            width: 100%;
-            height: 160px;
-            object-fit: cover;
-            display: block;
-            user-select: none;
-            pointer-events: none;
-        }
         .media-content {
             padding: 12px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
         }
         .media-title {
             font-size: 15px;
@@ -283,6 +348,17 @@
             font-size: 11px;
             font-weight: 500;
             margin-top: 4px;
+            align-self: flex-start;
+        }
+        .media-source {
+            display: none;
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-left: 8px;
+            text-transform: capitalize;
+        }
+        .media-card.top-rated-view .media-source {
+            display: inline-block;
         }
         .media-synopsis {
             color: var(--text-secondary);
@@ -317,20 +393,9 @@
             align-items: center;
             justify-content: flex-end;
             gap: 8px;
-            margin-top: 10px;
+            margin-top: auto;
+            padding-top: 10px;
             pointer-events: auto;
-        }
-        .watched-indicator {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 24px;
-            height: 24px;
-            background: rgba(193, 252, 50, 0.2);
-            border-radius: 50%;
-            color: var(--accent-color);
-            font-size: 12px;
-            margin-right: auto;
         }
         .note-action-btn {
             background: rgba(193, 252, 50, 0.1);
@@ -435,81 +500,6 @@
             min-height: 100px;
             resize: vertical;
         }
-        .checkbox-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .custom-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-        .custom-checkbox input {
-            display: none;
-        }
-        .custom-checkbox i {
-            font-size: 20px;
-            color: var(--accent-color);
-        }
-        .image-upload-container {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .image-upload-btn {
-            background: rgba(193, 252, 50, 0.1);
-            color: var(--accent-color);
-            border: 1px solid var(--accent-color);
-            padding: 12px 16px;
-            border-radius: var(--radius-medium);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        .image-upload-btn:hover {
-            background: rgba(193, 252, 50, 0.2);
-        }
-        .image-preview {
-            position: relative;
-            width: 100%;
-            height: 150px;
-            border-radius: var(--radius-medium);
-            overflow: hidden;
-            border: 2px dashed var(--border-color);
-            margin-top: 10px;
-        }
-        .preview-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-        .remove-image-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.7);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
-        .remove-image-btn:hover {
-            background: rgba(255, 100, 100, 0.8);
-            color: white;
-        }
         .form-buttons {
             display: flex;
             gap: 10px;
@@ -551,13 +541,50 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 12px;
             z-index: 100;
         }
-        .fab-main {
+        @media (min-width: 720px) {
+            .fab-container {
+                bottom: 30px;
+                right: 30px;
+                gap: 16px;
+            }
+        }
+        .scroll-pill {
+            background: var(--accent-color);
+            border: 0px;
+            color: black;
+            padding: 10px 23px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        .scroll-pill:hover {
+            background: rgba(193, 252, 50, 0.15);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+        @media (min-width: 720px) {
+            .scroll-pill {
+                padding: 14px 30px;
+                font-size: 16px;
+            }
+        }
+        .fab-square {
             width: 56px;
             height: 56px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
+            border-radius: 16px;
+            background: var(--accent-color);
             border: none;
             color: #000;
             font-size: 24px;
@@ -565,105 +592,21 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
-        .fab-main:hover {
-            transform: scale(1.1) rotate(90deg);
+        .fab-square:hover {
+            transform: scale(1.1);
         }
-        .fab-menu {
-            position: absolute;
-            bottom: 70px;
-            right: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(20px);
-            transition: all 0.3s ease;
+        .fab-square:active {
+            transform: scale(0.9);
         }
-        .fab-container:hover .fab-menu {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-        .fab-item {
-            width: 46px;
-            height: 46px;
-            border-radius: 50%;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-        .fab-item:hover {
-            background: rgba(193, 252, 50, 0.15);
-            color: var(--accent-color);
-            border-color: var(--accent-color);
-            transform: translateY(-5px);
-        }
-        .fab-item:nth-child(1):hover {
-            background: rgba(255, 100, 100, 0.2);
-            color: #ff6464;
-            border-color: #ff6464;
-        }
-        .no-link-notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 100, 100, 0.15);
-            border: 1px solid rgba(255, 100, 100, 0.3);
-            border-radius: var(--radius-medium);
-            padding: 16px;
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-            backdrop-filter: blur(10px);
-            max-width: 300px;
-        }
-        .notification-content {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .notification-content i {
-            font-size: 24px;
-            color: #ff6464;
-        }
-        .notification-content h4 {
-            color: #ff6464;
-            margin-bottom: 4px;
-            font-size: 14px;
-        }
-        .notification-content p {
-            color: var(--text-secondary);
-            font-size: 12px;
-            margin: 0;
-        }
-        .close-notification {
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            margin-left: auto;
-            padding: 4px;
-            border-radius: 4px;
-        }
-        .gallery-grid.horizontal {
-            display: flex;
-            flex-direction: row;
-            overflow-x: auto;
-            gap: 16px;
-            padding-bottom: 20px;
-            scrollbar-width: none;
-        }
-        .gallery-grid.horizontal::-webkit-scrollbar {
-            display: none;
+        @media (min-width: 720px) {
+            .fab-square {
+                width: 72px;
+                height: 72px;
+                border-radius: 24px;
+                font-size: 32px;
+            }
         }
         @keyframes fadeIn {
             from { opacity: 0; }
@@ -676,38 +619,62 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="user-info">
-            <div class="avatar" id="avatarContainer">
-                <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in" onclick="window.location.hash='';">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+
+        <app-header class="fade-in">
+            <div>
+                <h1 class="username">Kiraku Store</h1>
+                <p class="tagline">All in one store for all lildavegoth paid contents</p>
             </div>
-            <div class="username-container" id="usernameContainer">
-                <span class="username" id="usernameDisplay">Guest</span>
-                <input type="text" class="username-input" id="usernameInput" style="display: none;" value="Guest">
+        </app-header>
+            
+        <div class="header">
+            <div class="user-info">
+                <div class="avatar" id="avatarContainer">
+                    <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
+                </div>
+                <div class="username-container" id="usernameContainer">
+                    <span class="username" id="usernameDisplay">Guest</span>
+                    <input type="text" class="username-input" id="usernameInput" style="display: none;" value="Guest">
+                </div>
             </div>
+            <button class="settings-btn" onclick="openSettingsPopup()"><i class="fas fa-cog"></i></button>
         </div>
-    </div>
-
-    <div class="search-container">
-        <div>
-            <input type="text" id="globalSearch" placeholder="Search for anime or movies...">
-            <div class="search-icon-wrapper">
-                <i class="fas fa-search"></i>
+    
+        <div class="search-container">
+            <div>
+                <input type="text" id="globalSearch" placeholder="Search for anime or movies...">
+                <div class="search-icon-wrapper">
+                    <i class="fas fa-search"></i>
+                </div>
             </div>
+            <div class="search-suggestions" id="searchSuggestions"></div>
         </div>
-        <div class="search-suggestions" id="searchSuggestions"></div>
+    
+        <div class="filter-tabs">
+            <div class="filter-tab active" onclick="filterMedia('anime')">Anime</div>
+            <div class="filter-tab" onclick="filterMedia('animeseries')">Anime Series</div>
+            <div class="filter-tab" onclick="filterMedia('movies')">Movies</div>
+            <div class="filter-tab" onclick="filterMedia('series')">Series</div>
+            <div class="filter-tab" onclick="filterMedia('top')">Top Rated</div>
+        </div>
+    
+        <div class="gallery-grid" id="galleryGrid"></div>
+        
+        <footer style="margin-bottom: 100px;">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Kiraku Store</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
     </div>
-
-    <div class="filter-tabs">
-        <div class="filter-tab active" onclick="filterMedia('all')">All Media</div>
-        <div class="filter-tab" onclick="filterMedia('movies')">Movies</div>
-        <div class="filter-tab" onclick="filterMedia('series')">Series</div>
-        <div class="filter-tab" onclick="filterMedia('anime')">Anime</div>
-        <div class="filter-tab" onclick="filterMedia('animeseries')">Anime Series</div>
-        <div class="filter-tab" onclick="filterMedia('top')">Top Rated</div>
-    </div>
-
-    <div class="gallery-grid" id="galleryGrid"></div>
 
     <div id="universalPopup" class="popup-overlay" style="display: none;">
         <div class="popup-content">
@@ -717,51 +684,26 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div id="popupContent" class="popup-form">
-            </div>
+            <div id="popupContent" class="popup-form"></div>
         </div>
     </div>
 
     <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
+    <input type="file" id="importFiles" accept=".md" multiple style="display: none;">
 
     <div class="fab-container">
-        <button class="fab-main" onclick="openAddPopup()"><i class="fas fa-plus"></i></button>
-        <div class="fab-menu">
-            <button class="fab-item" onclick="resetAllData()"><i class="fas fa-trash"></i></button>
-            <button class="fab-item" onclick="window.scrollTo(0,0)"><i class="fas fa-arrow-up"></i></button>
-        </div>
+        <button class="scroll-pill" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-arrow-up"></i></button>
+        <button class="fab-square" onclick="openAddPopup()"><i class="fas fa-plus"></i></button>
     </div>
 
     <script>
-        let mediaData = [
-            {
-                id: 1,
-                name: "Stranger Things",
-                rating: 8.7,
-                genre: "Horror | Mystery",
-                country: "USA",
-                year: "2016-2024",
-                category: "series",
-                image: "https://wallpaperaccess.com/download/stranger-things-poster-825394",
-                synopsis: "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl.",
-                link: "",
-                watched: false
-            },
-            {
-                id: 2,
-                name: "Attack on Titan",
-                rating: 9.0,
-                genre: "Action | Dark Fantasy",
-                country: "Japan",
-                year: "2013-2023",
-                category: "animeseries",
-                image: "https://wallpaperaccess.com/download/attack-on-titan-posters-5286029",
-                synopsis: "After his hometown is destroyed and his mother is killed, young Eren Jaeger vows to cleanse the earth of the giant humanoid Titans.",
-                link: "",
-                watched: true
-            }
-        ];
+        let mediaData = [];
         let editingMediaId = null;
+        const SUGGESTION_LIMIT = 8;
+        const DEBOUNCE_DELAY = 150;
+        let searchTimeout;
+        let suggestionHighlightTimer = null;
+
         function loadData() {
             const saved = localStorage.getItem('mediaGalleryData');
             if (saved) mediaData = JSON.parse(saved);
@@ -773,25 +715,38 @@
         function renderGallery() {
             const gallery = document.getElementById('galleryGrid');
             gallery.innerHTML = '';
-            mediaData.forEach(item => {
+            if (mediaData.length === 0) {
+                gallery.innerHTML = '<div class="empty-gallery"><i class="fas fa-film"></i><p>There are no movies added yet, add one by click + button below</p></div>';
+                return;
+            }
+            const sorted = [...mediaData].sort((a,b) => a.name.localeCompare(b.name));
+            sorted.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'media-card';
                 card.setAttribute('data-category', item.category || '');
                 card.setAttribute('data-id', item.id);
-                const watchedIcon = item.watched ? '<span class="watched-indicator"><i class="fas fa-check"></i></span>' : '';
+                card.id = `media-${item.id}`;
+                const categoryDisplay = {
+                    'movies': 'Movie',
+                    'series': 'Series',
+                    'anime': 'Anime',
+                    'animeseries': 'Anime Series'
+                }[item.category] || item.category;
+                const genreHtml = (item.genre && item.genre !== 'No genre') ? `<span class="media-category">${item.genre}</span>` : '';
+                const yearHtml = (item.year && item.year.toString().trim() !== '') ? `<div class="media-year">${item.year}</div>` : '';
+                const synopsisHtml = (item.synopsis && item.synopsis.trim() !== '') ? `<div class="media-synopsis" id="synopsis-${item.id}">${item.synopsis}</div>` : '';
+                const readMoreHtml = (item.synopsis && item.synopsis.length > 80) ? `<button class="read-more-btn" onclick="toggleSynopsis(event, ${item.id})"><i class="fas fa-chevron-down"></i> Read More</button>` : '';
                 card.innerHTML = `
-                    <img src="${item.image || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop'}" alt="${item.name}" class="media-image">
                     <div class="media-content">
-                        <h3 class="media-title">${item.name}</h3>
+                        <h3 class="media-title">${item.name} <span class="media-source">(${categoryDisplay})</span></h3>
                         <div class="media-row">
                             <div class="media-rating"><i class="fas fa-star"></i> ${item.rating || 'N/A'}</div>
-                            <div class="media-year">${item.year || ''}</div>
+                            ${yearHtml}
                         </div>
-                        <span class="media-category">${item.genre || 'No genre'}</span>
-                        <div class="media-synopsis" id="synopsis-${item.id}">${item.synopsis || 'No synopsis available.'}</div>
-                        ${item.synopsis && item.synopsis.length > 80 ? `<button class="read-more-btn" onclick="toggleSynopsis(event, ${item.id})"><i class="fas fa-chevron-down"></i> Read More</button>` : ''}
+                        ${genreHtml}
+                        ${synopsisHtml}
+                        ${readMoreHtml}
                         <div class="note-actions">
-                            ${watchedIcon}
                             <button class="note-action-btn edit-btn">Edit</button>
                             <button class="note-action-btn delete-btn">Delete</button>
                         </div>
@@ -800,7 +755,7 @@
                 card.addEventListener('dblclick', function(e) {
                     if (!e.target.closest('.note-action-btn') && !e.target.closest('.read-more-btn')) {
                         if (item.link && item.link.trim()) window.open(item.link, '_blank', 'noopener,noreferrer');
-                        else showNoLinkNotification();
+                        else window.showMessage('No link available for this movie.');
                     }
                 });
                 const editBtn = card.querySelector('.edit-btn');
@@ -811,7 +766,7 @@
             });
             const activeTab = document.querySelector('.filter-tab.active');
             if (activeTab) {
-                const cat = activeTab.textContent.toLowerCase().includes('top') ? 'top' : activeTab.textContent.toLowerCase().split(' ')[0];
+                const cat = activeTab.textContent.toLowerCase().includes('top') ? 'top' : activeTab.textContent.toLowerCase().replace(' ', '');
                 applyFilter(cat);
             }
         }
@@ -861,7 +816,122 @@
             saveData();
             renderGallery();
             closeUniversalPopup();
+            window.showMessage('Item deleted');
         }
+        function openSettingsPopup() {
+            const html = `
+                <div style="padding: 20px;">
+                    <div class="form-row">
+                        <button class="submit-btn" style="width:100%; background:#C42833; color:white; border:none;" onclick="resetAllData()"><i class="fas fa-trash"></i> Reset All Data</button>
+                    </div>
+                    <div class="form-row">
+                        <button class="submit-btn" style="width:100%; background:var(--accent-color); color:black; border:none;" onclick="showImportCategoryPopup()"><i class="fas fa-file-import"></i> Import (.md)</button>
+                    </div>
+                    <div class="form-row">
+                        <button class="submit-btn" style="width:100%; background:var(--accent-color); color:black; border:none;" onclick="exportData()"><i class="fas fa-file-export"></i> Export (.md)</button>
+                    </div>
+                </div>
+            `;
+            openUniversalPopup('Settings', html);
+        }
+        function resetAllData() {
+            if (confirm('Reset to empty? This cannot be undone.')) {
+                mediaData = [];
+                saveData();
+                renderGallery();
+                closeUniversalPopup();
+                window.showMessage('All data reset');
+            }
+        }
+        function exportData() {
+            let markdown = '';
+            const grouped = {};
+            mediaData.forEach(item => {
+                let firstChar = item.name.charAt(0).toUpperCase();
+                if (!/^[A-Z]$/.test(firstChar)) firstChar = '#';
+                if (!grouped[firstChar]) grouped[firstChar] = [];
+                grouped[firstChar].push(item);
+            });
+            const sortedKeys = Object.keys(grouped).sort((a,b) => a.localeCompare(b));
+            for (const key of sortedKeys) {
+                markdown += `# ${key}\n`;
+                for (const item of grouped[key]) {
+                    let line = `- ${item.name}`;
+                    if (item.rating && item.rating !== 'N/A') line += ` | #${item.rating}`;
+                    if (item.synopsis && item.synopsis.trim() !== '') line += ` - ${item.synopsis}`;
+                    markdown += line + '\n';
+                }
+                markdown += '\n';
+            }
+            const blob = new Blob([markdown], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'media-export.md';
+            a.click();
+            URL.revokeObjectURL(url);
+            window.showMessage('Export completed');
+        }
+        function showImportCategoryPopup() {
+            const html = `
+                <div style="padding: 20px;">
+                    <p style="margin-bottom: 20px;">Choose category for imported items:</p>
+                    <div class="form-row">
+                        <select class="form-select" id="importCategory">
+                            <option value="movies">Movies</option>
+                            <option value="series">Series</option>
+                            <option value="anime">Anime</option>
+                            <option value="animeseries">Anime Series</option>
+                        </select>
+                    </div>
+                    <div class="form-buttons">
+                        <button class="cancel-btn" onclick="closeUniversalPopup()">Cancel</button>
+                        <button class="submit-btn" onclick="startImport()">Import</button>
+                    </div>
+                </div>
+            `;
+            openUniversalPopup('Import Category', html);
+        }
+        function startImport() {
+            const category = document.getElementById('importCategory').value;
+            closeUniversalPopup();
+            document.getElementById('importFiles').click();
+            window.tempImportCategory = category;
+        }
+        document.getElementById('importFiles').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            if (!files.length) return;
+            const category = window.tempImportCategory || 'movies';
+            Promise.all(files.map(file => file.text())).then(contents => {
+                contents.forEach(content => {
+                    const lines = content.split('\n');
+                    lines.forEach(line => {
+                        line = line.trim();
+                        if (!line.startsWith('- ')) return;
+                        const match = line.match(/^- (.*?)(?:\s*\|\s*#(\d+(?:\.\d+)?)\s*(?:-\s*(.*))?)?$/);
+                        if (match) {
+                            const name = match[1].trim();
+                            const rating = match[2] ? match[2] : 'N/A';
+                            const description = match[3] ? match[3].trim() : '';
+                            mediaData.unshift({
+                                id: Date.now() + Math.random(),
+                                name: name,
+                                rating: rating,
+                                genre: 'No genre',
+                                country: 'Unknown',
+                                year: '',
+                                category: category,
+                                link: '',
+                                synopsis: description,
+                            });
+                        }
+                    });
+                });
+                saveData();
+                renderGallery();
+                window.showMessage('Import completed');
+            });
+        });
         function getAddEditFormHTML() {
             return `
                 <form id="mediaForm" onsubmit="addNewMedia(event)">
@@ -871,7 +941,7 @@
                     </div>
                     <div class="form-row">
                         <label class="form-label">Rating</label>
-                        <input type="text" class="form-input" id="mediaRating" placeholder="e.g., 8.5">
+                        <input type="text" class="form-input" id="mediaRating" placeholder="e.g., 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 or 100">
                     </div>
                     <div class="form-row">
                         <label class="form-label">Genre</label>
@@ -886,7 +956,7 @@
                         <input type="text" class="form-input" id="mediaReleaseYear" placeholder="e.g., 2023">
                     </div>
                     <div class="form-row">
-                        <label class="form-label">Watch Link</label>
+                        <label class="form-label">Watch URL</label>
                         <input type="url" class="form-input" id="mediaLink" placeholder="https://...">
                     </div>
                     <div class="form-row">
@@ -900,29 +970,8 @@
                         </select>
                     </div>
                     <div class="form-row">
-                        <label class="form-label">Synopsis</label>
+                        <label class="form-label">Descriptions</label>
                         <textarea class="form-textarea" id="mediaSynopsis" placeholder="Brief description..."></textarea>
-                    </div>
-                    <div class="form-row checkbox-row">
-                        <label class="custom-checkbox">
-                            <input type="checkbox" id="mediaWatched">
-                            <i class="far fa-circle" id="watchedIcon"></i>
-                            <span>Watched</span>
-                        </label>
-                    </div>
-                    <div class="form-row">
-                        <label class="form-label">Image</label>
-                        <div class="image-upload-container">
-                            <input type="file" class="form-input image-file-input" id="mediaImageFile" accept="image/*" style="display: none;">
-                            <button type="button" class="image-upload-btn" onclick="document.getElementById('mediaImageFile').click()">
-                                <i class="fas fa-image"></i> Choose Image
-                            </button>
-                            <input type="text" class="form-input image-url-input" id="mediaImageUrl" placeholder="Or paste image URL">
-                        </div>
-                        <div id="imagePreview" class="image-preview" style="display: none;">
-                            <img id="previewImage" class="preview-image">
-                            <button type="button" class="remove-image-btn" onclick="removeImagePreview()"><i class="fas fa-times"></i></button>
-                        </div>
                     </div>
                     <div class="form-buttons">
                         <button type="button" class="cancel-btn" onclick="closeUniversalPopup()">Cancel</button>
@@ -931,34 +980,10 @@
                 </form>
             `;
         }
-        document.addEventListener('change', function(e) {
-            if (e.target && e.target.id === 'mediaWatched') {
-                const icon = document.getElementById('watchedIcon');
-                if (e.target.checked) {
-                    icon.className = 'fas fa-circle';
-                } else {
-                    icon.className = 'far fa-circle';
-                }
-            }
-        });
-        function getSelectedImage() {
-            const file = document.getElementById('mediaImageFile').files[0];
-            const url = document.getElementById('mediaImageUrl').value.trim();
-            if (file) {
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve(e.target.result);
-                    reader.readAsDataURL(file);
-                });
-            } else if (url) return Promise.resolve(url);
-            else return Promise.resolve('https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop');
-        }
-        async function addNewMedia(event) {
+        function addNewMedia(event) {
             event.preventDefault();
             const name = document.getElementById('mediaName').value.trim();
             if (!name) return;
-            const imageUrl = await getSelectedImage();
-            const watched = document.getElementById('mediaWatched').checked;
             if (editingMediaId) {
                 const idx = mediaData.findIndex(m => m.id === editingMediaId);
                 if (idx !== -1) {
@@ -968,15 +993,14 @@
                         rating: document.getElementById('mediaRating').value.trim() || 'N/A',
                         genre: document.getElementById('mediaGenre').value.trim() || 'No genre',
                         country: document.getElementById('mediaCountry').value.trim() || 'Unknown',
-                        year: document.getElementById('mediaReleaseYear').value.trim() || new Date().getFullYear(),
+                        year: document.getElementById('mediaReleaseYear').value.trim(),
                         category: document.getElementById('mediaCategory').value || 'movies',
-                        image: imageUrl,
                         link: document.getElementById('mediaLink').value.trim() || '',
-                        synopsis: document.getElementById('mediaSynopsis').value.trim() || 'No synopsis available.',
-                        watched
+                        synopsis: document.getElementById('mediaSynopsis').value.trim(),
                     };
                 }
                 editingMediaId = null;
+                window.showMessage('Movie updated');
             } else {
                 mediaData.unshift({
                     id: Date.now(),
@@ -984,13 +1008,12 @@
                     rating: document.getElementById('mediaRating').value.trim() || 'N/A',
                     genre: document.getElementById('mediaGenre').value.trim() || 'No genre',
                     country: document.getElementById('mediaCountry').value.trim() || 'Unknown',
-                    year: document.getElementById('mediaReleaseYear').value.trim() || new Date().getFullYear(),
+                    year: document.getElementById('mediaReleaseYear').value.trim(),
                     category: document.getElementById('mediaCategory').value || 'movies',
-                    image: imageUrl,
                     link: document.getElementById('mediaLink').value.trim() || '',
-                    synopsis: document.getElementById('mediaSynopsis').value.trim() || 'No synopsis available.',
-                    watched
+                    synopsis: document.getElementById('mediaSynopsis').value.trim(),
                 });
+                window.showMessage('Movie added');
             }
             saveData();
             renderGallery();
@@ -1008,29 +1031,28 @@
             document.getElementById('mediaCategory').value = m.category || 'movies';
             document.getElementById('mediaSynopsis').value = m.synopsis || '';
             document.getElementById('mediaReleaseYear').value = m.year || '';
-            const watchedCheck = document.getElementById('mediaWatched');
-            watchedCheck.checked = m.watched || false;
-            const icon = document.getElementById('watchedIcon');
-            if (watchedCheck.checked) {
-                icon.className = 'fas fa-circle';
-            } else {
-                icon.className = 'far fa-circle';
-            }
-            if (m.image) {
-                document.getElementById('previewImage').src = m.image;
-                document.getElementById('imagePreview').style.display = 'block';
-            }
             editingMediaId = id;
+        }
+        function setActiveTab(category) {
+            const tabs = document.querySelectorAll('.filter-tab');
+            tabs.forEach(t => t.classList.remove('active'));
+            let targetTab;
+            if (category === 'top') targetTab = Array.from(tabs).find(t => t.textContent.toLowerCase().includes('top'));
+            else if (category === 'movies') targetTab = Array.from(tabs).find(t => t.textContent.toLowerCase() === 'movies');
+            else if (category === 'series') targetTab = Array.from(tabs).find(t => t.textContent.toLowerCase() === 'series');
+            else if (category === 'anime') targetTab = Array.from(tabs).find(t => t.textContent.toLowerCase() === 'anime');
+            else if (category === 'animeseries') targetTab = Array.from(tabs).find(t => t.textContent.toLowerCase() === 'anime series');
+            if (targetTab) {
+                targetTab.classList.add('active');
+                applyFilter(category);
+            }
         }
         function applyFilter(cat) {
             document.querySelectorAll('.media-card').forEach(card => {
-                if (cat === 'all') {
-                    card.style.display = 'block';
-                    card.classList.remove('top-rated-view');
-                } else if (cat === 'top') {
+                if (cat === 'top') {
                     const ratingText = card.querySelector('.media-rating').textContent.replace(/[^0-9.]/g, '');
                     const rating = parseFloat(ratingText) || 0;
-                    if (rating >= 9.0) {
+                    if (rating > 10) {
                         card.style.display = 'block';
                         card.classList.add('top-rated-view');
                     } else {
@@ -1047,182 +1069,148 @@
                     card.classList.remove('top-rated-view');
                 }
             });
-            const grid = document.getElementById('galleryGrid');
-            if (cat === 'top') {
-                grid.classList.add('horizontal');
-            } else {
-                grid.classList.remove('horizontal');
-            }
         }
         function filterMedia(cat) {
-            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            applyFilter(cat);
+            setActiveTab(cat);
         }
-        function resetAllData() {
-            openUniversalPopup('Confirm Reset', `
-                <div style="padding: 20px; text-align: center;">
-                    <p style="margin-bottom: 20px;">Reset to default data?</p>
-                    <p style="margin-bottom: 20px; color: var(--text-secondary);">This action cannot be undone.</p>
-                    <div class="form-buttons">
-                        <button class="cancel-btn" onclick="closeUniversalPopup()">Cancel</button>
-                        <button class="submit-btn" onclick="confirmReset()">Reset</button>
-                    </div>
-                </div>
-            `);
-        }
-        function confirmReset() {
-            localStorage.removeItem('mediaGalleryData');
-            mediaData = [
-                {
-                    id: 1,
-                    name: "Stranger Things",
-                    rating: 8.7,
-                    genre: "Horror | Mystery",
-                    country: "USA",
-                    year: "2016-2024",
-                    category: "series",
-                    image: "https://wallpaperaccess.com/download/stranger-things-poster-825394",
-                    synopsis: "When a young boy vanishes, a small town uncovers a mystery involving secret experiments...",
-                    link: "",
-                    watched: false
-                },
-                {
-                    id: 2,
-                    name: "Attack on Titan",
-                    rating: 9.0,
-                    genre: "Action | Dark Fantasy",
-                    country: "Japan",
-                    year: "2013-2023",
-                    category: "animeseries",
-                    image: "https://wallpaperaccess.com/download/attack-on-titan-posters-5286029",
-                    synopsis: "After his hometown is destroyed, young Eren Jaeger vows to cleanse the earth...",
-                    link: "",
-                    watched: true
-                }
-            ];
-            renderGallery();
-            closeUniversalPopup();
-        }
-        function showNoLinkNotification() {
-            const notif = document.createElement('div');
-            notif.className = 'no-link-notification';
-            notif.innerHTML = `
-                <div class="notification-content">
-                    <i class="fas fa-link-slash"></i>
-                    <div><h4>No Link Added</h4><p>There are no links added for this media.</p></div>
-                    <button class="close-notification" onclick="this.parentElement.parentElement.remove()"><i class="fas fa-times"></i></button>
-                </div>`;
-            document.body.appendChild(notif);
-            setTimeout(() => notif.remove(), 4000);
-        }
-        let searchTimeout;
-        function setupSearch() {
+        function setupSearchDebounce() {
             const searchInput = document.getElementById('globalSearch');
             const suggestionsContainer = document.getElementById('searchSuggestions');
-            searchInput.addEventListener('input', function() {
+            searchInput.addEventListener('input', function(event) {
+                event.stopPropagation();
                 clearTimeout(searchTimeout);
-                const term = this.value.trim();
-                if (term.length < 1) {
-                    suggestionsContainer.style.display = 'none';
-                    return;
-                }
-                searchTimeout = setTimeout(() => showSearchSuggestions(term), 300);
-            });
-            searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
+                const value = this.value;
+                searchTimeout = setTimeout(() => {
+                    showSearchSuggestions(value);
+                }, DEBOUNCE_DELAY);
+            }, { passive: true });
+            searchInput.addEventListener('keydown', function(event) {
+                if(event.key === 'Enter') {
+                    event.preventDefault();
                     suggestionsContainer.style.display = 'none';
                     performSearch();
                 }
-            });
-            document.addEventListener('click', function(e) {
-                if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                if(event.key === 'Escape') {
+                    event.preventDefault();
                     suggestionsContainer.style.display = 'none';
                 }
             });
-            suggestionsContainer.addEventListener('click', function(e) {
-                const item = e.target.closest('.search-suggestion-item');
-                if (item) selectSuggestion(item);
-            });
+            suggestionsContainer.addEventListener('click', handleSuggestionClick, { capture: false });
+            document.addEventListener('click', function(event) {
+                const isSearchInput = searchInput.contains(event.target);
+                const isSuggestionsContainer = suggestionsContainer.contains(event.target);
+                if(!isSearchInput && !isSuggestionsContainer) {
+                    hideSuggestions();
+                }
+            }, { capture: true });
+            searchInput.addEventListener('focus', function() {
+                if(this.value.trim()) {
+                    showSearchSuggestions(this.value);
+                }
+            }, { passive: true });
+        }
+        function handleSuggestionClick(event) {
+            const item = event.target.closest('.search-suggestion-item');
+            if(item && item.hasAttribute('data-id')) {
+                event.stopPropagation();
+                event.preventDefault();
+                selectSuggestion(item);
+            }
         }
         function showSearchSuggestions(term) {
-            const suggestions = mediaData.filter(item =>
-                item.name.toLowerCase().includes(term.toLowerCase()) ||
-                (item.synopsis && item.synopsis.toLowerCase().includes(term.toLowerCase()))
-            ).slice(0, 5);
             const container = document.getElementById('searchSuggestions');
-            if (suggestions.length === 0) {
-                container.innerHTML = `<div class="search-suggestion-item"><div class="suggestion-title">No results found</div><div class="suggestion-description">Try different keywords</div></div>`;
-            } else {
-                container.innerHTML = suggestions.map(item => `
-                    <div class="search-suggestion-item" data-id="${item.id}">
-                        <div class="suggestion-title">${item.name}</div>
-                        <div class="suggestion-description">${item.synopsis || ''}</div>
-                        <div class="suggestion-category">${item.category || 'media'}</div>
-                    </div>
-                `).join('');
+            if(!term || !term.trim()) {
+                hideSuggestions();
+                return;
             }
+            const termLower = term.toLowerCase();
+            const matches = filterMediaBatch(termLower);
+            renderSuggestionsList(container, matches);
             container.style.display = 'block';
         }
-        function selectSuggestion(item) {
-            const id = item.getAttribute('data-id');
-            const card = document.querySelector(`.media-card[data-id="${id}"]`);
-            if (card) {
-                const cat = card.getAttribute('data-category');
-                const catMap = {
-                    'movies': 'movies',
-                    'series': 'series',
-                    'anime': 'anime',
-                    'animeseries': 'animeseries'
-                };
-                const filterCat = catMap[cat] || 'all';
-                const tab = Array.from(document.querySelectorAll('.filter-tab')).find(t => t.textContent.toLowerCase().includes(filterCat));
-                if (tab) {
-                    tab.click();
+        function filterMediaBatch(termLower) {
+            const filtered = [];
+            const maxItems = SUGGESTION_LIMIT;
+            for(let i = 0; i < mediaData.length && filtered.length < maxItems; i++) {
+                const item = mediaData[i];
+                const titleMatch = item.name.toLowerCase().includes(termLower);
+                const descMatch = item.synopsis && item.synopsis.toLowerCase().includes(termLower);
+                if(titleMatch || descMatch) {
+                    filtered.push(item);
                 }
-                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                card.style.borderColor = 'var(--accent-color)';
-                card.style.borderWidth = '2px';
-                setTimeout(() => {
-                    card.style.borderColor = 'rgba(255,255,255,0.1)';
-                    card.style.borderWidth = '1px';
-                }, 3000);
-                document.getElementById('searchSuggestions').style.display = 'none';
-                document.getElementById('globalSearch').value = mediaData.find(m => m.id == id).name;
             }
+            return filtered;
+        }
+        function renderSuggestionsList(container, matches) {
+            if(matches.length === 0) {
+                container.innerHTML = `<div class="search-suggestion-item"><div class="suggestion-title">No results found</div><div class="suggestion-description">Try different keywords</div></div>`;
+                return;
+            }
+            const fragment = document.createDocumentFragment();
+            matches.slice(0, SUGGESTION_LIMIT).forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'search-suggestion-item';
+                div.setAttribute('data-id', item.id);
+                div.setAttribute('role', 'option');
+                div.setAttribute('aria-selected', 'false');
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'suggestion-title';
+                titleDiv.textContent = item.name;
+                const descDiv = document.createElement('div');
+                descDiv.className = 'suggestion-description';
+                descDiv.textContent = `${item.genre || 'No genre'} • ${item.category || 'media'}`;
+                div.appendChild(titleDiv);
+                div.appendChild(descDiv);
+                fragment.appendChild(div);
+            });
+            container.innerHTML = '';
+            container.appendChild(fragment);
+        }
+        function hideSuggestions() {
+            const container = document.getElementById('searchSuggestions');
+            container.style.display = 'none';
+            container.innerHTML = '';
+        }
+        function selectSuggestion(item) {
+            const idAttr = item.getAttribute('data-id');
+            if(!idAttr) return;
+            const id = Number(idAttr);
+            const mediaItem = mediaData.find(t => t.id === id);
+            if(!mediaItem) return;
+            document.getElementById('globalSearch').value = mediaItem.name;
+            hideSuggestions();
+            if(document.querySelector('.filter-tab.active')?.textContent.toLowerCase() !== mediaItem.category) {
+                setActiveTab(mediaItem.category);
+            }
+            renderGallery();
+            highlightMediaCard(id);
+        }
+        function highlightMediaCard(mediaId) {
+            requestAnimationFrame(() => {
+                const card = document.getElementById(`media-${mediaId}`);
+                if(card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    clearTimeout(suggestionHighlightTimer);
+                    const originalColor = card.style.borderColor;
+                    card.style.borderColor = '#C1FC32';
+                    card.style.transition = 'border-color 0.3s ease';
+                    suggestionHighlightTimer = setTimeout(() => {
+                        card.style.borderColor = originalColor;
+                    }, 2500);
+                }
+            });
         }
         function performSearch() {
             const term = document.getElementById('globalSearch').value.trim().toLowerCase();
-            if (!term) return;
-            const match = mediaData.find(item =>
-                item.name.toLowerCase().includes(term) ||
-                (item.synopsis && item.synopsis.toLowerCase().includes(term))
-            );
-            if (match) {
-                const card = document.querySelector(`.media-card[data-id="${match.id}"]`);
-                if (card) {
-                    const cat = card.getAttribute('data-category');
-                    const catMap = {
-                        'movies': 'movies',
-                        'series': 'series',
-                        'anime': 'anime',
-                        'animeseries': 'animeseries'
-                    };
-                    const filterCat = catMap[cat] || 'all';
-                    const tab = Array.from(document.querySelectorAll('.filter-tab')).find(t => t.textContent.toLowerCase().includes(filterCat));
-                    if (tab) {
-                        tab.click();
-                    }
-                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    card.style.borderColor = 'var(--accent-color)';
-                    card.style.borderWidth = '2px';
-                    setTimeout(() => {
-                        card.style.borderColor = 'rgba(255,255,255,0.1)';
-                        card.style.borderWidth = '1px';
-                    }, 3000);
-                }
+            if(!term) return;
+            const matches = filterMediaBatch(term);
+            if(matches.length === 0) return;
+            const firstItem = matches[0];
+            if(document.querySelector('.filter-tab.active')?.textContent.toLowerCase() !== firstItem.category) {
+                setActiveTab(firstItem.category);
             }
-            document.getElementById('searchSuggestions').style.display = 'none';
+            renderGallery();
+            highlightMediaCard(firstItem.id);
         }
         document.getElementById('avatarContainer').addEventListener('click', function() {
             document.getElementById('avatarUpload').click();
@@ -1232,8 +1220,7 @@
             if (file && file.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onload = function(ev) {
-                    const avatar = document.getElementById('avatarContainer');
-                    avatar.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+                    document.getElementById('avatarContainer').innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
                     localStorage.setItem('userAvatar', ev.target.result);
                 };
                 reader.readAsDataURL(file);
@@ -1241,7 +1228,6 @@
         });
         const usernameDisplay = document.getElementById('usernameDisplay');
         const usernameInput = document.getElementById('usernameInput');
-        const usernameContainer = document.getElementById('usernameContainer');
         usernameDisplay.addEventListener('click', function() {
             usernameDisplay.style.display = 'none';
             usernameInput.style.display = 'inline-block';
@@ -1266,44 +1252,9 @@
             usernameDisplay.textContent = savedName;
             usernameInput.value = savedName;
         }
-        function handleImageSelect(e) {
-            const file = e.target.files[0];
-            if (!file || !file.type.match('image.*')) return;
-            if (file.size > 5 * 1024 * 1024) { alert('Image too large'); return; }
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                document.getElementById('previewImage').src = ev.target.result;
-                document.getElementById('imagePreview').style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        }
-        function handleImageUrlInput() {
-            const url = document.getElementById('mediaImageUrl').value.trim();
-            if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-                document.getElementById('previewImage').src = url;
-                document.getElementById('imagePreview').style.display = 'block';
-            }
-        }
-        function removeImagePreview() {
-            document.getElementById('imagePreview').style.display = 'none';
-            document.getElementById('mediaImageFile').value = '';
-            document.getElementById('mediaImageUrl').value = '';
-        }
         document.addEventListener('DOMContentLoaded', () => {
             loadData();
-            setupSearch();
-            document.addEventListener('change', function(e) {
-                if (e.target && e.target.id === 'mediaImageFile') handleImageSelect(e);
-            });
-            document.addEventListener('blur', function(e) {
-                if (e.target && e.target.id === 'mediaImageUrl') handleImageUrlInput();
-            }, true);
-            document.addEventListener('input', function(e) {
-                if (e.target && e.target.id === 'mediaImageUrl') {
-                    clearTimeout(window.urlTimeout);
-                    window.urlTimeout = setTimeout(handleImageUrlInput, 800);
-                }
-            });
+            setupSearchDebounce();
         });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeUniversalPopup(); });
     </script>
