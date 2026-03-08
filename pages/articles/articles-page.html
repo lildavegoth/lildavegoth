@@ -153,13 +153,158 @@
             margin: 0 0 20px 0;
         }
 
-        .text {
+        #articleContent {
             font-size: 17px;
             line-height: 1.6;
-            margin: 0 0 20px 0;
             color: var(--text-primary);
         }
-        
+
+        #articleContent a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        #articleContent a:hover {
+            text-decoration: underline;
+        }
+
+        #articleContent strong {
+            color: var(--accent-color);
+        }
+
+        #articleContent ul, #articleContent ol {
+            padding-left: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        #articleContent li {
+            margin: 0.25rem 0;
+        }
+
+        #articleContent img {
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--radius-medium);
+            display: block;
+            margin: 1rem 0;
+        }
+
+        #articleContent input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.2em;
+            height: 1.2em;
+            border: 2px solid var(--accent-color);
+            border-radius: 50%;
+            outline: none;
+            cursor: default;
+            vertical-align: middle;
+            margin-right: 0.5em;
+            background: transparent;
+        }
+
+        #articleContent input[type="checkbox"]:checked {
+            background: var(--accent-color);
+            box-shadow: inset 0 0 0 3px var(--bg-black);
+        }
+
+        #articleContent li:has(> input[type="checkbox"]) {
+            list-style: none;
+            margin-left: -1.5rem;
+        }
+
+        #articleContent table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1rem 0;
+            overflow-x: auto;
+            display: block;
+            white-space: nowrap;
+        }
+
+        #articleContent table th,
+        #articleContent table td {
+            border: 1px solid var(--text-secondary);
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        #articleContent table th {
+            font-weight: bold;
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+
+        #articleContent pre {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: 1rem;
+            overflow-x: auto;
+            position: relative;
+            margin: 1rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #articleContent pre code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .copy-code-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-small);
+            color: var(--text-secondary);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+            z-index: 3;
+        }
+
+        .copy-code-btn:hover {
+            background: rgba(193, 252, 50, 0.2);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .copy-code-btn.copied {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        @media (min-width: 720px) {
+            .main {
+                display: flex;
+                align-items: flex-start;
+                gap: 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 2rem;
+            }
+
+            .image-container {
+                flex: 0 0 300px;
+                margin: 0;
+                max-width: none;
+                width: 300px;
+            }
+
+            .content {
+                flex: 1;
+                margin: 0;
+                padding: 0;
+                max-width: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -242,6 +387,37 @@
             }
         }
 
+        function addCopyButtons() {
+            const preElements = document.querySelectorAll('#articleContent pre');
+            preElements.forEach((pre) => {
+                if (pre.querySelector('.copy-code-btn')) return;
+                const button = document.createElement('button');
+                button.className = 'copy-code-btn';
+                button.innerHTML = '<i class="far fa-copy"></i>';
+                button.setAttribute('aria-label', 'Copy code');
+                button.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const code = pre.querySelector('code')?.innerText || pre.innerText;
+                    try {
+                        await navigator.clipboard.writeText(code);
+                        button.innerHTML = '<i class="fas fa-check"></i>';
+                        button.classList.add('copied');
+                        setTimeout(() => {
+                            button.innerHTML = '<i class="far fa-copy"></i>';
+                            button.classList.remove('copied');
+                        }, 1500);
+                    } catch (err) {
+                        button.innerHTML = '<i class="fas fa-times"></i>';
+                        setTimeout(() => {
+                            button.innerHTML = '<i class="far fa-copy"></i>';
+                        }, 1500);
+                    }
+                });
+                pre.style.position = 'relative';
+                pre.appendChild(button);
+            });
+        }
+
         async function loadArticle() {
             const params = new URLSearchParams(window.location.search);
             const slug = params.get('slug');
@@ -251,7 +427,7 @@
             }
 
             try {
-                const response = await fetch(`/api/articles?slug=${encodeURIComponent(slug)}`);
+                const response = await fetch(`/api/articles?slug=${encodeURIComponent(slug)}&_=${Date.now()}`);
                 if (!response.ok) {
                     throw new Error('Article not found');
                 }
@@ -263,6 +439,8 @@
                 document.getElementById('articleContent').innerHTML = article.html;
                 document.getElementById('wordCount').textContent = `${article.wordCount} words`;
                 document.title = `${article.title} | lildavegoth`;
+
+                addCopyButtons();
             } catch (error) {
                 document.getElementById('articleContent').innerHTML = '<p style="color:var(--accent-color);">Article could not be loaded.</p>';
             }
