@@ -1,5 +1,5 @@
 ---
-title: "Kakoi Kiraku"
+title: "Test"
 date: "2024-02-15"
 image: "../../images/4ever.webp"
 ---
