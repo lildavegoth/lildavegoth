@@ -11,7 +11,7 @@ module.exports = async (req, res) => {
 
   const owner = 'lildavegoth';
   const repo = 'lildavegoth';
-  const branch = 'honepage';
+  const branch = 'homepage';
   const path = `pages/articles/${slug}.md`;
 
   const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
