@@ -24,7 +24,8 @@ image: "../../images/4ever.webp"
   
 ---
 
-![test](../../images/4ever.web)
+![test](https://github.com/lildavegoth/lildavegoth/blob/homepage/images/4ever.webp)
+![test]([https://github.com/lildavegoth/lildavegoth/blob/homepage/images/4ever.webp](https://github.com/lildavegoth/lildavegoth/raw/refs/heads/homepage/images/4ever.webp))
 
 ``` test
 su
