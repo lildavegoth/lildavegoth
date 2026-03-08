@@ -31,6 +31,7 @@ image: "../../images/4ever.webp"
 su
 test
 pm uninstall -k --user 0 com.test.apk
+pm uninstall -k --user 0 com.test.apk and also com.test.double.apk
 ```
 
 ---
