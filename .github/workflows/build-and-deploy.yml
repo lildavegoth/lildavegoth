@@ -116,9 +116,6 @@ jobs:
           source: ./
           destination: ./_site
 
-      - name: Make site writable
-        run: chmod -R +w ./_site
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -127,8 +124,9 @@ jobs:
       - name: Install html-minifier
         run: npm install -g html-minifier
 
-      - name: Minify HTML
+      - name: Minify HTML to new directory
         run: |
+          mkdir -p ./_site_min
           html-minifier \
             --collapse-whitespace \
             --remove-comments \
@@ -138,12 +136,15 @@ jobs:
             --use-short-doctype \
             --minify-css true \
             --minify-js true \
+            --minify-cssjs true \
             --input-dir ./_site \
-            --output-dir ./_site \
+            --output-dir ./_site_min \
             --file-ext html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site_min
 
   deploy-jekyll:
     needs: build-jekyll
