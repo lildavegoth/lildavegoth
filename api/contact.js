@@ -20,9 +20,9 @@ module.exports = async (req, res) => {
       reply_to: email,
       html: `
         <h2>Kakoi Kiraku Submission</h2>
-        <p style="margin-top: -3px;"><strong>Name:</strong> ${name}</p>
-        <p style="margin-top: -3px;"><strong>Email:</strong> ${email}</p>
-        <p style="margin-top: -3px;"><strong>Message:</strong><br>${message.replace(/\n/g, '<br>')}</p>
+        <p style="margin-top: -15px;"><strong>Name:</strong> ${name}</p>
+        <p style="margin-top: -15px;"><strong>Email:</strong> ${email}</p>
+        <p style="margin-top: -15px;"><strong>Message:</strong><br>${message.replace(/\n/g, '<br>')}</p>
       `,
     });
 
