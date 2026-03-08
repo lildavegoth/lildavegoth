@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     // Send the email using Resend
     const { data, error } = await resend.emails.send({
       from: 'Your Website <onboarding@resend.dev>', // Use the default Resend sender for testing
-      to: ['your-email@example.com'],               // Replace with your email address
+      to: ['lildavegoth@proton.me'],               // Replace with your email address
       subject: `New message from ${name}`,
       reply_to: email,
       html: `
