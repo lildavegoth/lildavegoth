@@ -174,11 +174,21 @@
 
         #articleContent ul, #articleContent ol {
             padding-left: 1.5rem;
-            margin: 1rem 0;
+            margin: 0.5rem 0;
         }
 
         #articleContent li {
             margin: 0.25rem 0;
+        }
+
+        #articleContent ol {
+            list-style-type: decimal;
+        }
+
+        #articleContent ol ol {
+            list-style-type: upper-roman;
+            margin-top: 0.25rem;
+            margin-bottom: 0.25rem;
         }
 
         #articleContent img {
@@ -211,15 +221,23 @@
         #articleContent li:has(> input[type="checkbox"]) {
             list-style: none;
             margin-left: -1.5rem;
+            padding-left: 1.5rem;
+            text-indent: -1.5rem;
         }
 
         #articleContent table {
             border-collapse: collapse;
             width: 100%;
-            margin: 1rem 0;
+            margin: 1rem auto;
             overflow-x: auto;
             display: block;
             white-space: nowrap;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        #articleContent table::-webkit-scrollbar {
+            display: none;
         }
 
         #articleContent table th,
@@ -238,17 +256,37 @@
         #articleContent pre {
             background: var(--bg-card);
             border-radius: var(--radius-medium);
-            padding: 1rem;
+            padding: 2.5rem 1rem 1rem 1rem;
             overflow-x: auto;
             position: relative;
             margin: 1rem 0;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        #articleContent pre::-webkit-scrollbar {
+            display: none;
         }
 
         #articleContent pre code {
             font-family: 'Courier New', monospace;
             font-size: 0.9rem;
             color: var(--text-primary);
+        }
+
+        .code-label {
+            position: absolute;
+            top: 8px;
+            left: 12px;
+            color: var(--accent-color);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: var(--radius-small);
+            z-index: 2;
         }
 
         .copy-code-btn {
@@ -387,17 +425,32 @@
             }
         }
 
-        function addCopyButtons() {
+        function enhanceCodeBlocks() {
             const preElements = document.querySelectorAll('#articleContent pre');
             preElements.forEach((pre) => {
-                if (pre.querySelector('.copy-code-btn')) return;
+                if (pre.querySelector('.copy-code-btn') || pre.querySelector('.code-label')) return;
+
+                const codeElement = pre.querySelector('code');
+                let language = '';
+                if (codeElement && codeElement.className) {
+                    const match = codeElement.className.match(/language-(\w+)/);
+                    if (match) language = match[1];
+                }
+
+                if (language) {
+                    const label = document.createElement('span');
+                    label.className = 'code-label';
+                    label.textContent = language;
+                    pre.appendChild(label);
+                }
+
                 const button = document.createElement('button');
                 button.className = 'copy-code-btn';
                 button.innerHTML = '<i class="far fa-copy"></i>';
                 button.setAttribute('aria-label', 'Copy code');
                 button.addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    const code = pre.querySelector('code')?.innerText || pre.innerText;
+                    const code = codeElement ? codeElement.innerText : pre.innerText;
                     try {
                         await navigator.clipboard.writeText(code);
                         button.innerHTML = '<i class="fas fa-check"></i>';
@@ -413,7 +466,6 @@
                         }, 1500);
                     }
                 });
-                pre.style.position = 'relative';
                 pre.appendChild(button);
             });
         }
@@ -440,7 +492,7 @@
                 document.getElementById('wordCount').textContent = `${article.wordCount} words`;
                 document.title = `${article.title} | lildavegoth`;
 
-                addCopyButtons();
+                enhanceCodeBlocks();
             } catch (error) {
                 document.getElementById('articleContent').innerHTML = '<p style="color:var(--accent-color);">Article could not be loaded.</p>';
             }
