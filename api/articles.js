@@ -14,16 +14,17 @@ module.exports = async (req, res) => {
   const branch = 'homepage';
   const path = `pages/articles/${slug}.md`;
 
-  const url = `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${branch}/${path}`;
+  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
 
   try {
     const response = await fetch(url);
+    
     if (!response.ok) {
+      console.error(`GitHub raw fetch failed: ${url} returned ${response.status}`);
       return res.status(404).json({ error: 'Article not found' });
     }
 
     const fileContent = await response.text();
-
     const { data: frontmatter, content } = matter(fileContent);
     const htmlContent = marked(content);
 
@@ -35,7 +36,7 @@ module.exports = async (req, res) => {
       wordCount: content.split(/\s+/).filter(w => w.length > 0).length,
     });
   } catch (error) {
-    console.error('Article fetch error:', error);
+    console.error('Fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
