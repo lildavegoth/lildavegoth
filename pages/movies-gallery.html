@@ -6,8 +6,7 @@
     <title>Movies Gallery | lildavegoth</title>
     <meta name="color-scheme" content="dark">
     <script src="../protections.js"></script>
-    <script src="../notification.cssjs"></script>
-    <link rel="stylesheet" href="../navigation.css">
+    <script src="../auth-check.js"></script>
     <link rel="stylesheet" href="../media.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -21,135 +20,178 @@
             --text-primary: #f5f5f7;
             --text-secondary: #a1a1a6;
             --border-color: rgba(255, 255, 255, 0.1);
+            --radius-small: 12px;
             --radius-medium: 20px;
             --radius-large: 28px;
             --spacing-sm: 16px;
             --spacing-md: 24px;
         }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-
         body {
             background-color: var(--bg-black);
             color: var(--text-primary);
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 16px;
+            padding-bottom: 30px;
             min-height: 100vh;
-            padding: 0;
             background-image: 
                 radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
                 radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
         }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: var(--spacing-md);
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
         }
-
-        .app-container {
-            max-width: 500px;
-            margin: 0 auto;
-            background: var(--bg-black);
-            min-height: 100vh;
-            padding: 20px;
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-
-        /* Blur Effects */
-        .blur-background {
+        .avatar {
+            width: 44px;
+            height: 44px;
+            background-color: var(--bg-dark);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(193, 252, 50, 0.2);
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar svg {
+            width: 20px;
+            height: 20px;
+            color: var(--text-secondary);
+        }
+        .username-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .username {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        .username-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--accent-color);
+            color: var(--text-primary);
+            padding: 4px 8px;
+            border-radius: var(--radius-small);
+            font-size: 16px;
+            outline: none;
+            width: 120px;
+        }
+        .search-container {
+            margin-bottom: var(--spacing-md);
+            position: relative;
+        }
+        .search-container > div {
+            position: relative;
+        }
+        #globalSearch {
+            width: 100%;
+            padding: 12px 44px 12px 16px;
+            border-radius: var(--radius-medium);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .search-icon-wrapper {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+        .search-icon-wrapper i {
+            color: var(--accent-color);
+            margin-right: 5px;
+        }
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
             backdrop-filter: saturate(180%) blur(20px);
             -webkit-backdrop-filter: saturate(180%) blur(20px);
-            background-color: rgba(22, 22, 24, 0.8);
-            border: 1px solid var(--border-color);
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
-        
-        /* Header */
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
+        .search-suggestions::-webkit-scrollbar {
+            display: none;
         }
-
-        .username {
-            font-size: 28px;
-            font-weight: 700;
-            background: linear-gradient(90deg, var(--accent-color), #e8f8b6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
+        .search-suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
         }
-
-        .page-title {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 10px;
+        .search-suggestion-item:hover {
+            background: rgba(193, 252, 50, 0.1);
         }
-
-        .page-subtitle {
+        .search-suggestion-item:last-child {
+            border-bottom: none;
+        }
+        .suggestion-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+        .suggestion-description {
+            font-size: 0.85rem;
             color: var(--text-secondary);
-            font-size: 1rem;
-            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
-
-        /* Action Buttons */
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .add-btn {
-            background: rgba(193, 252, 50, 0.15);
+        .suggestion-category {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-top: 4px;
+            background: rgba(193, 252, 50, 0.1);
             color: var(--accent-color);
-            border: 1px solid var(--accent-color);
-            padding: 12px 24px;
-            border-radius: 25px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
         }
-
-        .add-btn:hover {
-            background: rgba(193, 252, 50, 0.25);
-            transform: translateY(-2px);
-        }
-
-        .reset-btn {
-            background: rgba(255, 100, 100, 0.1);
-            color: #ff6464;
-            border: 1px solid #ff6464;
-            padding: 12px 24px;
-            border-radius: 25px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .reset-btn:hover {
-            background: rgba(255, 100, 100, 0.2);
-            transform: translateY(-2px);
-        }
-
-        /* Filter Tabs */
         .filter-tabs {
             display: flex;
             gap: 10px;
             margin-bottom: 25px;
             overflow-x: auto;
             padding-bottom: 10px;
+            scrollbar-width: none;
         }
-
+        .filter-tabs::-webkit-scrollbar {
+            display: none;
+        }
         .filter-tab {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -159,136 +201,187 @@
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.3s ease;
+            font-size: 14px;
         }
-
         .filter-tab:hover {
             border-color: var(--accent-color);
             color: var(--accent-color);
         }
-
         .filter-tab.active {
             background: rgba(193, 252, 50, 0.15);
             border-color: var(--accent-color);
             color: var(--accent-color);
             font-weight: 600;
         }
-
-        /* Gallery Grid */
         .gallery-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            gap: 16px;
             margin-bottom: 30px;
         }
-
-        /* Media Card */
         .media-card {
             background: var(--bg-card);
-            border-radius: var(--radius-large);
+            border-radius: var(--radius-medium);
             overflow: hidden;
             border: 1px solid var(--border-color);
             transition: all 0.3s ease;
             cursor: pointer;
+            backdrop-filter: blur(10px);
         }
-
+        .media-card.top-rated-view {
+            border-radius: 30px;
+            min-width: 280px;
+            margin-top: 10px;
+        }
         .media-card:hover {
-            transform: translateY(-8px);
+            transform: translateY(-6px);
             border-color: var(--accent-color);
-            box-shadow: 0 10px 30px rgba(193, 252, 50, 0.15);
             background: var(--bg-card-hover);
         }
-
         .media-image {
             width: 100%;
             height: 160px;
             object-fit: cover;
             display: block;
+            user-select: none;
+            pointer-events: none;
         }
-
         .media-content {
-            padding: 15px;
+            padding: 12px;
         }
-
         .media-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             line-height: 1.3;
             color: var(--text-primary);
         }
-
         .media-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
-
         .media-rating {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
             color: var(--accent-color);
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
         }
-
         .media-year {
             color: var(--text-secondary);
-            font-size: 14px;
+            font-size: 12px;
         }
-
         .media-category {
             display: inline-block;
             background: rgba(193, 252, 50, 0.1);
             color: var(--accent-color);
             padding: 4px 10px;
-            border-radius: 15px;
-            font-size: 12px;
+            border-radius: 30px;
+            font-size: 11px;
             font-weight: 500;
-            margin-top: 5px;
+            margin-top: 4px;
         }
-
-        /* Popup Overlay */
+        .media-synopsis {
+            color: var(--text-secondary);
+            font-size: 11px;
+            line-height: 1.4;
+            margin-top: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .media-card:hover .media-synopsis {
+            -webkit-line-clamp: 4;
+        }
+        .read-more-btn {
+            background: transparent;
+            border: none;
+            color: var(--accent-color);
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 0;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            pointer-events: auto;
+        }
+        .note-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 10px;
+            pointer-events: auto;
+        }
+        .watched-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: rgba(193, 252, 50, 0.2);
+            border-radius: 50%;
+            color: var(--accent-color);
+            font-size: 12px;
+            margin-right: auto;
+        }
+        .note-action-btn {
+            background: rgba(193, 252, 50, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--accent-color);
+            cursor: pointer;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .note-action-btn:hover {
+            background: rgba(193, 252, 50, 0.2);
+            border-color: rgba(193, 252, 50, 0.3);
+        }
         .popup-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            display: none;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            z-index: 99999999;
             animation: fadeIn 0.3s ease;
         }
-
         .popup-content {
             background: var(--bg-card);
             border-radius: var(--radius-large);
             width: 90%;
             max-width: 500px;
-            max-height: 80vh;
-            overflow-y: auto;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
-
         .popup-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: var(--spacing-md);
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-
         .popup-header h2 {
             font-size: 1.5rem;
             font-weight: 600;
         }
-
         .close-popup {
             background: transparent;
             border: none;
@@ -302,320 +395,69 @@
             align-items: center;
             justify-content: center;
         }
-
         .close-popup:hover {
             background: rgba(255, 255, 255, 0.1);
         }
-
-        /* Form Styles */
-        .form-group {
-            padding: 0 var(--spacing-md) var(--spacing-md);
+        .popup-form {
+            overflow-y: auto;
+            padding: var(--spacing-md);
         }
-
         .form-row {
             margin-bottom: 15px;
         }
-
         .form-label {
             display: block;
             margin-bottom: 8px;
             color: var(--text-primary);
             font-weight: 500;
         }
-
         .required {
             color: #ff6464;
         }
-
         .form-input, .form-select, .form-textarea {
-    width: 100%;
-    padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-medium);
-    color: var(--text-primary);
-    font-size: 16px;
-    transition: all 0.3s ease;
-    /* Add these 3 lines to remove default arrow */
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-}
-
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-medium);
+            color: var(--text-primary);
+            font-size: 16px;
+            transition: all 0.3s ease;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
         .form-input:focus, .form-select:focus, .form-textarea:focus {
             outline: none;
             border-color: var(--accent-color);
-            box-shadow: 0 0 0 2px rgba(193, 252, 50, 0.2);
         }
-
         .form-textarea {
             min-height: 100px;
             resize: vertical;
         }
-
-        .optional-text {
-            color: var(--text-secondary);
-            font-size: 0.85rem;
-            font-style: italic;
-        }
-
-        .form-buttons {
+        .checkbox-row {
             display: flex;
-            gap: 10px;
-            padding: var(--spacing-md);
-            border-top: 1px solid var(--border-color);
-        }
-
-        .submit-btn {
-            flex: 1;
-            background: rgba(193, 252, 50, 0.15);
-            color: var(--accent-color);
-            border: 1px solid var(--accent-color);
-            padding: 14px;
-            border-radius: var(--radius-medium);
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .submit-btn:hover {
-            background: rgba(193, 252, 50, 0.25);
-            transform: translateY(-2px);
-        }
-
-        .cancel-btn {
-            flex: 1;
-            background: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
-            padding: 14px;
-            border-radius: var(--radius-medium);
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .cancel-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
-        }
-        
-        /* Floating Action Button */
-        .fab-container {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            z-index: 100;
-        }
-        
-        .fab-main {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
-            border: none;
-            color: #000;
-            font-size: 24px;
-            cursor: pointer;
-            box-shadow: 0 4px 20px rgba(193, 252, 50, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
-        
-        .fab-main:hover {
-            transform: scale(1.1) rotate(90deg);
-            box-shadow: 0 6px 25px rgba(193, 252, 50, 0.6);
-        }
-        
-        .fab-main:active {
-            transform: scale(0.95);
-        }
-        
-        .fab-menu {
-            position: absolute;
-            bottom: 70px;
-            right: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(20px);
-            transition: all 0.3s ease;
-        }
-        
-        .fab-container:hover .fab-menu {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-        
-        .fab-item {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-        
-        .fab-item:hover {
-            background: rgba(193, 252, 50, 0.15);
-            color: var(--accent-color);
-            border-color: var(--accent-color);
-            transform: translateY(-5px);
-        }
-        
-        .fab-item:nth-child(1):hover {
-            background: rgba(255, 100, 100, 0.2);
-            color: #ff6464;
-            border-color: #ff6464;
-        }
-        
-        .fab-item:nth-child(2):hover {
-            background: rgba(100, 150, 255, 0.2);
-            color: #6496ff;
-            border-color: #6496ff;
-        }
-        
-        .fab-item:nth-child(3):hover {
-            background: rgba(255, 200, 100, 0.2);
-            color: #ffc864;
-            border-color: #ffc864;
-        }
-        
-        /* Mobile responsive for FAB */
-        @media (max-width: 500px) {
-            .fab-container {
-                bottom: 20px;
-                right: 20px;
-            }
-            
-            .fab-main {
-                width: 56px;
-                height: 56px;
-                font-size: 22px;
-            }
-            
-            .fab-item {
-                width: 46px;
-                height: 46px;
-                font-size: 16px;
-            }
-            
-            .fab-menu {
-                gap: 12px;
-                bottom: 65px;
-            }
-        }
-
-        /* Footer */
-        footer {
-            text-align: center;
-            padding: 30px 0 20px;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .social-links {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 15px;
-        }
-
-        .social-links a {
-            color: var(--text-secondary);
-            font-size: 1.2rem;
-            transition: color 0.3s ease;
-        }
-
-        .social-links a:hover {
-            color: var(--accent-color);
-        }
-
-        /* Back Link */
-        .back-link {
-            display: inline-flex;
             align-items: center;
             gap: 8px;
+        }
+        .custom-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .custom-checkbox input {
+            display: none;
+        }
+        .custom-checkbox i {
+            font-size: 20px;
             color: var(--accent-color);
-            text-decoration: none;
-            margin-bottom: 20px;
-            font-weight: 500;
-            padding: 8px 16px;
-            border-radius: 12px;
-            background: rgba(193, 252, 50, 0.1);
-            transition: all 0.3s ease;
         }
-
-        .back-link:hover {
-            gap: 12px;
-            background: rgba(193, 252, 50, 0.2);
-            transform: translateX(10px);
-        }
-
-        /* Responsive */
-        @media (max-width: 500px) {
-            .gallery-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-            
-            .app-container {
-                padding: 15px;
-            }
-            
-            .media-image {
-                height: 200px;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-            }
-        }
-
-        /* Image Protection */
-        img {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            pointer-events: none;
-        }
-
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .popup-content {
-            animation: slideIn 0.3s ease;
-        }
-        
-        /* Image Upload Styles */
         .image-upload-container {
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
-        
         .image-upload-btn {
             background: rgba(193, 252, 50, 0.1);
             color: var(--accent-color);
@@ -630,15 +472,9 @@
             font-weight: 500;
             transition: all 0.3s ease;
         }
-        
         .image-upload-btn:hover {
             background: rgba(193, 252, 50, 0.2);
         }
-        
-        .image-url-input {
-            width: 100%;
-        }
-        
         .image-preview {
             position: relative;
             width: 100%;
@@ -646,15 +482,14 @@
             border-radius: var(--radius-medium);
             overflow: hidden;
             border: 2px dashed var(--border-color);
+            margin-top: 10px;
         }
-        
         .preview-image {
             width: 100%;
             height: 100%;
             object-fit: cover;
             display: block;
         }
-        
         .remove-image-btn {
             position: absolute;
             top: 10px;
@@ -671,64 +506,113 @@
             justify-content: center;
             transition: all 0.3s ease;
         }
-        
         .remove-image-btn:hover {
             background: rgba(255, 100, 100, 0.8);
             color: white;
         }
-        
-        .file-info {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-top: 5px;
+        .form-buttons {
             display: flex;
-            align-items: center;
-            gap: 5px;
+            gap: 10px;
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border-color);
+            margin-top: var(--spacing-md);
         }
-        
-        /* Synopsis Styles */
-        .media-synopsis {
-            color: var(--text-secondary);
-            font-size: 12px;
-            line-height: 1.4;
-            margin-top: 12px;
-            display: -webkit-box;
-            -webkit-line-clamp: 3; /* Show max 3 lines */
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-height: 54px; /* 3 lines * 18px line-height */
-            transition: all 0.3s ease;
-        }
-        
-        .media-card:hover .media-synopsis {
-            -webkit-line-clamp: 5; /* Show more lines on hover */
-            max-height: 90px; /* 5 lines * 18px line-height */
-        }
-        
-        /* Read More Button */
-        .read-more-btn {
-            background: transparent;
-            border: none;
+        .submit-btn {
+            flex: 1;
+            background: rgba(193, 252, 50, 0.15);
             color: var(--accent-color);
-            font-size: 11px;
-            font-weight: 600;
+            border: 1px solid var(--accent-color);
+            padding: 14px;
+            border-radius: var(--radius-medium);
             cursor: pointer;
-            padding: 4px 8px;
-            margin-top: 5px;
-            border-radius: 4px;
+            font-weight: 600;
             transition: all 0.3s ease;
+        }
+        .submit-btn:hover {
+            background: rgba(193, 252, 50, 0.25);
+            transform: translateY(-2px);
+        }
+        .cancel-btn {
+            flex: 1;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 14px;
+            border-radius: var(--radius-medium);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .cancel-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+        .fab-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+        .fab-main {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
+            border: none;
+            color: #000;
+            font-size: 24px;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 4px;
-            pointer-events: auto !important;
+            justify-content: center;
+            transition: all 0.3s ease;
         }
-        
-        .read-more-btn:hover {
-            background: rgba(193, 252, 50, 0.1);
+        .fab-main:hover {
+            transform: scale(1.1) rotate(90deg);
         }
-        
-        /* No Link Notification */
+        .fab-menu {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        .fab-container:hover .fab-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .fab-item {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        .fab-item:hover {
+            background: rgba(193, 252, 50, 0.15);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+            transform: translateY(-5px);
+        }
+        .fab-item:nth-child(1):hover {
+            background: rgba(255, 100, 100, 0.2);
+            color: #ff6464;
+            border-color: #ff6464;
+        }
         .no-link-notification {
             position: fixed;
             top: 20px;
@@ -742,30 +626,25 @@
             backdrop-filter: blur(10px);
             max-width: 300px;
         }
-        
         .notification-content {
             display: flex;
             align-items: center;
             gap: 12px;
         }
-        
         .notification-content i {
             font-size: 24px;
             color: #ff6464;
         }
-        
         .notification-content h4 {
             color: #ff6464;
             margin-bottom: 4px;
             font-size: 14px;
         }
-        
         .notification-content p {
             color: var(--text-secondary);
             font-size: 12px;
             margin: 0;
         }
-        
         .close-notification {
             background: transparent;
             border: none;
@@ -774,509 +653,334 @@
             margin-left: auto;
             padding: 4px;
             border-radius: 4px;
-            transition: all 0.3s ease;
         }
-        
-        .close-notification:hover {
-            background: rgba(255, 100, 100, 0.1);
-            color: #ff6464;
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(100px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        /* Edit/Delete Buttons for Media Cards */
-        .note-actions {
+        .gallery-grid.horizontal {
             display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 10px;
-            pointer-events: auto;
-            position: relative;
-            z-index: 2;
+            flex-direction: row;
+            overflow-x: auto;
+            gap: 16px;
+            padding-bottom: 20px;
+            scrollbar-width: none;
         }
-        
-        .note-action-btn {
-            background: rgba(193, 252, 50, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--accent-color); 
-            cursor: pointer;
-            padding: 6px 12px;
-            border-radius: 50px;
-            transition: all 0.2s;
-            font-size: 0.9rem;
+        .gallery-grid.horizontal::-webkit-scrollbar {
+            display: none;
         }
-        
-        .note-action-btn:hover {
-            color: var(--accent-color);
-            background: rgba(193, 252, 50, 0.15);
-            border-color: rgba(193, 252, 50, 0.3);
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
-        
-        /* Prevent button click from opening link */
-        .note-action-btn {
-            pointer-events: auto;
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
         }
-        
-        /* Make sure card click doesn't trigger on buttons */
-        .media-card * {
-            pointer-events: none;
-        }
-        
-        .note-action-btn, .note-action-btn * {
-            pointer-events: auto;
-        }
-        
-        /* Style for date input */
-        input[type="date"] {
-            color-scheme: dark;
-        }
-        
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            cursor: pointer;
-            opacity: 0.7;
-        }
-        
-        input[type="date"]::-webkit-calendar-picker-indicator:hover {
-            opacity: 1;
-        }
-        
-        /* Tool Navigation */
-        .tool-navigation {
-            margin-top: var(--spacing-lg);
-            padding-top: var(--spacing-md);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .tool-navigation p {
-            color: var(--text-secondary);
-            margin-bottom: var(--spacing-sm);
-            font-size: 0.9rem;
-            text-align: center;
-        }
-        
-        .nav-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: var(--spacing-xs);
-            padding: var(--spacing-sm) var(--spacing-md);
-            background: rgba(193, 252, 50, 0.1);
-            color: var(--accent-color);
-            border: 2px solid var(--accent-color);
-            border-radius: var(--radius-medium);
-            font-weight: 600;
-            font-size: 0.95rem;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .nav-btn:hover {
-            background: rgba(193, 252, 50, 0.2);
-            transform: translateY(-2px);
-        }
-        
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <a href="../index.html" class="back-link">
-            <i class="fas fa-arrow-left"></i> Back to Home
-        </a>
-
-        <div class="header">
-            <h1 class="page-title">Movies Gallery</h1>
-            <p class="page-subtitle">
-                Click the <i class="fas fa-plus" style="color: var(--accent-color);"></i> button to add media.
-                All data except name is optional.
-            </p>
-        </div>
-
-        <!-- Filter Tabs -->
-        <div class="filter-tabs">
-            <div class="filter-tab active" onclick="filterMedia('all')">All Media</div>
-            <div class="filter-tab" onclick="filterMedia('movies')">Movies</div>
-            <div class="filter-tab" onclick="filterMedia('series')">Series</div>
-            <div class="filter-tab" onclick="filterMedia('anime')">Anime</div>
-            <div class="filter-tab" onclick="filterMedia('animeseries')">Anime Series</div>
-            <div class="filter-tab" onclick="filterMedia('top')">Top Rated</div>
-        </div>
-
-        <!-- Gallery Grid -->
-        <div class="gallery-grid" id="galleryGrid">
-            <!-- Cards will be generated dynamically -->
-        </div>
-
-        <!-- Add Media Popup -->
-        <div id="addPopup" class="popup-overlay">
-            <div class="popup-content">
-                <div class="popup-header">
-                    <h2>Add New Media</h2>
-                    <button class="close-popup" onclick="closeAddPopup()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                
-                <form id="mediaForm" onsubmit="addNewMedia(event)">
-                    <div class="form-group">
-                        <!-- Name (Required) -->
-                        <div class="form-row">
-                            <label class="form-label">Name <span class="required">*</span></label>
-                            <input type="text" class="form-input" id="mediaName" placeholder="Enter media name" required>
-                        </div>
-                        
-                        <!-- Rating (Optional) -->
-                        <div class="form-row">
-                            <label class="form-label">Rating <span class="optional-text">(optional)</span></label>
-                            <input type="text" class="form-input" id="mediaRating" placeholder="e.g., 8.5 or 9.2/10">
-                        </div>
-                        
-                        <!-- Genre (Optional) -->
-                        <div class="form-row">
-                            <label class="form-label">Genre <span class="optional-text">(optional)</span></label>
-                            <input type="text" class="form-input" id="mediaGenre" placeholder="e.g., Sci-Fi • Action • Drama">
-                        </div>
-                        
-                        <!-- Country (Optional) -->
-                        <div class="form-row">
-                            <label class="form-label">Country <span class="optional-text">(optional)</span></label>
-                            <input type="text" class="form-input" id="mediaCountry" placeholder="e.g., USA, Japan, Korea">
-                        </div>
-                        
-                        <!-- Release Year (Optional) -->
-                        <div class="form-row">
-                            <label class="form-label">Release Year <span class="optional-text">(optional)</span></label>
-                            <input type="text" class="form-input" id="mediaReleaseYear" placeholder="e.g., 2019, 2014, 2012" maxlength="4">
-                        </div>
-                        
-                        <!-- Watch Link (Optional) -->
-                        <div class="form-row">
-                            <label class="form-label">Watch Link <span class="optional-text">(optional)</span></label>
-                            <input type="url" class="form-input" id="mediaLink" placeholder="https://example.com/watch">
-                        </div>
-                        
-                        <!-- Category (Optional) -->
-                        <div class="form-row">
-                            <label class="form-label">Category <span class="optional-text">(optional)</span></label>
-                            <select class="form-select" id="mediaCategory">
-                                <option value="">Select category</option>
-                                <option value="movies">Movie</option>
-                                <option value="tv">TV Series</option>
-                                <option value="anime">Anime Movie</option>
-                                <option value="animeseries">Anime Series</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Synopsis (Optional) -->
-                        <div class="form-row">
-                            <label class="form-label">Synopsis <span class="optional-text">(optional)</span></label>
-                            <textarea class="form-textarea" id="mediaSynopsis" placeholder="Brief description of the media..."></textarea>
-                        </div>
-                        
-                        <!-- Image Input (Optional) -->
-                        <div class="form-row">
-                            <label class="form-label">Image <span class="optional-text">(optional)</span></label>
-                            <div class="image-upload-container">
-                                <input type="file" class="form-input image-file-input" id="mediaImageFile" accept="image/*" style="display: none;">
-                                <button type="button" class="image-upload-btn" onclick="document.getElementById('mediaImageFile').click()">
-                                    <i class="fas fa-image"></i> Choose Image
-                                </button>
-                                <input type="text" class="form-input image-url-input" id="mediaImageUrl" 
-                                       placeholder="Or paste image URL (e.g., https://...)" style="margin-top: 10px;">
-                            </div>
-                            <div id="imagePreview" class="image-preview" style="display: none; margin-top: 10px;">
-                                <img id="previewImage" class="preview-image">
-                                <button type="button" class="remove-image-btn" onclick="removeImagePreview()">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-buttons">
-                        <button type="button" class="cancel-btn" onclick="closeAddPopup()">Cancel</button>
-                        <button type="submit" class="submit-btn">Add to Gallery</button>
-                    </div>
-                </form>
+    <div class="header">
+        <div class="user-info">
+            <div class="avatar" id="avatarContainer">
+                <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
+            </div>
+            <div class="username-container" id="usernameContainer">
+                <span class="username" id="usernameDisplay">Guest</span>
+                <input type="text" class="username-input" id="usernameInput" style="display: none;" value="Guest">
             </div>
         </div>
-        
-        <!-- Floating Action Button -->
-        <div class="fab-container">
-            <button class="fab-main" onclick="openAddPopup()">
-                <i class="fas fa-plus"></i>
-            </button>
-            <div class="fab-menu">
-                <button class="fab-item" onclick="resetAllData()">
-                    <i class="fas fa-trash"></i>
-                </button>
-                <button class="fab-item" onclick="window.scrollTo(0, 0)">
-                    <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <div class="search-container">
+        <div>
+            <input type="text" id="globalSearch" placeholder="Search for anime or movies...">
+            <div class="search-icon-wrapper">
+                <i class="fas fa-search"></i>
+            </div>
+        </div>
+        <div class="search-suggestions" id="searchSuggestions"></div>
+    </div>
+
+    <div class="filter-tabs">
+        <div class="filter-tab active" onclick="filterMedia('all')">All Media</div>
+        <div class="filter-tab" onclick="filterMedia('movies')">Movies</div>
+        <div class="filter-tab" onclick="filterMedia('series')">Series</div>
+        <div class="filter-tab" onclick="filterMedia('anime')">Anime</div>
+        <div class="filter-tab" onclick="filterMedia('animeseries')">Anime Series</div>
+        <div class="filter-tab" onclick="filterMedia('top')">Top Rated</div>
+    </div>
+
+    <div class="gallery-grid" id="galleryGrid"></div>
+
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle">Add New Media</h2>
+                <button class="close-popup" onclick="closeUniversalPopup()">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
-        </div>
-        
-        <!-- Tool Navigation -->
-        <div class="tool-navigation" style="margin-top: var(--spacing-lg); padding-top: var(--spacing-md); border-top: 1px solid rgba(255, 255, 255, 0.1);">
-            <div style="text-align: center;">
-                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-sm); font-size: 0.9rem;">
-                    Explore other Movies apps
-                </p>
-                <div style="display: flex; justify-content: center; gap: var(--spacing-sm); flex-wrap: wrap;">
-                    <a href="movies-player.html" class="nav-btn">
-                        Movies Player
-                    </a>
-                </div>
+            <div id="popupContent" class="popup-form">
             </div>
         </div>
+    </div>
 
-        <footer>
-            <div class="social-links">
-                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
-                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
-            </div>
-            <p>© 2025 lildavegoth | Movies Gallery</p>
-            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
-                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
-            </p>
-        </footer>
+    <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
+
+    <div class="fab-container">
+        <button class="fab-main" onclick="openAddPopup()"><i class="fas fa-plus"></i></button>
+        <div class="fab-menu">
+            <button class="fab-item" onclick="resetAllData()"><i class="fas fa-trash"></i></button>
+            <button class="fab-item" onclick="window.scrollTo(0,0)"><i class="fas fa-arrow-up"></i></button>
+        </div>
     </div>
 
     <script>
-        // Initial sample data
         let mediaData = [
             {
                 id: 1,
                 name: "Stranger Things",
                 rating: 8.7,
-                genre: "Horror • Mystery",
+                genre: "Horror | Mystery",
                 country: "USA",
                 year: "2016-2024",
-                releaseDate: "2016-07-15",
                 category: "series",
                 image: "https://wallpaperaccess.com/download/stranger-things-poster-825394",
-                synopsis: "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl. A love letter to the '80s supernatural classics, this series follows a group of kids as they encounter otherworldly threats."
+                synopsis: "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl.",
+                link: "",
+                watched: false
             },
             {
                 id: 2,
                 name: "Attack on Titan",
                 rating: 9.0,
-                genre: "Action • Dark Fantasy",
+                genre: "Action | Dark Fantasy",
                 country: "Japan",
                 year: "2013-2023",
-                releaseDate: "2013-04-07",
                 category: "animeseries",
                 image: "https://wallpaperaccess.com/download/attack-on-titan-posters-5286029",
-                synopsis: "After his hometown is destroyed and his mother is killed, young Eren Jaeger vows to cleanse the earth of the giant humanoid Titans that have brought humanity to the brink of extinction. He joins the Scout Regiment to fight against the Titans and uncover the truth about their existence."
+                synopsis: "After his hometown is destroyed and his mother is killed, young Eren Jaeger vows to cleanse the earth of the giant humanoid Titans.",
+                link: "",
+                watched: true
             }
         ];
-
-        // Load data from localStorage on start
+        let editingMediaId = null;
         function loadData() {
             const saved = localStorage.getItem('mediaGalleryData');
-            if (saved) {
-                mediaData = JSON.parse(saved);
-            }
+            if (saved) mediaData = JSON.parse(saved);
             renderGallery();
         }
-
-        // Save data to localStorage
         function saveData() {
             localStorage.setItem('mediaGalleryData', JSON.stringify(mediaData));
         }
-
-        // Render gallery from data
         function renderGallery() {
             const gallery = document.getElementById('galleryGrid');
             gallery.innerHTML = '';
-            
             mediaData.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'media-card';
                 card.setAttribute('data-category', item.category || '');
                 card.setAttribute('data-id', item.id);
-                
-                // Get current year or use stored year
-                const year = item.year || new Date().getFullYear();
-                
+                const watchedIcon = item.watched ? '<span class="watched-indicator"><i class="fas fa-check"></i></span>' : '';
                 card.innerHTML = `
-                    <img src="${item.image}" alt="${item.name}" class="media-image">
+                    <img src="${item.image || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop'}" alt="${item.name}" class="media-image">
                     <div class="media-content">
                         <h3 class="media-title">${item.name}</h3>
                         <div class="media-row">
-                            <div class="media-rating">
-                                <i class="fas fa-star"></i> ${item.rating || 'N/A'}
-                            </div>
-                            <div class="media-year">${item.year}</div>
+                            <div class="media-rating"><i class="fas fa-star"></i> ${item.rating || 'N/A'}</div>
+                            <div class="media-year">${item.year || ''}</div>
                         </div>
-                        ${item.year ? 
-                            `<div class="media-release-date" style="color: var(--text-secondary); font-size: 12px; margin-top: 5px;">
-                                <i class="fas fa-calendar-alt"></i> ${item.year}
-                            </div>` 
-                            : ''}
                         <span class="media-category">${item.genre || 'No genre'}</span>
-                        <div class="media-synopsis" id="synopsis-${item.id}">
-                            ${item.synopsis || 'No synopsis available.'}
-                        </div>
-                        ${item.synopsis && item.synopsis.length > 100 ? 
-                            `<button class="read-more-btn" onclick="toggleSynopsis(event, ${item.id})">Read More</button>` 
-                            : ''}
-                        <!-- Add Edit and Delete Buttons -->
-                        <div class="note-actions" style="margin-top: 10px;">
-                            <button class="note-action-btn edit-btn" title="Edit">
-                                Edit
-                            </button>
-                            <button class="note-action-btn delete-btn" title="Delete">
-                                Delete
-                            </button>
+                        <div class="media-synopsis" id="synopsis-${item.id}">${item.synopsis || 'No synopsis available.'}</div>
+                        ${item.synopsis && item.synopsis.length > 80 ? `<button class="read-more-btn" onclick="toggleSynopsis(event, ${item.id})"><i class="fas fa-chevron-down"></i> Read More</button>` : ''}
+                        <div class="note-actions">
+                            ${watchedIcon}
+                            <button class="note-action-btn edit-btn">Edit</button>
+                            <button class="note-action-btn delete-btn">Delete</button>
                         </div>
                     </div>
                 `;
-                
-                // Add click event
-                card.addEventListener('click', function(e) {
-                    // Only open link if NOT clicking on edit/delete buttons
-                    if (!e.target.closest('.note-action-btn')) {
-                        if (item.link && item.link.trim()) {
-                            window.open(item.link, '_blank', 'noopener,noreferrer');
-                        } else {
-                            showNoLinkNotification();
-                        }
+                card.addEventListener('dblclick', function(e) {
+                    if (!e.target.closest('.note-action-btn') && !e.target.closest('.read-more-btn')) {
+                        if (item.link && item.link.trim()) window.open(item.link, '_blank', 'noopener,noreferrer');
+                        else showNoLinkNotification();
                     }
                 });
-                
-                // Add event listeners to action buttons
                 const editBtn = card.querySelector('.edit-btn');
                 const deleteBtn = card.querySelector('.delete-btn');
-                
-                editBtn.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent card click from firing
-                    editMedia(item.id);
-                });
-                
-                deleteBtn.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent card click from firing
-                    deleteMedia(item.id);
-                });
-                
+                editBtn.addEventListener('click', (e) => { e.stopPropagation(); editMedia(item.id); });
+                deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); openDeleteConfirm(item.id); });
                 gallery.appendChild(card);
             });
-        }
-        
-        // Edit media function
-        function editMedia(id) {
-            const media = mediaData.find(m => m.id === id);
-            if (!media) return;
-            
-            // Fill the form with existing data
-            document.getElementById('mediaName').value = media.name || '';
-            document.getElementById('mediaRating').value = media.rating || '';
-            document.getElementById('mediaGenre').value = media.genre || '';
-            document.getElementById('mediaCountry').value = media.country || '';
-            document.getElementById('mediaLink').value = media.link || '';
-            document.getElementById('mediaCategory').value = media.category || 'movies';
-            document.getElementById('mediaSynopsis').value = media.synopsis || '';
-            document.getElementById('mediaReleaseYear').value = media.year || media.releaseDate || '';
-            
-            // Set image preview if exists
-            if (media.image) {
-                document.getElementById('previewImage').src = media.image;
-                document.getElementById('imagePreview').style.display = 'block';
-            }
-            
-            // Store the ID we're editing
-            window.editingMediaId = id;
-            
-            // Update modal title
-            document.querySelector('.popup-header h2').textContent = 'Edit Media';
-            
-            // Open the modal
-            openAddPopup();
-        }
-        
-        function deleteMedia(id) {
-            if (confirm('Are you sure you want to delete this media?')) {
-                mediaData = mediaData.filter(item => item.id !== id);
-                saveData();
-                renderGallery();
+            const activeTab = document.querySelector('.filter-tab.active');
+            if (activeTab) {
+                const cat = activeTab.textContent.toLowerCase().includes('top') ? 'top' : activeTab.textContent.toLowerCase().split(' ')[0];
+                applyFilter(cat);
             }
         }
-        
-        function toggleSynopsis(event, itemId) {
+        function toggleSynopsis(event, id) {
             event.stopPropagation();
-            
-            const synopsis = document.getElementById(`synopsis-${itemId}`);
-            const button = event.target.closest('.read-more-btn');
-            
-            if (synopsis.style.webkitLineClamp === 'unset' || synopsis.style.maxHeight === 'none') {
-                // Collapse
-                synopsis.style.webkitLineClamp = '3';
-                synopsis.style.maxHeight = '54px';
-                button.innerHTML = '<i class="fas fa-chevron-down"></i> Read More';
+            const syn = document.getElementById(`synopsis-${id}`);
+            const btn = event.currentTarget;
+            if (syn.style.webkitLineClamp === 'unset') {
+                syn.style.webkitLineClamp = '2';
+                syn.style.maxHeight = '';
+                btn.innerHTML = '<i class="fas fa-chevron-down"></i> Read More';
             } else {
-                // Expand
-                synopsis.style.webkitLineClamp = 'unset';
-                synopsis.style.maxHeight = 'none';
-                button.innerHTML = '<i class="fas fa-chevron-up"></i> Read Less';
+                syn.style.webkitLineClamp = 'unset';
+                syn.style.maxHeight = 'none';
+                btn.innerHTML = '<i class="fas fa-chevron-up"></i> Read Less';
             }
         }
-
+        function openUniversalPopup(title, contentHTML) {
+            document.getElementById('popupTitle').textContent = title;
+            document.getElementById('popupContent').innerHTML = contentHTML;
+            document.getElementById('universalPopup').style.display = 'flex';
+        }
+        function closeUniversalPopup() {
+            document.getElementById('universalPopup').style.display = 'none';
+        }
         function openAddPopup() {
-            document.getElementById('addPopup').style.display = 'flex';
+            openUniversalPopup('Add New Media', getAddEditFormHTML());
+            editingMediaId = null;
         }
-
-        function closeAddPopup() {
-            document.getElementById('addPopup').style.display = 'none';
-            document.getElementById('mediaForm').reset();
-            removeImagePreview(); // Clear image preview
-            
-            // Reset editing state
-            window.editingMediaId = null;
-            
-            // Reset modal title
-            document.querySelector('.popup-header h2').textContent = 'Add New Media';
+        function openDeleteConfirm(id) {
+            const item = mediaData.find(m => m.id === id);
+            if (!item) return;
+            const html = `
+                <div style="padding: 20px; text-align: center;">
+                    <p style="margin-bottom: 20px;">Delete "${item.name}"?</p>
+                    <p style="margin-bottom: 20px; color: var(--text-secondary);">This action cannot be undone.</p>
+                    <div class="form-buttons">
+                        <button class="cancel-btn" onclick="closeUniversalPopup()">Cancel</button>
+                        <button class="submit-btn" onclick="confirmDelete(${id})">Delete</button>
+                    </div>
+                </div>
+            `;
+            openUniversalPopup('Confirm Delete', html);
         }
-
+        function confirmDelete(id) {
+            mediaData = mediaData.filter(item => item.id !== id);
+            saveData();
+            renderGallery();
+            closeUniversalPopup();
+        }
+        function getAddEditFormHTML() {
+            return `
+                <form id="mediaForm" onsubmit="addNewMedia(event)">
+                    <div class="form-row">
+                        <label class="form-label">Name <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="mediaName" placeholder="Enter media name" required>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">Rating</label>
+                        <input type="text" class="form-input" id="mediaRating" placeholder="e.g., 8.5">
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">Genre</label>
+                        <input type="text" class="form-input" id="mediaGenre" placeholder="e.g., Action | Comedy">
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">Country</label>
+                        <input type="text" class="form-input" id="mediaCountry" placeholder="e.g., Japan, USA">
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">Release Year</label>
+                        <input type="text" class="form-input" id="mediaReleaseYear" placeholder="e.g., 2023">
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">Watch Link</label>
+                        <input type="url" class="form-input" id="mediaLink" placeholder="https://...">
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" id="mediaCategory">
+                            <option value="">Select category</option>
+                            <option value="movies">Movie</option>
+                            <option value="series">TV Series</option>
+                            <option value="anime">Anime Movie</option>
+                            <option value="animeseries">Anime Series</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">Synopsis</label>
+                        <textarea class="form-textarea" id="mediaSynopsis" placeholder="Brief description..."></textarea>
+                    </div>
+                    <div class="form-row checkbox-row">
+                        <label class="custom-checkbox">
+                            <input type="checkbox" id="mediaWatched">
+                            <i class="far fa-circle" id="watchedIcon"></i>
+                            <span>Watched</span>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">Image</label>
+                        <div class="image-upload-container">
+                            <input type="file" class="form-input image-file-input" id="mediaImageFile" accept="image/*" style="display: none;">
+                            <button type="button" class="image-upload-btn" onclick="document.getElementById('mediaImageFile').click()">
+                                <i class="fas fa-image"></i> Choose Image
+                            </button>
+                            <input type="text" class="form-input image-url-input" id="mediaImageUrl" placeholder="Or paste image URL">
+                        </div>
+                        <div id="imagePreview" class="image-preview" style="display: none;">
+                            <img id="previewImage" class="preview-image">
+                            <button type="button" class="remove-image-btn" onclick="removeImagePreview()"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-buttons">
+                        <button type="button" class="cancel-btn" onclick="closeUniversalPopup()">Cancel</button>
+                        <button type="submit" class="submit-btn">Save</button>
+                    </div>
+                </form>
+            `;
+        }
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === 'mediaWatched') {
+                const icon = document.getElementById('watchedIcon');
+                if (e.target.checked) {
+                    icon.className = 'fas fa-circle';
+                } else {
+                    icon.className = 'far fa-circle';
+                }
+            }
+        });
+        function getSelectedImage() {
+            const file = document.getElementById('mediaImageFile').files[0];
+            const url = document.getElementById('mediaImageUrl').value.trim();
+            if (file) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            } else if (url) return Promise.resolve(url);
+            else return Promise.resolve('https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop');
+        }
         async function addNewMedia(event) {
             event.preventDefault();
-            
             const name = document.getElementById('mediaName').value.trim();
             if (!name) return;
-            
             const imageUrl = await getSelectedImage();
-            
-            if (window.editingMediaId) {
-                const mediaIndex = mediaData.findIndex(m => m.id === window.editingMediaId);
-                if (mediaIndex !== -1) {
-                    mediaData[mediaIndex] = {
-                        ...mediaData[mediaIndex],
-                        name: name,
+            const watched = document.getElementById('mediaWatched').checked;
+            if (editingMediaId) {
+                const idx = mediaData.findIndex(m => m.id === editingMediaId);
+                if (idx !== -1) {
+                    mediaData[idx] = {
+                        ...mediaData[idx],
+                        name,
                         rating: document.getElementById('mediaRating').value.trim() || 'N/A',
                         genre: document.getElementById('mediaGenre').value.trim() || 'No genre',
                         country: document.getElementById('mediaCountry').value.trim() || 'Unknown',
-                        category: document.getElementById('mediaCategory').value || 'movies',
-                        releaseDate: document.getElementById('mediaReleaseYear').value.trim() || '',
                         year: document.getElementById('mediaReleaseYear').value.trim() || new Date().getFullYear(),
+                        category: document.getElementById('mediaCategory').value || 'movies',
                         image: imageUrl,
                         link: document.getElementById('mediaLink').value.trim() || '',
-                        synopsis: document.getElementById('mediaSynopsis').value.trim() || 'No synopsis available.'
+                        synopsis: document.getElementById('mediaSynopsis').value.trim() || 'No synopsis available.',
+                        watched
                     };
                 }
-                
-                window.editingMediaId = null;
+                editingMediaId = null;
             } else {
-                const newMedia = {
+                mediaData.unshift({
                     id: Date.now(),
-                    name: name,
+                    name,
                     rating: document.getElementById('mediaRating').value.trim() || 'N/A',
                     genre: document.getElementById('mediaGenre').value.trim() || 'No genre',
                     country: document.getElementById('mediaCountry').value.trim() || 'Unknown',
@@ -1284,255 +988,324 @@
                     category: document.getElementById('mediaCategory').value || 'movies',
                     image: imageUrl,
                     link: document.getElementById('mediaLink').value.trim() || '',
-                    synopsis: document.getElementById('mediaSynopsis').value.trim() || 'No synopsis available.'
-                };
-                
-                mediaData.unshift(newMedia);
+                    synopsis: document.getElementById('mediaSynopsis').value.trim() || 'No synopsis available.',
+                    watched
+                });
             }
-            
             saveData();
             renderGallery();
-            closeAddPopup();
+            closeUniversalPopup();
         }
-        
-        function handleImageSelect(event) {
-            const file = event.target.files[0];
-            if (file) {
-                // Check if it's an image
-                if (!file.type.match('image.*')) {
-                    window.showMessage('Please select an image file.');
-                    return;
-                }
-                
-                // Check file size (max 5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    window.showMessage('Image size should be less than 5MB.');
-                    return;
-                }
-                
-                // Create preview
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById('imagePreview');
-                    const previewImage = document.getElementById('previewImage');
-                    
-                    previewImage.src = e.target.result;
-                    preview.style.display = 'block';
-                    
-                    // Clear URL input if file is selected
-                    document.getElementById('mediaImageUrl').value = '';
-                    
-                    // Show file info
-                    const fileInfo = document.createElement('div');
-                    fileInfo.className = 'file-info';
-                    fileInfo.innerHTML = `<i class="fas fa-info-circle"></i> ${file.name} (${(file.size/1024/1024).toFixed(2)}MB)`;
-                    
-                    // Remove previous file info
-                    const oldInfo = preview.querySelector('.file-info');
-                    if (oldInfo) oldInfo.remove();
-                    
-                    preview.appendChild(fileInfo);
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-        
-        function handleImageUrlInput() {
-            const urlInput = document.getElementById('mediaImageUrl');
-            const url = urlInput.value.trim();
-            
-            if (url) {
-                // Simple URL validation
-                if (url.startsWith('http://') || url.startsWith('https://')) {
-                    const preview = document.getElementById('imagePreview');
-                    const previewImage = document.getElementById('previewImage');
-                    
-                    previewImage.src = url;
-                    preview.style.display = 'block';
-                    
-                    // Clear file input if URL is entered
-                    document.getElementById('mediaImageFile').value = '';
-                    
-                    // Clear file info
-                    const fileInfo = preview.querySelector('.file-info');
-                    if (fileInfo) fileInfo.remove();
-                } else {
-                    window.showMessage('Please enter a valid URL starting with http:// or https://');
-                    urlInput.focus();
-                }
-            }
-        }
-        
-        function removeImagePreview() {
-            const preview = document.getElementById('imagePreview');
-            preview.style.display = 'none';
-            
-            // Clear both inputs
-            document.getElementById('mediaImageFile').value = '';
-            document.getElementById('mediaImageUrl').value = '';
-            
-            // Clear preview image
-            document.getElementById('previewImage').src = '';
-            
-            // Remove file info
-            const fileInfo = preview.querySelector('.file-info');
-            if (fileInfo) fileInfo.remove();
-        }
-        
-        // Function to get the selected image (either file or URL)
-        function getSelectedImage() {
-            const fileInput = document.getElementById('mediaImageFile');
-            const urlInput = document.getElementById('mediaImageUrl').value.trim();
-            const preview = document.getElementById('imagePreview');
-            
-            if (fileInput.files && fileInput.files[0]) {
-                // Return as data URL for local storage
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        resolve(e.target.result);
-                    };
-                    reader.readAsDataURL(fileInput.files[0]);
-                });
-            } else if (urlInput) {
-                // Return URL directly
-                return Promise.resolve(urlInput);
-            } else if (preview.style.display === 'block' && document.getElementById('previewImage').src) {
-                // If preview is showing, return the current preview src
-                return Promise.resolve(document.getElementById('previewImage').src);
+        function editMedia(id) {
+            const m = mediaData.find(x => x.id === id);
+            if (!m) return;
+            openUniversalPopup('Edit Media', getAddEditFormHTML());
+            document.getElementById('mediaName').value = m.name || '';
+            document.getElementById('mediaRating').value = m.rating || '';
+            document.getElementById('mediaGenre').value = m.genre || '';
+            document.getElementById('mediaCountry').value = m.country || '';
+            document.getElementById('mediaLink').value = m.link || '';
+            document.getElementById('mediaCategory').value = m.category || 'movies';
+            document.getElementById('mediaSynopsis').value = m.synopsis || '';
+            document.getElementById('mediaReleaseYear').value = m.year || '';
+            const watchedCheck = document.getElementById('mediaWatched');
+            watchedCheck.checked = m.watched || false;
+            const icon = document.getElementById('watchedIcon');
+            if (watchedCheck.checked) {
+                icon.className = 'fas fa-circle';
             } else {
-                // Default image
-                return Promise.resolve("https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop");
+                icon.className = 'far fa-circle';
             }
+            if (m.image) {
+                document.getElementById('previewImage').src = m.image;
+                document.getElementById('imagePreview').style.display = 'block';
+            }
+            editingMediaId = id;
         }
-        
-        // Show "no link" notification
-        function showNoLinkNotification() {
-            const notification = document.createElement('div');
-            notification.className = 'no-link-notification';
-            notification.innerHTML = `
-                <div class="notification-content">
-                    <i class="fas fa-link-slash"></i>
-                    <div>
-                        <h4>No Link Added</h4>
-                        <p>There are no links added for this media.</p>
-                    </div>
-                    <button class="close-notification" onclick="this.parentElement.parentElement.remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Auto-remove after 4 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 4000);
-        }
-
-        // Filter media function
-        function filterMedia(category) {
-            // Update active tab
-            document.querySelectorAll('.filter-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // Show/hide cards
-            const cards = document.querySelectorAll('.media-card');
-            
-            cards.forEach(card => {
-                if (category === 'all') {
+        function applyFilter(cat) {
+            document.querySelectorAll('.media-card').forEach(card => {
+                if (cat === 'all') {
                     card.style.display = 'block';
+                    card.classList.remove('top-rated-view');
+                } else if (cat === 'top') {
+                    const ratingText = card.querySelector('.media-rating').textContent.replace(/[^0-9.]/g, '');
+                    const rating = parseFloat(ratingText) || 0;
+                    if (rating >= 9.0) {
+                        card.style.display = 'block';
+                        card.classList.add('top-rated-view');
+                    } else {
+                        card.style.display = 'none';
+                        card.classList.remove('top-rated-view');
+                    }
                 } else {
-                    const cardCategory = card.getAttribute('data-category');
-                    // Split multiple categories and check exact match
-                    const categories = cardCategory.split(' ');
-                    
-                    if (categories.includes(category)) {
+                    const cardCat = card.getAttribute('data-category');
+                    if (cardCat && cardCat.split(' ').includes(cat)) {
                         card.style.display = 'block';
                     } else {
                         card.style.display = 'none';
                     }
+                    card.classList.remove('top-rated-view');
                 }
             });
+            const grid = document.getElementById('galleryGrid');
+            if (cat === 'top') {
+                grid.classList.add('horizontal');
+            } else {
+                grid.classList.remove('horizontal');
+            }
         }
-
-        // Reset all data
+        function filterMedia(cat) {
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            applyFilter(cat);
+        }
         function resetAllData() {
-            if (confirm("Are you sure? This will delete all your custom media entries.")) {
-                localStorage.removeItem('mediaGalleryData');
-                mediaData = [
-                    {
-                        id: 1,
-                        name: "Stranger Things",
-                        rating: 8.7,
-                        genre: "Horror • Mystery",
-                        country: "USA",
-                        year: "2016-2024",
-                        releaseDate: "2016-07-15",
-                        category: "tv",
-                        image: "https://wallpaperaccess.com/download/stranger-things-poster-825394",
-                        synopsis: "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl. A love letter to the '80s supernatural classics, this series follows a group of kids as they encounter otherworldly threats."
-                    },
-                    {
-                        id: 2,
-                        name: "Attack on Titan",
-                        rating: 9.0,
-                        genre: "Action • Dark Fantasy",
-                        country: "Japan",
-                        year: "2013-2023",
-                        releaseDate: "2013-04-07",
-                        category: "anime",
-                        image: "https://wallpaperaccess.com/download/attack-on-titan-posters-5286029",
-                        synopsis: "After his hometown is destroyed and his mother is killed, young Eren Jaeger vows to cleanse the earth of the giant humanoid Titans that have brought humanity to the brink of extinction. He joins the Scout Regiment to fight against the Titans and uncover the truth about their existence."
-                    }
-                ];
-                renderGallery();
-                window.showMessage("Gallery reset to default!", 'info');
+            openUniversalPopup('Confirm Reset', `
+                <div style="padding: 20px; text-align: center;">
+                    <p style="margin-bottom: 20px;">Reset to default data?</p>
+                    <p style="margin-bottom: 20px; color: var(--text-secondary);">This action cannot be undone.</p>
+                    <div class="form-buttons">
+                        <button class="cancel-btn" onclick="closeUniversalPopup()">Cancel</button>
+                        <button class="submit-btn" onclick="confirmReset()">Reset</button>
+                    </div>
+                </div>
+            `);
+        }
+        function confirmReset() {
+            localStorage.removeItem('mediaGalleryData');
+            mediaData = [
+                {
+                    id: 1,
+                    name: "Stranger Things",
+                    rating: 8.7,
+                    genre: "Horror | Mystery",
+                    country: "USA",
+                    year: "2016-2024",
+                    category: "series",
+                    image: "https://wallpaperaccess.com/download/stranger-things-poster-825394",
+                    synopsis: "When a young boy vanishes, a small town uncovers a mystery involving secret experiments...",
+                    link: "",
+                    watched: false
+                },
+                {
+                    id: 2,
+                    name: "Attack on Titan",
+                    rating: 9.0,
+                    genre: "Action | Dark Fantasy",
+                    country: "Japan",
+                    year: "2013-2023",
+                    category: "animeseries",
+                    image: "https://wallpaperaccess.com/download/attack-on-titan-posters-5286029",
+                    synopsis: "After his hometown is destroyed, young Eren Jaeger vows to cleanse the earth...",
+                    link: "",
+                    watched: true
+                }
+            ];
+            renderGallery();
+            closeUniversalPopup();
+        }
+        function showNoLinkNotification() {
+            const notif = document.createElement('div');
+            notif.className = 'no-link-notification';
+            notif.innerHTML = `
+                <div class="notification-content">
+                    <i class="fas fa-link-slash"></i>
+                    <div><h4>No Link Added</h4><p>There are no links added for this media.</p></div>
+                    <button class="close-notification" onclick="this.parentElement.parentElement.remove()"><i class="fas fa-times"></i></button>
+                </div>`;
+            document.body.appendChild(notif);
+            setTimeout(() => notif.remove(), 4000);
+        }
+        let searchTimeout;
+        function setupSearch() {
+            const searchInput = document.getElementById('globalSearch');
+            const suggestionsContainer = document.getElementById('searchSuggestions');
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const term = this.value.trim();
+                if (term.length < 1) {
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+                searchTimeout = setTimeout(() => showSearchSuggestions(term), 300);
+            });
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    suggestionsContainer.style.display = 'none';
+                    performSearch();
+                }
+            });
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+            suggestionsContainer.addEventListener('click', function(e) {
+                const item = e.target.closest('.search-suggestion-item');
+                if (item) selectSuggestion(item);
+            });
+        }
+        function showSearchSuggestions(term) {
+            const suggestions = mediaData.filter(item =>
+                item.name.toLowerCase().includes(term.toLowerCase()) ||
+                (item.synopsis && item.synopsis.toLowerCase().includes(term.toLowerCase()))
+            ).slice(0, 5);
+            const container = document.getElementById('searchSuggestions');
+            if (suggestions.length === 0) {
+                container.innerHTML = `<div class="search-suggestion-item"><div class="suggestion-title">No results found</div><div class="suggestion-description">Try different keywords</div></div>`;
+            } else {
+                container.innerHTML = suggestions.map(item => `
+                    <div class="search-suggestion-item" data-id="${item.id}">
+                        <div class="suggestion-title">${item.name}</div>
+                        <div class="suggestion-description">${item.synopsis || ''}</div>
+                        <div class="suggestion-category">${item.category || 'media'}</div>
+                    </div>
+                `).join('');
+            }
+            container.style.display = 'block';
+        }
+        function selectSuggestion(item) {
+            const id = item.getAttribute('data-id');
+            const card = document.querySelector(`.media-card[data-id="${id}"]`);
+            if (card) {
+                const cat = card.getAttribute('data-category');
+                const catMap = {
+                    'movies': 'movies',
+                    'series': 'series',
+                    'anime': 'anime',
+                    'animeseries': 'animeseries'
+                };
+                const filterCat = catMap[cat] || 'all';
+                const tab = Array.from(document.querySelectorAll('.filter-tab')).find(t => t.textContent.toLowerCase().includes(filterCat));
+                if (tab) {
+                    tab.click();
+                }
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                card.style.borderColor = 'var(--accent-color)';
+                card.style.borderWidth = '2px';
+                setTimeout(() => {
+                    card.style.borderColor = 'rgba(255,255,255,0.1)';
+                    card.style.borderWidth = '1px';
+                }, 3000);
+                document.getElementById('searchSuggestions').style.display = 'none';
+                document.getElementById('globalSearch').value = mediaData.find(m => m.id == id).name;
             }
         }
-
-        // Close popup with Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeAddPopup();
+        function performSearch() {
+            const term = document.getElementById('globalSearch').value.trim().toLowerCase();
+            if (!term) return;
+            const match = mediaData.find(item =>
+                item.name.toLowerCase().includes(term) ||
+                (item.synopsis && item.synopsis.toLowerCase().includes(term))
+            );
+            if (match) {
+                const card = document.querySelector(`.media-card[data-id="${match.id}"]`);
+                if (card) {
+                    const cat = card.getAttribute('data-category');
+                    const catMap = {
+                        'movies': 'movies',
+                        'series': 'series',
+                        'anime': 'anime',
+                        'animeseries': 'animeseries'
+                    };
+                    const filterCat = catMap[cat] || 'all';
+                    const tab = Array.from(document.querySelectorAll('.filter-tab')).find(t => t.textContent.toLowerCase().includes(filterCat));
+                    if (tab) {
+                        tab.click();
+                    }
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    card.style.borderColor = 'var(--accent-color)';
+                    card.style.borderWidth = '2px';
+                    setTimeout(() => {
+                        card.style.borderColor = 'rgba(255,255,255,0.1)';
+                        card.style.borderWidth = '1px';
+                    }, 3000);
+                }
+            }
+            document.getElementById('searchSuggestions').style.display = 'none';
+        }
+        document.getElementById('avatarContainer').addEventListener('click', function() {
+            document.getElementById('avatarUpload').click();
+        });
+        document.getElementById('avatarUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const avatar = document.getElementById('avatarContainer');
+                    avatar.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+                    localStorage.setItem('userAvatar', ev.target.result);
+                };
+                reader.readAsDataURL(file);
             }
         });
-        
-        // Add event listeners for image inputs
-        document.addEventListener('DOMContentLoaded', function() {
+        const usernameDisplay = document.getElementById('usernameDisplay');
+        const usernameInput = document.getElementById('usernameInput');
+        const usernameContainer = document.getElementById('usernameContainer');
+        usernameDisplay.addEventListener('click', function() {
+            usernameDisplay.style.display = 'none';
+            usernameInput.style.display = 'inline-block';
+            usernameInput.focus();
+        });
+        usernameInput.addEventListener('blur', function() {
+            usernameDisplay.style.display = 'inline';
+            usernameInput.style.display = 'none';
+            const newName = usernameInput.value.trim() || 'Guest';
+            usernameDisplay.textContent = newName;
+            localStorage.setItem('userName', newName);
+        });
+        usernameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') this.blur();
+        });
+        const savedAvatar = localStorage.getItem('userAvatar');
+        if (savedAvatar) {
+            document.getElementById('avatarContainer').innerHTML = `<img src="${savedAvatar}" style="width:100%;height:100%;object-fit:cover;">`;
+        }
+        const savedName = localStorage.getItem('userName');
+        if (savedName) {
+            usernameDisplay.textContent = savedName;
+            usernameInput.value = savedName;
+        }
+        function handleImageSelect(e) {
+            const file = e.target.files[0];
+            if (!file || !file.type.match('image.*')) return;
+            if (file.size > 5 * 1024 * 1024) { alert('Image too large'); return; }
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                document.getElementById('previewImage').src = ev.target.result;
+                document.getElementById('imagePreview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+        function handleImageUrlInput() {
+            const url = document.getElementById('mediaImageUrl').value.trim();
+            if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                document.getElementById('previewImage').src = url;
+                document.getElementById('imagePreview').style.display = 'block';
+            }
+        }
+        function removeImagePreview() {
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('mediaImageFile').value = '';
+            document.getElementById('mediaImageUrl').value = '';
+        }
+        document.addEventListener('DOMContentLoaded', () => {
             loadData();
-            
-            // Image file input change
-            document.getElementById('mediaImageFile').addEventListener('change', handleImageSelect);
-            
-            // Image URL input change (with debounce)
-            let urlTimeout;
-            document.getElementById('mediaImageUrl').addEventListener('input', function() {
-                clearTimeout(urlTimeout);
-                urlTimeout = setTimeout(() => {
-                    if (this.value.trim()) {
-                        handleImageUrlInput();
-                    }
-                }, 800);
+            setupSearch();
+            document.addEventListener('change', function(e) {
+                if (e.target && e.target.id === 'mediaImageFile') handleImageSelect(e);
             });
-            
-            // Also trigger on blur (when user leaves the field)
-            document.getElementById('mediaImageUrl').addEventListener('blur', function() {
-                if (this.value.trim()) {
-                    handleImageUrlInput();
+            document.addEventListener('blur', function(e) {
+                if (e.target && e.target.id === 'mediaImageUrl') handleImageUrlInput();
+            }, true);
+            document.addEventListener('input', function(e) {
+                if (e.target && e.target.id === 'mediaImageUrl') {
+                    clearTimeout(window.urlTimeout);
+                    window.urlTimeout = setTimeout(handleImageUrlInput, 800);
                 }
             });
         });
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            loadData();
-        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeUniversalPopup(); });
     </script>
 </body>
 </html>
