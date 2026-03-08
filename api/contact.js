@@ -14,15 +14,15 @@ module.exports = async (req, res) => {
 
   try {
     await resend.emails.send({
-      from: 'Your Website <onboarding@resend.dev>',
+      from: 'Kakoi Kiraku Home <onboarding@resend.dev>',
       to: ['lildavegoth@proton.me'],
       subject: `New message from ${name}`,
       reply_to: email,
       html: `
-        <h2>New Contact Form Submission</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Message:</strong><br>${message.replace(/\n/g, '<br>')}</p>
+        <h2>Kakoi Kiraku Submission</h2>
+        <p style="margin-top: -3px;"><strong>Name:</strong> ${name}</p>
+        <p style="margin-top: -3px;"><strong>Email:</strong> ${email}</p>
+        <p style="margin-top: -3px;"><strong>Message:</strong><br>${message.replace(/\n/g, '<br>')}</p>
       `,
     });
 
