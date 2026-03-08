@@ -18,6 +18,9 @@ image: "../../images/4ever.webp"
 2. Test
     1. Test
     2. Test
+- [ ] Test
+    - [ ] Test
+    - [ ] Test
   
 ---
 
@@ -25,11 +28,11 @@ image: "../../images/4ever.webp"
 
 ``` test
 su
-tes
+test
 pm uninstall -k --user 0 com.test.apk
 ```
-- [ ] Test
-    - [ ] Test
+
+---
 
 | test |        | test test test test |      | test |      |
 | ------ | ------ | ---- | ---- | ---- | ---- |
