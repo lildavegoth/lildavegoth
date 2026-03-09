@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Browser Homepage | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="cordova.js"></script>
     <link rel="stylesheet" href="media.css">
     <script src="notification.cssjs"></script>
     <script src="protections.js"></script>
@@ -1561,6 +1562,78 @@
                 });
             }
             
+            async function saveFile(content, filename, mimeType) {
+                return new Promise((resolve, reject) => {
+                    if (window.cordova) {
+                        const writeFile = (dirEntry, isDownloads) => {
+                            dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                                fileEntry.createWriter((writer) => {
+                                    writer.onwriteend = () => {
+                                        const location = isDownloads ? 'Downloads' : 'app folder';
+                                        window.showMessage(`Browser settings backed up to ${location}!`, 'success');
+                                        if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                                            cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                                        }
+                                        resolve();
+                                    };
+                                    writer.onerror = () => {
+                                        window.showMessage('Export failed', 'error');
+                                        reject();
+                                    };
+                                    writer.write(new Blob([content], { type: mimeType }));
+                                }, () => {
+                                    window.showMessage('Export failed', 'error');
+                                    reject();
+                                });
+                            }, () => {
+                                window.showMessage('Export failed', 'error');
+                                reject();
+                            });
+                        };
+            
+                        const saveToDownloads = () => {
+                            window.resolveLocalFileSystemURL(
+                                cordova.file.externalRootDirectory + 'Download/',
+                                (dir) => {
+                                    writeFile(dir, true);
+                                },
+                                () => {
+                                    window.resolveLocalFileSystemURL(
+                                        cordova.file.dataDirectory,
+                                        (dir) => {
+                                            writeFile(dir, false);
+                                        },
+                                        () => {
+                                            window.showMessage('Export failed', 'error');
+                                            reject();
+                                        }
+                                    );
+                                }
+                            );
+                        };
+            
+                        if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                            saveToDownloads();
+                        } else {
+                            document.addEventListener('deviceready', saveToDownloads);
+                        }
+                    } else {
+                        // Browser fallback
+                        const blob = new Blob([content], { type: mimeType });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        window.showMessage('Browser settings exported!', 'success');
+                        resolve();
+                    }
+                });
+            }
+            
             function saveLinkChanges() {
                 const nameInputs = document.querySelectorAll('.link-name-input');
                 const urlInputs = document.querySelectorAll('.link-url-input');
@@ -1710,35 +1783,36 @@
                 }
             });
             
-            exportSettings.addEventListener('click', function() {
-                const settings = {
-                    version: '1.0',
-                    exportDate: new Date().toISOString(),
-                    quickLinks: [],
-                    hideSettingsButton: localStorage.getItem('hideSettingsButton'),
-                    showDescription: localStorage.getItem('showDescription'),
-                    bodyPosition: localStorage.getItem('bodyPosition'),
-                    showSearchBar: localStorage.getItem('showSearchBar'),
-                    showBanner: localStorage.getItem('showBanner'),
-                    showQuickLinks: localStorage.getItem('showQuickLinks')
-                };
-                const linkCards = document.querySelectorAll('.link-card');
-                linkCards.forEach((linkCard) => {
-                    settings.quickLinks.push({
-                        name: linkCard.querySelector('.link-text').textContent,
-                        url: linkCard.href
+            exportSettings.addEventListener('click', async function() {
+                try {
+                    const settings = {
+                        version: '1.0',
+                        exportDate: new Date().toISOString(),
+                        quickLinks: [],
+                        hideSettingsButton: localStorage.getItem('hideSettingsButton'),
+                        showDescription: localStorage.getItem('showDescription'),
+                        bodyPosition: localStorage.getItem('bodyPosition'),
+                        showSearchBar: localStorage.getItem('showSearchBar'),
+                        showBanner: localStorage.getItem('showBanner'),
+                        showQuickLinks: localStorage.getItem('showQuickLinks')
+                    };
+            
+                    const linkCards = document.querySelectorAll('.link-card');
+                    linkCards.forEach((linkCard) => {
+                        settings.quickLinks.push({
+                            name: linkCard.querySelector('.link-text').textContent,
+                            url: linkCard.href
+                        });
                     });
-                });
-                const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `kkbrowser-settings-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                window.showMessage('All settings exported!', 'success');
+            
+                    const jsonStr = JSON.stringify(settings, null, 2);
+                    const filename = `kkbrowser-settings-${new Date().toISOString().split('T')[0]}.json`;
+                    const mimeType = 'application/json';
+            
+                    await saveFile(jsonStr, filename, mimeType);
+                } catch (error) {
+                    window.showMessage('Export failed', 'error');
+                }
             });
             
             importSettings.addEventListener('click', function() {

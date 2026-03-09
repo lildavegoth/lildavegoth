@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Account | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="cordova.js"></script>
     <script src="protections.js"></script>
     <script src="notification.cssjs"></script>
     <link rel="stylesheet" href="media.css">
@@ -55,15 +56,11 @@
             margin: 0 auto;
         }
 
-        /* Blur Effects */
-        .blur-background {
-            backdrop-filter: saturate(180%) blur(20px);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
+        .calculator {
             background-color: rgba(22, 22, 24, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* Header Styles */
         header {
             text-align: center;
             margin-bottom: var(--spacing-xl);
@@ -97,7 +94,6 @@
             margin-bottom: var(--spacing-md);
         }
 
-        /* Form Styles */
         .form-container {
             background: var(--bg-card);
             border-radius: var(--radius-large);
@@ -196,7 +192,6 @@
             text-decoration: underline;
         }
 
-        /* Message Styles */
         .message {
             padding: var(--spacing-sm);
             border-radius: var(--radius-small);
@@ -220,7 +215,6 @@
             display: block;
         }
 
-        /* User Info */
         .user-info {
             background: var(--bg-card);
             border-radius: var(--radius-large);
@@ -299,7 +293,6 @@
             background: var(--accent-dark);
         }
 
-        /* ID Key Display */
         .id-key-display {
             background: rgba(0, 0, 0, 0.3);
             border-radius: var(--radius-small);
@@ -322,7 +315,6 @@
             margin-top: var(--spacing-sm);
         }
 
-        /* File Input */
         .file-input-container {
             position: relative;
             margin-bottom: var(--spacing-md);
@@ -384,6 +376,30 @@
             display: none;
         }
 
+        .pill-container {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 16px 0 8px;
+            flex-wrap: wrap;
+            margin-top: -15px;
+        }
+        .pill {
+            background: rgba(193, 252, 50, 1.0);
+            color: black;
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+        }
+        .usage-note {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin: 12px 0 0;
+        }
+        
     </style>
 </head>
 <body>
@@ -392,7 +408,6 @@
             <i class="fas fa-arrow-left"></i> Back to Home
         </a>
         
-        <!-- Header -->
         <app-header class="fade-in">
             <div>
                 <h1 class="username">Account</h1>
@@ -425,8 +440,7 @@
             </div>
         </div>
 
-        <!-- User Info (shown when logged in) -->
-        <div class="user-info blur-background" id="userInfo">
+        <div class="user-info" id="userInfo">
             <p class="form-subtitle" style="text-align: left; margin-bottom: var(--spacing-md);">
                 You're signed in! Your data is saved locally in your browser. You can now access all features across the pages.
             </p>
@@ -450,11 +464,16 @@
             <p class="form-subtitle" style="text-align: left; margin-bottom: var(--spacing-md);">
                 Keep your UserID Key safe and don't you ever lose it, or you'll not be able to login to your account at all cause i don't have your UserID Key and i can't bring it back cause the UserID is encrypted!
             </p>
+
+            <div class="pill-container">
+                <a href="giveaway.html" class="pill">Giveaways</a>
+                <a href="pages/kiraku-store.html" class="pill">Kiraku Store</a>
+            </div>
+            <p class="usage-note">The accounts are only used for listed above.</p>
             
         </div>
 
-        <!-- Sign In Form -->
-        <div class="form-container blur-background" id="signInForm">
+        <div class="form-container calculator" id="signInForm">
             <h2 class="form-title">Sign In</h2>
             <p class="form-subtitle">
                 Import your User ID Key file to sign in. No passwords needed.
@@ -462,13 +481,12 @@
             
             <div class="message" id="signInMessage"></div>
             
-            <!-- File Upload -->
             <div class="file-input-container">
                 <label class="file-input-label" for="importKeyFile">
                     <i class="fas fa-file-import" style="margin-right: 8px;"></i>
                     Choose ID Key File
                 </label>
-                <input type="file" id="importKeyFile" class="file-input" accept=".txt,.json">
+                <input type="file" id="importKeyFile" class="file-input">
                 <div class="file-name" id="fileName">No file selected</div>
             </div>
             
@@ -486,8 +504,7 @@
             Accounts are used for protecting my contents, permissions & giveaways only. <strong>There is nothing important i collects or receives at all</strong>!
         </p>
 
-        <!-- Sign Up Form -->
-        <div class="form-container blur-background" id="signUpForm" style="display: none;">
+        <div class="form-container calculator" id="signUpForm" style="display: none;">
             <h2 class="form-title">Create Account</h2>
             <p class="form-subtitle">
                 Create a new account. Your User ID Key will be generated and you can download it for future sign-ins.
@@ -528,16 +545,14 @@
     </div>
 
     <script>
-        // Encryption key (in a real app, this would be more secure)
         const ENCRYPTION_KEY = "lildavegoth_secure_key_2026";
         
-        // Simple XOR encryption/decryption
         function simpleEncrypt(text, key) {
             let result = '';
             for (let i = 0; i < text.length; i++) {
                 result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
             }
-            return btoa(result); // Base64 encode
+            return btoa(result);
         }
         
         function simpleDecrypt(encrypted, key) {
@@ -549,14 +564,12 @@
             return result;
         }
         
-        // Generate a unique user ID
         function generateUserId() {
             const timestamp = Date.now().toString(36);
             const random = Math.random().toString(36).substr(2, 9);
             return 'USER_' + timestamp + '_' + random.toUpperCase();
         }
         
-        // Generate ID Key data
         function generateIdKey(userData) {
             const keyData = {
                 id: userData.id,
@@ -565,12 +578,10 @@
                 createdAt: userData.createdAt,
                 encrypted: true
             };
-            
             const jsonString = JSON.stringify(keyData);
             return simpleEncrypt(jsonString, ENCRYPTION_KEY);
         }
         
-        // Decrypt ID Key
         function decryptIdKey(encryptedKey) {
             try {
                 const decrypted = simpleDecrypt(encryptedKey, ENCRYPTION_KEY);
@@ -580,13 +591,11 @@
             }
         }
         
-        // Get all users from localStorage
         function getAllUsers() {
             const users = localStorage.getItem('users');
             return users ? JSON.parse(users) : [];
         }
         
-        // Save users to localStorage
         function saveUsers(users) {
             localStorage.setItem('users', JSON.stringify(users));
         }
@@ -618,10 +627,9 @@
         function enableUserIdEdit() {
             const streak = getUserStreak();
             if (streak < 15) {
-                window.showMessage(`Cannot change UserID. Required: 15+ day streak (Current: ${streak} days)`);
+                window.showMessage(`Cannot change UserID. Required: 15+ day streak on Routine Quest, (Current: ${streak} days)`);
                 return;
             }
-            
             const displayIdEl = document.getElementById('displayUserID');
             const inputIdEl = document.getElementById('editUserIdInput');
             if (displayIdEl.style.display !== 'none') {
@@ -643,7 +651,11 @@
                     inputIdEl.focus();
                     return;
                 }
-                
+                if (newUserId.toLowerCase() === 'lildavegoth') {
+                    window.showMessage('UserID "lildavegoth" is not allowed');
+                    inputIdEl.focus();
+                    return;
+                }
                 const currentUser = JSON.parse(localStorage.getItem('currentUser'));
                 if (currentUser) {
                     currentUser.id = newUserId;
@@ -655,11 +667,9 @@
                         users[userIndex].id = newUserId;
                         saveUsers(users);
                     }
-                    
                     displayIdEl.textContent = newUserId;
                 }
             }
-            
             displayIdEl.style.display = 'inline-block';
             inputIdEl.style.display = 'none';
         }
@@ -676,10 +686,9 @@
         function enableUsernameEdit() {
             const streak = getUserStreak();
             if (streak < 15) {
-                window.showMessage(`Cannot change username. Required: 15+ day streak (Current: ${streak} days)`);
+                window.showMessage(`Cannot change username. Required: 15+ day streaks on Routine Quest, (Current: ${streak} days)`);
                 return;
             }
-            
             const displayEl = document.getElementById('displayUsername');
             const inputEl = document.getElementById('editUsernameInput');
             if (displayEl.style.display !== 'none') {
@@ -696,6 +705,11 @@
             const newUsername = inputEl.value.trim();
             
             if (newUsername) {
+                if (newUsername.toLowerCase() === 'lildavegoth') {
+                    window.showMessage('Username "lildavegoth" is not allowed');
+                    inputEl.focus();
+                    return;
+                }
                 const currentUser = JSON.parse(localStorage.getItem('currentUser'));
                 if (currentUser) {
                     currentUser.username = newUsername;
@@ -707,11 +721,9 @@
                         users[userIndex].username = newUsername;
                         saveUsers(users);
                     }
-                    
                     displayEl.textContent = newUsername;
                 }
             }
-            
             displayEl.style.display = 'inline-block';
             inputEl.style.display = 'none';
         }
@@ -744,7 +756,6 @@
             try {
                 const gameData = localStorage.getItem('routineGame');
                 if (!gameData) return 0;
-                
                 const data = JSON.parse(gameData);
                 return data.streak || 0;
             } catch (error) {
@@ -775,6 +786,78 @@
                 showBtn.innerHTML = '<i class="fas fa-eye"></i>';
                 showBtn.title = 'Show ID Key';
             }
+        }
+        
+        async function saveFile(content, filename, mimeType) {
+            return new Promise((resolve, reject) => {
+                if (window.cordova) {
+                    const writeFile = (dirEntry, isDownloads) => {
+                        dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                            fileEntry.createWriter((writer) => {
+                                writer.onwriteend = () => {
+                                    const location = isDownloads ? 'Downloads' : 'app folder';
+                                    window.showMessage(`ID Key backed up to ${location}!`, 'success');
+                                    if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                                    }
+                                    resolve();
+                                };
+                                writer.onerror = () => {
+                                    window.showMessage('Download failed', 'error');
+                                    reject();
+                                };
+                                writer.write(new Blob([content], { type: mimeType }));
+                            }, () => {
+                                window.showMessage('Download failed', 'error');
+                                reject();
+                            });
+                        }, () => {
+                            window.showMessage('Download failed', 'error');
+                            reject();
+                        });
+                    };
+        
+                    const saveToDownloads = () => {
+                        window.resolveLocalFileSystemURL(
+                            cordova.file.externalRootDirectory + 'Download/',
+                            (dir) => {
+                                writeFile(dir, true);
+                            },
+                            () => {
+                                window.resolveLocalFileSystemURL(
+                                    cordova.file.dataDirectory,
+                                    (dir) => {
+                                        writeFile(dir, false);
+                                    },
+                                    () => {
+                                        window.showMessage('Download failed', 'error');
+                                        reject();
+                                    }
+                                );
+                            }
+                        );
+                    };
+        
+                    if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                        saveToDownloads();
+                    } else {
+                        document.addEventListener('deviceready', saveToDownloads);
+                    }
+                } else {
+                    // Browser fallback
+                    const blob = new Blob([content], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    window.showMessage('ID Key downloaded!', 'success');
+                    resolve();
+                }
+            });
         }
         
         function updateIdKeyDisplay(key) {
@@ -833,7 +916,6 @@
             updateStreakNumberDisplay();
         });
         
-        // Switch between sign in and sign up forms
         document.getElementById('switchToSignUp').addEventListener('click', function() {
             document.getElementById('signInForm').style.display = 'none';
             document.getElementById('signUpForm').style.display = 'block';
@@ -844,7 +926,6 @@
             document.getElementById('signInForm').style.display = 'block';
         });
         
-        // Sign up functionality
         document.getElementById('signUpBtn').addEventListener('click', function() {
             const username = document.getElementById('signUpUsername').value.trim();
             const email = document.getElementById('signUpEmail').value.trim();
@@ -853,8 +934,11 @@
                 showMessage('signUpMessage', 'Please enter a username', true);
                 return;
             }
+            if (username.toLowerCase() === 'lildavegoth') {
+                showMessage('signUpMessage', 'Username "lildavegoth" is not allowed', true);
+                return;
+            }
             
-            // Check if username already exists
             const users = getAllUsers();
             const userExists = users.find(u => u.username === username);
             
@@ -863,7 +947,6 @@
                 return;
             }
             
-            // Create new user
             const newUser = {
                 id: generateUserId(),
                 username: username,
@@ -871,16 +954,13 @@
                 createdAt: new Date().toISOString()
             };
             
-            // Show success message
             showMessage('signUpMessage', 'Account created successfully!', false);
             
-            // Auto login after a short delay
             setTimeout(() => {
                 showUserInfo(newUser);
             }, 1500);
         });
         
-        // Import ID Key functionality
         document.getElementById('importKeyBtn').addEventListener('click', function() {
             const fileInput = document.getElementById('importKeyFile');
             
@@ -902,11 +982,9 @@
                         return;
                     }
                     
-                    // Check if user exists
                     const users = getAllUsers();
                     let user = users.find(u => u.id === userData.id);
                     
-                    // If not found, create from ID Key data
                     if (!user) {
                         user = {
                             id: userData.id,
@@ -932,29 +1010,25 @@
             reader.readAsText(file);
         });
         
-        document.getElementById('downloadKeyBtn').addEventListener('click', function() {
-            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-            if (!currentUser) return;
-            
-            const idKey = generateIdKey(currentUser);
-            const blob = new Blob([idKey], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            
-            a.href = url;
-            a.download = `user_id_key_${currentUser.username}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            const btn = document.getElementById('downloadKeyBtn');
-            btn.style.background = 'rgba(193, 252, 50, 0.2)';
-            
-            setTimeout(function() {
-                window.showMessage('ID Key has been downloaded')
-                btn.style.background = '';
-            }, 2000);
+        document.getElementById('downloadKeyBtn').addEventListener('click', async function() {
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                if (!currentUser) return;
+        
+                const idKey = generateIdKey(currentUser);
+                const filename = `user_id_key_${currentUser.username}.txt`;
+                const mimeType = 'text/plain';
+        
+                await saveFile(idKey, filename, mimeType);
+        
+                const btn = document.getElementById('downloadKeyBtn');
+                btn.style.background = 'rgba(193, 252, 50, 0.2)';
+                setTimeout(() => {
+                    btn.style.background = '';
+                }, 2000);
+            } catch (error) {
+                window.showMessage('Download failed', 'error');
+            }
         });
         
         document.getElementById('logoutBtn').addEventListener('click', function() {
@@ -976,4 +1050,4 @@
         
     </script>
 </body>
-</html> 
+</html>
