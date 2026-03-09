@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Journal | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
@@ -985,13 +986,75 @@
         window.closeSettingsPopup = () => { settingsPopup.style.display = 'none'; };
         
         document.getElementById('exportBtn').addEventListener('click', () => {
+          try {
             const exportData = { username, quickTypes, quickEmojis, dailyContents };
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `journal_backup_${new Date().toISOString().slice(0,10)}.json`;
-            a.click();
+            const jsonStr = JSON.stringify(exportData, null, 2);
+            const filename = `journal_backup_${new Date().toISOString().slice(0,10)}.json`;
+            const mimeType = 'application/json';
+        
+            if (window.cordova) {
+              const writeFile = (dirEntry, isDownloads) => {
+                dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                  fileEntry.createWriter((writer) => {
+                    writer.onwriteend = () => {
+                      const location = isDownloads ? 'Downloads' : 'app folder';
+                      window.showMessage(`Journal backed up to ${location}!`);
+                      if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                      }
+                    };
+                    writer.onerror = () => {
+                      window.showMessage('Backup failed', 'error');
+                    };
+                    writer.write(new Blob([jsonStr], { type: mimeType }));
+                  }, () => {
+                    window.showMessage('Backup failed', 'error');
+                  });
+                }, () => {
+                  window.showMessage('Backup failed', 'error');
+                });
+              };
+        
+              const saveToDownloads = () => {
+                window.resolveLocalFileSystemURL(
+                  cordova.file.externalRootDirectory + 'Download/',
+                  (dir) => {
+                    writeFile(dir, true);
+                  },
+                  () => {
+                    window.resolveLocalFileSystemURL(
+                      cordova.file.dataDirectory,
+                      (dir) => {
+                        writeFile(dir, false);
+                      },
+                      () => {
+                        window.showMessage('Backup failed', 'error');
+                      }
+                    );
+                  }
+                );
+              };
+        
+              if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                saveToDownloads();
+              } else {
+                document.addEventListener('deviceready', saveToDownloads);
+              }
+            } else {
+              const blob = new Blob([jsonStr], { type: mimeType });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              window.showMessage('File backed up successfully');
+            }
+          } catch (error) {
+            window.showMessage('Backup failed', 'error');
+          }
         });
         
         document.getElementById('importFile').addEventListener('change', (e) => {

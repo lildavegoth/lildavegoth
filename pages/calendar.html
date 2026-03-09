@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendar | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
@@ -1548,21 +1549,76 @@
         });
         
         document.getElementById('exportOption').addEventListener('click', () => {
+          try {
             const dataStr = JSON.stringify(plans, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `plans-${new Date().toISOString().split('T')[0]}.json`;
-            
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            
+            const filename = `calendar-plans-${new Date().toISOString().split('T')[0]}.json`;
+            const mimeType = 'application/json';
+        
+            if (window.cordova) {
+              const writeFile = (dirEntry, isDownloads) => {
+                dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                  fileEntry.createWriter((writer) => {
+                    writer.onwriteend = () => {
+                      const location = isDownloads ? 'Downloads' : 'app folder';
+                      window.showMessage(`Plans exported to ${location}!`);
+                      if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                      }
+                    };
+                    writer.onerror = () => {
+                      window.showMessage('Export failed', 'error');
+                    };
+                    writer.write(new Blob([dataStr], { type: mimeType }));
+                  }, () => {
+                    window.showMessage('Export failed', 'error');
+                  });
+                }, () => {
+                  window.showMessage('Export failed', 'error');
+                });
+              };
+        
+              const saveToDownloads = () => {
+                window.resolveLocalFileSystemURL(
+                  cordova.file.externalRootDirectory + 'Download/',
+                  (dir) => {
+                    writeFile(dir, true);
+                  },
+                  () => {
+                    window.resolveLocalFileSystemURL(
+                      cordova.file.dataDirectory,
+                      (dir) => {
+                        writeFile(dir, false);
+                      },
+                      () => {
+                        window.showMessage('Export failed', 'error');
+                      }
+                    );
+                  }
+                );
+              };
+        
+              if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                saveToDownloads();
+              } else {
+                document.addEventListener('deviceready', saveToDownloads);
+              }
+            } else {
+              const dataBlob = new Blob([dataStr], { type: mimeType });
+              const url = URL.createObjectURL(dataBlob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = filename;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+              window.showMessage('File has be backed up');
+            }
+        
             document.getElementById('importExportPopup').classList.remove('show');
-            window.showMessage('Plans exported successfully!');
+          } catch (error) {
+            window.showMessage('Export failed', 'error');
+          }
         });
         
         document.getElementById('importOption').addEventListener('click', () => {

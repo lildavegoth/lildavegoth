@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dictionary Manager | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../navigation.css">
@@ -1781,20 +1782,75 @@
 	        }
 	        
 	        exportDictionary() {
-	            const content = this.exportToTxt();
-	            const blob = new Blob([content], { type: 'text/plain' });
-	            const url = URL.createObjectURL(blob);
-	            
-	            const a = document.createElement('a');
-	            a.href = url;
-	            a.download = `user-dictionary-${new Date().toISOString().split('T')[0]}.txt`;
-	            document.body.appendChild(a);
-	            a.click();
-	            document.body.removeChild(a);
-	            URL.revokeObjectURL(url);
-	            
-	            window.showMessage('Dictionary exported successfully', 'success');
-	        }
+              try {
+                const content = this.exportToTxt();
+                const filename = `dictionary-backup-${new Date().toISOString().split('T')[0]}.txt`;
+                const mimeType = 'text/plain';
+            
+                if (window.cordova) {
+                  const writeFile = (dirEntry, isDownloads) => {
+                    dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                      fileEntry.createWriter((writer) => {
+                        writer.onwriteend = () => {
+                          const location = isDownloads ? 'Downloads' : 'app folder';
+                          window.showMessage(`Dictionary exported to ${location}!`);
+                          if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                            cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                          }
+                        };
+                        writer.onerror = () => {
+                          window.showMessage('Export failed', 'error');
+                        };
+                        writer.write(new Blob([content], { type: mimeType }));
+                      }, () => {
+                        window.showMessage('Export failed', 'error');
+                      });
+                    }, () => {
+                      window.showMessage('Export failed', 'error');
+                    });
+                  };
+            
+                  const saveToDownloads = () => {
+                    window.resolveLocalFileSystemURL(
+                      cordova.file.externalRootDirectory + 'Download/',
+                      (dir) => {
+                        writeFile(dir, true);
+                      },
+                      () => {
+                        window.resolveLocalFileSystemURL(
+                          cordova.file.dataDirectory,
+                          (dir) => {
+                            writeFile(dir, false);
+                          },
+                          () => {
+                            window.showMessage('Export failed', 'error');
+                          }
+                        );
+                      }
+                    );
+                  };
+            
+                  if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                    saveToDownloads();
+                  } else {
+                    document.addEventListener('deviceready', saveToDownloads);
+                  }
+                } else {
+                  const blob = new Blob([content], { type: mimeType });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = filename;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  window.showMessage('Backup successfully');
+                }
+              } catch (error) {
+                window.showMessage('Export failed', 'error');
+              }
+            }
 	        
 	        importDictionary() {
 	            const fileInput = document.getElementById('fileInput');

@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Downloads Task | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -1265,145 +1267,327 @@
         }
 
         function handleImportFile(input) {
-            const file = input.files[0]
-            if (!file) return
+            const file = input.files[0];
+            if (!file) return;
             
-            const folderName = capitalizeFolderName(file.name.replace(/\.[^/.]+$/, ""))
-            if (!categories.includes(folderName) && folderName !== "All") {
-                categories.push(folderName)
-                sortCategories()
-            }
+            const isZip = file.name.toLowerCase().endsWith('.zip');
             
-            const reader = new FileReader()
-            reader.onload = (e) => {
-                const content = e.target.result
-                const lines = content.split('\n')
-                const newTasks = []
-                
-                lines.forEach(line => {
-                    const trimmed = line.trim()
-                    if (!trimmed) return
+            if (isZip) {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const arrayBuffer = e.target.result;
+                    const zip = await JSZip.loadAsync(arrayBuffer);
+                    const newTasks = [];
+                    const newFolders = [];
                     
-                    const isChecked = trimmed.startsWith('- [x]')
-                    const isUnchecked = trimmed.startsWith('- [ ]')
-                    if (!isChecked && !isUnchecked) return
-                    
-                    const priority = trimmed.includes('Priority')
-                    
-                    let rest = trimmed.substring(5).trim()
-                    
-                    let title = ''
-                    let downloadUrl = ''
-                    let sourceUrl = ''
-                    let status = ''
-                    
-                    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g
-                    let match
-                    let firstLink = null
-                    let linkIndex = -1
-                    
-                    while ((match = linkRegex.exec(rest)) !== null) {
-                        if (firstLink === null) {
-                            firstLink = { text: match[1], url: match[2], index: match.index }
-                            linkIndex = match.index
-                        }
-                    }
-                    
-                    if (firstLink) {
-                        title = firstLink.text
-                        downloadUrl = firstLink.url
-                        
-                        let afterFirst = rest.substring(firstLink.index + firstLink.text.length + firstLink.url.length + 4)
-                        const pipeIndex = afterFirst.indexOf('|')
-                        if (pipeIndex !== -1) {
-                            afterFirst = afterFirst.substring(pipeIndex + 1).trim()
-                            const sourceMatch = afterFirst.match(/\[Source\]\(([^)]+)\)/)
-                            if (sourceMatch) {
-                                sourceUrl = sourceMatch[1]
+                    const promises = [];
+                    zip.forEach((relativePath, zipEntry) => {
+                        if (!zipEntry.dir && relativePath.toLowerCase().endsWith('.md')) {
+                            // Extract only the filename from the path
+                            const pathParts = relativePath.split('/');
+                            const fileName = pathParts[pathParts.length - 1];
+                            const folderName = capitalizeFolderName(fileName.replace(/\.[^/.]+$/, ""));
+                            
+                            if (!categories.includes(folderName) && folderName !== "All" && !newFolders.includes(folderName)) {
+                                newFolders.push(folderName);
                             }
                             
-                            const statusWords = ['Ongoing', 'Not Released', 'Unreleased', 'NSFW', 'New', 'PlayStation 1', 'PlayStation 2', 'PlayStation Portable', 'Paid', 'Not Supported']
-                            for (let word of statusWords) {
-                                if (afterFirst.includes(word)) {
-                                    status = word
-                                    break
-                                }
-                            }
+                            const promise = zipEntry.async('string').then(content => {
+                                const lines = content.split('\n');
+                                lines.forEach(line => {
+                                    const trimmed = line.trim();
+                                    if (!trimmed) return;
+                                    const isChecked = trimmed.startsWith('- [x]');
+                                    const isUnchecked = trimmed.startsWith('- [ ]');
+                                    if (!isChecked && !isUnchecked) return;
+                                    
+                                    const priority = trimmed.includes('Priority');
+                                    let rest = trimmed.substring(5).trim();
+                                    
+                                    let title = '';
+                                    let downloadUrl = '';
+                                    let sourceUrl = '';
+                                    let status = '';
+                                    
+                                    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+                                    let matches = [];
+                                    let match;
+                                    while ((match = linkRegex.exec(rest)) !== null) {
+                                        matches.push({ text: match[1], url: match[2], full: match[0] });
+                                    }
+                                    
+                                    let remaining = rest;
+                                    
+                                    matches.forEach(link => {
+                                        if (link.text.toLowerCase() === 'source') {
+                                            sourceUrl = link.url;
+                                            remaining = remaining.replace(link.full, '');
+                                        }
+                                    });
+                                    
+                                    matches.forEach(link => {
+                                        if (link.text.toLowerCase() !== 'source' && !downloadUrl) {
+                                            downloadUrl = link.url;
+                                            title = link.text;
+                                            remaining = remaining.replace(link.full, '');
+                                        }
+                                    });
+                                    
+                                    remaining = remaining.replace(/\s+/g, ' ').trim();
+                                    
+                                    if (!title) {
+                                        const pipeIndex = remaining.indexOf('|');
+                                        if (pipeIndex !== -1) {
+                                            title = remaining.substring(0, pipeIndex).trim();
+                                            remaining = remaining.substring(pipeIndex + 1).trim();
+                                        } else {
+                                            title = remaining;
+                                            remaining = '';
+                                        }
+                                    }
+                                    
+                                    const statusWords = ['Ongoing', 'Not Released', 'Unreleased', 'NSFW', 'New', 'PlayStation 1', 'PlayStation 2', 'PlayStation Portable', 'Paid', 'Not Supported'];
+                                    for (let word of statusWords) {
+                                        if (remaining.includes(word)) {
+                                            status = word;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (title) {
+                                        newTasks.push({
+                                            id: Date.now() + Math.random() + newTasks.length,
+                                            title: title,
+                                            url: downloadUrl,
+                                            category: folderName,
+                                            status: status,
+                                            sourceUrl: sourceUrl,
+                                            notes: '',
+                                            checked: isChecked,
+                                            priority: priority
+                                        });
+                                    }
+                                });
+                            });
+                            promises.push(promise);
                         }
-                    } else {
-                        const pipeIndex = rest.indexOf('|')
-                        if (pipeIndex !== -1) {
-                            title = rest.substring(0, pipeIndex).trim()
-                            let afterPipe = rest.substring(pipeIndex + 1).trim()
-                            const sourceMatch = afterPipe.match(/\[Source\]\(([^)]+)\)/)
-                            if (sourceMatch) {
-                                sourceUrl = sourceMatch[1]
-                            }
-                            const statusWords = ['Ongoing', 'Not Released', 'Unreleased', 'NSFW']
-                            for (let word of statusWords) {
-                                if (afterPipe.includes(word)) {
-                                    status = word
-                                    break
-                                }
-                            }
-                        } else {
-                            title = rest
-                        }
+                    });
+                    
+                    await Promise.all(promises);
+                    
+                    if (newFolders.length > 0) {
+                        newFolders.forEach(f => {
+                            if (!categories.includes(f)) categories.push(f);
+                        });
+                        sortCategories();
                     }
                     
-                    if (title) {
-                        newTasks.push({
-                            id: Date.now() + Math.random(),
-                            title: title,
-                            url: downloadUrl,
-                            category: folderName,
-                            status: status,
-                            sourceUrl: sourceUrl,
-                            notes: '',
-                            checked: isChecked,
-                            priority: priority
-                        })
+                    if (newTasks.length > 0) {
+                        tasks = [...newTasks, ...tasks];
+                        saveData();
+                        renderTabs();
+                        renderTasks();
+                        window.showMessage(`Imported ${newTasks.length} tasks from ${promises.length} file(s)`);
                     }
-                })
-                
-                if (newTasks.length > 0) {
-                    tasks = [...newTasks, ...tasks]
-                    saveData()
-                    renderTabs()
-                    renderTasks()
-                    window.showMessage(`Imported ${newTasks.length} tasks into "${folderName}"`)
+                    input.value = '';
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                const folderName = capitalizeFolderName(file.name.replace(/\.[^/.]+$/, ""));
+                if (!categories.includes(folderName) && folderName !== "All") {
+                    categories.push(folderName);
+                    sortCategories();
                 }
-                input.value = ''
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    const lines = content.split('\n');
+                    const newTasks = [];
+                    
+                    lines.forEach(line => {
+                        const trimmed = line.trim();
+                        if (!trimmed) return;
+                        const isChecked = trimmed.startsWith('- [x]');
+                        const isUnchecked = trimmed.startsWith('- [ ]');
+                        if (!isChecked && !isUnchecked) return;
+                        const priority = trimmed.includes('Priority');
+                        let rest = trimmed.substring(5).trim();
+                        
+                        let title = '';
+                        let downloadUrl = '';
+                        let sourceUrl = '';
+                        let status = '';
+                        
+                        const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+                        let matches = [];
+                        let match;
+                        while ((match = linkRegex.exec(rest)) !== null) {
+                            matches.push({ text: match[1], url: match[2], full: match[0] });
+                        }
+                        
+                        let remaining = rest;
+                        
+                        matches.forEach(link => {
+                            if (link.text.toLowerCase() === 'source') {
+                                sourceUrl = link.url;
+                                remaining = remaining.replace(link.full, '');
+                            }
+                        });
+                        
+                        matches.forEach(link => {
+                            if (link.text.toLowerCase() !== 'source' && !downloadUrl) {
+                                downloadUrl = link.url;
+                                title = link.text;
+                                remaining = remaining.replace(link.full, '');
+                            }
+                        });
+                        
+                        remaining = remaining.replace(/\s+/g, ' ').trim();
+                        
+                        if (!title) {
+                            const pipeIndex = remaining.indexOf('|');
+                            if (pipeIndex !== -1) {
+                                title = remaining.substring(0, pipeIndex).trim();
+                                remaining = remaining.substring(pipeIndex + 1).trim();
+                            } else {
+                                title = remaining;
+                                remaining = '';
+                            }
+                        }
+                        
+                        const statusWords = ['Ongoing', 'Not Released', 'Unreleased', 'NSFW', 'New', 'PlayStation 1', 'PlayStation 2', 'PlayStation Portable', 'Paid', 'Not Supported'];
+                        for (let word of statusWords) {
+                            if (remaining.includes(word)) {
+                                status = word;
+                                break;
+                            }
+                        }
+                        
+                        if (title) {
+                            newTasks.push({
+                                id: Date.now() + Math.random(),
+                                title: title,
+                                url: downloadUrl,
+                                category: folderName,
+                                status: status,
+                                sourceUrl: sourceUrl,
+                                notes: '',
+                                checked: isChecked,
+                                priority: priority
+                            });
+                        }
+                    });
+                    
+                    if (newTasks.length > 0) {
+                        tasks = [...newTasks, ...tasks];
+                        saveData();
+                        renderTabs();
+                        renderTasks();
+                        window.showMessage(`Imported ${newTasks.length} tasks into "${folderName}"`);
+                    }
+                    input.value = '';
+                };
+                reader.readAsText(file);
             }
-            reader.readAsText(file)
         }
 
         function exportTasks() {
-            let mdContent = ''
-            tasks.forEach(task => {
-                const checkmark = task.checked ? '- [x]' : '- [ ]'
-                let line = `${checkmark} [${task.title}]`
+          try {
+            if (typeof JSZip === 'undefined') return;
+        
+            const zip = new JSZip();
+            const folders = categories.filter(c => c !== "All");
+        
+            folders.forEach(folder => {
+              const folderTasks = tasks.filter(t => t.category === folder);
+              if (folderTasks.length === 0) return;
+        
+              let md = '';
+              folderTasks.forEach(task => {
+                const check = task.checked ? '- [x]' : '- [ ]';
+                let line = check + ' ';
                 if (task.url) {
-                    line = `${checkmark} [${task.title}](${task.url})`
+                  line += `[${task.title}](${task.url})`;
+                } else {
+                  line += task.title;
                 }
-                if (task.sourceUrl) {
-                    line += ` | [Source](${task.sourceUrl})`
+                if (task.sourceUrl) line += ` | [Source](${task.sourceUrl})`;
+                if (task.status) line += ` | ${task.status}`;
+                if (task.priority) line += ` Priority`;
+                md += line + '\n';
+              });
+        
+              const safeName = folder.replace(/[\\/:*?"<>|]/g, '_') + '.md';
+              zip.file(safeName, md);
+            });
+        
+            zip.generateAsync({ type: 'blob' }).then(blob => {
+              const filename = `downloads-task-backup.zip`;
+              const mimeType = 'application/zip';
+        
+              if (window.cordova) {
+                const writeFile = (dirEntry, isDownloads) => {
+                  dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                    fileEntry.createWriter((writer) => {
+                      writer.onwriteend = () => {
+                        const location = isDownloads ? 'Downloads' : 'app folder';
+                        window.showMessage(`Tasks exported to ${location}!`);
+                        if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                          cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                        }
+                      };
+                      writer.onerror = () => {
+                        window.showMessage('Export failed', 'error');
+                      };
+                      writer.write(blob);
+                    }, () => {
+                      window.showMessage('Export failed', 'error');
+                    });
+                  }, () => {
+                    window.showMessage('Export failed', 'error');
+                  });
+                };
+        
+                const saveToDownloads = () => {
+                  window.resolveLocalFileSystemURL(
+                    cordova.file.externalRootDirectory + 'Download/',
+                    (dir) => {
+                      writeFile(dir, true);
+                    },
+                    () => {
+                      window.resolveLocalFileSystemURL(
+                        cordova.file.dataDirectory,
+                        (dir) => {
+                          writeFile(dir, false);
+                        },
+                        () => {
+                          window.showMessage('Export failed', 'error');
+                        }
+                      );
+                    }
+                  );
+                };
+        
+                if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                  saveToDownloads();
+                } else {
+                  document.addEventListener('deviceready', saveToDownloads);
                 }
-                if (task.status) {
-                    line += ` | ${task.status}`
-                }
-                if (task.priority) {
-                    line += ` Priority`
-                }
-                mdContent += line + '\n'
-            })
-            const blob = new Blob([mdContent], { type: 'text/markdown' })
-            const a = document.createElement('a')
-            a.href = URL.createObjectURL(blob)
-            a.download = 'tasks_export.md'
-            a.click()
-            URL.revokeObjectURL(a.href)
-            window.showMessage('Tasks exported')
+              } else {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+                window.showMessage('Open with browser app and download the file');
+              }
+            });
+          } catch (error) {
+            window.showMessage('Export failed', 'error');
+          }
         }
 
         function showClearAllPopup() {

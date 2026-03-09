@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Notes App | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
@@ -2634,20 +2635,18 @@
                 settingsMenu.classList.remove('active');
                 settingsOverlay.classList.remove('active');
             });
-            document.getElementById('exportNotes').addEventListener('click', () => {
-                const data = { version: '1.0', exportDate: new Date().toISOString(), notes: notesData, folders: foldersData };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `notes-export-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                window.showMessage('Notes exported!', 'success');
-                settingsMenu.classList.remove('active');
-                settingsOverlay.classList.remove('active');
+            document.getElementById('exportNotes').addEventListener('click', async () => {
+              const data = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                notes: notesData,
+                folders: foldersData
+              };
+              const jsonStr = JSON.stringify(data, null, 2);
+              const filename = `notes-export-${new Date().toISOString().split('T')[0]}.json`;
+              await saveFile(jsonStr, filename, 'application/json');
+              settingsMenu.classList.remove('active');
+              settingsOverlay.classList.remove('active');
             });
             document.getElementById('importNotes').addEventListener('click', () => {
                 document.getElementById('importFile').click();
@@ -2751,6 +2750,78 @@
                 });
                 textarea.addEventListener('keydown', handleEditorKeyDown);
             }
+        }
+        
+        function saveFile(content, filename, mimeType) {
+          return new Promise((resolve, reject) => {
+            if (window.cordova) {
+              const writeFile = (dirEntry, isDownloads) => {
+                dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                  fileEntry.createWriter((writer) => {
+                    writer.onwriteend = () => {
+                      const location = isDownloads ? 'Downloads' : 'app folder';
+                      window.showMessage(`Notes exported to ${location}!`, 'success');
+                      if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                      }
+                      resolve();
+                    };
+                    writer.onerror = () => {
+                      window.showMessage('Export failed', 'error');
+                      reject();
+                    };
+                    writer.write(new Blob([content], { type: mimeType }));
+                  }, () => {
+                    window.showMessage('Export failed', 'error');
+                    reject();
+                  });
+                }, () => {
+                  window.showMessage('Export failed', 'error');
+                  reject();
+                });
+              };
+        
+              const saveToDownloads = () => {
+                window.resolveLocalFileSystemURL(
+                  cordova.file.externalRootDirectory + 'Download/',
+                  (dir) => {
+                    writeFile(dir, true);
+                  },
+                  () => {
+                    window.resolveLocalFileSystemURL(
+                      cordova.file.dataDirectory,
+                      (dir) => {
+                        writeFile(dir, false);
+                      },
+                      () => {
+                        window.showMessage('Export failed', 'error');
+                        reject();
+                      }
+                    );
+                  }
+                );
+              };
+        
+              if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                saveToDownloads();
+              } else {
+                document.addEventListener('deviceready', saveToDownloads);
+              }
+            } else {
+              // Browser fallback
+              const blob = new Blob([content], { type: mimeType });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              window.showMessage('Notes exported!', 'success');
+              resolve();
+            }
+          });
         }
 
         function confirmReset() {

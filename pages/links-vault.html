@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Links Vault | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
-    <link rel="stylesheet" href="../navigation.css">
     <link rel="stylesheet" href="../media.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -973,6 +973,79 @@
             renderNotes();
         }
         
+        // Universal file saver for Cordova & browser
+        function saveFile(content, filename, mimeType) {
+          return new Promise((resolve, reject) => {
+            if (window.cordova) {
+              const writeFile = (dirEntry, isDownloads) => {
+                dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                  fileEntry.createWriter((writer) => {
+                    writer.onwriteend = () => {
+                      const location = isDownloads ? 'Downloads' : 'app folder';
+                      window.showMessage(`Links backed up to ${location}!`);
+                      if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                      }
+                      resolve();
+                    };
+                    writer.onerror = () => {
+                      window.showMessage('Backup failed', 'error');
+                      reject();
+                    };
+                    writer.write(new Blob([content], { type: mimeType }));
+                  }, () => {
+                    window.showMessage('Backup failed', 'error');
+                    reject();
+                  });
+                }, () => {
+                  window.showMessage('Backup failed', 'error');
+                  reject();
+                });
+              };
+        
+              const saveToDownloads = () => {
+                window.resolveLocalFileSystemURL(
+                  cordova.file.externalRootDirectory + 'Download/',
+                  (dir) => {
+                    writeFile(dir, true);
+                  },
+                  () => {
+                    window.resolveLocalFileSystemURL(
+                      cordova.file.dataDirectory,
+                      (dir) => {
+                        writeFile(dir, false);
+                      },
+                      () => {
+                        window.showMessage('Backup failed', 'error');
+                        reject();
+                      }
+                    );
+                  }
+                );
+              };
+        
+              if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                saveToDownloads();
+              } else {
+                document.addEventListener('deviceready', saveToDownloads);
+              }
+            } else {
+              // Browser fallback
+              const blob = new Blob([content], { type: mimeType });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              window.showMessage('File backed up successfully', 'success');
+              resolve();
+            }
+          });
+        }
+        
         // Save notes to localStorage
         function saveNotes() {
             localStorage.setItem('kakoiKirakuNotes', JSON.stringify(notes));
@@ -1245,84 +1318,57 @@
         
         // Export as HTML (Netscape Bookmark format)
         async function exportAsHtml() {
-            const date = new Date();
-            const addDate = Math.floor(date.getTime() / 1000);
-            
-            let htmlContent = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
-<!-- This is an automatically generated file from Links Vault -->
-<TITLE>Links Vault Bookmarks</TITLE>
-<H1>Links Vault Bookmarks</H1>
-<DL><p>
-    <DT><H3 ADD_DATE="${addDate}" LAST_MODIFIED="${addDate}">Links Vault</H3>
-    <DL><p>`;
-            
-            for (const note of notes) {
-                const noteAddDate = note.createdAt ? Math.floor(new Date(note.createdAt).getTime() / 1000) : addDate;
-                htmlContent += `
-        <DT><A HREF="${escapeHtml(note.url)}" ADD_DATE="${noteAddDate}">${escapeHtml(note.title)}</A>
-        <DD>${escapeHtml(note.description || 'No description')}`;
-                
-                if (note.imageUrl) {
-                    htmlContent += ` [IMG:${escapeHtml(note.imageUrl)}]`;
-                }
-            }
-            
+          const date = new Date();
+          const addDate = Math.floor(date.getTime() / 1000);
+          let htmlContent = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+        <!-- This is an automatically generated file from Links Vault -->
+        <TITLE>Links Vault Bookmarks</TITLE>
+        <H1>Links Vault Bookmarks</H1>
+        <DL><p>
+            <DT><H3 ADD_DATE="${addDate}" LAST_MODIFIED="${addDate}">Links Vault</H3>
+            <DL><p>`;
+                    
+          for (const note of notes) {
+            const noteAddDate = note.createdAt ? Math.floor(new Date(note.createdAt).getTime() / 1000) : addDate;
             htmlContent += `
-    </DL><p>
-</DL><p>`;
-            
-            // Create and download the file
-            const blob = new Blob([htmlContent], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `links-vault-backup-${date.toISOString().split('T')[0]}.html`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            showStatusMessage('exportOptions', 'success', 'HTML file exported successfully!');
+                <DT><A HREF="${escapeHtml(note.url)}" ADD_DATE="${noteAddDate}">${escapeHtml(note.title)}</A>
+                <DD>${escapeHtml(note.description || 'No description')}`;
+            if (note.imageUrl) {
+              htmlContent += ` [IMG:${escapeHtml(note.imageUrl)}]`;
+            }
+          }
+          htmlContent += `
+            </DL><p>
+        </DL><p>`;
+        
+          const filename = `links-vault-backup-${date.toISOString().split('T')[0]}.html`;
+          await saveFile(htmlContent, filename, 'text/html');
         }
         
-        // Export as JSON with Base64 images
         async function exportAsJson() {
-            const date = new Date();
-            const exportData = {
-                version: '1.0',
-                exportDate: date.toISOString(),
-                source: 'Links Vault',
-                notes: []
-            };
-            
-            // Process each note and convert images to Base64
-            for (const note of notes) {
-                const noteData = { ...note };
-                
-                // Convert image URL to Base64 if it exists
-                if (note.imageUrl && note.imageUrl.startsWith('http')) {
-                    try {
-                        noteData.imageBase64 = await imageUrlToBase64(note.imageUrl);
-                    } catch (error) {
-                        noteData.imageBase64 = null;
-                    }
-                }
-                
-                exportData.notes.push(noteData);
+          const date = new Date();
+          const exportData = {
+            version: '1.0',
+            exportDate: date.toISOString(),
+            source: 'Links Vault',
+            notes: []
+          };
+        
+          for (const note of notes) {
+            const noteData = { ...note };
+            if (note.imageUrl && note.imageUrl.startsWith('http')) {
+              try {
+                noteData.imageBase64 = await imageUrlToBase64(note.imageUrl);
+              } catch (error) {
+                noteData.imageBase64 = null;
+              }
             }
-            
-            // Create and download the file
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `links-vault-backup-${date.toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            showStatusMessage('exportOptions', 'success', 'JSON file exported successfully with Base64 images!');
+            exportData.notes.push(noteData);
+          }
+        
+          const jsonStr = JSON.stringify(exportData, null, 2);
+          const filename = `links-vault-backup-${date.toISOString().split('T')[0]}.json`;
+          await saveFile(jsonStr, filename, 'application/json');
         }
         
         // Import from HTML file
@@ -1374,9 +1420,9 @@
             if (importedNotes.length > 0) {
                 notes.unshift(...importedNotes);
                 saveNotes();
-                showStatusMessage('importOptions', 'success', `Imported ${importedCount} links from HTML file!`);
+                window.showMessage(`Imported ${importedCount} links from HTML file!`);
             } else {
-                showStatusMessage('importOptions', 'info', 'No new links found in the HTML file.');
+                window.showMessage('No new links found in the HTML file.');
             }
         }
         
@@ -1412,12 +1458,12 @@
                 if (importedNotes.length > 0) {
                     notes.unshift(...importedNotes);
                     saveNotes();
-                    showStatusMessage('importOptions', 'success', `Imported ${importedCount} links from JSON file!`);
+                    window.showMessage(`Imported ${importedCount} links from JSON file!`);
                 } else {
-                    showStatusMessage('importOptions', 'info', 'No new links found in the JSON file.');
+                    window.showMessage('No new links found in the JSON file.');
                 }
             } catch (error) {
-                showStatusMessage('importOptions', 'error', 'Error parsing JSON file. Please check the file format.');
+                window.showMessage('Error parsing JSON file. Please check the file format.');
             }
         }
         
@@ -1553,21 +1599,6 @@
             document.getElementById('clearSearchBtn').style.display = 'none';
         }
         
-        // Show status message
-        function showStatusMessage(containerId, type, message) {
-            const container = document.getElementById(containerId);
-            let statusDiv = container.querySelector('.status-message');
-            
-            if (!statusDiv) {
-                statusDiv = document.createElement('div');
-                statusDiv.className = 'status-message';
-                container.appendChild(statusDiv);
-            }
-            
-            statusDiv.className = `status-message status-${type}`;
-            statusDiv.textContent = message;
-        }
-        
         // Handle file selection for import
         function handleFileSelect(file) {
             selectedFile = file;
@@ -1599,7 +1630,7 @@
                         importHtmlOption.classList.remove('selected');
                         importJsonOption.classList.add('selected');
                     } else {
-                        showStatusMessage('importOptions', 'error', 'Cannot determine file type. Please select .html or .json file.');
+                        window.showMessage('Cannot determine file type. Please select .html or .json file.');
                         confirmImportBtn.disabled = true;
                         return;
                     }
@@ -1680,7 +1711,7 @@
             // Confirm import
             confirmImportBtn.addEventListener('click', () => {
                 if (!selectedFile) {
-                    showStatusMessage('importOptions', 'error', 'Please select a file first.');
+                    window.showMessage('Please select a file first.');
                     return;
                 }
                 

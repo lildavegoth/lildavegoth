@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Routine Quest | lildavegoth</title>
     <meta name="color-scheme" content="dark">
-    <script src="cordova.js"></script>
-    <script src="{{ '/export-helper.js' | relative_url }}"></script>
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <link rel="stylesheet" href="../media.css">
     <script src="../notification.cssjs"></script>
@@ -3756,43 +3755,95 @@
             
             // Import/Export methods
             exportData() {
-                try {
-                    const data = {
-                        coins: this.coins,
-                        gems: this.gems,
-                        level: this.level,
-                        xp: this.xp,
-                        xpToNextLevel: this.xpToNextLevel,
-                        tasks: this.tasks,
-                        checkinData: this.checkinData,
-                        collection: this.collection,
-                        achievements: this.achievements,
-                        streak: this.streak,
-                        username: this.username,
-                        nameTags: this.nameTags,
-                        exportDate: new Date().toISOString(),
-                        version: '1.0'
-                    };
-                    
-                    const jsonStr = JSON.stringify(data, null, 2);
-                    const encodedData = this.encryptData(jsonStr);
-                    
-                    const blob = new Blob([encodedData], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `routine-quest-backup-${Date.now()}.rqsave`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    
-                    window.showMessage('Data exported successfully!', 'success');
-                    return true;
-                } catch (error) {
-                    window.showMessage('Export failed', 'error');
-                    return false;
+              try {
+                const data = {
+                  coins: this.coins,
+                  gems: this.gems,
+                  level: this.level,
+                  xp: this.xp,
+                  xpToNextLevel: this.xpToNextLevel,
+                  tasks: this.tasks,
+                  checkinData: this.checkinData,
+                  collection: this.collection,
+                  achievements: this.achievements,
+                  streak: this.streak,
+                  username: this.username,
+                  nameTags: this.nameTags,
+                  exportDate: new Date().toISOString(),
+                  version: '1.0'
+                };
+            
+                const jsonStr = JSON.stringify(data, null, 2);
+                const encodedData = this.encryptData(jsonStr);
+                const filename = `routine-quest-backup-${Date.now()}.rqsave`;
+                const mimeType = 'text/plain';
+            
+                if (window.cordova) {
+                  const writeFile = (dirEntry, isDownloads) => {
+                    dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                      fileEntry.createWriter((writer) => {
+                        writer.onwriteend = () => {
+                          const location = isDownloads ? 'Downloads' : 'app folder';
+                          window.showMessage(`File saved to ${location}: ${filename}`, 'success');
+                          if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                            cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                          }
+                        };
+                        writer.onerror = () => {
+                          window.showMessage('Export failed', 'error');
+                        };
+                        writer.write(new Blob([encodedData], { type: mimeType }));
+                      }, () => {
+                        window.showMessage('Export failed', 'error');
+                      });
+                    }, () => {
+                      window.showMessage('Export failed', 'error');
+                    });
+                  };
+            
+                  const saveToDownloads = () => {
+                    window.resolveLocalFileSystemURL(
+                      cordova.file.externalRootDirectory + 'Download/',
+                      (dir) => {
+                        writeFile(dir, true);
+                      },
+                      () => {
+                        window.resolveLocalFileSystemURL(
+                          cordova.file.dataDirectory,
+                          (dir) => {
+                            writeFile(dir, false);
+                          },
+                          () => {
+                            window.showMessage('Export failed', 'error');
+                          }
+                        );
+                      }
+                    );
+                  };
+            
+                  if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                    saveToDownloads();
+                  } else {
+                    document.addEventListener('deviceready', saveToDownloads);
+                  }
+                  return true;
+                } else {
+                  const blob = new Blob([encodedData], { type: mimeType });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = filename;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  window.showMessage('Backup file has been downloaded', 'success');
+                  return true;
                 }
+              } catch (error) {
+                window.showMessage('Export failed', 'error');
+                return false;
+              }
             }
 
             importData(fileContent) {

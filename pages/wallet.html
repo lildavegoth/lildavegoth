@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wallet Money Tracker | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
@@ -200,7 +201,7 @@
             align-items: flex-start;
         }
 
-        .holder-name {
+        .card-name-display {
             font-size: 1.2rem;
             font-weight: 600;
             margin-bottom: 4px;
@@ -213,7 +214,6 @@
             display: flex;
             align-items: center;
             gap: 4px;
-            margin-bottom: -20px;
         }
 
         .main-balance {
@@ -224,10 +224,37 @@
             line-height: 1.1;
         }
 
-        .card-name {
+        .holder-name-display {
             font-size: 1rem;
             font-weight: 500;
             opacity: 0.9;
+        }
+
+        .card-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: auto;
+        }
+
+        .card-bottom-right {
+            text-align: right;
+        }
+
+        .expiry-display {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+
+        .account-number-display {
+            font-size: 0.9rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .account-masked, .account-plain {
+            letter-spacing: 1px;
         }
 
         .menu-dots {
@@ -416,6 +443,36 @@
 
         input[type="date"]::-webkit-calendar-picker-indicator {
             display: none;
+        }
+
+        .swipe-indicator {
+            background: rgba(193, 252, 50, 0.15);
+            border: 1px solid var(--accent-color);
+            border-radius: var(--radius-medium);
+            padding: 12px 20px;
+            margin: var(--spacing-md) 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            backdrop-filter: blur(4px);
+            margin-bottom: -20px;
+        }
+
+        .swipe-indicator .close-indicator {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 8px;
+            transition: color 0.2s;
+        }
+
+        .swipe-indicator .close-indicator:hover {
+            color: var(--accent-color);
         }
 
         .privacy-container {
@@ -787,7 +844,7 @@
         
         <app-header class="fade-in">
             <h1 class="username">Wallet Money Tracker</h1>
-            <p class="tagline">Track your expenses and income like a banking app.</p>
+            <p class="tagline">Track your expenses and incomes like a banking app.</p>
         </app-header>
 
         <div class="search-container" style="margin-bottom: var(--spacing-md); position: relative;">
@@ -815,8 +872,13 @@
         <section class="transactions-section">
             <div class="transactions-list" id="transactionsList"></div>
         </section>
-        
+                
         <hr>
+        
+        <div class="swipe-indicator" id="swipeIndicator">
+            <span>Swipe on the Cards display to see more Cards</span>
+            <button class="close-indicator" id="closeSwipeIndicator">×</button>
+        </div>
         
         <div class="privacy-container fade-in collapsed">
             <div class="privacy-header" id="privacyHeader">
@@ -877,19 +939,17 @@
             </div>
             <div class="popup-body">
                 <div style="margin-top: 15px;" class="form-group">
+                    <label class="form-label" for="cardNameInput">Card Name</label>
+                    <input type="text" class="form-input" id="cardNameInput" placeholder="Enter card name">
+                </div>
+                <div class="form-group">
                     <label class="form-label" for="cardHolderNameInput">Card Holder Name</label>
                     <input type="text" class="form-input" id="cardHolderNameInput" placeholder="Enter holder name">
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="cardNameInput">Card Name</label>
-                    <input type="text" class="form-input" id="cardNameInput" placeholder="Enter card name">
-                </div>
-                
-                <div class="form-group">
                     <label class="form-label" for="cardBalance">Initial Balance</label>
                     <input type="number" class="form-input" id="cardBalance" placeholder="0.00" step="0.01" min="0">
                 </div>
-                
                 <div class="form-group">
                     <label class="form-label" for="cardCurrency">Currency</label>
                     <select class="form-select" id="cardCurrency">
@@ -897,7 +957,21 @@
                         <option value="IDR">IDR (Rp)</option>
                     </select>
                 </div>
-
+                <div class="form-group">
+                    <label class="form-label" for="cardType">Card Type</label>
+                    <select class="form-select" id="cardType">
+                        <option value="Standard">Standard</option>
+                        <option value="Banking">Banking</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="cardAccountNumber">Account Number (for Banking)</label>
+                    <input type="text" class="form-input" id="cardAccountNumber" placeholder="Enter account number">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="cardExpiry">Expiry Date (for Banking)</label>
+                    <input type="text" class="form-input" id="cardExpiry" placeholder="MM/YY">
+                </div>
                 <div class="form-group">
                     <label class="form-label">Card Background</label>
                     <input type="file" id="cardImageInput" accept="image/*">
@@ -1068,6 +1142,7 @@
                 this.renderCards();
                 this.renderTransactions();
                 this.setupSearch();
+                this.setupSwipeIndicator();
             }
             
             loadData() {
@@ -1077,6 +1152,9 @@
                         this.cards = JSON.parse(savedCards);
                         this.cards.forEach(card => {
                             if (!card.cardName) card.cardName = card.holderName;
+                            if (!card.cardType) card.cardType = 'Standard';
+                            if (!card.accountNumber) card.accountNumber = '';
+                            if (!card.expiry) card.expiry = '';
                         });
                     } else {
                         this.cards = [];
@@ -1123,7 +1201,10 @@
                     balance: 1500.00,
                     currency: 'USD',
                     design: this.cardDesigns[0],
-                    isActive: true
+                    isActive: true,
+                    cardType: 'Standard',
+                    accountNumber: '',
+                    expiry: ''
                 };
                 
                 this.cards.push(defaultCard);
@@ -1132,7 +1213,7 @@
                 return defaultCard;
             }
             
-            addCard(holderName, cardName, balance, currency, imageDataUrl = null) {
+            addCard(holderName, cardName, balance, currency, imageDataUrl = null, cardType = 'Standard', accountNumber = '', expiry = '') {
                 const newCard = {
                     id: Date.now() + Math.random(),
                     holderName: holderName.trim(),
@@ -1140,7 +1221,10 @@
                     balance: parseFloat(balance) || 0,
                     currency: currency || 'USD',
                     design: imageDataUrl || this.defaultCardImage,
-                    isActive: false
+                    isActive: false,
+                    cardType: cardType,
+                    accountNumber: accountNumber.trim(),
+                    expiry: expiry.trim()
                 };
                 
                 this.cards.push(newCard);
@@ -1149,7 +1233,7 @@
                 return newCard;
             }
             
-            editCard(cardId, holderName, cardName, balance, currency, imageDataUrl = null) {
+            editCard(cardId, holderName, cardName, balance, currency, imageDataUrl = null, cardType = 'Standard', accountNumber = '', expiry = '') {
                 const cardIndex = this.cards.findIndex(card => card.id === cardId);
                 if (cardIndex === -1) return false;
                 
@@ -1159,7 +1243,10 @@
                     cardName: cardName.trim(),
                     balance: parseFloat(balance) || 0,
                     currency: currency,
-                    design: imageDataUrl || this.cards[cardIndex].design
+                    design: imageDataUrl || this.cards[cardIndex].design,
+                    cardType: cardType,
+                    accountNumber: accountNumber.trim(),
+                    expiry: expiry.trim()
                 };
                 
                 this.saveData();
@@ -1349,6 +1436,16 @@
                 let html = '';
                 this.cards.forEach(card => {
                     const stats = this.getCardStats(card.id);
+                    const bankingExtras = (card.cardType === 'Banking' && card.accountNumber) ? `
+                        <div class="card-bottom-right">
+                            <div class="expiry-display">${this.escapeHtml(card.expiry || '')}</div>
+                            <div class="account-number-display">
+                                <span class="account-masked">••••••••••••</span>
+                                <span class="account-plain" style="display:none;">${this.escapeHtml(card.accountNumber)}</span>
+                            </div>
+                        </div>
+                    ` : '';
+                    
                     html += `
                         <div class="bank-card ${card.isActive ? 'active' : ''}" data-id="${card.id}">
                             <div class="card-bg">
@@ -1356,12 +1453,15 @@
                             </div>
                             <div class="card-content">
                                 <div class="card-header">
-                                    <div class="holder-name">${this.escapeHtml(card.holderName)}</div>
+                                    <div class="card-name-display">${this.escapeHtml(card.cardName || card.holderName)}</div>
                                     <div class="menu-dots" data-id="${card.id}"><span></span><span></span></div>
                                 </div>
                                 <div class="net-balance">${this.formatMoney(stats.net, card.currency)}</div>
                                 <div class="main-balance">${this.formatMoney(card.balance, card.currency)}</div>
-                                <div class="card-name">${this.escapeHtml(card.cardName || card.holderName)}</div>
+                                <div class="card-bottom">
+                                    <div class="holder-name-display">${this.escapeHtml(card.holderName)}</div>
+                                    ${bankingExtras}
+                                </div>
                                 <div class="card-settings-menu" id="settings-menu-${card.id}">
                                     <div class="card-settings-item edit-card-item" data-id="${card.id}">
                                         <i class="fas fa-edit"></i> Edit Card
@@ -1416,6 +1516,25 @@
                 
                 document.addEventListener('click', () => {
                     this.closeAllSettingsMenus();
+                });
+                
+                this.attachAccountNumberListeners();
+            }
+            
+            attachAccountNumberListeners() {
+                document.querySelectorAll('.account-number-display').forEach(container => {
+                    container.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const masked = container.querySelector('.account-masked');
+                        const plain = container.querySelector('.account-plain');
+                        if (masked.style.display !== 'none') {
+                            masked.style.display = 'none';
+                            plain.style.display = 'inline';
+                        } else {
+                            masked.style.display = 'inline';
+                            plain.style.display = 'none';
+                        }
+                    });
                 });
             }
             
@@ -1510,10 +1629,13 @@
                     const card = this.cards.find(c => c.id === cardId);
                     if (card) {
                         title.textContent = 'Edit Card';
-                        document.getElementById('cardHolderNameInput').value = card.holderName;
                         document.getElementById('cardNameInput').value = card.cardName || card.holderName;
+                        document.getElementById('cardHolderNameInput').value = card.holderName;
                         document.getElementById('cardBalance').value = card.balance;
                         document.getElementById('cardCurrency').value = card.currency || 'USD';
+                        document.getElementById('cardType').value = card.cardType || 'Standard';
+                        document.getElementById('cardAccountNumber').value = card.accountNumber || '';
+                        document.getElementById('cardExpiry').value = card.expiry || '';
                         if (card.design && card.design !== this.defaultCardImage) {
                             preview.innerHTML = `<img src="${card.design}" style="width:100%;height:100%;object-fit:cover;">`;
                         } else {
@@ -1522,10 +1644,13 @@
                     }
                 } else {
                     title.textContent = 'Add New Card';
-                    document.getElementById('cardHolderNameInput').value = '';
                     document.getElementById('cardNameInput').value = '';
+                    document.getElementById('cardHolderNameInput').value = '';
                     document.getElementById('cardBalance').value = '';
                     document.getElementById('cardCurrency').value = 'USD';
+                    document.getElementById('cardType').value = 'Standard';
+                    document.getElementById('cardAccountNumber').value = '';
+                    document.getElementById('cardExpiry').value = '';
                     preview.innerHTML = '';
                 }
                 
@@ -1700,6 +1825,22 @@
                 }
             }
             
+            setupSwipeIndicator() {
+                const indicator = document.getElementById('swipeIndicator');
+                const closeBtn = document.getElementById('closeSwipeIndicator');
+                if (!indicator || !closeBtn) return;
+                
+                const hidden = localStorage.getItem('hideSwipeIndicator');
+                if (hidden === 'true') {
+                    indicator.style.display = 'none';
+                }
+                
+                closeBtn.addEventListener('click', () => {
+                    indicator.style.display = 'none';
+                    localStorage.setItem('hideSwipeIndicator', 'true');
+                });
+            }
+            
             setupEventListeners() {
                 document.getElementById('addCardBtn')?.addEventListener('click', () => {
                     this.openCardModal();
@@ -1864,10 +2005,13 @@
             }
             
             saveCard() {
-                const holderName = document.getElementById('cardHolderNameInput').value.trim();
                 const cardName = document.getElementById('cardNameInput').value.trim();
+                const holderName = document.getElementById('cardHolderNameInput').value.trim();
                 const balance = document.getElementById('cardBalance').value;
                 const currency = document.getElementById('cardCurrency').value;
+                const cardType = document.getElementById('cardType').value;
+                const accountNumber = document.getElementById('cardAccountNumber').value.trim();
+                const expiry = document.getElementById('cardExpiry').value.trim();
                 const fileInput = document.getElementById('cardImageInput');
                 let imageDataUrl = null;
                 
@@ -1875,25 +2019,25 @@
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         imageDataUrl = event.target.result;
-                        this.finishSaveCard(holderName, cardName, balance, currency, imageDataUrl);
+                        this.finishSaveCard(holderName, cardName, balance, currency, imageDataUrl, cardType, accountNumber, expiry);
                     };
                     reader.readAsDataURL(fileInput.files[0]);
                 } else {
-                    this.finishSaveCard(holderName, cardName, balance, currency, null);
+                    this.finishSaveCard(holderName, cardName, balance, currency, null, cardType, accountNumber, expiry);
                 }
             }
             
-            finishSaveCard(holderName, cardName, balance, currency, imageDataUrl) {
+            finishSaveCard(holderName, cardName, balance, currency, imageDataUrl, cardType, accountNumber, expiry) {
                 if (!holderName || !cardName) {
                     window.showMessage('Please enter both holder name and card name');
                     return;
                 }
                 
                 if (this.editingCardId) {
-                    this.editCard(this.editingCardId, holderName, cardName, balance, currency, imageDataUrl);
+                    this.editCard(this.editingCardId, holderName, cardName, balance, currency, imageDataUrl, cardType, accountNumber, expiry);
                     this.closeCardModal();
                 } else {
-                    this.addCard(holderName, cardName, balance, currency, imageDataUrl);
+                    this.addCard(holderName, cardName, balance, currency, imageDataUrl, cardType, accountNumber, expiry);
                     this.closeCardModal();
                 }
             }
@@ -1947,6 +2091,77 @@
                 }
             }
             
+            async saveFile(content, filename, mimeType) {
+              return new Promise((resolve, reject) => {
+                if (window.cordova) {
+                  const writeFile = (dirEntry, isDownloads) => {
+                    dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                      fileEntry.createWriter((writer) => {
+                        writer.onwriteend = () => {
+                          const location = isDownloads ? 'Downloads' : 'app folder';
+                          window.showMessage(`Wallet backed up to ${location}!`, 'success');
+                          if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                            cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                          }
+                          resolve();
+                        };
+                        writer.onerror = () => {
+                          window.showMessage('Export failed', 'error');
+                          reject();
+                        };
+                        writer.write(new Blob([content], { type: mimeType }));
+                      }, () => {
+                        window.showMessage('Export failed', 'error');
+                        reject();
+                      });
+                    }, () => {
+                      window.showMessage('Export failed', 'error');
+                      reject();
+                    });
+                  };
+            
+                  const saveToDownloads = () => {
+                    window.resolveLocalFileSystemURL(
+                      cordova.file.externalRootDirectory + 'Download/',
+                      (dir) => {
+                        writeFile(dir, true);
+                      },
+                      () => {
+                        window.resolveLocalFileSystemURL(
+                          cordova.file.dataDirectory,
+                          (dir) => {
+                            writeFile(dir, false);
+                          },
+                          () => {
+                            window.showMessage('Export failed', 'error');
+                            reject();
+                          }
+                        );
+                      }
+                    );
+                  };
+            
+                  if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                    saveToDownloads();
+                  } else {
+                    document.addEventListener('deviceready', saveToDownloads);
+                  }
+                } else {
+                  const blob = new Blob([content], { type: mimeType });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = filename;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  window.showMessage('Wallet exported!', 'success');
+                  resolve();
+                }
+              });
+            }
+            
             decryptData(encryptedString) {
                 try {
                     const jsonString = decodeURIComponent(escape(atob(encryptedString)));
@@ -1956,35 +2171,30 @@
                 }
             }
             
-            exportData() {
+            async exportData() {
+              try {
                 const data = {
-                    version: '1.0',
-                    exportedAt: new Date().toISOString(),
-                    cards: this.cards,
-                    transactions: this.transactions,
-                    currentCardId: this.currentCardId
+                  version: '1.0',
+                  exportedAt: new Date().toISOString(),
+                  cards: this.cards,
+                  transactions: this.transactions,
+                  currentCardId: this.currentCardId
                 };
-                
+            
                 const encryptedData = this.encryptData(data);
                 if (!encryptedData) {
-                    window.showMessage('Export failed', 'error');
-                    return;
+                  window.showMessage('Export failed', 'error');
+                  return;
                 }
-                
+            
                 const timestamp = new Date().toISOString().split('T')[0];
                 const filename = `wallet-backup-${timestamp}.json`;
-                
-                const blob = new Blob([encryptedData], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                window.showMessage('Data exported successfully!', 'success');
+                const mimeType = 'application/json';
+            
+                await this.saveFile(encryptedData, filename, mimeType);
+              } catch (error) {
+                window.showMessage('Export failed', 'error');
+              }
             }
             
             importData() {
@@ -2033,6 +2243,9 @@
                     
                     this.cards.forEach(card => {
                         if (!card.cardName) card.cardName = card.holderName;
+                        if (!card.cardType) card.cardType = 'Standard';
+                        if (!card.accountNumber) card.accountNumber = '';
+                        if (!card.expiry) card.expiry = '';
                     });
                     
                     if (this.cards.length > 0 && !this.currentCardId) {
@@ -2053,6 +2266,9 @@
                         importedData.cards.forEach(card => {
                             if (!existingCardIds.has(card.id)) {
                                 if (!card.cardName) card.cardName = card.holderName;
+                                if (!card.cardType) card.cardType = 'Standard';
+                                if (!card.accountNumber) card.accountNumber = '';
+                                if (!card.expiry) card.expiry = '';
                                 this.cards.push(card);
                             }
                         });
