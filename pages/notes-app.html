@@ -9,6 +9,8 @@
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -114,7 +116,7 @@
         .note-card {
             background: var(--bg-card);
             border-radius: var(--radius-medium);
-            padding: var(--spacing-md);
+            padding: var(--spacing-md) var(--spacing-md) 12px var(--spacing-md);
             transition: opacity 0.3s ease, border-color 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.05);
             cursor: pointer;
@@ -151,14 +153,14 @@
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
-            margin-bottom: var(--spacing-sm);
+            margin-bottom: var(--spacing-xs);
         }
 
         .note-tags {
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
-            margin-bottom: var(--spacing-sm);
+            margin-bottom: 4px;
         }
 
         .note-tag {
@@ -426,9 +428,9 @@
         }
 
         .toolbar-divider {
-            width: 1px;
+            width: 2px;
             height: 24px;
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--bg-card);
             flex-shrink: 0;
         }
         
@@ -756,8 +758,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.8);
             z-index: 999;
             display: none;
         }
@@ -892,8 +893,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.8);
             z-index: 99998;
             display: none;
             opacity: 0;
@@ -1048,8 +1048,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.8);
             z-index: 999999;
             display: none;
             opacity: 0;
@@ -1121,13 +1120,21 @@
         }
         
         .reading-mode-header {
+            position: sticky;
+            top: -30px;
+            z-index: 100;
+            background-color: var(--bg-black);
             max-width: 800px;
-            margin: 0 auto 40px;
-            padding-top: 20px;
+            margin: 0 auto;
+            padding: 20px var(--spacing-md) 20px;
+        }
+
+        .reading-mode-header .header-row {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: var(--spacing-sm);
-            flex-wrap: wrap;
+            width: 100%;
+            margin-bottom: 10px;
         }
 
         .reading-mode-header .back-button {
@@ -1156,13 +1163,12 @@
             font-weight: 700;
             margin-bottom: 10px;
             color: var(--text-primary);
-            flex: 1;
+            width: 100%;
         }
 
         .reading-date {
             color: var(--text-secondary);
             font-size: 0.9rem;
-            margin-bottom: 40px;
             width: 100%;
         }
         
@@ -1210,6 +1216,13 @@
             margin-bottom: 0;
             padding-left: 20px;
         }
+
+        .reading-content ol {
+            list-style-type: decimal;
+        }
+        .reading-content ol ol {
+            list-style-type: upper-roman;
+        }
         
         .reading-content strong {
             color: var(--accent-color);
@@ -1221,20 +1234,10 @@
         }
         
         .reading-content code {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 2px 6px;
-            border-radius: 4px;
             font-family: monospace;
             font-size: 0.9em;
             color: var(--accent-color);
-        }
-        
-        .reading-content pre {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            overflow-x: auto;
+            margin-right: 15px;
         }
         
         .reading-content blockquote {
@@ -1255,39 +1258,149 @@
             border-bottom-color: var(--accent-color);
         }
 
+        .reading-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+        }
+
         .reading-content input[type="checkbox"] {
-            margin-right: 8px;
-            pointer-events: none;
-            filter: invert(0.8) hue-rotate(60deg);
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.2em;
+            height: 1.2em;
+            border: 2px solid var(--accent-color);
+            border-radius: 50%;
+            outline: none;
+            cursor: default;
+            vertical-align: middle;
+            margin-right: 0.5em;
+            background: transparent;
         }
 
-        .reading-content .missing-image {
-            display: inline-block;
-            padding: 4px 12px;
-            background: rgba(255, 59, 48, 0.1);
-            border: 1px solid rgba(255, 59, 48, 0.3);
-            border-radius: 20px;
-            color: #ff3b30;
-            font-size: 0.9rem;
+        .reading-content input[type="checkbox"]:checked {
+            background: var(--accent-color);
+            box-shadow: inset 0 0 0 3px var(--bg-black);
         }
 
-        .reading-content .collapsible-list-item {
-            cursor: pointer;
+        .reading-content li:has(> input[type="checkbox"]) {
+            list-style: none;
+            margin-left: -1.5rem;
+            padding-left: 1.5rem;
+            text-indent: -1.5rem;
         }
-        .reading-content .collapsible-list-item .list-content {
-            display: inline;
+
+        .reading-content table {
+            border-collapse: collapse;
+            margin: 5px 0;
+            width: auto;
+            max-width: 100%;
+            border: 2px solid var(--bg-card);
         }
-        .reading-content .collapsible-list-item .collapse-toggle {
-            margin-right: 4px;
-            display: inline-block;
-            transition: transform 0.2s;
+        .reading-content th {
+            font-weight: 700;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid var(--bg-card);
+            padding: 8px 12px;
+            white-space: nowrap;
         }
-        .reading-content .collapsible-list-item.collapsed .collapse-toggle {
-            transform: rotate(-90deg);
+        .reading-content td {
+            border: 2px solid var(--bg-card);
+            padding: 8px 12px;
+            white-space: nowrap;
         }
-        .reading-content .collapsible-list-item.collapsed > ul,
-        .reading-content .collapsible-list-item.collapsed > ol {
+
+        .reading-content .table-scroll {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .reading-content .table-scroll::-webkit-scrollbar {
             display: none;
+        }
+        
+        .reading-content hr {
+            border: none;
+            height: 1px;
+            background-color: rgba(255,255,255,0.2);
+            margin: 2em 0;
+        }
+
+        .code-block-wrapper {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .code-label {
+            color: var(--accent-color);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .copy-code-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: var(--radius-small);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .copy-code-btn:hover {
+            background: rgba(193, 252, 50, 0.2);
+            color: var(--accent-color);
+        }
+
+        .copy-code-btn.copied {
+            color: var(--accent-color);
+        }
+
+        .code-content {
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .code-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        .code-content pre {
+            margin: 0;
+            padding: 1rem;
+            background: transparent;
+            border: none;
+        }
+
+        .code-content code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: var(--text-primary);
         }
         
         @media (max-width: 768px) {
@@ -1335,7 +1448,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 1.0);
+            background: rgba(0, 0, 0, 0.9);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1635,11 +1748,14 @@
             <button class="toolbar-btn" title="Clear" onclick="clearText()">
                 <i class="fas fa-eraser"></i>
             </button>
+            <button class="toolbar-btn" title="Insert Table" onclick="insertTable()">
+                <i class="fas fa-table"></i>
+            </button>
         </div>
     </div>
 
     <div class="bottom-nav">
-        <button class="nav-button active" onclick="switchPage('home')">
+        <button class="nav-button" onclick="switchPage('home')">
             <div class="nav-icon">
                 <span class="icon icon-home"></span>
             </div>
@@ -1689,9 +1805,14 @@
     
     <div class="reading-mode" id="readingMode">
         <div class="reading-mode-header">
-            <button class="back-button" id="readingModeBack" onclick="goHomeFromReading()">
-                <i class="fas fa-chevron-left"></i>
-            </button>
+            <div class="header-row">
+                <button class="back-button" onclick="goHomeFromReading()">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="back-button" onclick="editFromReading()" title="Edit note">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
+            </div>
             <h1 id="readingTitle"></h1>
             <p class="reading-date" id="readingDate"></p>
         </div>
@@ -1720,6 +1841,8 @@
         let selectedFolderId = null;
         let autoSaveTimer = null;
 
+        const turndownService = new TurndownService();
+
         function init() {
             loadNotesFromStorage();
             loadFoldersFromStorage();
@@ -1743,6 +1866,7 @@
             localStorage.setItem('notesApp', JSON.stringify(notesData));
             renderNotes();
             updateFolderCounts();
+            renderFolders();
         }
 
         function saveFoldersToStorage() {
@@ -1774,17 +1898,20 @@
                 return;
             }
             emptyState.style.display = 'none';
-            notesGrid.innerHTML = notesData.map(note => `
+            notesGrid.innerHTML = notesData.map(note => {
+                let previewMd = note.content || 'No content';
+                if (previewMd.length > 250) previewMd = previewMd.substring(0, 250) + '...';
+                return `
                 <div class="note-card" onclick="openNoteReadingMode(${note.id})">
                     <h3 class="note-title">${note.title || 'Untitled'}</h3>
                     <p class="note-date">${formatDate(note.date)}</p>
-                    <p class="note-preview">${stripMarkdown(note.content || 'No content')}</p>
+                    <div class="note-preview">${convertMarkdownToHTML(previewMd)}</div>
                     <div class="note-tags">
                         ${(note.tags || []).map(tag => `<span class="note-tag">${tag}</span>`).join('')}
                         ${note.folderId ? `<span class="note-tag" style="background: rgba(255, 255, 255, 0.1);">${getFolderName(note.folderId)}</span>` : ''}
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         function stripMarkdown(text) {
@@ -1834,14 +1961,17 @@
                 folderEmptyState.style.display = 'block';
             } else {
                 folderEmptyState.style.display = 'none';
-                folderNotesGrid.innerHTML = folderNotes.map(note => `
+                folderNotesGrid.innerHTML = folderNotes.map(note => {
+                    let previewMd = note.content || 'No content';
+                    if (previewMd.length > 250) previewMd = previewMd.substring(0, 250) + '...';
+                    return `
                     <div class="note-card" onclick="openNoteReadingMode(${note.id})">
                         <h3 class="note-title">${note.title || 'Untitled'}</h3>
                         <p class="note-date">${formatDate(note.date)}</p>
-                        <p class="note-preview">${stripMarkdown(note.content || 'No content')}</p>
+                        <div class="note-preview">${convertMarkdownToHTML(previewMd)}</div>
                         <div class="note-tags">${(note.tags || []).map(tag => `<span class="note-tag">${tag}</span>`).join('')}</div>
                     </div>
-                `).join('');
+                `}).join('');
             }
             switchPage('folder-notes');
         }
@@ -1960,12 +2090,14 @@
             if (!note) return;
             document.getElementById('readingTitle').textContent = note.title || 'Untitled';
             document.getElementById('readingDate').textContent = `Last edited: ${formatDate(note.date)}`;
-            let html = convertMarkdownToHTML(note.content);
-            html = makeListsCollapsible(html);
+            const html = convertMarkdownToHTML(note.content);
             document.getElementById('readingContent').innerHTML = html;
             document.getElementById('readingMode').classList.add('active');
             document.body.style.overflow = 'hidden';
-            attachCollapseListeners();
+            attachCheckboxListeners();
+            enhanceCodeBlocks();
+            wrapTablesForScroll();
+            makeLinksExternal();
         }
 
         function goHomeFromReading() {
@@ -1974,22 +2106,112 @@
             switchPage('home');
         }
 
-        function makeListsCollapsible(html) {
-            return html.replace(/<li>(.*?)<\/li>/gs, (match, content) => {
-                if (content.includes('<ul>') || content.includes('<ol>')) {
-                    return `<li class="collapsible-list-item"><span class="collapse-toggle">▼</span><span class="list-content">${content}</span></li>`;
+        function editFromReading() {
+            if (currentNoteId) {
+                document.getElementById('readingMode').classList.remove('active');
+                openNoteEditor(currentNoteId);
+            }
+        }
+
+        function convertMarkdownToHTML(markdown) {
+            if (!markdown) return '';
+            return marked.parse(markdown, { mangle: false, headerIds: false });
+        }
+
+        function attachCheckboxListeners() {
+            const note = notesData.find(n => n.id === currentNoteId);
+            if (!note) return;
+            const lines = note.content.split('\n');
+            const taskLineIndices = [];
+            for (let i = 0; i < lines.length; i++) {
+                if (/^(\s*)- \[[ x]\]\s+/.test(lines[i])) {
+                    taskLineIndices.push(i);
                 }
-                return match;
+            }
+            const checkboxes = document.querySelectorAll('.reading-content input[type="checkbox"]');
+            checkboxes.forEach((checkbox, idx) => {
+                const li = checkbox.closest('li');
+                if (!li || idx >= taskLineIndices.length) return;
+                const lineIndex = taskLineIndices[idx];
+                li.dataset.lineIndex = lineIndex;
+                checkbox.addEventListener('change', () => {
+                    toggleTaskListItem(lineIndex);
+                });
             });
         }
 
-        function attachCollapseListeners() {
-            document.querySelectorAll('.collapsible-list-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('collapse-toggle') || e.target.classList.contains('list-content')) {
-                        item.classList.toggle('collapsed');
-                    }
-                });
+        function toggleTaskListItem(lineIndex) {
+            const note = notesData.find(n => n.id === currentNoteId);
+            if (!note || lineIndex === undefined) return;
+            let lines = note.content.split('\n');
+            if (lines[lineIndex]) {
+                if (lines[lineIndex].includes('- [ ]')) {
+                    lines[lineIndex] = lines[lineIndex].replace('- [ ]', '- [x]');
+                } else if (lines[lineIndex].includes('- [x]')) {
+                    lines[lineIndex] = lines[lineIndex].replace('- [x]', '- [ ]');
+                }
+            }
+            note.content = lines.join('\n');
+            note.date = new Date().toISOString();
+            saveNotesToStorage();
+            const newHtml = convertMarkdownToHTML(note.content);
+            document.getElementById('readingContent').innerHTML = newHtml;
+            attachCheckboxListeners();
+            enhanceCodeBlocks();
+            wrapTablesForScroll();
+            makeLinksExternal();
+        }
+
+        function enhanceCodeBlocks() {
+            const preElements = document.querySelectorAll('.reading-content pre');
+            preElements.forEach((pre) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'code-block-wrapper';
+
+                const header = document.createElement('div');
+                header.className = 'code-header';
+
+                const codeElement = pre.querySelector('code');
+                let language = '';
+                if (codeElement && codeElement.className) {
+                    const match = codeElement.className.match(/language-(\w+)/);
+                    if (match) language = match[1];
+                }
+
+                const label = document.createElement('span');
+                label.className = 'code-label';
+                label.textContent = language || 'code';
+                header.appendChild(label);
+
+                const button = document.createElement('button');
+                button.className = 'copy-code-btn';
+                button.innerHTML = '<i class="far fa-copy"></i>';
+                header.appendChild(button);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'code-content';
+                pre.parentNode.insertBefore(wrapper, pre);
+                wrapper.appendChild(header);
+                wrapper.appendChild(contentDiv);
+                contentDiv.appendChild(pre);
+            });
+        }
+        
+        function makeLinksExternal() {
+            const links = document.querySelectorAll('#readingContent a');
+            links.forEach(link => {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            });
+        }
+
+        function wrapTablesForScroll() {
+            document.querySelectorAll('.reading-content table').forEach(table => {
+                if (table.parentElement.classList.contains('table-scroll')) return;
+                const wrapper = document.createElement('div');
+                wrapper.className = 'table-scroll';
+                table.parentNode.insertBefore(wrapper, table);
+                wrapper.appendChild(table);
             });
         }
 
@@ -2145,6 +2367,16 @@
             insertMarkdown('[' + linkText + '](' + url + ')', '');
         }
 
+        function insertTable() {
+            const tableTemplate = `
+| Header 1 | Header 2 | Header 3 |
+|----------|----------|----------|
+| Cell 1   | Cell 2   | Cell 3   |
+| Cell 4   | Cell 5   | Cell 6   |
+`;
+            insertMarkdown(tableTemplate, '');
+        }
+
         function indent() {
             const textarea = document.getElementById('editorContent');
             const start = textarea.selectionStart;
@@ -2200,6 +2432,31 @@
             }
         }
 
+        function handleEditorKeyDown(e) {
+            if (e.key !== 'Enter') return;
+            const textarea = e.target;
+            const start = textarea.selectionStart;
+            const text = textarea.value;
+            const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+            const currentLine = text.substring(lineStart, start);
+            const bulletMatch = currentLine.match(/^(\s*)([-*]|(\d+\.)|(- \[[ x]\]))\s+/);
+            if (bulletMatch) {
+                e.preventDefault();
+                const indent = bulletMatch[1] || '';
+                const marker = bulletMatch[2];
+                let newMarker = marker;
+                if (marker.match(/\d+\./)) {
+                    const num = parseInt(marker) + 1;
+                    newMarker = num + '.';
+                }
+                const newLine = '\n' + indent + newMarker + ' ';
+                const newText = text.substring(0, start) + newLine + text.substring(start);
+                textarea.value = newText;
+                textarea.selectionStart = textarea.selectionEnd = start + newLine.length;
+                triggerAutoSave();
+            }
+        }
+
         function formatDate(dateString) {
             const date = new Date(dateString);
             const today = new Date();
@@ -2226,86 +2483,24 @@
         }
 
         function toggleReadingMode() {
+            saveCurrentNote();
             const note = notesData.find(n => n.id === currentNoteId);
             if (!note) return;
             document.getElementById('readingTitle').textContent = note.title || 'Untitled';
             document.getElementById('readingDate').textContent = `Last edited: ${formatDate(note.date)}`;
-            let html = convertMarkdownToHTML(note.content);
-            html = makeListsCollapsible(html);
+            const html = convertMarkdownToHTML(note.content);
             document.getElementById('readingContent').innerHTML = html;
             document.getElementById('noteEditorPage').classList.remove('active');
             document.getElementById('readingMode').classList.add('active');
-            attachCollapseListeners();
+            attachCheckboxListeners();
+            enhanceCodeBlocks();
+            wrapTablesForScroll();
+            makeLinksExternal();
         }
 
         function backToEditMode() {
             document.getElementById('readingMode').classList.remove('active');
             openNoteEditor(currentNoteId);
-        }
-
-        function convertMarkdownToHTML(markdown) {
-            if (!markdown) return '<p>No content</p>';
-            const lines = markdown.split('\n');
-            let html = '';
-            let listStack = [];
-            const listMarkerRegex = /^(\s*)([-*+]|\d+\.)\s+(.*)$/;
-            for (let line of lines) {
-                const match = line.match(listMarkerRegex);
-                if (match) {
-                    const indent = match[1].length;
-                    const marker = match[2];
-                    const content = match[3];
-                    const isOrdered = /^\d+\.$/.test(marker);
-                    const listType = isOrdered ? 'ol' : 'ul';
-                    while (listStack.length > 0 && listStack[listStack.length-1].indent >= indent) {
-                        const last = listStack.pop();
-                        html += `</${last.type}></li>`;
-                    }
-                    if (listStack.length === 0 || listStack[listStack.length-1].indent < indent) {
-                        if (listStack.length > 0) {
-                            html += '<li>';
-                        }
-                        html += `<${listType}><li>`;
-                        listStack.push({ type: listType, indent: indent });
-                    } else {
-                        html += '</li><li>';
-                    }
-                    html += processInline(content);
-                } else {
-                    while (listStack.length > 0) {
-                        const last = listStack.pop();
-                        html += `</li></${last.type}>`;
-                    }
-                    if (line.trim() === '') {
-                        html += '<p></p>';
-                    } else if (line.match(/^#{1,6}\s/)) {
-                        const headingLevel = line.match(/^(#{1,6})\s/)[1].length;
-                        const headingContent = line.replace(/^#{1,6}\s/, '');
-                        html += `<h${headingLevel}>${headingContent}</h${headingLevel}>`;
-                    } else if (line.match(/^>\s/)) {
-                        html += `<blockquote>${line.replace(/^>\s/, '')}</blockquote>`;
-                    } else {
-                        html += `<p>${processInline(line)}</p>`;
-                    }
-                }
-            }
-            while (listStack.length > 0) {
-                const last = listStack.pop();
-                html += `</li></${last.type}>`;
-            }
-            html = html.replace(/!\[\[.*?\]\]/g, '<span class="missing-image">The image has been missing</span>');
-            return html;
-        }
-
-        function processInline(text) {
-            return text
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/~~(.*?)~~/g, '<del>$1</del>')
-                .replace(/`(.*?)`/g, '<code>$1</code>')
-                .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
-                .replace(/^- \[ \] (.*$)/gm, '<input type="checkbox" disabled> $1')
-                .replace(/^- \[x\] (.*$)/gm, '<input type="checkbox" disabled checked> $1');
         }
 
         function switchPage(page) {
@@ -2522,6 +2717,30 @@
                     if (!floatingMenu.contains(event.target) && !clickedButton) closeFloatingMenu();
                 }
             });
+            document.getElementById('readingContent').addEventListener('click', async (e) => {
+                const button = e.target.closest('.copy-code-btn');
+                if (!button) return;
+                e.preventDefault();
+                const wrapper = button.closest('.code-block-wrapper');
+                if (!wrapper) return;
+                const codeElement = wrapper.querySelector('code') || wrapper.querySelector('pre');
+                if (!codeElement) return;
+                const code = codeElement.innerText;
+                try {
+                    await navigator.clipboard.writeText(code);
+                    button.innerHTML = '<i class="fas fa-check"></i>';
+                    button.classList.add('copied');
+                    setTimeout(() => {
+                        button.innerHTML = '<i class="far fa-copy"></i>';
+                        button.classList.remove('copied');
+                    }, 1500);
+                } catch (err) {
+                    button.innerHTML = '<i class="fas fa-times"></i>';
+                    setTimeout(() => {
+                        button.innerHTML = '<i class="far fa-copy"></i>';
+                    }, 1500);
+                }
+            });
             const textarea = document.getElementById('editorContent');
             if (textarea) {
                 textarea.addEventListener('input', () => {
@@ -2530,6 +2749,7 @@
                     redoStack = [];
                     triggerAutoSave();
                 });
+                textarea.addEventListener('keydown', handleEditorKeyDown);
             }
         }
 
