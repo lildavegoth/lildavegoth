@@ -209,7 +209,7 @@
                 target.classList.contains('protected')) {
                 e.preventDefault();
                 if (window.showMessage) {
-                    window.showMessage('Image Protection', 'Protected content cannot be opened', 'warning');
+                    window.showMessage('Content Protected', 'Protected content cannot be opened', 'warning');
                 }
                 return false;
             }
@@ -222,7 +222,7 @@
             if (text.includes('http') && text.match(PROTECTED_FORMATS)) {
                 e.preventDefault();
                 if (window.showMessage) {
-                    window.showMessage('Image Protection', 'Image URL copying disabled', 'warning');
+                    window.showMessage('Content Protected', 'Image URL copying disabled', 'warning');
                 }
                 return false;
             }
@@ -281,7 +281,7 @@
                     text-align: center;
                     max-width: 90%;
                 ">
-                    <strong>⚠️ Image Protection Active</strong><br>
+                    <strong>⚠️ Content Protected Active</strong><br>
                     <small style="opacity: 0.9;">Content is protected from downloading</small>
                 </div>
             `;
@@ -290,7 +290,7 @@
             setTimeout(() => alert.remove(), 4000);
             
             if (window.showMessage) {
-                window.showMessage('Image Protection', 'Image protection is now active', 'warning', '', 'Content is protected from downloading');
+                window.showMessage('Content Protected', 'Image protection is now active', 'warning', '', 'Content is protected from downloading');
             }
         }
         
