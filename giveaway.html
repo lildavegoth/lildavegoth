@@ -40,7 +40,7 @@
             background-color: var(--bg-black);
             color: var(--text-primary);
             min-height: 100vh;
-            background-image: 
+            background-image:
                 radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
                 radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
             overflow-x: hidden;
@@ -245,7 +245,6 @@
             }
         }
         
-        /* Add this to your existing CSS */
         .action-button.admin-active {
             background: var(--accent-color);
             position: relative;
@@ -266,7 +265,6 @@
             font-weight: bold;
         }
         
-        /* Admin Panel Styles */
         .admin-panel {
             position: fixed;
             top: 0;
@@ -308,8 +306,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.9);
             z-index: 9998;
             opacity: 0;
             transition: opacity 0.3s ease;
@@ -319,7 +316,6 @@
             opacity: 1;
         }
         
-        /* Update admin-header to have proper spacing */
         .admin-header {
             display: flex;
             justify-content: space-between;
@@ -338,12 +334,10 @@
             gap: 10px;
         }
         
-        /* Update admin-sections for better padding */
         .admin-sections {
             padding: 0 var(--spacing-lg) var(--spacing-lg);
         }
         
-        /* Make sure the panel is visible when active */
         .admin-panel.active {
             display: flex;
         }
@@ -466,7 +460,6 @@
             margin-top: var(--spacing-md);
         }
         
-        /* Mobile responsive */
         @media (max-width: 768px) {
             .admin-panel {
                 padding: var(--spacing-sm);
@@ -489,7 +482,6 @@
             }
         }
         
-        /* Spinner animation */
         .fa-spinner {
             animation: spin 1s linear infinite;
         }
@@ -499,7 +491,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Celebration animation */
         .celebrate {
             animation: celebrate 0.5s ease;
         }
@@ -509,13 +500,11 @@
             50% { transform: scale(1.1); }
         }
         
-        /* FAB Button Hover */
         #adminFAB:hover {
             transform: scale(1.1) rotate(90deg);
             box-shadow: 0 6px 25px rgba(193, 252, 50, 0.4);
         }
         
-        /* Admin Status Button */
         .admin-status-btn {
             flex: 1;
             padding: 10px;
@@ -537,17 +526,14 @@
             background: rgba(255, 255, 255, 0.1);
         }
         
-        /* Add to existing CSS */
         .admin-only {
             display: none !important;
         }
         
-        /* When admin is logged in, show admin-only elements */
         .admin-only.admin-visible {
             display: flex !important;
         }
         
-        /* Animations */
         @keyframes slideUp {
             from {
                 opacity: 0;
@@ -564,7 +550,6 @@
             50% { transform: scale(1.1); }
         }
         
-        /* Spinner */
         .fa-spin {
             animation: spin 1s linear infinite;
         }
@@ -574,7 +559,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Responsive for mobile */
         @media (max-width: 768px) {
             #adminFAB {
                 bottom: 20px;
@@ -590,7 +574,6 @@
                 left: 20px;
             }
         }
-        
     </style>
 </head>
 <body>
@@ -599,7 +582,6 @@
             <a href="index.html" class="back-link fade-in">
                 <i class="fas fa-arrow-left"></i> Back to Home
             </a>
-            
             <h1 class="page-title fade-in">Giveaways Event</h1>
             <p style="margin-bottom: -30px;" class="page-subtitle fade-in">
                 Join the giveaway for a chance to win amazing prizes! Only signed-in users can participate.
@@ -658,8 +640,7 @@
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxrmgcqr4Yl-kW_AycRi_vlrPUT1n4ifvVdZY3C2QyKV14xdjNiWG4tp5mDwl9TJfc3/exec';
-        const ADMIN_USER_ID = 'lildavegoth';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxF5622f2vQnNfE2EbmkuEOVWLNSQasMdnN1pjtGsd3FtRhXp7L7nb4PvX1VIj2aAeU/exec';
         
         let giveawayParticipants = [];
         let giveawaySettings = {
@@ -670,25 +651,24 @@
         let currentUser = null;
         let isOnline = true;
         let isAdmin = false;
+        let adminIds = [];
         
         async function initGiveaway() {
             currentUser = window.authCheck ? window.authCheck.getCurrentUser() : null;
-            checkAdminStatus();
-            
             await testConnection();
             await loadGiveawaySettings();
             await loadParticipants();
-            
+            await loadAdmins();
+            checkAdminStatus();
             updateUI();
             setupEventListeners();
-            
             if (isAdmin) {
                 createFABButton();
             }
-            
             setInterval(() => {
                 loadGiveawaySettings();
                 loadParticipants();
+                loadAdmins();
             }, 10000);
         }
         
@@ -697,11 +677,11 @@
                 const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=test&t=${Date.now()}`);
                 if (response.ok) {
                     isOnline = true;
-                    window.showMessage('Online', 'Connected to giveaway server', 'Notification', 'System');
+                    window.showMessage('Connected to giveaway server');
                 }
             } catch (error) {
                 isOnline = false;
-                window.showMessage('Offline', 'Using local storage mode', 'error', 'System');
+                window.showMessage('Offline');
             }
         }
         
@@ -745,6 +725,26 @@
             }
         }
         
+        async function loadAdmins() {
+            try {
+                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getAdmins&t=${Date.now()}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        adminIds = data.admins || [];
+                        localStorage.setItem('giveaway_admins', JSON.stringify(adminIds));
+                    }
+                }
+            } catch (error) {
+                const cached = localStorage.getItem('giveaway_admins');
+                if (cached) {
+                    adminIds = JSON.parse(cached);
+                }
+            }
+            checkAdminStatus();
+            updateUI();
+        }
+        
         function updateGiveawayDisplay() {
             const statusElement = document.querySelector('.giveaway-status');
             const prizeElement = document.querySelector('.giveaway-prize');
@@ -752,11 +752,11 @@
             
             if (statusElement) {
                 statusElement.textContent = giveawaySettings.status.toUpperCase();
-                statusElement.style.background = giveawaySettings.status === 'active' 
-                    ? 'rgba(193, 252, 50, 0.1)' 
+                statusElement.style.background = giveawaySettings.status === 'active'
+                    ? 'rgba(193, 252, 50, 0.1)'
                     : 'rgba(255, 59, 48, 0.1)';
-                statusElement.style.color = giveawaySettings.status === 'active' 
-                    ? 'var(--accent-color)' 
+                statusElement.style.color = giveawaySettings.status === 'active'
+                    ? 'var(--accent-color)'
                     : '#ff3b30';
             }
             
@@ -776,7 +776,6 @@
             if (joinedCount) {
                 const count = giveawayParticipants.length;
                 joinedCount.textContent = count;
-                
                 if (count >= giveawaySettings.maxParticipants * 0.9) {
                     joinedCount.style.color = '#ff3b30';
                 }
@@ -791,8 +790,6 @@
                 joinButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In to Join';
                 joinButton.disabled = false;
                 startButton.disabled = true;
-                
-                // Hide admin button for non-admin users
                 startButton.classList.remove('admin-visible');
                 return;
             }
@@ -809,7 +806,6 @@
                 joinButton.style.background = 'var(--accent-color)';
             }
             
-            // Show button only if user is admin
             if (isAdmin) {
                 startButton.classList.add('admin-visible');
                 startButton.disabled = false;
@@ -821,7 +817,7 @@
         }
         
         function checkAdminStatus() {
-            isAdmin = currentUser && currentUser.id === ADMIN_USER_ID;
+            isAdmin = currentUser && adminIds.includes(currentUser.id);
         }
         
         async function joinGiveaway() {
@@ -834,18 +830,18 @@
             }
             
             if (giveawaySettings.status === 'inactive') {
-                window.showMessage('Paused', 'Giveaway is inactive', 'error', 'Giveaway');
+                window.showMessage('No Giveaway available for now');
                 return;
             }
             
             if (giveawayParticipants.length >= giveawaySettings.maxParticipants) {
-                window.showMessage('Full', 'Maximum participants reached', 'error', 'Giveaway');
+                window.showMessage('Maximum participants reached');
                 return;
             }
             
             const alreadyJoined = giveawayParticipants.some(p => p.id === currentUser.id);
             if (alreadyJoined) {
-                window.showMessage('Already Joined', 'You already joined', 'info', 'Giveaway');
+                window.showMessage('You already joined');
                 return;
             }
             
@@ -866,18 +862,15 @@
                     giveawayParticipants.push(participant);
                     updateParticipantCount();
                     updateUI();
-                    
-                    window.showMessage('Joined!', 'You are now in the giveaway', 'Notification', 'Giveaway');
-                    
+                    window.showMessage('You are now in the giveaway');
                     const joinButton = document.getElementById('joinButton');
                     joinButton.style.animation = 'celebrate 0.5s ease';
                     setTimeout(() => joinButton.style.animation = '', 500);
                 } else {
-                    window.showMessage('Error', result.message || 'Join failed', 'error', 'Giveaway');
+                    window.showMessage('Error', result.message || 'Join failed');
                 }
             } catch (error) {
-                window.showMessage('Offline', 'Saved locally, will sync later', 'info', 'Giveaway');
-                
+                window.showMessage('Saved locally, will sync later');
                 giveawayParticipants.push(participant);
                 localStorage.setItem('giveaway_participants', JSON.stringify(giveawayParticipants));
                 updateParticipantCount();
@@ -887,12 +880,12 @@
         
         function selectWinner() {
             if (!isAdmin) {
-                window.showMessage('Admin Only', 'Only admin can select winner', 'error', 'Giveaway');
+                window.showMessage('Only admin can select winner');
                 return;
             }
             
             if (giveawayParticipants.length === 0) {
-                window.showMessage('No Participants', 'No one joined yet', 'error', 'Giveaway');
+                window.showMessage('No one joined yet');
                 return;
             }
             
@@ -909,26 +902,20 @@
             const interval = setInterval(() => {
                 const randomIndex = Math.floor(Math.random() * giveawayParticipants.length);
                 winnerName.textContent = giveawayParticipants[randomIndex].username;
-                
                 if (++count >= maxCount) {
                     clearInterval(interval);
-                    
                     const winnerIndex = Math.floor(Math.random() * giveawayParticipants.length);
                     const winner = giveawayParticipants[winnerIndex];
-                    
                     setTimeout(() => {
                         winnerName.textContent = winner.username;
                         winnerDetails.textContent = `ID: ${winner.id} • Selected from ${giveawayParticipants.length} participants`;
                         winnerDisplay.classList.add('active');
-                        
                         startButton.disabled = false;
                         startButton.innerHTML = '<i class="fas fa-play"></i> Start Selection';
-                        
                         localStorage.setItem('lastGiveawayWinner', JSON.stringify({
                             ...winner,
                             selectedAt: new Date().toISOString()
                         }));
-                        
                         winnerDisplay.scrollIntoView({ behavior: 'smooth' });
                     }, 500);
                 }
@@ -940,15 +927,14 @@
                 const url = `${GOOGLE_SCRIPT_URL}?action=updateSettings&field=${field}&value=${encodeURIComponent(value)}`;
                 const response = await fetch(url);
                 const result = await response.json();
-                
                 if (result.success) {
                     giveawaySettings[field] = value;
                     updateGiveawayDisplay();
-                    window.showMessage('Updated', `${field} set to ${value}`, 'Notification', 'System');
+                    window.showMessage(`${field} set to ${value}`);
                     localStorage.setItem('giveaway_settings', JSON.stringify(giveawaySettings));
                 }
             } catch (error) {
-                window.showMessage('Error', 'Failed to update', 'error', 'System');
+                window.showMessage('Failed to update');
             }
         }
         
@@ -956,15 +942,14 @@
             try {
                 const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=clearParticipants`);
                 const result = await response.json();
-                
                 if (result.success) {
                     giveawayParticipants = [];
                     updateParticipantCount();
                     localStorage.removeItem('giveaway_participants');
-                    window.showMessage('Cleared', 'All participants removed', 'Notification', 'System');
+                    window.showMessage('All participants cleared');
                 }
             } catch (error) {
-                window.showMessage('Error', 'Failed to clear', 'error', 'System');
+                window.showMessage('Failed to clear');
             }
         }
         
@@ -1004,7 +989,6 @@
         
         function toggleAdminPanel() {
             const panel = document.getElementById('adminPanel');
-            
             if (panel && panel.classList.contains('active')) {
                 hideAdminPanel();
             } else {
@@ -1015,30 +999,24 @@
         function showAdminPanel() {
             if (document.getElementById('adminPanel')) return;
             
-            // Create overlay
             const overlay = document.createElement('div');
             overlay.className = 'admin-panel-overlay';
             overlay.id = 'adminPanelOverlay';
             
-            // Create panel container
             const panel = document.createElement('div');
             panel.id = 'adminPanel';
             panel.className = 'admin-panel';
             
-            // Create panel content
             const panelContent = document.createElement('div');
             panelContent.className = 'admin-panel-content';
             
-            // Panel HTML content
             panelContent.innerHTML = `
                 <div class="admin-header">
                     <h3>
                         <i class="fas fa-crown"></i> Admin Controls
                     </h3>
                 </div>
-                
                 <div class="admin-sections">
-                    <!-- Status Control -->
                     <div class="admin-section">
                         <h4><i class="fas fa-power-off"></i> Giveaway Status</h4>
                         <div class="status-buttons">
@@ -1050,8 +1028,6 @@
                             </button>
                         </div>
                     </div>
-                    
-                    <!-- Prize Settings -->
                     <div class="admin-section">
                         <h4><i class="fas fa-gift"></i> Prize Settings</h4>
                         <input type="text" class="admin-input" id="adminPrizeInput" value="${giveawaySettings.prize}" placeholder="Prize Name">
@@ -1059,8 +1035,6 @@
                             <i class="fas fa-save"></i> Update Prize
                         </button>
                     </div>
-                    
-                    <!-- Participants Limit -->
                     <div class="admin-section">
                         <h4><i class="fas fa-users"></i> Participants Limit</h4>
                         <input type="number" class="admin-input" id="adminMaxInput" value="${giveawaySettings.maxParticipants}" placeholder="Max Participants">
@@ -1068,8 +1042,6 @@
                             <i class="fas fa-save"></i> Update Limit
                         </button>
                     </div>
-                    
-                    <!-- Quick Actions -->
                     <div class="admin-section">
                         <h4><i class="fas fa-bolt"></i> Quick Actions</h4>
                         <div class="action-buttons-grid">
@@ -1084,14 +1056,10 @@
                 </div>
             `;
             
-            // Assemble the structure
             panel.appendChild(panelContent);
-            
-            // Add to body
             document.body.appendChild(overlay);
             document.body.appendChild(panel);
             
-            // Show with animation
             setTimeout(() => {
                 overlay.classList.add('active');
                 panel.classList.add('active');
@@ -1103,10 +1071,8 @@
         function hideAdminPanel() {
             const panel = document.getElementById('adminPanel');
             const overlay = document.getElementById('adminPanelOverlay');
-            
             if (panel) panel.classList.remove('active');
             if (overlay) overlay.classList.remove('active');
-            
             setTimeout(() => {
                 if (panel) panel.remove();
                 if (overlay) overlay.remove();
@@ -1114,21 +1080,16 @@
         }
         
         function setupAdminPanelListeners() {
-            // Close when clicking overlay
             const overlay = document.getElementById('adminPanelOverlay');
             if (overlay) {
                 overlay.addEventListener('click', hideAdminPanel);
             }
-            
-            // Stop propagation when clicking inside panel content
             const panelContent = document.querySelector('.admin-panel-content');
             if (panelContent) {
                 panelContent.addEventListener('click', function(event) {
                     event.stopPropagation();
                 });
             }
-            
-            // Rest of your event listeners remain the same...
             document.querySelectorAll('.status-btn').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const status = this.getAttribute('data-status');
@@ -1137,7 +1098,6 @@
                     this.classList.add('active');
                 });
             });
-            
             const savePrizeBtn = document.getElementById('savePrizeBtn');
             if (savePrizeBtn) {
                 savePrizeBtn.addEventListener('click', async function() {
@@ -1147,7 +1107,6 @@
                     }
                 });
             }
-            
             const saveMaxBtn = document.getElementById('saveMaxBtn');
             if (saveMaxBtn) {
                 saveMaxBtn.addEventListener('click', async function() {
@@ -1157,7 +1116,6 @@
                     }
                 });
             }
-            
             const clearBtn = document.getElementById('clearParticipantsBtn');
             if (clearBtn) {
                 clearBtn.addEventListener('click', async function() {
@@ -1166,13 +1124,13 @@
                     }
                 });
             }
-            
             const refreshBtn = document.getElementById('refreshBtn');
             if (refreshBtn) {
                 refreshBtn.addEventListener('click', function() {
                     loadGiveawaySettings();
                     loadParticipants();
-                    window.showMessage('Refreshed', 'Data updated', 'Notification', 'System');
+                    loadAdmins();
+                    window.showMessage('Data updated');
                 });
             }
         }
@@ -1181,7 +1139,6 @@
             const joinButton = document.getElementById('joinButton');
             const startButton = document.getElementById('startButton');
             const selectAgainButton = document.getElementById('selectAgainButton');
-            
             if (joinButton) joinButton.addEventListener('click', joinGiveaway);
             if (startButton) startButton.addEventListener('click', selectWinner);
             if (selectAgainButton) selectAgainButton.addEventListener('click', () => {
