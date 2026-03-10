@@ -117,37 +117,18 @@ jobs:
       - name: Build signed release APK
         run: cordova build android --release --buildConfig=build.json
 
+      - name: List APK output
+        run: |
+          echo "Release folder:"
+          ls -la platforms/android/app/build/outputs/apk/release/ || true
+          echo "Debug folder:"
+          ls -la platforms/android/app/build/outputs/apk/debug/ || true
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: kakoi-kiraku-home-apk
-          path: platforms/android/app/build/outputs/apk/release/app-release.apk
-
-  build-jekyll:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./
-          destination: ./_site
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-
-  deploy-jekyll:
-    needs: build-jekyll
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    concurrency:
-      group: pages
-      cancel-in-progress: false
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          path: |
+            platforms/android/app/build/outputs/apk/release/app-release.apk
+            platforms/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
