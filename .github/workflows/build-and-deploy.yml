@@ -92,15 +92,36 @@ jobs:
           cordova plugin add cordova-plugin-inappbrowser
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-media-capture
+          cordova plugin add cordova-plugin-deeplinks \
+            --variable URL_SCHEME=kiraku \
+            --variable HOST_NAME=kakoi-kiraku-home.vercel.app
 
-      - name: Build debug APK
-        run: cordova build android --debug
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > kiraku.keystore
+
+      - name: Create build.json
+        run: |
+          cat > build.json << EOF
+          {
+            "android": {
+              "release": {
+                "keystore": "kiraku.keystore",
+                "storePassword": "${{ secrets.KEYSTORE_PASSWORD }}",
+                "alias": "${{ secrets.KEY_ALIAS }}",
+                "password": "${{ secrets.KEY_PASSWORD }}"
+              }
+            }
+          }
+          EOF
+
+      - name: Build signed release APK
+        run: cordova build android --release --buildConfig=build.json
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: kakoi-kiraku-home-apk
-          path: platforms/android/app/build/outputs/apk/debug/app-debug.apk
+          path: platforms/android/app/build/outputs/apk/release/app-release.apk
 
   build-jekyll:
     runs-on: ubuntu-latest
