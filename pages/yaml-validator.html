@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAML Validator | lildavegoth</title>
+    <meta name="description" content="Validate, Verify and Reformat your YAML documents">
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            padding: var(--spacing-md);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .username {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .editor-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .editor-box {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .editor-header {
+            padding: var(--spacing-sm);
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-title {
+            font-weight: 600;
+        }
+
+        .editor-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--accent-color);
+        }
+
+        textarea {
+            width: 100%;
+            height: 300px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            padding: var(--spacing-md);
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+        }
+
+        textarea:focus {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .options {
+            display: flex;
+            justify-content: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .options-list {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 350px;
+            max-width: 100%;
+        }
+
+        .option-row {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-small);
+            transition: all 0.3s;
+        }
+
+        .option-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .option-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(193, 252, 50, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            font-size: 0.9rem;
+        }
+
+        .option-text {
+            flex: 1;
+            color: white;
+            font-size: 0.95rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .toggle-checkbox {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-secondary);
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        .toggle-checkbox:checked + .toggle-slider {
+            background-color: rgba(193, 252, 50, 0.2);
+        }
+
+        .toggle-checkbox:checked + .toggle-slider:before {
+            transform: translateX(26px);
+            background-color: var(--accent-color);
+        }
+
+        .actions {
+            display: flex;
+            justify-content: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .button-container {
+            display: flex;
+            gap: var(--spacing-sm);
+            width: 300px;
+            max-width: 100%;
+            justify-content: center;
+        }
+        
+        .action-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-small);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            flex: 1;
+            min-height: 44px;
+        }
+        
+        .action-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+        
+        .action-btn.primary {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: 600;
+            border-color: var(--accent-color);
+        }
+        
+        .action-btn.primary:hover {
+            background: var(--accent-dark);
+            border-color: var(--accent-dark);
+        }
+
+        .result-box {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: var(--spacing-md);
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .result-valid {
+            background: rgba(0, 255, 0, 0.1);
+            border-color: rgba(0, 255, 0, 0.3);
+            color: #4CAF50;
+        }
+
+        .result-invalid {
+            background: rgba(255, 0, 0, 0.1);
+            border-color: rgba(255, 0, 0, 0.3);
+            color: #ff4444;
+        }
+
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        textarea::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        textarea::-webkit-scrollbar-thumb {
+            background: rgba(193, 252, 50, 0.3);
+            border-radius: 4px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--accent-color);
+            color: #000;
+            padding: 12px 24px;
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            animation: slideIn 0.3s;
+            z-index: 1000;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+
+        <header>
+            <h1 class="username">YAML Validator</h1>
+            <p class="tagline">Validate, Verify and Reformat your YAML documents</p>
+        </header>
+
+        <div class="editor-container">
+            <div class="editor-box">
+                <div class="editor-header">
+                    <div class="editor-title">YAML Input</div>
+                    <div class="editor-buttons">
+                        <button class="icon-btn" onclick="importYamlFile()" title="Import YAML File">
+                            <i class="fas fa-file-import"></i>
+                        </button>
+                        <button class="icon-btn" onclick="clearInput()" title="Clear">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="icon-btn" onclick="loadSample()" title="Load Sample">
+                            <i class="fas fa-file-code"></i>
+                        </button>
+                    </div>
+                </div>
+                <textarea id="inputYaml" placeholder="Paste your YAML code here..." oninput="yamlChanged()"></textarea>
+            </div>
+        </div>
+
+        <input type="file" id="fileInput" accept=".yaml,.yml,.txt" style="display: none;">
+
+        <div class="options">
+            <div class="options-list">
+                <div class="option-row">
+                    <div class="option-icon">
+                        <i class="fas fa-redo"></i>
+                    </div>
+                    <div class="option-text">Reformat (strips comments)</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="reformat" class="toggle-checkbox" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <div class="option-row">
+                    <div class="option-icon">
+                        <i class="fas fa-link"></i>
+                    </div>
+                    <div class="option-text">Resolve aliases</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="resolve_aliases" class="toggle-checkbox" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <div class="button-container">
+                <button class="action-btn primary" onclick="validateYaml()">
+                    <i class="fas fa-check-circle"></i>
+                </button>
+                <button class="action-btn" onclick="copyYaml()">
+                    <i class="fas fa-copy"></i>
+                </button>
+                <button class="action-btn" onclick="downloadYaml()">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="result" class="result-box">
+            <div id="resultMessage">Enter YAML and click "Check" button to start validates</div>
+        </div>
+
+        <footer class="fade-in">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | YAML Validator</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script>
+        const inputYaml = document.getElementById('inputYaml');
+        const result = document.getElementById('result');
+        const resultMessage = document.getElementById('resultMessage');
+        const fileInput = document.getElementById('fileInput');
+        const reformat = document.getElementById('reformat');
+        const resolveAliases = document.getElementById('resolve_aliases');
+        const optionRows = document.querySelectorAll('.option-row');
+
+        function importYamlFile() {
+            fileInput.click();
+        }
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                inputYaml.value = e.target.result;
+                window.showMessage('File imported');
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        function updateOptionStyles() {
+            optionRows[0].classList.toggle('active', reformat.checked);
+            optionRows[1].classList.toggle('active', resolveAliases.checked);
+        }
+
+        updateOptionStyles();
+        reformat.addEventListener('change', function() {
+            updateOptionStyles();
+            if (!this.checked) {
+                resolveAliases.disabled = true;
+            } else {
+                resolveAliases.disabled = false;
+            }
+        });
+        resolveAliases.addEventListener('change', updateOptionStyles);
+
+        optionRows.forEach(row => {
+            row.addEventListener('click', () => {
+                const checkbox = row.querySelector('.toggle-checkbox');
+                if (!checkbox.disabled) {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+
+        function clearInput() {
+            inputYaml.value = '';
+            result.className = 'result-box';
+            resultMessage.textContent = 'Enter YAML and click "Validate YAML"';
+            window.showMessage('Input cleared');
+        }
+
+        function yamlChanged() {
+            result.className = 'result-box';
+            resultMessage.textContent = 'Enter YAML and click "Validate YAML"';
+        }
+
+        function validateYaml() {
+            const yamlText = inputYaml.value.trim();
+            
+            if (!yamlText) {
+                result.className = 'result-box result-invalid';
+                resultMessage.textContent = 'Please enter YAML content';
+                window.showMessage('No YAML entered');
+                return;
+            }
+
+            try {
+                const docs = [];
+                let currentDoc = '';
+                let inDoc = false;
+                const lines = yamlText.split('\n');
+                
+                for (const line of lines) {
+                    if (line.trim() === '---') {
+                        if (inDoc && currentDoc) {
+                            docs.push(currentDoc);
+                            currentDoc = '';
+                        }
+                        inDoc = !inDoc;
+                    } else if (inDoc) {
+                        currentDoc += line + '\n';
+                    }
+                }
+                
+                if (currentDoc) {
+                    docs.push(currentDoc);
+                }
+
+                if (docs.length === 0) {
+                    docs.push(yamlText);
+                }
+
+                let allValid = true;
+                let errorMessages = [];
+                
+                for (let i = 0; i < docs.length; i++) {
+                    try {
+                        const parsed = jsyaml.load(docs[i], { schema: jsyaml.FAILSAFE_SCHEMA });
+                        
+                        if (reformat.checked) {
+                            const options = {};
+                            if (!resolveAliases.checked || resolveAliases.disabled) {
+                                options.noRefs = true;
+                            }
+                            const formatted = jsyaml.dump(parsed, options);
+                            if (docs.length === 1) {
+                                inputYaml.value = formatted;
+                            } else {
+                                const newDocs = [];
+                                for (let j = 0; j < docs.length; j++) {
+                                    try {
+                                        const docParsed = jsyaml.load(docs[j]);
+                                        newDocs.push('---\n' + jsyaml.dump(docParsed, options));
+                                    } catch(e) {
+                                        newDocs.push(docs[j]);
+                                    }
+                                }
+                                inputYaml.value = newDocs.join('\n');
+                            }
+                        }
+                    } catch(e) {
+                        allValid = false;
+                        errorMessages.push(`Document ${i + 1}: ${e.message}`);
+                    }
+                }
+
+                if (allValid) {
+                    result.className = 'result-box result-valid';
+                    resultMessage.textContent = '✓ Valid YAML!';
+                    window.showMessage('YAML is valid');
+                } else {
+                    result.className = 'result-box result-invalid';
+                    resultMessage.textContent = errorMessages.join('\n');
+                    window.showMessage('YAML has errors');
+                }
+
+            } catch(e) {
+                result.className = 'result-box result-invalid';
+                resultMessage.textContent = `Error: ${e.message}`;
+                window.showMessage('Invalid YAML');
+            }
+        }
+
+        function copyYaml() {
+            if (!inputYaml.value.trim()) {
+                window.showMessage('No YAML to copy');
+                return;
+            }
+            
+            const text = inputYaml.value;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    window.showMessage('Copied to clipboard');
+                });
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                window.showMessage('Copied to clipboard');
+            }
+        }
+
+        function downloadYaml() {
+            if (!inputYaml.value.trim()) {
+                window.showMessage('No YAML to download');
+                return;
+            }
+            
+            const blob = new Blob([inputYaml.value], { type: 'text/yaml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'yaml-document.yaml';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            window.showMessage('Download started');
+        }
+
+        function loadSample() {
+            const sample = `# Sample YAML configuration
+database:
+  host: localhost
+  port: 3306
+  username: admin
+  password: secret
+  databases:
+    - main
+    - backup
+
+server:
+  port: 8080
+  environment: production
+  features:
+    caching: true
+    logging: false
+
+users:
+  - &admin
+    name: John Doe
+    role: administrator
+    permissions:
+      - read
+      - write
+      - execute
+
+  - &user
+    name: Jane Smith
+    role: user
+    permissions:
+      - read
+
+assignments:
+  admin: *admin
+  regular_user: *user`;
+            
+            inputYaml.value = sample;
+            window.showMessage('Sample loaded');
+        }
+
+        window.addEventListener('load', function() {
+            window.showMessage('Ready to validate YAML');
+        });
+    </script>
+</body>
+</html>

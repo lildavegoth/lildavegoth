@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Thumbnail Grabber | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="../navigation.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        .blur-background {
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            background-color: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        header {
+            padding: var(--spacing-lg) 0;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .profile-section {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .username {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .projects-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .profile-section {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .username {
+                font-size: 2rem;
+            }
+            
+            .main-poster-container {
+                height: 60vh !important;
+            }
+            
+            .nav-buttons {
+                gap: var(--spacing-sm) !important;
+            }
+        }
+
+        .gallery-container {
+            width: 100%;
+            margin: var(--spacing-xl) 0;
+        }
+        
+        .main-poster-container {
+            width: 100%;
+            height: 70vh;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: var(--spacing-lg);
+            background: transparent !important;
+            border: none !important;
+        }
+        
+        .main-poster {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        
+        .main-poster img {
+            width: auto;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            transition: transform 0.5s ease, opacity 0.4s ease;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-md);
+            margin: var(--spacing-lg) 0;
+        }
+        
+        .nav-btn {
+            background: var(--bg-card);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .nav-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+            transform: translateY(-3px);
+        }
+        
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .nav-btn:disabled:hover {
+            background: var(--bg-card);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .poster-info {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+            padding: var(--spacing-md);
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+        }
+        
+        .poster-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+            color: var(--accent-color);
+        }
+        
+        .poster-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        .poster-counter {
+            display: inline-block;
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-top: var(--spacing-xs);
+        }
+        
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            padding: 6px 12px;
+            border-radius: var(--radius-small);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            background: rgba(193, 252, 50, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .accent-btn {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+            margin: var(--spacing-lg) auto;
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(193, 252, 50, 0.3);
+        }
+        
+        .accent-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            transform: translateY(-3px);
+            border-color: var(--accent-color);
+            box-shadow: 0 5px 20px rgba(193, 252, 50, 0.2);
+        }
+        
+        .accent-btn-content {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .accent-btn-content i.fab {
+            color: #E1306C;
+            font-size: 1.5rem;
+        }
+        
+        .accent-btn-content span {
+            flex: 1;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        
+        .accent-btn-content small {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .accent-btn-content i.fa-arrow-right {
+            color: var(--accent-color);
+        }
+        
+        .gallery-description {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            margin-top: var(--spacing-md);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tool-input-container {
+            margin: var(--spacing-xl) 0;
+        }
+
+        .tool-input {
+            width: 100%;
+            height: 56px;
+            border-radius: var(--radius-medium);
+            background: var(--bg-card);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 0 var(--spacing-md);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .tool-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(193, 252, 50, 0.1);
+        }
+
+        .tool-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .thumbnail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--spacing-md);
+            margin: var(--spacing-xl) 0;
+        }
+
+        .thumbnail-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .thumbnail-card:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-5px);
+        }
+
+        .thumbnail-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: var(--radius-small);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .resolution-badge {
+            display: inline-block;
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-right: 6px;
+        }
+
+        .thumbnail-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            padding: 6px 12px;
+            border-radius: var(--radius-small);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: var(--spacing-sm);
+            transition: all 0.3s ease;
+        }
+
+        .thumbnail-download:hover {
+            background: rgba(193, 252, 50, 0.2);
+            transform: scale(1.05);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: var(--spacing-xl);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--spacing-md);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff6b6b;
+            padding: var(--spacing-md);
+            border-radius: var(--radius-medium);
+            margin: var(--spacing-md) 0;
+            border: 1px solid rgba(255, 0, 0, 0.2);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <header class="fade-in">
+            <div class="profile-section">
+                <div> 
+                    <h1 class="username">YouTube Thumbnail Grabber</h1>
+                    <p class="tagline">Download YouTube Thumbnails Online</p>
+                </div>
+            </div>
+            
+            <div class="gallery-description fade-in delay-1">
+                <p style="margin-bottom: 0; color: var(--text-secondary);">
+                    Free online tool for grabbing thumbnail images of YouTube videos for different resolutions. 
+                    Enter any YouTube URL to extract thumbnails instantly.
+                </p>
+            </div>
+        </header>
+        
+        <section class="gallery-container">
+            <div class="projects-header">
+                <h2 class="section-title fade-in">Enter YouTube URL</h2>
+            </div>
+            
+            <div class="tool-input-container fade-in delay-1">
+                <input 
+                    type="text" 
+                    id="youtubeUrl" 
+                    class="tool-input" 
+                    placeholder="e.g. https://www.youtube.com/watch?v=XqZsoesa55w"
+                >
+            </div>
+            
+            <div class="loading-spinner" id="loadingSpinner">
+                <div class="spinner"></div>
+                <p>Loading thumbnails...</p>
+            </div>
+            
+            <div id="errorContainer" style="display: none;">
+                <div class="error-message" id="errorMessage"></div>
+            </div>
+            
+            <div id="thumbnailContainer" class="thumbnail-grid"></div>
+            
+            <div class="poster-info fade-in delay-2">
+                <div class="poster-title">How to Use</div>
+                <div class="poster-description">
+                    1. Copy the URL of any YouTube video<br>
+                    2. Paste it in the input field above<br>
+                    3. Thumbnails will appear automatically<br>
+                    4. Click "Download" on any thumbnail to save it
+                </div>
+            </div>
+        </section>
+        
+        <a href="https://instagram.com/dave_goth" class="accent-btn fade-in">
+            <div class="accent-btn-content">
+                <i class="fab fa-instagram"></i>
+                <span>More Digital Tools</span>
+                <small>@dave_goth</small>
+                <i class="fas fa-arrow-right"></i>
+            </div>
+        </a>
+        
+        <footer class="fade-in">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | YouTube Thumbnail Grabber</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const youtubeUrlInput = document.getElementById('youtubeUrl');
+            const thumbnailContainer = document.getElementById('thumbnailContainer');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const errorContainer = document.getElementById('errorContainer');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            function extractVideoId(url) {
+                const patterns = [
+                    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+                    /youtube\.com\/v\/([^&\n?#]+)/,
+                    /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+                    /youtu\.be\/([^&\n?#]+)/
+                ];
+                
+                for (const pattern of patterns) {
+                    const match = url.match(pattern);
+                    if (match && match[1]) {
+                        return match[1].split('?')[0].split('&')[0];
+                    }
+                }
+                
+                return null;
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorContainer.style.display = 'block';
+                thumbnailContainer.innerHTML = '';
+            }
+            
+            function hideError() {
+                errorContainer.style.display = 'none';
+            }
+            
+            function showLoading() {
+                loadingSpinner.style.display = 'block';
+                thumbnailContainer.innerHTML = '';
+                hideError();
+            }
+            
+            function hideLoading() {
+                loadingSpinner.style.display = 'none';
+            }
+            
+            function generateThumbnailCards(videoId) {
+                const resolutions = [
+                    { name: 'Max Resolution', code: 'maxresdefault', width: 1280, height: 720 },
+                    { name: 'Standard', code: 'sddefault', width: 640, height: 480 },
+                    { name: 'High Quality', code: 'hqdefault', width: 480, height: 360 },
+                    { name: 'Medium', code: 'mqdefault', width: 320, height: 180 },
+                    { name: 'Default', code: 'default', width: 120, height: 90 }
+                ];
+                
+                thumbnailContainer.innerHTML = '';
+                
+                resolutions.forEach(res => {
+                    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/${res.code}.jpg`;
+                    
+                    const card = document.createElement('div');
+                    card.className = 'thumbnail-card fade-in';
+                    
+                    card.innerHTML = `
+                        <img src="${thumbnailUrl}" alt="YouTube Thumbnail" class="thumbnail-image" onerror="this.style.display='none'">
+                        <div>
+                            <span class="resolution-badge">${res.width}x${res.height}</span>
+                            <span style="color: var(--text-secondary); font-size: 0.9rem;">${res.name}</span>
+                        </div>
+                        <a href="${thumbnailUrl}" download="youtube-thumbnail-${videoId}-${res.code}.jpg" class="thumbnail-download">
+                            <i class="fas fa-download"></i> Download
+                        </a>
+                    `;
+                    
+                    thumbnailContainer.appendChild(card);
+                });
+            }
+            
+            function processYouTubeUrl(url) {
+                if (!url.trim()) {
+                    showError('Please enter a YouTube URL');
+                    return;
+                }
+                
+                const videoId = extractVideoId(url);
+                
+                if (!videoId) {
+                    showError('Invalid YouTube URL. Please check and try again.');
+                    return;
+                }
+                
+                showLoading();
+                
+                setTimeout(() => {
+                    hideLoading();
+                    generateThumbnailCards(videoId);
+                }, 500);
+            }
+            
+            youtubeUrlInput.addEventListener('input', function(e) {
+                const url = e.target.value.trim();
+                
+                if (!url) {
+                    thumbnailContainer.innerHTML = '';
+                    hideError();
+                    return;
+                }
+                
+                if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                    processYouTubeUrl(url);
+                }
+            });
+            
+            youtubeUrlInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    processYouTubeUrl(this.value);
+                }
+            });
+            
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    youtubeUrlInput.value = '';
+                    thumbnailContainer.innerHTML = '';
+                    hideError();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
