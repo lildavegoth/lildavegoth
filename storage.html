@@ -634,9 +634,16 @@ async function uploadBackup() {
             },
             body: content
         });
-        if (!resp.ok) throw new Error('Upload failed');
+
+        if (!resp.ok) {
+            // Try to get the error body from Dropbox
+            const errorBody = await resp.text();
+            throw new Error(`Dropbox API error (${resp.status}): ${errorBody}`);
+        }
+
         showMsg(`Backup saved as ${fileName}`);
     } catch (err) {
+        console.error('Full upload error:', err);
         showMsg('Upload error: ' + err.message, true);
     }
 }
