@@ -9,6 +9,7 @@
     <meta name="msvalidate.01" content="2EE62FBAD61B146288C4450F4222CDA9"/>
     <meta name="robots" content="index, follow">
     <meta name="googlebot" content="index, follow">
+    <script src="cordova.js"></script>
     <script src="protections.js"></script>
     <script src="auth-check.js"></script>
     <link rel="stylesheet" href="media.css">
@@ -184,6 +185,45 @@
             font-size: 1.8rem;
             font-weight: 600;
             margin-bottom: -15px;
+        }
+
+        .notification-button {
+            background: rgba(193, 252, 50, 0.1);
+            border: none;
+            color: var(--accent-color);
+            width: 44px;
+            height: 44px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            font-size: 1.3rem;
+            transition: background 0.2s ease;
+            margin-bottom: -15px;
+        }
+
+        .notification-button:hover {
+            background: rgba(193, 252, 50, 0.2);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: var(--accent-color);
+            color: black;
+            font-size: 0.7rem;
+            font-weight: bold;
+            min-width: 20px;
+            height: 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 5px;
+            border: 2px solid var(--bg-black);
         }
 
         .projects-grid {
@@ -788,6 +828,34 @@
           transform: translateY(0);
         }
         
+        .hidden-notification {
+            display: none;
+        }
+        
+        .notification-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-small);
+            padding: var(--spacing-sm);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        
+        .notification-item:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: rgba(193, 252, 50, 0.3);
+            transform: translateY(-5px);
+        }
+        
+        .notification-item h3 {
+            font-size: 1.2rem;
+        }
+        
+        .notification-item p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -862,6 +930,10 @@
         <section id="home-page" class="page-section active">
             <div style="margin-bottom: 30px;" class="section-header">
                 <h2 class="section-title">Highlight Projects</h2>
+                <button class="notification-button" id="notificationButton" onclick="showNotificationsPopup()">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notificationBadge">2</span>
+                </button>
             </div>
             
             <div class="projects-grid" id="highlight-projects"></div>
@@ -883,22 +955,24 @@
                 </p>	
             </div>
             
-            <div style="margin-top: -10px; margin-bottom: 10px;" class="section-header">
-                <h2 class="section-title">Submission & Reports</h2>
+            <div id="submission-section">
+                <div style="margin-top: -10px; margin-bottom: 10px;" class="section-header">
+                    <h2 class="section-title">Submission & Reports</h2>
+                </div>
+                
+                <form id="contact-form" action="/api/contact" method="POST">
+                  <label for="name">Your Name</label>
+                  <input type="text" id="name" name="name" required>
+                
+                  <label for="email">Your Email</label>
+                  <input type="email" id="email" name="email" required>
+                
+                  <label for="message">Message</label>
+                  <textarea id="message" name="message" rows="5" required></textarea>
+                
+                  <button type="submit">Send Message</button>
+                </form>
             </div>
-            
-            <form id="contact-form" action="/api/contact" method="POST">
-              <label for="name">Your Name</label>
-              <input type="text" id="name" name="name" required>
-            
-              <label for="email">Your Email</label>
-              <input type="email" id="email" name="email" required>
-            
-              <label for="message">Message</label>
-              <textarea id="message" name="message" rows="5" required></textarea>
-            
-              <button type="submit">Send Message</button>
-            </form>
         </section>
 
         <section id="apps-page" class="page-section">
@@ -930,6 +1004,27 @@
                 <div class="tools-grid" id="popupContent"></div>
             </div>
         </div>
+
+        <div id="notificationPopup" class="popup-overlay" style="display: none;">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h2>New Apps</h2>
+                    <button class="close-popup" onclick="closeNotificationPopup()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="tools-grid" id="notificationPopupContent"></div>
+            </div>
+        </div>
+        
+        <div class="hidden-notification" id="notificationItemsTemplate">
+            <div class="notification-item" data-title="Pocket Garden">
+                <h3>Pocket Garden</h3>
+            </div>
+            <div class="notification-item" data-title="YouTube Thumbnail Grabber">
+                <h3>YouTube Thumbnail Grabber</h3>
+            </div>
+        </div>
         
         <footer>
             <div class="social-links">
@@ -944,19 +1039,19 @@
     </div>
 
     <div class="bottom-nav">
-        <button class="nav-button" onclick="switchPage('apps')">
+        <button class="nav-button" onclick="switchPage('apps', event)">
             <div class="nav-icon">
                 <span class="icon icon-android"></span>
             </div>
         </button>
         
-        <button class="nav-button active" onclick="switchPage('home')">
+        <button class="nav-button active" onclick="switchPage('home', event)">
             <div class="nav-icon">
                 <span class="icon icon-home"></span>
             </div>
         </button>
         
-        <button class="nav-button" onclick="switchPage('games')">
+        <button class="nav-button" onclick="switchPage('games', event)">
             <div class="nav-icon">
                 <span class="icon icon-games"></span>
             </div>
