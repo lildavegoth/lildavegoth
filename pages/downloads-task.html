@@ -566,7 +566,7 @@
         </div>
         <div class="flex gap-3 mt-3">
             <button onclick="importTasks()" class="pill-btn flex-1 bg-zinc-800 text-white font-semibold">Import</button>
-            <button onclick="exportTasks()" class="pill-btn flex-1 bg-zinc-800 text-white font-semibold">Export</button>
+            <button onclick="window.location.href='../storage.html'" class="pill-btn flex-1 bg-zinc-800 text-white font-semibold"><i class="fas fa-database"></i> Data Storage</button>
         </div>
         <div class="mt-3">
             <button onclick="showClearAllPopup()" class="pill-btn w-full clear-btn font-semibold">Clear All</button>
@@ -1283,7 +1283,6 @@
                     const promises = [];
                     zip.forEach((relativePath, zipEntry) => {
                         if (!zipEntry.dir && relativePath.toLowerCase().endsWith('.md')) {
-                            // Extract only the filename from the path
                             const pathParts = relativePath.split('/');
                             const fileName = pathParts[pathParts.length - 1];
                             const folderName = capitalizeFolderName(fileName.replace(/\.[^/.]+$/, ""));
@@ -1490,104 +1489,6 @@
                 };
                 reader.readAsText(file);
             }
-        }
-
-        function exportTasks() {
-          try {
-            if (typeof JSZip === 'undefined') return;
-        
-            const zip = new JSZip();
-            const folders = categories.filter(c => c !== "All");
-        
-            folders.forEach(folder => {
-              const folderTasks = tasks.filter(t => t.category === folder);
-              if (folderTasks.length === 0) return;
-        
-              let md = '';
-              folderTasks.forEach(task => {
-                const check = task.checked ? '- [x]' : '- [ ]';
-                let line = check + ' ';
-                if (task.url) {
-                  line += `[${task.title}](${task.url})`;
-                } else {
-                  line += task.title;
-                }
-                if (task.sourceUrl) line += ` | [Source](${task.sourceUrl})`;
-                if (task.status) line += ` | ${task.status}`;
-                if (task.priority) line += ` Priority`;
-                md += line + '\n';
-              });
-        
-              const safeName = folder.replace(/[\\/:*?"<>|]/g, '_') + '.md';
-              zip.file(safeName, md);
-            });
-        
-            zip.generateAsync({ type: 'blob' }).then(blob => {
-              const filename = `downloads-task-backup.zip`;
-              const mimeType = 'application/zip';
-        
-              if (window.cordova) {
-                const writeFile = (dirEntry, isDownloads) => {
-                  dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
-                    fileEntry.createWriter((writer) => {
-                      writer.onwriteend = () => {
-                        const location = isDownloads ? 'Downloads' : 'app folder';
-                        window.showMessage(`Tasks exported to ${location}!`);
-                        if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
-                          cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
-                        }
-                      };
-                      writer.onerror = () => {
-                        window.showMessage('Export failed', 'error');
-                      };
-                      writer.write(blob);
-                    }, () => {
-                      window.showMessage('Export failed', 'error');
-                    });
-                  }, () => {
-                    window.showMessage('Export failed', 'error');
-                  });
-                };
-        
-                const saveToDownloads = () => {
-                  window.resolveLocalFileSystemURL(
-                    cordova.file.externalRootDirectory + 'Download/',
-                    (dir) => {
-                      writeFile(dir, true);
-                    },
-                    () => {
-                      window.resolveLocalFileSystemURL(
-                        cordova.file.dataDirectory,
-                        (dir) => {
-                          writeFile(dir, false);
-                        },
-                        () => {
-                          window.showMessage('Export failed', 'error');
-                        }
-                      );
-                    }
-                  );
-                };
-        
-                if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
-                  saveToDownloads();
-                } else {
-                  document.addEventListener('deviceready', saveToDownloads);
-                }
-              } else {
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(a.href);
-                window.showMessage('Open with browser app and download the file');
-              }
-            });
-          } catch (error) {
-            window.showMessage('Export failed', 'error');
-          }
         }
 
         function showClearAllPopup() {

@@ -11,7 +11,6 @@
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -691,7 +690,6 @@
     </div>
 
     <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
-    <input type="file" id="importFiles" accept=".md" multiple style="display: none;">
 
     <div class="fab-container">
         <button class="scroll-pill" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-arrow-up"></i></button>
@@ -713,76 +711,6 @@
         }
         function saveData() {
             localStorage.setItem('mediaGalleryData', JSON.stringify(mediaData));
-        }
-        async function saveFile(content, filename, mimeType) {
-            return new Promise((resolve, reject) => {
-                if (window.cordova) {
-                    const writeFile = (dirEntry, isDownloads) => {
-                        dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
-                            fileEntry.createWriter((writer) => {
-                                writer.onwriteend = () => {
-                                    const location = isDownloads ? 'Downloads' : 'app folder';
-                                    window.showMessage(`Gallery exported to ${location}!`, 'success');
-                                    if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
-                                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
-                                    }
-                                    resolve();
-                                };
-                                writer.onerror = () => {
-                                    window.showMessage('Export failed', 'error');
-                                    reject();
-                                };
-                                writer.write(new Blob([content], { type: mimeType }));
-                            }, () => {
-                                window.showMessage('Export failed', 'error');
-                                reject();
-                            });
-                        }, () => {
-                            window.showMessage('Export failed', 'error');
-                            reject();
-                        });
-                    };
-        
-                    const saveToDownloads = () => {
-                        window.resolveLocalFileSystemURL(
-                            cordova.file.externalRootDirectory + 'Download/',
-                            (dir) => {
-                                writeFile(dir, true);
-                            },
-                            () => {
-                                window.resolveLocalFileSystemURL(
-                                    cordova.file.dataDirectory,
-                                    (dir) => {
-                                        writeFile(dir, false);
-                                    },
-                                    () => {
-                                        window.showMessage('Export failed', 'error');
-                                        reject();
-                                    }
-                                );
-                            }
-                        );
-                    };
-        
-                    if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
-                        saveToDownloads();
-                    } else {
-                        document.addEventListener('deviceready', saveToDownloads);
-                    }
-                } else {
-                    const blob = new Blob([content], { type: mimeType });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    window.showMessage('Gallery exported!', 'success');
-                    resolve();
-                }
-            });
         }
         function renderGallery() {
             const gallery = document.getElementById('galleryGrid');
@@ -897,10 +825,7 @@
                         <button class="submit-btn" style="width:100%; background:#C42833; color:white; border:none;" onclick="resetAllData()"><i class="fas fa-trash"></i> Reset All Data</button>
                     </div>
                     <div class="form-row">
-                        <button class="submit-btn" style="width:100%; background:var(--accent-color); color:black; border:none;" onclick="showImportCategoryPopup()"><i class="fas fa-file-import"></i> Import (.md)</button>
-                    </div>
-                    <div class="form-row">
-                        <button class="submit-btn" style="width:100%; background:var(--accent-color); color:black; border:none;" onclick="exportData()"><i class="fas fa-file-export"></i> Export (.zip)</button>
+                        <button class="submit-btn" style="width:100%; background:var(--accent-color); color:black; border:none;" onclick="window.location.href='../storage.html'"><i class="fas fa-database"></i> Data Storage</button>
                     </div>
                 </div>
             `;
@@ -915,105 +840,6 @@
                 window.showMessage('All data reset');
             }
         }
-        async function exportData() {
-            try {
-                const zip = new JSZip();
-                const categories = [
-                    { name: 'Anime', key: 'anime' },
-                    { name: 'Anime Series', key: 'animeseries' },
-                    { name: 'Movies', key: 'movies' },
-                    { name: 'Series', key: 'series' }
-                ];
-                for (const cat of categories) {
-                    const items = mediaData.filter(item => item.category === cat.key);
-                    if (items.length === 0) continue;
-                    let markdown = '';
-                    const grouped = {};
-                    items.forEach(item => {
-                        let firstChar = item.name.charAt(0).toUpperCase();
-                        if (!/^[A-Z]$/.test(firstChar)) firstChar = '#';
-                        if (!grouped[firstChar]) grouped[firstChar] = [];
-                        grouped[firstChar].push(item);
-                    });
-                    const sortedKeys = Object.keys(grouped).sort((a,b) => a.localeCompare(b));
-                    for (const key of sortedKeys) {
-                        markdown += `# ${key}\n`;
-                        for (const item of grouped[key]) {
-                            let line = `- ${item.name}`;
-                            if (item.rating && item.rating !== 'N/A') line += ` | #${item.rating}`;
-                            if (item.synopsis && item.synopsis.trim() !== '') line += ` - ${item.synopsis}`;
-                            markdown += line + '\n';
-                        }
-                        markdown += '\n';
-                    }
-                    zip.file(`${cat.name}.md`, markdown);
-                }
-                const content = await zip.generateAsync({ type: 'blob' });
-                await saveFile(content, 'media-export.zip', 'application/zip');
-            } catch (error) {
-                window.showMessage('Export failed', 'error');
-            }
-        }
-        function showImportCategoryPopup() {
-            const html = `
-                <div style="padding: 20px;">
-                    <p style="margin-bottom: 20px;">Choose category for imported items:</p>
-                    <div class="form-row">
-                        <select class="form-select" id="importCategory">
-                            <option value="movies">Movies</option>
-                            <option value="series">Series</option>
-                            <option value="anime">Anime</option>
-                            <option value="animeseries">Anime Series</option>
-                        </select>
-                    </div>
-                    <div class="form-buttons">
-                        <button class="cancel-btn" onclick="closeUniversalPopup()">Cancel</button>
-                        <button class="submit-btn" onclick="startImport()">Import</button>
-                    </div>
-                </div>
-            `;
-            openUniversalPopup('Import Category', html);
-        }
-        function startImport() {
-            const category = document.getElementById('importCategory').value;
-            closeUniversalPopup();
-            document.getElementById('importFiles').click();
-            window.tempImportCategory = category;
-        }
-        document.getElementById('importFiles').addEventListener('change', function(e) {
-            const files = Array.from(e.target.files);
-            if (!files.length) return;
-            const category = window.tempImportCategory || 'movies';
-            Promise.all(files.map(file => file.text())).then(contents => {
-                contents.forEach(content => {
-                    const lines = content.split('\n');
-                    lines.forEach(line => {
-                        line = line.trim();
-                        if (!line.startsWith('- ')) return;
-                        const match = line.match(/^- (.*?)(?:\s*\|\s*#(\d+(?:\.\d+)?)\s*(?:-\s*(.*))?)?$/);
-                        if (match) {
-                            const name = match[1].trim();
-                            const rating = match[2] ? match[2] : 'N/A';
-                            const description = match[3] ? match[3].trim() : '';
-                            mediaData.unshift({
-                                id: Date.now() + Math.random(),
-                                name: name,
-                                rating: rating,
-                                genre: 'No genre',
-                                country: 'Unknown',
-                                year: '',
-                                category: category,
-                                link: '',
-                                synopsis: description,
-                            });
-                        }
-                    });
-                });
-                saveData();
-                renderGallery();
-                window.showMessage('Import completed');
-            });
-        });
         function getAddEditFormHTML() {
             return `
                 <form id="mediaForm" onsubmit="addNewMedia(event)">

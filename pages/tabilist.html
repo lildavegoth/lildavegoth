@@ -509,11 +509,8 @@
         </div>
     
         <div class="toolbar">
-            <button class="control-btn success" id="exportBtn">
-                <i class="fas fa-file-export"></i> Export
-            </button>
-            <button class="control-btn" id="importBtn">
-                <i class="fas fa-file-import"></i> Import
+            <button class="control-btn" id="dataStorageBtn">
+                <i class="fas fa-database"></i> Data Storage
             </button>
             <button class="control-btn danger" id="clearBtn">
                 <i class="fas fa-trash"></i> Clear All
@@ -576,8 +573,7 @@
         const dataBody = document.getElementById('data-body');
         const addRowBtn = document.getElementById('add-row-btn');
         const undoBtn = document.getElementById('undoBtn');
-        const exportBtn = document.getElementById('exportBtn');
-        const importBtn = document.getElementById('importBtn');
+        const dataStorageBtn = document.getElementById('dataStorageBtn');
         const clearBtn = document.getElementById('clearBtn');
     
         const popup = document.getElementById('universalPopup');
@@ -598,78 +594,6 @@
         function saveData() {
             localStorage.setItem('folders', JSON.stringify(folders));
             localStorage.setItem('currentFolder', currentFolder);
-        }
-        
-        function saveFile(content, filename, mimeType) {
-          return new Promise((resolve, reject) => {
-            if (window.cordova) {
-              const writeFile = (dirEntry, isDownloads) => {
-                dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
-                  fileEntry.createWriter((writer) => {
-                    writer.onwriteend = () => {
-                      const location = isDownloads ? 'Downloads' : 'app folder';
-                      window.showMessage(`Tabilist backed up to ${location}!`, 'success');
-                      if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
-                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
-                      }
-                      resolve();
-                    };
-                    writer.onerror = () => {
-                      window.showMessage('Export failed', 'error');
-                      reject();
-                    };
-                    writer.write(new Blob([content], { type: mimeType }));
-                  }, () => {
-                    window.showMessage('Export failed', 'error');
-                    reject();
-                  });
-                }, () => {
-                  window.showMessage('Export failed', 'error');
-                  reject();
-                });
-              };
-        
-              const saveToDownloads = () => {
-                window.resolveLocalFileSystemURL(
-                  cordova.file.externalRootDirectory + 'Download/',
-                  (dir) => {
-                    writeFile(dir, true);
-                  },
-                  () => {
-                    window.resolveLocalFileSystemURL(
-                      cordova.file.dataDirectory,
-                      (dir) => {
-                        writeFile(dir, false);
-                      },
-                      () => {
-                        window.showMessage('Export failed', 'error');
-                        reject();
-                      }
-                    );
-                  }
-                );
-              };
-        
-              if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
-                saveToDownloads();
-              } else {
-                document.addEventListener('deviceready', saveToDownloads);
-              }
-            } else {
-              // Browser fallback
-              const blob = new Blob([content], { type: mimeType });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = filename;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-              window.showMessage('Tabilist exported!', 'success');
-              resolve();
-            }
-          });
         }
     
         function showAddFolderPopup() {
@@ -903,91 +827,6 @@
             }
         }
     
-        function encryptData(data) {
-            try {
-                const jsonString = JSON.stringify(data);
-                return btoa(unescape(encodeURIComponent(jsonString)));
-            } catch {
-                return null;
-            }
-        }
-    
-        function decryptData(encryptedString) {
-            try {
-                const jsonString = decodeURIComponent(escape(atob(encryptedString)));
-                return JSON.parse(jsonString);
-            } catch {
-                return null;
-            }
-        }
-    
-        async function exportData() {
-          try {
-            const exportData = {
-              version: '1.0',
-              exportedAt: new Date().toISOString(),
-              folders: folders.map(folder => ({
-                ...folder,
-                rows: folder.rows.map(row => ({
-                  ...row,
-                  pinned: row.pinned || false
-                }))
-              }))
-            };
-        
-            const encryptedData = encryptData(exportData);
-            if (!encryptedData) {
-              window.showMessage('Export failed', 'error');
-              return;
-            }
-        
-            const timestamp = new Date().toISOString().split('T')[0];
-            const filename = `tabilist-backup-${timestamp}.json`;
-            const mimeType = 'application/json';
-        
-            await saveFile(encryptedData, filename, mimeType);
-          } catch (error) {
-            window.showMessage('Export failed', 'error');
-          }
-        }
-    
-        function importData() {
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = '.json';
-            fileInput.onchange = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const encryptedContent = e.target.result;
-                        const decryptedData = decryptData(encryptedContent);
-                        if (decryptedData && decryptedData.folders) {
-                            folders = decryptedData.folders.map(folder => ({
-                                ...folder,
-                                rows: folder.rows.map(row => ({
-                                    ...row,
-                                    pinned: row.pinned || false
-                                }))
-                            }));
-                            currentFolder = 0;
-                            saveData();
-                            renderTabs();
-                            renderTable();
-                            window.showMessage('Import successful');
-                        } else {
-                            window.showMessage('Invalid backup file');
-                        }
-                    } catch {
-                        window.showMessage('Failed to read file');
-                    }
-                };
-                reader.readAsText(file);
-            };
-            fileInput.click();
-        }
-    
         function renderTabs() {
             tabsContainer.innerHTML = '';
             folders.forEach((folder, index) => {
@@ -1112,10 +951,9 @@
         });
     
         undoBtn.addEventListener('click', undoDelete);
-        
-        exportBtn.addEventListener('click', exportData);
-        importBtn.addEventListener('click', importData);
-        
+        dataStorageBtn.addEventListener('click', () => {
+            window.location.href = '../storage.html';
+        });
         clearBtn.addEventListener('click', () => {
             if (folders[currentFolder].rows.length > 0) {
                 showClearAllConfirmation();
