@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Storage | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="cordova.js"></script>
     <script src="protections.js"></script>
     <script src="notification.cssjs"></script>
     <link rel="stylesheet" href="media.css">
@@ -357,7 +358,7 @@
         <header style="margin-bottom: 50px;" class="fade-in">
             <div>
                 <h1 class="app-name">Storage</h1>
-                <p class="tagline">Access to all database on Kakoi Kiraku Home pages to clear specific pages data for your account.</p>
+                <p class="tagline">Access to all database on Kakoi Kiraku Home pages to clear specific pages data and backup or restore data for your account</p>
             </div>
         </header>
 
@@ -437,12 +438,15 @@
             let input = document.createElement('input');
             input.type = 'text';
             input.value = username;
+            input.maxLength = 11;
             usernameEl.textContent = '';
             usernameEl.appendChild(input);
             input.focus();
             input.select();
             input.onblur = () => {
-                username = input.value.trim() || 'User';
+                let newUsername = input.value.trim();
+                if (newUsername.length > 11) newUsername = newUsername.substring(0, 7);
+                username = newUsername || 'User';
                 localStorage.setItem('username', username);
                 usernameEl.textContent = username;
             };
@@ -451,12 +455,12 @@
             };
         };
         
-        // ==================== DROPBOX SYNC ====================
+        // ==================== DROPBOX SYNC (Cordova ready) ====================
         const DROPBOX_CLIENT_ID = '5630n4t14l8r80h';
-        const REDIRECT_URI = window.location.origin + window.location.pathname;
+        const REDIRECT_URI = window.cordova ? 'com.kakoikiraku.home://oauth' : (window.location.origin + window.location.pathname);
         const DROPBOX_TOKEN_KEY = 'dropbox_tokens';
         
-        function showMsg(msg, isError = false) {
+        function showMsg(msg, isError) {
             if (window.showMessage) window.showMessage(msg, isError ? 'error' : 'success');
             else alert(msg);
         }
@@ -475,11 +479,9 @@
         async function getValidAccessToken() {
             let tokens = getDropboxTokens();
             if (!tokens) return null;
-        
             if (tokens.expires_at && Date.now() < tokens.expires_at - 300000) {
                 return tokens.access_token;
             }
-        
             if (tokens.refresh_token) {
                 try {
                     const newTokens = await refreshAccessToken(tokens.refresh_token);
@@ -513,6 +515,22 @@
             };
         }
         
+        function generateCodeVerifier() {
+            const array = new Uint32Array(32);
+            crypto.getRandomValues(array);
+            return base64URLEncode(array);
+        }
+        async function generateCodeChallenge(verifier) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(verifier);
+            const digest = await crypto.subtle.digest('SHA-256', data);
+            return base64URLEncode(new Uint8Array(digest));
+        }
+        function base64URLEncode(buffer) {
+            return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+        
         async function authenticateDropbox() {
             const verifier = generateCodeVerifier();
             const challenge = await generateCodeChallenge(verifier);
@@ -526,25 +544,65 @@
                 code_challenge: challenge,
                 token_access_type: 'offline'
             });
-            window.location.href = authUrl;
+        
+            if (window.cordova) {
+                const browser = cordova.InAppBrowser.open(authUrl, '_blank', 'location=no,hidden=no');
+                browser.addEventListener('loadstart', function (event) {
+                    if (event.url.startsWith(REDIRECT_URI)) {
+                        browser.close();
+                        const url = new URL(event.url);
+                        const code = url.searchParams.get('code');
+                        if (code) {
+                            handleOAuthCode(code, verifier);
+                        } else {
+                            showMsg('OAuth failed: no code', true);
+                        }
+                    }
+                });
+                browser.addEventListener('loaderror', function (event) {
+                    if (event.url && event.url.startsWith(REDIRECT_URI)) {
+                        browser.close();
+                        const url = new URL(event.url);
+                        const code = url.searchParams.get('code');
+                        if (code) {
+                            handleOAuthCode(code, verifier);
+                        } else {
+                            showMsg('OAuth failed: no code', true);
+                        }
+                    }
+                });
+            } else {
+                window.location.href = authUrl;
+            }
         }
         
-        function generateCodeVerifier() {
-            const array = new Uint8Array(32);
-            crypto.getRandomValues(array);
-            return base64URLEncode(array);
-        }
-        async function generateCodeChallenge(verifier) {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(verifier);
-            const digest = await crypto.subtle.digest('SHA-256', data);
-            return base64URLEncode(new Uint8Array(digest));
-        }
-        function base64URLEncode(buffer) {
-            return btoa(String.fromCharCode(...new Uint8Array(buffer)))
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_')
-                .replace(/=/g, '');
+        async function handleOAuthCode(code, verifier) {
+            try {
+                const body = new URLSearchParams({
+                    code: code,
+                    grant_type: 'authorization_code',
+                    client_id: DROPBOX_CLIENT_ID,
+                    redirect_uri: REDIRECT_URI,
+                    code_verifier: verifier
+                });
+                const resp = await fetch('https://api.dropboxapi.com/oauth2/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body
+                });
+                if (!resp.ok) throw new Error('Token exchange failed');
+                const data = await resp.json();
+                const tokens = {
+                    access_token: data.access_token,
+                    refresh_token: data.refresh_token,
+                    expires_at: Date.now() + data.expires_in * 1000
+                };
+                setDropboxTokens(tokens);
+                showMsg('Dropbox connected!');
+                updateDropboxStatus();
+            } catch (err) {
+                showMsg('OAuth error: ' + err.message, true);
+            }
         }
         
         async function handleOAuthRedirect() {
@@ -554,33 +612,10 @@
             if (code && verifier) {
                 window.history.replaceState({}, document.title, window.location.pathname);
                 sessionStorage.removeItem('code_verifier');
-        
-                try {
-                    const body = new URLSearchParams({
-                        code: code,
-                        grant_type: 'authorization_code',
-                        client_id: DROPBOX_CLIENT_ID,
-                        redirect_uri: REDIRECT_URI,
-                        code_verifier: verifier
-                    });
-                    const resp = await fetch('https://api.dropboxapi.com/oauth2/token', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: body
-                    });
-                    if (!resp.ok) throw new Error('Token exchange failed');
-                    const data = await resp.json();
-                    const tokens = {
-                        access_token: data.access_token,
-                        refresh_token: data.refresh_token,
-                        expires_at: Date.now() + data.expires_in * 1000
-                    };
-                    setDropboxTokens(tokens);
-                    showMsg('Dropbox connected!');
-                } catch (err) {
-                    showMsg('OAuth error: ' + err.message, true);
-                }
+                await handleOAuthCode(code, verifier);
+                return;
             }
+            if (window.cordova) return;
         }
         
         async function uploadBackup() {
@@ -590,9 +625,9 @@
                 return;
             }
         
-            const exclude = ['username', 'avatar', 'dropbox_tokens', 'pinnedItems', 
-                             'giveaway_settings', 'giveaway_participants', 'lastGiveawayWinner',
-                             'app_hash_v2', 'app_salt_v2'];
+            const exclude = ['username', 'avatar', 'dropbox_tokens', 'pinnedItems',
+                'giveaway_settings', 'giveaway_participants', 'lastGiveawayWinner',
+                'app_hash_v2', 'app_salt_v2'];
             const backup = {};
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
@@ -609,22 +644,15 @@
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
-                        'Dropbox-API-Arg': JSON.stringify({
-                            path: '/' + fileName,
-                            mode: 'overwrite',
-                            autorename: false,
-                            mute: false
-                        }),
+                        'Dropbox-API-Arg': JSON.stringify({ path: '/' + fileName, mode: 'overwrite' }),
                         'Content-Type': 'application/octet-stream'
                     },
                     body: content
                 });
-        
                 if (!resp.ok) {
                     const errorBody = await resp.text();
                     throw new Error(`Dropbox API error (${resp.status}): ${errorBody}`);
                 }
-        
                 showMsg(`Backup saved as ${fileName}`);
             } catch (err) {
                 showMsg('Upload error: ' + err.message, true);
@@ -686,22 +714,30 @@
             const statusSpan = document.getElementById('dropboxStatus');
             const tokens = getDropboxTokens();
             if (!tokens) {
-                window.showMessage('Dropbox not connected');
+                window.showMessage('Not connected');
                 return;
             }
             const valid = await getValidAccessToken();
             if (valid) {
-                window.showMessage('Dropbox connected');
+                window.showMessage('Connected');
             } else {
-                window.showMessage('Dropbox expired');
+                window.showMessage('Expired');
                 clearDropboxTokens();
             }
         }
         
-        document.getElementById('dropboxBackupBtn').addEventListener('click', uploadBackup);
-        document.getElementById('dropboxRestoreBtn').addEventListener('click', downloadAndRestore);
-        
-        handleOAuthRedirect().then(() => updateDropboxStatus());
+        // Attach buttons only after Cordova is ready (if in Cordova)
+        if (window.cordova) {
+            document.addEventListener('deviceready', function() {
+                document.getElementById('dropboxBackupBtn').addEventListener('click', uploadBackup);
+                document.getElementById('dropboxRestoreBtn').addEventListener('click', downloadAndRestore);
+                handleOAuthRedirect().then(() => updateDropboxStatus());
+            });
+        } else {
+            document.getElementById('dropboxBackupBtn').addEventListener('click', uploadBackup);
+            document.getElementById('dropboxRestoreBtn').addEventListener('click', downloadAndRestore);
+            handleOAuthRedirect();
+        }
     
         function getData() {
             let keys = [];
