@@ -567,11 +567,15 @@
                 <span class="arrow-bg"><i class="fas fa-arrow-right"></i></span>
             </button>
             <button class="home-btn" id="homeStorageBtn">
-                <span class="btn-text"><i class="fas fa-database"></i> Storage</span>
+                <span class="btn-text"><i class="fas fa-box"></i> Storage</span>
                 <span class="arrow-bg"><i class="fas fa-arrow-right"></i></span>
             </button>
             <button class="home-btn" id="homeHistoryBtn">
                 <span class="btn-text"><i class="fas fa-history"></i> History</span>
+                <span class="arrow-bg"><i class="fas fa-arrow-right"></i></span>
+            </button>
+            <button class="home-btn" id="homeSettingsBtn">
+                <span class="btn-text"><i class="fas fa-cog"></i> Settings</span>
                 <span class="arrow-bg"><i class="fas fa-arrow-right"></i></span>
             </button>
         </div>
@@ -671,6 +675,7 @@
             const homeAchievementsBtn = document.getElementById('homeAchievementsBtn');
             const homeStorageBtn = document.getElementById('homeStorageBtn');
             const homeHistoryBtn = document.getElementById('homeHistoryBtn');
+            const homeSettingsBtn = document.getElementById('homeSettingsBtn');
             
             const popup = document.getElementById('universalPopup');
             const popupTitle = document.getElementById('popupTitle');
@@ -1197,6 +1202,52 @@
                 window.showMessage('All history has been deleted');
             }
 
+            function showStorageMenu() {
+                streak = parseInt(localStorage.getItem('hiraganaStreak') || '0');
+                stars = parseInt(localStorage.getItem('hiraganaStars') || '1');
+                const streakIconColor = streak >= 2 ? 'var(--accent-color)' : 'white';
+                popupTitle.innerText = 'Storage';
+                popupContent.innerHTML = `
+                    <div class="info-bar">
+                        <span><i class="fas fa-fire" style="color: ${streakIconColor};"></i> Streak</span>
+                        <strong>${streak} days</strong>
+                    </div>
+                    <button class="action-btn" id="useStarBtn" ${stars > 0 ? '' : 'disabled'}>
+                        <span>Use Insight Star</span>
+                        <span>${stars} <i class="fas fa-star"></i></span>
+                    </button>
+                    <p style="color: #aaa; font-size: 0.9rem;">Using an Insight Star enables romaji hints for the next Hard/Challenge session (appears randomly).</p>
+                    <p style="color: #aaa; font-size: 0.9rem;">Insight Stars are earned from achievements and every 2-day check-in streak.</p>
+                `;
+                popup.style.display = 'flex';
+                const useBtn = document.getElementById('useStarBtn');
+                if (useBtn) {
+                    useBtn.addEventListener('click', () => {
+                        let currentStars = parseInt(localStorage.getItem('hiraganaStars') || '1');
+                        if (currentStars > 0) {
+                            currentStars -= 1;
+                            localStorage.setItem('hiraganaStars', currentStars);
+                            localStorage.setItem('hintModeEnabled', 'true');
+                            hintModeEnabled = true;
+                            stars = currentStars;
+                            showStorageMenu();
+                            window.showMessage('Insight Star activated for one session');
+                        }
+                    });
+                }
+            }
+
+            function showSettingsPopup() {
+                popupTitle.innerText = 'Settings';
+                popupContent.innerHTML = `
+                    <button class="action-btn" onclick="window.location.href='../storage.html'">
+                        <span><i class="fas fa-database"></i> Data Storage</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                `;
+                popup.style.display = 'flex';
+            }
+
             function goHome() {
                 if (timerInterval) clearInterval(timerInterval);
                 homeSection.classList.remove('hidden');
@@ -1221,12 +1272,15 @@
                 renderAchievements();
             });
             homeStorageBtn.addEventListener('click', () => {
-                window.location.href = '../storage.html';
+                showStorageMenu();
             });
             homeHistoryBtn.addEventListener('click', () => {
                 homeSection.classList.add('hidden');
                 historyArea.classList.remove('hidden');
                 renderHistoryList();
+            });
+            homeSettingsBtn.addEventListener('click', () => {
+                showSettingsPopup();
             });
 
             backFromHiraganaBtn.addEventListener('click', goHome);
