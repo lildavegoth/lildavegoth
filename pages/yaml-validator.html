@@ -6,6 +6,7 @@
     <title>YAML Validator | lildavegoth</title>
     <meta name="description" content="Validate, Verify and Reformat your YAML documents">
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../navigation.css">
@@ -226,7 +227,7 @@
             justify-content: center;
             margin-bottom: var(--spacing-lg);
         }
-        
+
         .button-container {
             display: flex;
             gap: var(--spacing-sm);
@@ -234,7 +235,7 @@
             max-width: 100%;
             justify-content: center;
         }
-        
+
         .action-btn {
             background: transparent;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -251,20 +252,20 @@
             flex: 1;
             min-height: 44px;
         }
-        
+
         .action-btn:hover {
             background: rgba(193, 252, 50, 0.1);
             border-color: var(--accent-color);
             transform: translateY(-2px);
         }
-        
+
         .action-btn.primary {
             background: var(--accent-color);
             color: #000;
             font-weight: 600;
             border-color: var(--accent-color);
         }
-        
+
         .action-btn.primary:hover {
             background: var(--accent-dark);
             border-color: var(--accent-dark);
@@ -378,7 +379,7 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                
+
                 <div class="option-row">
                     <div class="option-icon">
                         <i class="fas fa-link"></i>
@@ -424,6 +425,77 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <script>
+        async function saveFile(content, filename, mimeType) {
+            return new Promise((resolve, reject) => {
+                if (window.cordova) {
+                    const writeFile = (dirEntry, isDownloads) => {
+                        dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                            fileEntry.createWriter((writer) => {
+                                writer.onwriteend = () => {
+                                    const location = isDownloads ? 'Downloads' : 'app folder';
+                                    window.showMessage(`File saved to ${location}!`, 'success');
+                                    if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                                    }
+                                    resolve();
+                                };
+                                writer.onerror = () => {
+                                    window.showMessage('Download failed', 'error');
+                                    reject();
+                                };
+                                writer.write(content);
+                            }, () => {
+                                window.showMessage('Download failed', 'error');
+                                reject();
+                            });
+                        }, () => {
+                            window.showMessage('Download failed', 'error');
+                            reject();
+                        });
+                    };
+
+                    const saveToDownloads = () => {
+                        window.resolveLocalFileSystemURL(
+                            cordova.file.externalRootDirectory + 'Download/',
+                            (dir) => {
+                                writeFile(dir, true);
+                            },
+                            () => {
+                                window.resolveLocalFileSystemURL(
+                                    cordova.file.dataDirectory,
+                                    (dir) => {
+                                        writeFile(dir, false);
+                                    },
+                                    () => {
+                                        window.showMessage('Download failed', 'error');
+                                        reject();
+                                    }
+                                );
+                            }
+                        );
+                    };
+
+                    if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                        saveToDownloads();
+                    } else {
+                        document.addEventListener('deviceready', saveToDownloads);
+                    }
+                } else {
+                    const blob = new Blob([content], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    window.showMessage('File downloaded!', 'success');
+                    resolve();
+                }
+            });
+        }
+
         const inputYaml = document.getElementById('inputYaml');
         const result = document.getElementById('result');
         const resultMessage = document.getElementById('resultMessage');
@@ -439,7 +511,7 @@
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
-            
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 inputYaml.value = e.target.result;
@@ -489,7 +561,7 @@
 
         function validateYaml() {
             const yamlText = inputYaml.value.trim();
-            
+
             if (!yamlText) {
                 result.className = 'result-box result-invalid';
                 resultMessage.textContent = 'Please enter YAML content';
@@ -502,7 +574,7 @@
                 let currentDoc = '';
                 let inDoc = false;
                 const lines = yamlText.split('\n');
-                
+
                 for (const line of lines) {
                     if (line.trim() === '---') {
                         if (inDoc && currentDoc) {
@@ -514,7 +586,7 @@
                         currentDoc += line + '\n';
                     }
                 }
-                
+
                 if (currentDoc) {
                     docs.push(currentDoc);
                 }
@@ -525,11 +597,11 @@
 
                 let allValid = true;
                 let errorMessages = [];
-                
+
                 for (let i = 0; i < docs.length; i++) {
                     try {
                         const parsed = jsyaml.load(docs[i], { schema: jsyaml.FAILSAFE_SCHEMA });
-                        
+
                         if (reformat.checked) {
                             const options = {};
                             if (!resolveAliases.checked || resolveAliases.disabled) {
@@ -579,9 +651,9 @@
                 window.showMessage('No YAML to copy');
                 return;
             }
-            
+
             const text = inputYaml.value;
-            
+
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(text).then(() => {
                     window.showMessage('Copied to clipboard');
@@ -599,22 +671,17 @@
             }
         }
 
-        function downloadYaml() {
+        async function downloadYaml() {
             if (!inputYaml.value.trim()) {
                 window.showMessage('No YAML to download');
                 return;
             }
-            
-            const blob = new Blob([inputYaml.value], { type: 'text/yaml' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'yaml-document.yaml';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            window.showMessage('Download started');
+
+            const content = inputYaml.value;
+            const filename = 'yaml-document.yaml';
+            const mimeType = 'text/yaml';
+
+            await saveFile(content, filename, mimeType);
         }
 
         function loadSample() {
@@ -653,7 +720,7 @@ users:
 assignments:
   admin: *admin
   regular_user: *user`;
-            
+
             inputYaml.value = sample;
             window.showMessage('Sample loaded');
         }

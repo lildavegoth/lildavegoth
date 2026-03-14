@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HTML Cleaner | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../navigation.css">
@@ -50,7 +51,6 @@
             margin: 0 auto;
         }
 
-        /* Header */
         header {
             margin-bottom: var(--spacing-lg);
         }
@@ -66,7 +66,6 @@
             font-size: 1.1rem;
         }
 
-        /* Editor Section */
         .editor-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -136,7 +135,6 @@
             background: rgba(0, 0, 0, 0.2);
         }
 
-        /* Options - New Styles */
         .options {
             display: flex;
             justify-content: center;
@@ -234,13 +232,12 @@
             background-color: var(--accent-color);
         }
 
-        /* Action Buttons */
         .actions {
             display: flex;
             justify-content: center;
             margin-bottom: var(--spacing-lg);
         }
-        
+
         .button-container {
             display: flex;
             gap: var(--spacing-sm);
@@ -249,7 +246,7 @@
             justify-content: center;
             margin-top: -5px;
         }
-        
+
         .action-btn {
             background: transparent;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -266,26 +263,25 @@
             flex: 1;
             min-height: 44px;
         }
-        
+
         .action-btn:hover {
             background: rgba(193, 252, 50, 0.1);
             border-color: var(--accent-color);
             transform: translateY(-2px);
         }
-        
+
         .action-btn.primary {
             background: var(--accent-color);
             color: #000;
             font-weight: 600;
             border-color: var(--accent-color);
         }
-        
+
         .action-btn.primary:hover {
             background: var(--accent-dark);
             border-color: var(--accent-dark);
         }
 
-        /* Stats */
         .stats {
             display: flex;
             justify-content: center;
@@ -300,8 +296,7 @@
             color: var(--text-secondary);
             font-size: 0.9rem;
         }
-        
-        /* Toast Notification */
+
         .toast {
             position: fixed;
             bottom: 20px;
@@ -326,7 +321,6 @@
             }
         }
 
-        /* Scrollbar */
         textarea::-webkit-scrollbar {
             width: 8px;
         }
@@ -339,31 +333,23 @@
             background: rgba(193, 252, 50, 0.3);
             border-radius: 4px;
         }
-        
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Back to main portfolio -->
         <a href="../index.html" class="back-link fade-in">
             <i class="fas fa-arrow-left"></i> Back to Home
         </a>
-        <!-- Header -->
         <header>
             <h1 class="username">HTML Cleaner</h1>
             <p class="tagline">Instantly clean HTML to reduce it's size</p>
         </header>
 
-        <!-- Editor Section -->
         <div class="editor-container">
-            <!-- Input Editor -->
             <div class="editor-box">
                 <div class="editor-header">
                     <div class="editor-title">Input HTML</div>
                     <div class="editor-buttons">
-                        <button class="icon-btn" onclick="importHtmlFile()" title="Import HTML File">
-                            <i class="fas fa-file-import"></i>
-                        </button>
                         <button class="icon-btn" onclick="clearInput()" title="Clear">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -375,7 +361,6 @@
                 <textarea id="inputHtml" placeholder="Paste your HTML code here..."></textarea>
             </div>
 
-            <!-- Output Editor -->
             <div class="editor-box">
                 <div class="editor-header">
                     <div class="editor-title">Output HTML</div>
@@ -395,17 +380,15 @@
             </div>
         </div>
 
-        <!-- Hidden file input for import -->
         <input type="file" id="fileInput" accept=".html,.htm,.txt" style="display: none;">
 
-        <!-- Options -->
         <div class="options">
             <div class="options-list">
                 <div style="margin-left: 15px; margin-bottom: 10px;" class="stat-info">
                     <h3 id="sizeReduction">0%</h3>
                     <p>Reduction</p>
                 </div>
-            
+
                 <div class="option-row">
                     <div class="option-icon">
                         <i class="fas fa-minus"></i>
@@ -416,7 +399,7 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                
+
                 <div class="option-row">
                     <div class="option-icon">
                         <i class="fas fa-cut"></i>
@@ -427,8 +410,7 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                
-                <!-- Add this after the existing options, before the closing </div> -->
+
                 <div class="option-row">
                     <div class="option-icon">
                         <i class="fas fa-comments"></i>
@@ -442,7 +424,6 @@
             </div>
         </div>
 
-        <!-- Action Buttons -->
         <div class="actions">
             <div class="button-container">
                 <button class="action-btn primary" onclick="cleanHTML()">
@@ -455,8 +436,7 @@
                 </button>
             </div>
         </div>
-        
-        <!-- Footer -->
+
         <footer class="fade-in">
             <div class="social-links">
                 <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
@@ -470,30 +450,92 @@
     </div>
 
     <script>
-        // Get DOM elements
+        async function saveFile(content, filename, mimeType) {
+            return new Promise((resolve, reject) => {
+                if (window.cordova) {
+                    const writeFile = (dirEntry, isDownloads) => {
+                        dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                            fileEntry.createWriter((writer) => {
+                                writer.onwriteend = () => {
+                                    const location = isDownloads ? 'Downloads' : 'app folder';
+                                    window.showMessage(`File saved to ${location}!`, 'success');
+                                    if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                                    }
+                                    resolve();
+                                };
+                                writer.onerror = () => {
+                                    window.showMessage('Download failed', 'error');
+                                    reject();
+                                };
+                                writer.write(content);
+                            }, () => {
+                                window.showMessage('Download failed', 'error');
+                                reject();
+                            });
+                        }, () => {
+                            window.showMessage('Download failed', 'error');
+                            reject();
+                        });
+                    };
+
+                    const saveToDownloads = () => {
+                        window.resolveLocalFileSystemURL(
+                            cordova.file.externalRootDirectory + 'Download/',
+                            (dir) => {
+                                writeFile(dir, true);
+                            },
+                            () => {
+                                window.resolveLocalFileSystemURL(
+                                    cordova.file.dataDirectory,
+                                    (dir) => {
+                                        writeFile(dir, false);
+                                    },
+                                    () => {
+                                        window.showMessage('Download failed', 'error');
+                                        reject();
+                                    }
+                                );
+                            }
+                        );
+                    };
+
+                    if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                        saveToDownloads();
+                    } else {
+                        document.addEventListener('deviceready', saveToDownloads);
+                    }
+                } else {
+                    const blob = new Blob([content], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    window.showMessage('File downloaded!', 'success');
+                    resolve();
+                }
+            });
+        }
+
         const inputHtml = document.getElementById('inputHtml');
         const outputHtml = document.getElementById('outputHtml');
         const sizeReduction = document.getElementById('sizeReduction');
         const fileInput = document.getElementById('fileInput');
-        
-        // Get all checkboxes
+
         const removeEmptyLines = document.getElementById('removeEmptyLines');
         const trimLines = document.getElementById('trimLines');
         const removeAllComments = document.getElementById('removeAllComments');
-        
-        // Get all option rows
+
         const optionRows = document.querySelectorAll('.option-row');
-    
-        // Import file
-        function importHtmlFile() {
-            fileInput.click();
-        }
-    
-        // Handle file selection
+
         fileInput.addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 inputHtml.value = e.target.result;
@@ -503,21 +545,18 @@
             reader.readAsText(file);
             event.target.value = '';
         });
-    
-        // Update option colors
+
         function updateOptionStyles() {
             optionRows[0].classList.toggle('active', removeEmptyLines.checked);
             optionRows[1].classList.toggle('active', trimLines.checked);
-            optionRows[3].classList.toggle('active', removeAllComments.checked);
+            optionRows[2].classList.toggle('active', removeAllComments.checked);
         }
-    
-        // Set up checkboxes
+
         updateOptionStyles();
         removeEmptyLines.addEventListener('change', updateOptionStyles);
         trimLines.addEventListener('change', updateOptionStyles);
         removeAllComments.addEventListener('change', updateOptionStyles);
-    
-        // Make rows clickable
+
         optionRows.forEach(row => {
             row.addEventListener('click', () => {
                 const checkbox = row.querySelector('.toggle-checkbox');
@@ -525,36 +564,32 @@
                 checkbox.dispatchEvent(new Event('change'));
             });
         });
-    
-        // Clear input
+
         function clearInput() {
             inputHtml.value = '';
             updateStats();
             window.showMessage('Input cleared');
         }
-    
-        // Clear output
+
         function clearOutput() {
             outputHtml.value = '';
             updateStats();
             window.showMessage('Output cleared');
         }
-    
-        // Copy output
+
         function copyOutput() {
             if (!outputHtml.value.trim()) {
                 window.showMessage('No output to copy');
                 return;
             }
-            
+
             const text = outputHtml.value.trim();
-            
+
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(text).then(() => {
                     window.showMessage('Copied to clipboard');
                 });
             } else {
-                // Fallback for old browsers
                 const textarea = document.createElement('textarea');
                 textarea.value = text;
                 textarea.style.position = 'fixed';
@@ -566,27 +601,20 @@
                 window.showMessage('Copied to clipboard');
             }
         }
-    
-        // Download output
-        function downloadOutput() {
+
+        async function downloadOutput() {
             if (!outputHtml.value.trim()) {
                 window.showMessage('No output to download');
                 return;
             }
-            
-            const blob = new Blob([outputHtml.value], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'cleaned-html.html';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            window.showMessage('Download started');
+
+            const content = outputHtml.value;
+            const filename = 'cleaned-html.html';
+            const mimeType = 'text/html';
+
+            await saveFile(content, filename, mimeType);
         }
-    
-        // Load sample
+
         function loadSample() {
             const sample = `<!DOCTYPE html>
     <html>
@@ -603,57 +631,48 @@
         <p>Hello World</p>
     </body>
     </html>`;
-            
+
             inputHtml.value = sample;
             cleanHTML();
             window.showMessage('Sample loaded');
         }
-    
-        // Clean HTML - MAIN FUNCTION
+
         function cleanHTML() {
             if (!inputHtml.value.trim()) {
                 window.showMessage('Enter HTML first');
                 return;
             }
-            
+
             let result = inputHtml.value;
-            
-            // Remove comments based on settings
+
             if (removeAllComments.checked) {
-                // Remove /* comments */
                 result = result.replace(/\/\*[\s\S]*?\*\//g, '');
-                // Remove // comments
                 result = result.replace(/\/\/.*$/gm, '');
-                // Remove <!-- comments -->
                 result = result.replace(/<!--[\s\S]*?-->/g, '');
-                // Remove ===== separators
                 result = result.replace(/^=+.*=+$/gm, '');
             }
-            
-            // Trim whitespace from lines
+
             if (trimLines.checked) {
                 result = result.split('\n').map(line => line.trim()).join('\n');
             }
-            
-            // Remove empty lines
+
             if (removeEmptyLines.checked) {
                 result = result.split('\n').filter(line => line.trim() !== '').join('\n');
             }
-            
+
             outputHtml.value = result;
             updateStats();
             window.showMessage('HTML cleaned');
         }
-    
-        // Update size reduction
+
         function updateStats() {
             const input = inputHtml.value;
             const output = outputHtml.value;
-            
+
             if (input.length > 0 && output.length > 0) {
                 const reduction = Math.round(((input.length - output.length) / input.length) * 100);
                 sizeReduction.textContent = reduction > 0 ? reduction + '%' : '0%';
-                
+
                 if (reduction > 20) {
                     sizeReduction.style.color = 'var(--accent-color)';
                 } else if (reduction > 0) {
@@ -666,16 +685,14 @@
                 sizeReduction.style.color = 'var(--text-secondary)';
             }
         }
-    
-        // Auto clean when typing
+
         let cleanTimeout;
         inputHtml.addEventListener('input', function() {
             clearTimeout(cleanTimeout);
             updateStats();
             cleanTimeout = setTimeout(cleanHTML, 500);
         });
-    
-        // Start
+
         window.addEventListener('load', function() {
             updateStats();
             window.showMessage('Ready to clean HTML');

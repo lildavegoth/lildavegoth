@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UserScripts Gallery | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
@@ -261,15 +262,15 @@
             .container {
                 padding: 15px;
             }
-            
+
             .header h1 {
                 font-size: 1.8rem;
             }
-            
+
             .scripts-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .script-actions {
                 flex-direction: column;
             }
@@ -282,21 +283,21 @@
         <a href="../index.html" class="back-link fade-in">
             <i class="fas fa-arrow-left"></i> Back to Home
         </a>
-        
+
         <div class="header">
             <h1>UserScripts Gallery</h1>
             <p>Collection of useful UserScripts for enhancing web browsing</p>
         </div>
-        
+
         <div style="margin-top: 25px; margin-bottom: 25px;" class="search-container">
             <div class="search-wrapper">
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" id="searchInput" class="search-input" placeholder="Search userscripts by title or description...">
             </div>
         </div>
-        
+
         <div id="scriptsGrid" class="scripts-grid"></div>
-        
+
         <div style="margin-top: -10px;" class="guide-background">
             <h2 style="margin-top: 0; margin-bottom: 15px;">How to Use</h2>
             <ol style="margin-left: 20px; margin-bottom: 20px;">
@@ -306,13 +307,13 @@
                 <li>Paste the code and click <strong>Save</strong></li>
                 <li>The script will automatically run on the specified websites</li>
             </ol>
-            
+
             <h2 style="margin-top: 0; margin-bottom: 15px;">Notes</h2>
             <ul style="margin-left: 20px; margin-bottom: 20px;">
                 <li>Ignore the <strong>Image Protection Warning</strong> notification</li>
             </ul>
         </div>
-        
+
         <footer class="fade-in">
             <div class="social-links">
                 <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
@@ -324,156 +325,220 @@
             </p>
         </footer>
     </div>
-    
+
     <script>
-      const scriptsGrid = document.getElementById('scriptsGrid');
-      const searchInput = document.getElementById('searchInput');
-      const USERS_CRIPTS_URL = 'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/UserScripts%20Gallery/userscripts.json';
-      let userscripts = [];
-    
-      fetch(USERS_CRIPTS_URL)
-        .then(response => response.json())
-        .then(data => {
-          userscripts = data;
-          renderScripts(userscripts);
-        })
-        .catch(() => {
-          scriptsGrid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📁</div><h3>Failed to load scripts</h3><p>Please try again later</p></div>';
-        });
-    
-      function sortNewestFirst(scripts) {
-        return scripts.sort((a, b) => {
-          const dateA = new Date(a.createdAt);
-          const dateB = new Date(b.createdAt);
-          return dateB - dateA;
-        });
-      }
-    
-      function renderScripts(scriptsToRender) {
-        const sortedScripts = sortNewestFirst([...scriptsToRender]);
-        scriptsGrid.innerHTML = '';
-    
-        sortedScripts.forEach(script => {
-          const scriptCard = document.createElement('div');
-          scriptCard.className = 'script-card';
-    
-          const date = new Date(script.createdAt);
-          const formattedDate = date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-          });
-    
-          const pillTag = script.tag ? 
-            `<span class="pill-tag">${script.tag}</span>` : 
-            '';
-    
-          scriptCard.innerHTML = `
-            <div class="script-header">
-              <div class="title-container">
-                <h3 class="script-title">${script.title}</h3>
-                ${pillTag}
-              </div>
-              <div class="script-date">${formattedDate}</div>
-            </div>
-            
-            <div class="script-description">
-              ${script.description}
-            </div>
-            
-            <div class="script-actions">
-              <button class="script-btn copy-btn" data-id="${script.id}">
-                <i class="fas fa-copy"></i> Copy Code
-              </button>
-              <button class="script-btn download-btn" data-id="${script.id}">
-                <i class="fas fa-download"></i> Download
-              </button>
-            </div>
-          `;
-    
-          scriptsGrid.appendChild(scriptCard);
-          
-          const copyBtn = scriptCard.querySelector('.copy-btn');
-          const downloadBtn = scriptCard.querySelector('.download-btn');
-          
-          copyBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const id = this.getAttribute('data-id');
-            copyToClipboard(id);
-          });
-          
-          downloadBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const id = this.getAttribute('data-id');
-            downloadScript(id);
-          });
-        });
-      }
-    
-      function copyToClipboard(id) {
-        const script = userscripts.find(s => s.id === id);
-        if (!script) return;
-        
-        navigator.clipboard.writeText(script.code)
-          .then(() => {
-            window.showMessage('Script copied to clipboard!');
-          })
-          .catch(() => {
-            const textArea = document.createElement('textarea');
-            textArea.value = script.code;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            window.showMessage('Script copied to clipboard!');
-            document.body.removeChild(textArea);
-          });
-      }
-    
-      function downloadScript(id) {
-        const script = userscripts.find(s => s.id === id);
-        if (!script) return;
-        
-        const fileName = script.title
-          .toLowerCase()
-          .replace(/[^a-z0-9]/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '') + '.js';
-        
-        const blob = new Blob([script.code], { type: 'text/javascript' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        window.showMessage(`Downloaded ${fileName}`);
-      }
-    
-      function performSearch(searchTerm) {
-        const term = searchTerm.toLowerCase().trim();
-        
-        if (term === '') {
-          renderScripts(userscripts);
-          return;
+        async function saveFile(content, filename, mimeType) {
+            return new Promise((resolve, reject) => {
+                if (window.cordova) {
+                    const writeFile = (dirEntry, isDownloads) => {
+                        dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                            fileEntry.createWriter((writer) => {
+                                writer.onwriteend = () => {
+                                    const location = isDownloads ? 'Downloads' : 'app folder';
+                                    window.showMessage(`Script saved to ${location}!`, 'success');
+                                    if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                                    }
+                                    resolve();
+                                };
+                                writer.onerror = () => {
+                                    window.showMessage('Download failed', 'error');
+                                    reject();
+                                };
+                                writer.write(content);
+                            }, () => {
+                                window.showMessage('Download failed', 'error');
+                                reject();
+                            });
+                        }, () => {
+                            window.showMessage('Download failed', 'error');
+                            reject();
+                        });
+                    };
+
+                    const saveToDownloads = () => {
+                        window.resolveLocalFileSystemURL(
+                            cordova.file.externalRootDirectory + 'Download/',
+                            (dir) => {
+                                writeFile(dir, true);
+                            },
+                            () => {
+                                window.resolveLocalFileSystemURL(
+                                    cordova.file.dataDirectory,
+                                    (dir) => {
+                                        writeFile(dir, false);
+                                    },
+                                    () => {
+                                        window.showMessage('Download failed', 'error');
+                                        reject();
+                                    }
+                                );
+                            }
+                        );
+                    };
+
+                    if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                        saveToDownloads();
+                    } else {
+                        document.addEventListener('deviceready', saveToDownloads);
+                    }
+                } else {
+                    const blob = new Blob([content], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    window.showMessage('Script downloaded!', 'success');
+                    resolve();
+                }
+            });
         }
-        
-        const filteredScripts = userscripts.filter(script => {
-          const titleMatch = script.title.toLowerCase().includes(term);
-          const descMatch = script.description.toLowerCase().includes(term);
-          return titleMatch || descMatch;
+
+        const scriptsGrid = document.getElementById('scriptsGrid');
+        const searchInput = document.getElementById('searchInput');
+        const USERS_CRIPTS_URL = 'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/UserScripts%20Gallery/userscripts.json';
+        let userscripts = [];
+
+        fetch(USERS_CRIPTS_URL)
+            .then(response => response.json())
+            .then(data => {
+                userscripts = data;
+                renderScripts(userscripts);
+            })
+            .catch(() => {
+                scriptsGrid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📁</div><h3>Failed to load scripts</h3><p>Please try again later</p></div>';
+            });
+
+        function sortNewestFirst(scripts) {
+            return scripts.sort((a, b) => {
+                const dateA = new Date(a.createdAt);
+                const dateB = new Date(b.createdAt);
+                return dateB - dateA;
+            });
+        }
+
+        function renderScripts(scriptsToRender) {
+            const sortedScripts = sortNewestFirst([...scriptsToRender]);
+            scriptsGrid.innerHTML = '';
+
+            sortedScripts.forEach(script => {
+                const scriptCard = document.createElement('div');
+                scriptCard.className = 'script-card';
+
+                const date = new Date(script.createdAt);
+                const formattedDate = date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+
+                const pillTag = script.tag ?
+                    `<span class="pill-tag">${script.tag}</span>` :
+                    '';
+
+                scriptCard.innerHTML = `
+                    <div class="script-header">
+                        <div class="title-container">
+                            <h3 class="script-title">${script.title}</h3>
+                            ${pillTag}
+                        </div>
+                        <div class="script-date">${formattedDate}</div>
+                    </div>
+                    
+                    <div class="script-description">
+                        ${script.description}
+                    </div>
+                    
+                    <div class="script-actions">
+                        <button class="script-btn copy-btn" data-id="${script.id}">
+                            <i class="fas fa-copy"></i> Copy Code
+                        </button>
+                        <button class="script-btn download-btn" data-id="${script.id}">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                    </div>
+                `;
+
+                scriptsGrid.appendChild(scriptCard);
+
+                const copyBtn = scriptCard.querySelector('.copy-btn');
+                const downloadBtn = scriptCard.querySelector('.download-btn');
+
+                copyBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const id = this.getAttribute('data-id');
+                    copyToClipboard(id);
+                });
+
+                downloadBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const id = this.getAttribute('data-id');
+                    downloadScript(id);
+                });
+            });
+        }
+
+        function copyToClipboard(id) {
+            const script = userscripts.find(s => s.id === id);
+            if (!script) return;
+
+            navigator.clipboard.writeText(script.code)
+                .then(() => {
+                    window.showMessage('Script copied to clipboard!');
+                })
+                .catch(() => {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = script.code;
+                    textArea.style.position = 'fixed';
+                    textArea.style.opacity = '0';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    window.showMessage('Script copied to clipboard!');
+                    document.body.removeChild(textArea);
+                });
+        }
+
+        async function downloadScript(id) {
+            const script = userscripts.find(s => s.id === id);
+            if (!script) return;
+
+            const fileName = script.title
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '') + '.js';
+
+            const content = script.code;
+            const mimeType = 'text/javascript';
+
+            await saveFile(content, fileName, mimeType);
+        }
+
+        function performSearch(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+
+            if (term === '') {
+                renderScripts(userscripts);
+                return;
+            }
+
+            const filteredScripts = userscripts.filter(script => {
+                const titleMatch = script.title.toLowerCase().includes(term);
+                const descMatch = script.description.toLowerCase().includes(term);
+                return titleMatch || descMatch;
+            });
+
+            renderScripts(filteredScripts);
+        }
+
+        searchInput.addEventListener('input', function() {
+            performSearch(this.value);
         });
-        
-        renderScripts(filteredScripts);
-      }
-    
-      searchInput.addEventListener('input', function() {
-        performSearch(this.value);
-      });
     </script>
 </body>
 </html>

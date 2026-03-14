@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML Editor with Live Preview</title>
+    <title>HTML Editor | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
@@ -48,22 +49,6 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: var(--spacing-md);
-        }
-
-        header {
-            padding: var(--spacing-lg) 0;
-        }
-
-        .username {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 4px;
-        }
-
-        .tagline {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
         }
 
         .mode-toggle {
@@ -294,13 +279,17 @@
 </head>
 <body>
     <div class="container">
-        <header>
+        <a href="../index.html" class="back-link fade-in" onclick="window.location.hash='';">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <app-header class="fade-in">
             <div>
                 <h1 class="username">HTML Editor</h1>
-                <p class="tagline">Edit HTML with Live Mobile Preview</p>
+                <p class="tagline">Edit HTML with Live Mobile Preview<</p>
             </div>
-        </header>
-        
+        </app-header>
+
         <div class="mode-toggle">
             <button class="mode-btn active" id="editModeBtn">
                 <i class="fas fa-edit"></i> Edit HTML
@@ -309,7 +298,7 @@
                 <i class="fas fa-eye"></i> Live Preview
             </button>
         </div>
-        
+
         <div class="main-content">
             <div class="editor-container">
                 <div class="editor-wrapper">
@@ -363,7 +352,7 @@
 </body>
 </html></textarea>
                 </div>
-                
+
                 <div class="toolbar">
                     <button title="Undo" onclick="undo()"><i class="fas fa-undo"></i></button>
                     <button title="Redo" onclick="redo()"><i class="fas fa-redo"></i></button>
@@ -382,33 +371,44 @@
                     <button title="Image" onclick="insertImg()"><i class="fas fa-image"></i></button>
                     <button title="Comment" onclick="insertComment()"><i class="fas fa-comment"></i></button>
                 </div>
-                
+
                 <div class="preview-container" id="previewContainer" style="display: none;">
                     <iframe id="previewFrame" class="preview-frame"></iframe>
                 </div>
             </div>
-            
+
             <div class="stats">
                 <div>
-                    <span id="charCount">0</span> characters • 
+                    <span id="charCount">0</span> characters •
                     <span id="lineCount">0</span> lines
                 </div>
                 <div>
                     <span id="currentMode">Edit HTML</span>
                 </div>
             </div>
-            
+
             <div class="action-buttons">
                 <button class="action-btn primary" onclick="updatePreview()">
                     <i class="fas fa-sync"></i> Update Preview
                 </button>
-                <button class="action-btn secondary" onclick="saveFile()">
+                <button class="action-btn secondary" id="saveButton">
                     <i class="fas fa-save"></i> Save HTML
                 </button>
             </div>
         </div>
+        
+        <footer style="margin-bottom: 100px;">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | HTML Editor</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
     </div>
-    
+
     <div class="copy-notification" id="copyNotification">
         <i class="fas fa-check"></i> Action complete
     </div>
@@ -417,7 +417,7 @@
         const faScript = document.createElement('script');
         faScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js';
         document.head.appendChild(faScript);
-        
+
         const htmlEditor = document.getElementById('htmlEditor');
         const previewFrame = document.getElementById('previewFrame');
         const previewContainer = document.getElementById('previewContainer');
@@ -428,11 +428,12 @@
         const lineCount = document.getElementById('lineCount');
         const currentMode = document.getElementById('currentMode');
         const lineNumbers = document.getElementById('lineNumbers');
-        
+        const saveButton = document.getElementById('saveButton');
+
         let history = [];
         let historyIndex = -1;
         let previewTimeout;
-        
+
         function saveState() {
             const current = htmlEditor.value;
             if (historyIndex >= 0 && history[historyIndex] === current) return;
@@ -444,7 +445,7 @@
                 historyIndex--;
             }
         }
-        
+
         function undo() {
             if (historyIndex > 0) {
                 historyIndex--;
@@ -452,7 +453,7 @@
                 updateAfterChange();
             }
         }
-        
+
         function redo() {
             if (historyIndex < history.length - 1) {
                 historyIndex++;
@@ -460,20 +461,20 @@
                 updateAfterChange();
             }
         }
-        
+
         function updateAfterChange() {
             updateStats();
             updateLineNumbers();
             lineNumbers.scrollTop = htmlEditor.scrollTop;
             updatePreview();
         }
-        
+
         document.addEventListener('DOMContentLoaded', function() {
             saveState();
             updateLineNumbers();
             updateStats();
             updatePreview();
-            
+
             htmlEditor.addEventListener('input', function() {
                 saveState();
                 updateStats();
@@ -482,25 +483,25 @@
                 clearTimeout(previewTimeout);
                 previewTimeout = setTimeout(updatePreview, 300);
             });
-            
+
             htmlEditor.addEventListener('scroll', function() {
                 lineNumbers.scrollTop = htmlEditor.scrollTop;
             });
-            
+
             htmlEditor.addEventListener('keydown', handleKeyDown);
-            
+
             lineNumbers.addEventListener('click', function(e) {
                 if (e.target.tagName === 'DIV') {
                     const lineNum = parseInt(e.target.textContent);
                     const lines = htmlEditor.value.split('\n');
                     const lineText = lines[lineNum - 1] || '';
-                    
+
                     const textArea = document.createElement('textarea');
                     textArea.value = lineText;
                     document.body.appendChild(textArea);
                     textArea.select();
                     textArea.setSelectionRange(0, 99999);
-                    
+
                     try {
                         document.execCommand('copy');
                         showNotification('Line ' + lineNum + ' copied');
@@ -511,12 +512,12 @@
                             showNotification('Failed to copy');
                         });
                     }
-                    
+
                     document.body.removeChild(textArea);
                 }
             });
         });
-        
+
         function handleKeyDown(e) {
             if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
                 e.preventDefault();
@@ -528,7 +529,7 @@
                 redo();
                 return;
             }
-            
+
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const start = htmlEditor.selectionStart;
@@ -546,7 +547,7 @@
                 htmlEditor.selectionStart = htmlEditor.selectionEnd = start + 1 + indent.length;
                 updateAfterChange();
             }
-            
+
             if (e.key === 'Tab') {
                 e.preventDefault();
                 if (e.shiftKey) {
@@ -556,7 +557,7 @@
                 }
             }
         }
-        
+
         function switchMode(mode) {
             if (mode === 'edit') {
                 editModeBtn.classList.add('active');
@@ -576,23 +577,20 @@
                 updatePreview();
             }
         }
-        
+
         editModeBtn.addEventListener('click', () => switchMode('edit'));
         previewModeBtn.addEventListener('click', () => switchMode('preview'));
-        
+
         function updatePreview() {
-            const html = htmlEditor.value;
-            const blob = new Blob([html], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            previewFrame.src = url;
+            previewFrame.srcdoc = htmlEditor.value;
         }
-        
+
         function updateStats() {
             const text = htmlEditor.value;
             charCount.textContent = text.length;
             lineCount.textContent = text.split('\n').length;
         }
-        
+
         function updateLineNumbers() {
             const lines = htmlEditor.value.split('\n').length;
             let html = '';
@@ -602,7 +600,7 @@
             lineNumbers.innerHTML = html;
             lineNumbers.scrollTop = htmlEditor.scrollTop;
         }
-        
+
         function indentLines(add) {
             const textarea = htmlEditor;
             const startPos = textarea.selectionStart;
@@ -630,7 +628,7 @@
             saveState();
             updateAfterChange();
         }
-        
+
         function formatCode() {
             let code = htmlEditor.value;
             let formatted = '';
@@ -647,19 +645,19 @@
             updateAfterChange();
             showNotification('Code formatted');
         }
-        
+
         function selectAll() {
             htmlEditor.focus();
             htmlEditor.select();
         }
-        
+
         function copyCode() {
             const textArea = document.createElement('textarea');
             textArea.value = htmlEditor.value;
             document.body.appendChild(textArea);
             textArea.select();
             textArea.setSelectionRange(0, 99999);
-            
+
             try {
                 document.execCommand('copy');
                 showNotification('Code copied');
@@ -670,10 +668,10 @@
                     showNotification('Failed to copy');
                 });
             }
-            
+
             document.body.removeChild(textArea);
         }
-        
+
         function clearEditor() {
             if (confirm('Clear editor?')) {
                 htmlEditor.value = '';
@@ -683,20 +681,7 @@
                 showNotification('Editor cleared');
             }
         }
-        
-        function saveFile() {
-            const blob = new Blob([htmlEditor.value], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'page.html';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showNotification('File saved');
-        }
-        
+
         function loadFile() {
             const input = document.createElement('input');
             input.type = 'file';
@@ -716,7 +701,7 @@
             };
             input.click();
         }
-        
+
         function insertTag(tag) {
             const start = htmlEditor.selectionStart;
             const end = htmlEditor.selectionEnd;
@@ -729,7 +714,7 @@
             saveState();
             updateAfterChange();
         }
-        
+
         function insertImg() {
             const str = '<img src="" alt="" />';
             const start = htmlEditor.selectionStart;
@@ -738,7 +723,7 @@
             saveState();
             updateAfterChange();
         }
-        
+
         function insertComment() {
             const str = '<!--  -->';
             const start = htmlEditor.selectionStart;
@@ -747,7 +732,7 @@
             saveState();
             updateAfterChange();
         }
-        
+
         function checkHTML() {
             const html = htmlEditor.value.trim();
             if (!html) {
@@ -762,7 +747,7 @@
                 showNotification('HTML is valid');
             }
         }
-        
+
         function showNotification(message) {
             copyNotification.innerHTML = `<i class="fas fa-check"></i> ${message}`;
             copyNotification.classList.add('show');
@@ -770,6 +755,119 @@
                 copyNotification.classList.remove('show');
             }, 2000);
         }
+
+        async function saveToCordova(content, filename, mimeType) {
+            return new Promise((resolve, reject) => {
+                if (!window.cordova) {
+                    reject(new Error('Not in Cordova'));
+                    return;
+                }
+        
+                const tryDownloads = () => {
+                    window.resolveLocalFileSystemURL(
+                        cordova.file.externalRootDirectory + 'Download/',
+                        (dir) => {
+                            dir.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                                fileEntry.createWriter((writer) => {
+                                    writer.onwriteend = () => {
+                                        showNotification(`File saved to Downloads folder`);
+                                        if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                                            cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                                        }
+                                        resolve();
+                                    };
+                                    writer.onerror = () => {
+                                        // Fallback to app folder
+                                        fallbackToAppFolder();
+                                    };
+                                    writer.write(content);
+                                }, fallbackToAppFolder);
+                            }, fallbackToAppFolder);
+                        },
+                        fallbackToAppFolder
+                    );
+                };
+        
+                const fallbackToAppFolder = () => {
+                    window.resolveLocalFileSystemURL(
+                        cordova.file.dataDirectory,
+                        (dir) => {
+                            dir.getFile(filename, { create: true }, (fileEntry) => {
+                                fileEntry.createWriter((writer) => {
+                                    writer.onwriteend = () => {
+                                        showNotification(`File saved to app folder`);
+                                        if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                                            cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                                        }
+                                        resolve();
+                                    };
+                                    writer.onerror = () => {
+                                        showNotification('Error writing file');
+                                        reject();
+                                    };
+                                    writer.write(content);
+                                }, () => {
+                                    showNotification('Could not create file writer');
+                                    reject();
+                                });
+                            }, () => {
+                                showNotification('Could not create file');
+                                reject();
+                            });
+                        },
+                        () => {
+                            showNotification('Cannot access any storage');
+                            reject();
+                        }
+                    );
+                };
+        
+                // Try to request permission only if needed (optional, but may help on older Android)
+                if (cordova.plugins && cordova.plugins.permissions) {
+                    cordova.plugins.permissions.requestPermission(
+                        cordova.plugins.permissions.WRITE_EXTERNAL_STORAGE,
+                        (status) => {
+                            // Regardless of permission status, try Downloads (may fail silently on newer Android)
+                            tryDownloads();
+                        },
+                        () => {
+                            // Permission request failed, skip Downloads and go straight to app folder
+                            fallbackToAppFolder();
+                        }
+                    );
+                } else {
+                    // No permissions plugin, try Downloads directly
+                    tryDownloads();
+                }
+            });
+        }
+
+        async function saveFile() {
+            const content = htmlEditor.value;
+            const filename = 'page.html';
+            const mimeType = 'text/html';
+
+            if (window.cordova) {
+                try {
+                    await saveToCordova(content, filename, mimeType);
+                } catch (error) {
+                    showNotification('Save failed: ' + (error.message || 'unknown error'));
+                }
+            } else {
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showNotification('File saved');
+            }
+        }
+
+        saveButton.addEventListener('click', saveFile);
     </script>
 </body>
 </html>
