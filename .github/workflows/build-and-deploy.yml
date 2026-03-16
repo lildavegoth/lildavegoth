@@ -96,14 +96,33 @@ jobs:
                       --variable URL_SCHEME=kiraku \
                       --variable HOST_NAME=kakoi-kiraku-home.vercel.app
 
-            - name: Build debug APK
-              run: cordova build android --debug
+            - name: Decode Keystore
+              run: |
+                  echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
+
+            - name: Create build.json
+              run: |
+                  cat > build.json << EOF
+                  {
+                    "android": {
+                      "release": {
+                        "keystore": "keystore.jks",
+                        "alias": "${{ secrets.KEY_ALIAS }}",
+                        "storePassword": "${{ secrets.KEYSTORE_PASSWORD }}",
+                        "password": "${{ secrets.KEY_PASSWORD }}"
+                      }
+                    }
+                  }
+                  EOF
+
+            - name: Build release APK
+              run: cordova build android --release
 
             - name: Upload APK
               uses: actions/upload-artifact@v4
               with:
-                  name: kakoi-kiraku-home-apk
-                  path: platforms/android/app/build/outputs/apk/debug/app-debug.apk
+                  name: kakoi-kiraku-home-release-apk
+                  path: platforms/android/app/build/outputs/apk/release/app-release.apk
 
     build-jekyll:
         runs-on: ubuntu-latest
