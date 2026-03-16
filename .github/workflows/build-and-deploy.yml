@@ -99,6 +99,10 @@ jobs:
             - name: Decode Keystore
               run: |
                   echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
+                  
+            - name: Verify keystore
+              run: |
+                keytool -list -v -keystore keystore.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -alias "${{ secrets.KEY_ALIAS }}"
 
             - name: Create build.json
               run: |
@@ -116,7 +120,7 @@ jobs:
                   EOF
 
             - name: Build release APK
-              run: cordova build android --release
+              run: cordova build android --release -- --packageType=apk
 
             - name: List generated files
               run: |
@@ -129,7 +133,8 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                 name: kakoi-kiraku-home-release-apk
-                path: platforms/android/app/build/outputs/apk/release/*.apk
+                path: platforms/android/**/*.apk
+                if-no-files-found: error
 
     build-jekyll:
         runs-on: ubuntu-latest
