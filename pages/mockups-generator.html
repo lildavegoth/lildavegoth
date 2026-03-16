@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mockups Generator | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../navigation.css">
@@ -512,281 +513,364 @@
     <canvas id="downloadCanvas" width="1200" height="800"></canvas>
     
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const fileList = document.getElementById('fileList');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const shadowSlider = document.getElementById('shadowSlider');
-        const blurSlider = document.getElementById('blurSlider');
-        const downloadCanvas = document.getElementById('downloadCanvas');
-        
-        let uploadedImages = [];
-        
-        uploadArea.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            uploadArea.classList.add('dragover');
-        });
-        
-        uploadArea.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            uploadArea.classList.remove('dragover');
-        });
-        
-        uploadArea.addEventListener('drop', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            uploadArea.classList.remove('dragover');
-            
-            const files = e.dataTransfer.files;
-            handleFiles(files);
-        });
-        
-        fileInput.addEventListener('change', function() {
-            handleFiles(this.files);
-        });
-        
-        function handleFiles(files) {
-            fileList.innerHTML = '';
-            uploadedImages = [];
-            
-            const validFiles = Array.from(files).slice(0, 2);
-            
-            if (validFiles.length === 0) return;
-            
-            let filesLoaded = 0;
-            const maxFiles = Math.min(validFiles.length, 2);
-            
-            validFiles.forEach((file, index) => {
-                if (!file.type.match('image.*')) {
-                    window.showMessage(`"${file.name}" is not an image file`, 'error');
-                    return;
-                }
-                
-                if (file.size > 5 * 1024 * 1024) {
-                    window.showMessage(`"${file.name}" is too large (max 5MB)`, 'error');
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    uploadedImages[index] = {
-                        src: e.target.result,
-                        name: file.name
+        async function saveFile(content, filename, mimeType) {
+            return new Promise((resolve, reject) => {
+                if (window.cordova) {
+                    const writeFile = (dirEntry, isDownloads) => {
+                        dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                            fileEntry.createWriter((writer) => {
+                                writer.onwriteend = () => {
+                                    const location = isDownloads ? 'Downloads' : 'app folder';
+                                    window.showMessage(`Mockup saved to ${location}!`, 'success');
+                                    if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                                    }
+                                    resolve();
+                                };
+                                writer.onerror = () => {
+                                    window.showMessage('Download failed', 'error');
+                                    reject();
+                                };
+                                writer.write(content);
+                            }, () => {
+                                window.showMessage('Download failed', 'error');
+                                reject();
+                            });
+                        }, () => {
+                            window.showMessage('Download failed', 'error');
+                            reject();
+                        });
                     };
-                    
-                    const fileItem = document.createElement('div');
-                    fileItem.className = 'file-item';
-                    fileItem.innerHTML = `
-                        <i class="fas fa-check-circle"></i>
-                        Image ${index + 1}
-                    `;
-                    fileList.appendChild(fileItem);
-                    
-                    filesLoaded++;
-                    
-                    if (filesLoaded === maxFiles) {
-                        updateMockupScreens();
-                        downloadBtn.disabled = false;
-                    }
-                };
-                
-                reader.onerror = function() {
-                    window.showMessage(`Error reading: ${file.name}`, 'error');
-                };
-                
-                reader.readAsDataURL(file);
-            });
-        }
-        
-        function updateMockupScreens() {
-            for (let i = 1; i <= 2; i++) {
-                const screen = document.querySelector(`#screen-${i}`);
-                if (screen) {
-                    screen.innerHTML = `<div class="placeholder-screen">
-                        <i class="fas fa-mobile-alt fa-2x"></i>
-                        <span>Screen ${i}</span>
-                    </div>`;
-                }
-            }
-            
-            uploadedImages.forEach((img, index) => {
-                if (!img) return;
-                
-                const screen = document.querySelector(`#screen-${index + 1}`);
-                if (screen) {
-                    const imgElement = document.createElement('img');
-                    imgElement.src = img.src;
-                    imgElement.alt = `Uploaded screenshot ${index + 1}`;
-                    imgElement.style.width = '100%';
-                    imgElement.style.height = '100%';
-                    imgElement.style.objectFit = 'contain';
-                    imgElement.style.background = '#000';
-                    screen.innerHTML = '';
-                    screen.appendChild(imgElement);
-                }
-            });
-        }
-        
-        shadowSlider.addEventListener('input', function() {
-            const value = this.value;
-            document.querySelectorAll('.mockup-device').forEach(el => {
-                el.style.boxShadow = `0 20px 40px rgba(0, 0, 0, ${value/100})`;
-            });
-        });
-        
-        blurSlider.addEventListener('input', function() {
-            const value = this.value;
-            document.querySelector('.mockup-container').style.backdropFilter = `blur(${value}px)`;
-        });
-        
-        downloadBtn.addEventListener('click', async function() {
-            if (uploadedImages.length === 0) {
-                window.showMessage('Please upload at least one screenshot', 'error');
-                return;
-            }
-            
-            const originalText = this.innerHTML;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
-            this.disabled = true;
-            
-            try {
-                const deviceWidth = 450;
-                const deviceHeight = 1000;
-                const spacing = 60;
-                const canvasWidth = (deviceWidth * 2) + (spacing * 3);
-                const canvasHeight = deviceHeight + 100;
-                
-                downloadCanvas.width = canvasWidth;
-                downloadCanvas.height = canvasHeight;
-                
-                const ctx = downloadCanvas.getContext('2d');
-                
-                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-                
-                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-card');
-                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-                
-                const shadowValue = shadowSlider.value / 100;
-                
-                for (let i = 0; i < Math.min(uploadedImages.length, 2); i++) {
-                    if (!uploadedImages[i]) continue;
-                    
-                    const x = (i * (deviceWidth + spacing)) + spacing;
-                    const y = 50;
-                    
-                    ctx.save();
-                    ctx.shadowColor = `rgba(0, 0, 0, ${shadowValue})`;
-                    ctx.shadowBlur = 40;
-                    ctx.shadowOffsetY = 20;
-                    
-                    ctx.fillStyle = '#111';
-                    drawRoundedRect(ctx, x, y, deviceWidth, deviceHeight, 40);
-                    ctx.fill();
-                    
-                    ctx.restore();
-                    
-                    ctx.fillStyle = '#222';
-                    drawRoundedRect(ctx, x + (deviceWidth/2) - 30, y + 10, 60, 6, 3);
-                    ctx.fill();
-                    
-                    const screenX = x + 20;
-                    const screenY = y + 20;
-                    const screenWidth = deviceWidth - 40;
-                    const screenHeight = deviceHeight - 40;
-                    const screenRadius = 25;
-                    
-                    ctx.fillStyle = '#000';
-                    drawRoundedRect(ctx, screenX, screenY, screenWidth, screenHeight, screenRadius);
-                    ctx.fill();
-                    
-                    await new Promise((resolve) => {
-                        const img = new Image();
-                        img.crossOrigin = 'anonymous';
-                        img.onload = function() {
-                            ctx.save();
-                            drawRoundedRect(ctx, screenX, screenY, screenWidth, screenHeight, screenRadius);
-                            ctx.clip();
-                            
-                            const imgRatio = img.width / img.height;
-                            const screenRatio = screenWidth / screenHeight;
-                            
-                            let drawWidth, drawHeight, drawX, drawY;
-                            
-                            if (imgRatio > screenRatio) {
-                                drawHeight = screenHeight;
-                                drawWidth = drawHeight * imgRatio;
-                                drawX = screenX - (drawWidth - screenWidth) / 2;
-                                drawY = screenY;
-                            } else {
-                                drawWidth = screenWidth;
-                                drawHeight = drawWidth / imgRatio;
-                                drawX = screenX;
-                                drawY = screenY - (drawHeight - screenHeight) / 2;
+
+                    const saveToDownloads = () => {
+                        window.resolveLocalFileSystemURL(
+                            cordova.file.externalRootDirectory + 'Download/',
+                            (dir) => {
+                                writeFile(dir, true);
+                            },
+                            () => {
+                                window.resolveLocalFileSystemURL(
+                                    cordova.file.dataDirectory,
+                                    (dir) => {
+                                        writeFile(dir, false);
+                                    },
+                                    () => {
+                                        window.showMessage('Download failed', 'error');
+                                        reject();
+                                    }
+                                );
                             }
-                            
-                            ctx.fillStyle = '#000';
-                            ctx.fillRect(screenX, screenY, screenWidth, screenHeight);
-                            ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-                            ctx.restore();
-                            resolve();
-                        };
-                        img.onerror = () => resolve();
-                        img.src = uploadedImages[i].src;
-                    });
+                        );
+                    };
+
+                    if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                        saveToDownloads();
+                    } else {
+                        document.addEventListener('deviceready', saveToDownloads);
+                    }
+                } else {
+                    const blob = new Blob([content], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    window.showMessage('Mockup downloaded!', 'success');
+                    resolve();
                 }
-                
-                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary');
-                ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('Generated with lildavegoth Mockup Generator', canvasWidth / 2, canvasHeight - 20);
-                
-                setTimeout(() => {
-                    const link = document.createElement('a');
-                    link.download = `mockup-${Date.now()}.png`;
-                    link.href = downloadCanvas.toDataURL('image/png', 1.0);
-                    link.click();
-                    
+            });
+        }
+
+        function dataURLToBlob(dataUrl) {
+            const arr = dataUrl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            const fileList = document.getElementById('fileList');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const shadowSlider = document.getElementById('shadowSlider');
+            const blurSlider = document.getElementById('blurSlider');
+            const downloadCanvas = document.getElementById('downloadCanvas');
+
+            let uploadedImages = [];
+
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('dragover');
+
+                const files = e.dataTransfer.files;
+                handleFiles(files);
+            });
+
+            fileInput.addEventListener('change', function() {
+                handleFiles(this.files);
+            });
+
+            function handleFiles(files) {
+                fileList.innerHTML = '';
+                uploadedImages = [];
+
+                const validFiles = Array.from(files).slice(0, 2);
+
+                if (validFiles.length === 0) return;
+
+                let filesLoaded = 0;
+                const maxFiles = Math.min(validFiles.length, 2);
+
+                validFiles.forEach((file, index) => {
+                    if (!file.type.match('image.*')) {
+                        window.showMessage(`"${file.name}" is not an image file`, 'error');
+                        return;
+                    }
+
+                    if (file.size > 5 * 1024 * 1024) {
+                        window.showMessage(`"${file.name}" is too large (max 5MB)`, 'error');
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        uploadedImages[index] = {
+                            src: e.target.result,
+                            name: file.name
+                        };
+
+                        const fileItem = document.createElement('div');
+                        fileItem.className = 'file-item';
+                        fileItem.innerHTML = `
+                            <i class="fas fa-check-circle"></i>
+                            Image ${index + 1}
+                        `;
+                        fileList.appendChild(fileItem);
+
+                        filesLoaded++;
+
+                        if (filesLoaded === maxFiles) {
+                            updateMockupScreens();
+                            downloadBtn.disabled = false;
+                        }
+                    };
+
+                    reader.onerror = function() {
+                        window.showMessage(`Error reading: ${file.name}`, 'error');
+                    };
+
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            function updateMockupScreens() {
+                for (let i = 1; i <= 2; i++) {
+                    const screen = document.querySelector(`#screen-${i}`);
+                    if (screen) {
+                        screen.innerHTML = `<div class="placeholder-screen">
+                            <i class="fas fa-mobile-alt fa-2x"></i>
+                            <span>Screen ${i}</span>
+                        </div>`;
+                    }
+                }
+
+                uploadedImages.forEach((img, index) => {
+                    if (!img) return;
+
+                    const screen = document.querySelector(`#screen-${index + 1}`);
+                    if (screen) {
+                        const imgElement = document.createElement('img');
+                        imgElement.src = img.src;
+                        imgElement.alt = `Uploaded screenshot ${index + 1}`;
+                        imgElement.style.width = '100%';
+                        imgElement.style.height = '100%';
+                        imgElement.style.objectFit = 'contain';
+                        imgElement.style.background = '#000';
+                        screen.innerHTML = '';
+                        screen.appendChild(imgElement);
+                    }
+                });
+            }
+
+            shadowSlider.addEventListener('input', function() {
+                const value = this.value;
+                document.querySelectorAll('.mockup-device').forEach(el => {
+                    el.style.boxShadow = `0 20px 40px rgba(0, 0, 0, ${value/100})`;
+                });
+            });
+
+            blurSlider.addEventListener('input', function() {
+                const value = this.value;
+                document.querySelector('.mockup-container').style.backdropFilter = `blur(${value}px)`;
+            });
+
+            downloadBtn.addEventListener('click', async function() {
+                if (uploadedImages.length === 0) {
+                    window.showMessage('Please upload at least one screenshot', 'error');
+                    return;
+                }
+
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                this.disabled = true;
+
+                try {
+                    const deviceWidth = 450;
+                    const deviceHeight = 1000;
+                    const spacing = 60;
+                    const canvasWidth = (deviceWidth * 2) + (spacing * 3);
+                    const canvasHeight = deviceHeight + 100;
+
+                    downloadCanvas.width = canvasWidth;
+                    downloadCanvas.height = canvasHeight;
+
+                    const ctx = downloadCanvas.getContext('2d');
+
+                    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-card');
+                    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+                    const shadowValue = shadowSlider.value / 100;
+
+                    for (let i = 0; i < Math.min(uploadedImages.length, 2); i++) {
+                        if (!uploadedImages[i]) continue;
+
+                        const x = (i * (deviceWidth + spacing)) + spacing;
+                        const y = 50;
+
+                        ctx.save();
+                        ctx.shadowColor = `rgba(0, 0, 0, ${shadowValue})`;
+                        ctx.shadowBlur = 40;
+                        ctx.shadowOffsetY = 20;
+
+                        ctx.fillStyle = '#111';
+                        drawRoundedRect(ctx, x, y, deviceWidth, deviceHeight, 40);
+                        ctx.fill();
+
+                        ctx.restore();
+
+                        ctx.fillStyle = '#222';
+                        drawRoundedRect(ctx, x + (deviceWidth/2) - 30, y + 10, 60, 6, 3);
+                        ctx.fill();
+
+                        const screenX = x + 20;
+                        const screenY = y + 20;
+                        const screenWidth = deviceWidth - 40;
+                        const screenHeight = deviceHeight - 40;
+                        const screenRadius = 25;
+
+                        ctx.fillStyle = '#000';
+                        drawRoundedRect(ctx, screenX, screenY, screenWidth, screenHeight, screenRadius);
+                        ctx.fill();
+
+                        await new Promise((resolve) => {
+                            const img = new Image();
+                            img.crossOrigin = 'anonymous';
+                            img.onload = function() {
+                                ctx.save();
+                                drawRoundedRect(ctx, screenX, screenY, screenWidth, screenHeight, screenRadius);
+                                ctx.clip();
+
+                                const imgRatio = img.width / img.height;
+                                const screenRatio = screenWidth / screenHeight;
+
+                                let drawWidth, drawHeight, drawX, drawY;
+
+                                if (imgRatio > screenRatio) {
+                                    drawHeight = screenHeight;
+                                    drawWidth = drawHeight * imgRatio;
+                                    drawX = screenX - (drawWidth - screenWidth) / 2;
+                                    drawY = screenY;
+                                } else {
+                                    drawWidth = screenWidth;
+                                    drawHeight = drawWidth / imgRatio;
+                                    drawX = screenX;
+                                    drawY = screenY - (drawHeight - screenHeight) / 2;
+                                }
+
+                                ctx.fillStyle = '#000';
+                                ctx.fillRect(screenX, screenY, screenWidth, screenHeight);
+                                ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+                                ctx.restore();
+                                resolve();
+                            };
+                            img.onerror = () => resolve();
+                            img.src = uploadedImages[i].src;
+                        });
+                    }
+
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary');
+                    ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Generated with lildavegoth Mockup Generator', canvasWidth / 2, canvasHeight - 20);
+
+                    const dataUrl = downloadCanvas.toDataURL('image/png', 1.0);
+                    const blob = dataURLToBlob(dataUrl);
+                    const filename = `mockup-${Date.now()}.png`;
+                    const mimeType = 'image/png';
+
+                    await saveFile(blob, filename, mimeType);
+
                     window.showMessage('Mockup downloaded successfully!', 'success');
                     this.innerHTML = originalText;
                     this.disabled = false;
-                }, 500);
-                
-            } catch (error) {
-                window.showMessage('Failed to generate mockup. Please try again.', 'error');
-                this.innerHTML = originalText;
-                this.disabled = false;
+
+                } catch (error) {
+                    window.showMessage('Failed to generate mockup. Please try again.', 'error');
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                }
+            });
+
+            function drawRoundedRect(ctx, x, y, width, height, radius) {
+                if (width < 2 * radius) radius = width / 2;
+                if (height < 2 * radius) radius = height / 2;
+
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.arcTo(x + width, y, x + width, y + height, radius);
+                ctx.arcTo(x + width, y + height, x, y + height, radius);
+                ctx.arcTo(x, y + height, x, y, radius);
+                ctx.arcTo(x, y, x + width, y, radius);
+                ctx.closePath();
             }
+
+            document.addEventListener('contextmenu', function(e) {
+                if (e.target.tagName === 'IMG') {
+                    e.preventDefault();
+                    window.showMessage('Image saving is disabled.');
+                }
+            });
+
+            document.addEventListener('touchstart', function(e) {
+                if (e.target.tagName === 'IMG') {
+                    e.preventDefault();
+                }
+            }, { passive: false });
         });
-        
-        function drawRoundedRect(ctx, x, y, width, height, radius) {
-            if (width < 2 * radius) radius = width / 2;
-            if (height < 2 * radius) radius = height / 2;
-            
-            ctx.beginPath();
-            ctx.moveTo(x + radius, y);
-            ctx.arcTo(x + width, y, x + width, y + height, radius);
-            ctx.arcTo(x + width, y + height, x, y + height, radius);
-            ctx.arcTo(x, y + height, x, y, radius);
-            ctx.arcTo(x, y, x + width, y, radius);
-            ctx.closePath();
-        }
-        
-        document.addEventListener('contextmenu', function(e) {
-            if (e.target.tagName === 'IMG') {
-                e.preventDefault();
-                alert('Image saving is disabled.');
-            }
-        });
-        
-        document.addEventListener('touchstart', function(e) {
-            if (e.target.tagName === 'IMG') {
-                e.preventDefault();
-            }
-        }, { passive: false });
-    });
     </script>
 </body>
 </html>

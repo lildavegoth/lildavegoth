@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Sitemap XML Generator | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../navigation.css">
@@ -353,7 +354,6 @@
                 align-items: flex-start;
             }
         }
-        
     </style>
 </head>
 <body>
@@ -373,7 +373,7 @@
             </button>
         </div>
 
-        <input type="file" id="fileInput" accept=".json,.txt,.html,.js" multiple style="display: none;">
+        <input type="file" id="fileInput" multiple style="display: none;">
 
         <div class="editor-container">
             <div class="editor-box">
@@ -407,7 +407,6 @@
             </div>
         </div>
 
-        <!-- New row for robots.txt -->
         <div style="margin-top: var(--spacing-md);">
             <div class="editor-box">
                 <div class="editor-header">
@@ -431,7 +430,7 @@
                     <h3 id="urlCount">0</h3>
                     <p>URLs found</p>
                 </div>
-            
+
                 <div class="option-row">
                     <div class="option-icon">
                         <i class="fas fa-calendar"></i>
@@ -442,7 +441,7 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                
+
                 <div class="option-row">
                     <div class="option-icon">
                         <i class="fas fa-star"></i>
@@ -453,7 +452,7 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                
+
                 <div class="option-row">
                     <div class="option-icon">
                         <i class="fas fa-clock"></i>
@@ -465,7 +464,6 @@
                     </label>
                 </div>
 
-                <!-- New toggle for including robots.txt in download -->
                 <div class="option-row">
                     <div class="option-icon">
                         <i class="fas fa-robot"></i>
@@ -491,7 +489,7 @@
                 </button>
             </div>
         </div>
-        
+
         <footer>
             <div class="social-links">
                 <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
@@ -505,6 +503,77 @@
     </div>
 
     <script>
+        async function saveFile(content, filename, mimeType) {
+            return new Promise((resolve, reject) => {
+                if (window.cordova) {
+                    const writeFile = (dirEntry, isDownloads) => {
+                        dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                            fileEntry.createWriter((writer) => {
+                                writer.onwriteend = () => {
+                                    const location = isDownloads ? 'Downloads' : 'app folder';
+                                    window.showMessage(`File saved to ${location}!`, 'success');
+                                    if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                                    }
+                                    resolve();
+                                };
+                                writer.onerror = () => {
+                                    window.showMessage('Download failed', 'error');
+                                    reject();
+                                };
+                                writer.write(content);
+                            }, () => {
+                                window.showMessage('Download failed', 'error');
+                                reject();
+                            });
+                        }, () => {
+                            window.showMessage('Download failed', 'error');
+                            reject();
+                        });
+                    };
+
+                    const saveToDownloads = () => {
+                        window.resolveLocalFileSystemURL(
+                            cordova.file.externalRootDirectory + 'Download/',
+                            (dir) => {
+                                writeFile(dir, true);
+                            },
+                            () => {
+                                window.resolveLocalFileSystemURL(
+                                    cordova.file.dataDirectory,
+                                    (dir) => {
+                                        writeFile(dir, false);
+                                    },
+                                    () => {
+                                        window.showMessage('Download failed', 'error');
+                                        reject();
+                                    }
+                                );
+                            }
+                        );
+                    };
+
+                    if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                        saveToDownloads();
+                    } else {
+                        document.addEventListener('deviceready', saveToDownloads);
+                    }
+                } else {
+                    const blob = new Blob([content], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    window.showMessage('File downloaded!', 'success');
+                    resolve();
+                }
+            });
+        }
+
         const inputUrls = document.getElementById('inputUrls');
         const outputXml = document.getElementById('outputXml');
         const outputRobots = document.getElementById('outputRobots');
@@ -620,23 +689,14 @@
             document.body.removeChild(ta);
         }
 
-        function downloadOutput() {
+        async function downloadOutput() {
             if (!outputXml.value.trim()) {
                 window.showMessage('No XML to download');
                 return;
             }
 
             if (!includeRobots.checked) {
-                const blob = new Blob([outputXml.value], { type: 'application/xml' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'sitemap.xml';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                window.showMessage('Download started');
+                await saveFile(outputXml.value, 'sitemap.xml', 'application/xml');
                 return;
             }
 
@@ -649,17 +709,12 @@
                 const domain = domainInput.value.trim().replace(/\/$/, '') || 'https://example.com';
                 zip.file('robots.txt', generateRobotsTxt(domain));
             }
-            zip.generateAsync({ type: 'blob' }).then(blob => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'sitemap_and_robots.zip';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                window.showMessage('ZIP download started');
-            });
+            try {
+                const blob = await zip.generateAsync({ type: 'blob' });
+                await saveFile(blob, 'sitemap_and_robots.zip', 'application/zip');
+            } catch (error) {
+                window.showMessage('Error creating ZIP: ' + error.message, 'error');
+            }
         }
 
         function loadSample() {
@@ -954,12 +1009,11 @@ Sitemap: ${sitemapUrl}`;
             const domain = domainInput.value.trim().replace(/\/$/, '') || 'https://example.com';
             outputRobots.value = generateRobotsTxt(domain);
         });
-        
+
         domainInput.addEventListener('input', () => {
             const domain = domainInput.value.trim().replace(/\/$/, '') || 'https://example.com';
             outputRobots.value = generateRobotsTxt(domain);
         });
-        
     </script>
 </body>
 </html>
