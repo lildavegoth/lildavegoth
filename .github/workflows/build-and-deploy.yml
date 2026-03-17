@@ -142,6 +142,7 @@ jobs:
                       exports.authenticate = function(token,success,error){exec(success,error,'KakoiKirakuIconPack','authenticate',[token]);};
                       exports.syncIcons = function(manifestUrl,success,error){exec(success,error,'KakoiKirakuIconPack','syncIcons',[manifestUrl]);};
                       exports.addIcon = function(pkg,activity,base64Image,success,error){exec(success,error,'KakoiKirakuIconPack','addIcon',[pkg,activity,base64Image]);};
+                      exports.listIcons = function(success,error){exec(success,error,'KakoiKirakuIconPack','listIcons',[]);};
                       exports.test = function(success,error){exec(success,error,'KakoiKirakuIconPack','test',[]);};
                   });
                   EOF
@@ -193,6 +194,9 @@ jobs:
                               String activity = args.getString(1);
                               String base64Image = args.getString(2);
                               addIcon(pkg, activity, base64Image, callbackContext);
+                              return true;
+                          } else if ("listIcons".equals(action)) {
+                              listIcons(callbackContext);
                               return true;
                           } else if ("test".equals(action)) {
                               callbackContext.success("Plugin is working");
@@ -294,6 +298,23 @@ jobs:
                               if (callbackContext != null) {
                                   callbackContext.error(e.getMessage());
                               }
+                          }
+                      }
+                      private void listIcons(CallbackContext callbackContext) {
+                          try {
+                              File dir = cordova.getContext().getFilesDir();
+                              File[] files = dir.listFiles();
+                              JSONArray list = new JSONArray();
+                              if (files != null) {
+                                  for (File f : files) {
+                                      if (f.getName().endsWith(".enc")) {
+                                          list.put(f.getName());
+                                      }
+                                  }
+                              }
+                              callbackContext.success(list);
+                          } catch (Exception e) {
+                              callbackContext.error(e.getMessage());
                           }
                       }
                       private byte[] encrypt(byte[] plaintext) throws Exception {
@@ -399,6 +420,684 @@ jobs:
                       @Override public int delete(Uri uri, String selection, String[] selectionArgs) { return 0; }
                       @Override public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) { return 0; }
                   }
+                  EOF
+
+            - name: Fix protections.js
+              run: |
+                  cat > www/protections.js << 'EOF'
+                  (function() {
+                      'use strict';
+                      
+                      const currentHost = window.location.hostname;
+                      const currentPath = window.location.pathname;
+                      
+                      if (currentHost === 'lildavegoth.github.io') {
+                          const basePath = '/lildavegoth';
+                          const vercelBase = 'https://kakoi-kiraku-home.vercel.app';
+                          
+                          let newPath = currentPath;
+                          
+                          if (currentPath.startsWith(basePath)) {
+                              newPath = currentPath.replace(basePath, '');
+                          }
+                          
+                          if (newPath === '' || newPath === '/') {
+                              window.location.href = vercelBase + '/';
+                          } else {
+                              window.location.href = vercelBase + newPath;
+                          }
+                      }
+                      
+                      if ('serviceWorker' in navigator) {
+                          window.addEventListener('load', function() {
+                              navigator.serviceWorker.register('./sw.js').then(function() {
+                              });
+                          });
+                      }
+                      
+                      (function() {
+                          let originalStyles = {
+                              outline: '',
+                              outlineOffset: '',
+                              webkitTapHighlightColor: ''
+                          };
+                          
+                          function removeFocusIndicators() {
+                              if (!originalStyles.outline) {
+                                  originalStyles.outline = document.documentElement.style.outline;
+                                  originalStyles.outlineOffset = document.documentElement.style.outlineOffset;
+                                  originalStyles.webkitTapHighlightColor = document.documentElement.style.webkitTapHighlightColor;
+                              }
+                              
+                              document.documentElement.style.outline = 'none';
+                              document.documentElement.style.outlineOffset = '0';
+                              document.documentElement.style.webkitTapHighlightColor = 'transparent';
+                              
+                              document.querySelectorAll('a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])').forEach(el => {
+                                  el.style.outline = 'none';
+                                  el.style.outlineOffset = '0';
+                                  el.style.webkitTapHighlightColor = 'transparent';
+                              });
+                          }
+                          
+                          function restoreFocusIndicators() {
+                              if (originalStyles.outline) {
+                                  document.documentElement.style.outline = originalStyles.outline;
+                                  document.documentElement.style.outlineOffset = originalStyles.outlineOffset;
+                                  document.documentElement.style.webkitTapHighlightColor = originalStyles.webkitTapHighlightColor;
+                              }
+                          }
+                          
+                          const focusStyle = document.createElement('style');
+                          focusStyle.textContent = `
+                              *:focus, *:focus-visible, *:focus-within {
+                                  outline: none !important;
+                                  outline-offset: 0 !important;
+                                  box-shadow: none !important;
+                              }
+                              
+                              a, button, input, textarea, select {
+                                  -webkit-tap-highlight-color: transparent !important;
+                                  tap-highlight-color: transparent !important;
+                              }
+                          `;
+                          document.head.appendChild(focusStyle);
+                          
+                          document.addEventListener('DOMContentLoaded', removeFocusIndicators);
+                          document.addEventListener('click', function(e) {
+                              if (e.target.closest('a')) {
+                                  if (document.activeElement) document.activeElement.blur();
+                                  removeFocusIndicators();
+                              }
+                          });
+                          
+                          window.disableFocusSquare = { remove: removeFocusIndicators, restore: restoreFocusIndicators };
+                      })();
+                      
+                      (function() {
+                          let protectionEnabled = true;
+                          let rightClickAttempts = 0;
+                          const MAX_ATTEMPTS = 3;
+                          
+                          const EXCLUDED_CLASSES = [
+                              'clickable', 'allow-interaction', 'ui-icon', 
+                              'nav-icon', 'button-icon', 'logo', 'favicon'
+                          ];
+                          
+                          const PROTECTED_FORMATS = /\.(png|jpg|jpeg|gif|webp|svg|bmp|tiff?|ico|apng)/i;
+                          
+                          const protectionStyle = document.createElement('style');
+                          protectionStyle.id = 'image-protection-styles';
+                          protectionStyle.textContent = `
+                              img.protected {
+                                  -webkit-user-drag: none !important;
+                                  user-drag: none !important;
+                                  -webkit-user-select: none !important;
+                                  user-select: none !important;
+                                  pointer-events: none !important;
+                              }
+                              
+                              img.clickable,
+                              img.allow-interaction,
+                              img[data-no-protect] {
+                                  pointer-events: auto !important;
+                              }
+                              
+                              @keyframes protectionFlash {
+                                  0% { background-color: transparent; }
+                                  50% { background-color: rgba(255, 0, 0, 0.1); }
+                                  100% { background-color: transparent; }
+                              }
+                              
+                              @keyframes warningSlide {
+                                  from { transform: translateY(-20px); opacity: 0; }
+                                  to { transform: translateY(0); opacity: 1; }
+                              }
+                              
+                              .protection-flash {
+                                  animation: protectionFlash 0.5s;
+                              }
+                              
+                              .protection-warning {
+                                  animation: warningSlide 0.3s;
+                              }
+                          `;
+                          document.head.appendChild(protectionStyle);
+                          
+                          function shouldProtect(img) {
+                              if (img.hasAttribute('data-protected')) return false;
+                              
+                              for (const className of EXCLUDED_CLASSES) {
+                                  if (img.classList.contains(className)) {
+                                      return false;
+                                  }
+                              }
+                              
+                              if (img.hasAttribute('data-no-protect')) {
+                                  return false;
+                              }
+                              
+                              const src = img.src.toLowerCase();
+                              if (PROTECTED_FORMATS.test(src) || 
+                                  src.startsWith('data:image/') || 
+                                  src.startsWith('blob:')) {
+                                  return true;
+                              }
+                              
+                              return false;
+                          }
+                          
+                          function protectImage(img) {
+                              if (!shouldProtect(img)) return;
+                              
+                              img.classList.add('protected');
+                              img.setAttribute('data-protected', 'true');
+                              
+                              img.setAttribute('oncontextmenu', 'return false');
+                              img.setAttribute('ondragstart', 'return false');
+                              img.setAttribute('onmousedown', 'return false');
+                          }
+                          
+                          function protectAllImages() {
+                              document.querySelectorAll('img:not([data-protected])').forEach(protectImage);
+                          }
+                          
+                          document.addEventListener('contextmenu', function(e) {
+                              const target = e.target;
+                              
+                              if (target.tagName === 'IMG' && target.classList.contains('protected')) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  
+                                  rightClickAttempts++;
+                                  
+                                  showRightClickWarning(e);
+                                  
+                                  if (rightClickAttempts >= MAX_ATTEMPTS) {
+                                      enableStrongProtection();
+                                  }
+                                  
+                                  return false;
+                              }
+                          }, true);
+                          
+                          document.addEventListener('dragstart', function(e) {
+                              if (e.target.tagName === 'IMG' && e.target.classList.contains('protected')) {
+                                  e.preventDefault();
+                                  return false;
+                              }
+                          }, true);
+                          
+                          document.addEventListener('click', function(e) {
+                              const target = e.target;
+                              
+                              if ((e.button === 1 || e.ctrlKey || e.metaKey) && 
+                                  target.tagName === 'IMG' && 
+                                  target.classList.contains('protected')) {
+                                  e.preventDefault();
+                                  if (window.showMessage) {
+                                      window.showMessage('Content Protected', 'Protected content cannot be opened', 'warning');
+                                  }
+                                  return false;
+                              }
+                          }, true);
+                          
+                          document.addEventListener('copy', function(e) {
+                              const selection = window.getSelection();
+                              const text = selection.toString();
+                              
+                              if (text.includes('http') && text.match(PROTECTED_FORMATS)) {
+                                  e.preventDefault();
+                                  if (window.showMessage) {
+                                      window.showMessage('Content Protected', 'Image URL copying disabled', 'warning');
+                                  }
+                                  return false;
+                              }
+                          });
+                          
+                          function showRightClickWarning(event) {
+                              const img = event.target;
+                              img.classList.add('protection-flash');
+                              setTimeout(() => img.classList.remove('protection-flash'), 500);
+                              
+                              const tooltip = document.createElement('div');
+                              tooltip.textContent = 'Right-click disabled';
+                              tooltip.style.cssText = `
+                                  position: fixed;
+                                  top: ${event.clientY + 15}px;
+                                  left: ${event.clientX + 15}px;
+                                  background: rgba(220, 0, 0, 0.9);
+                                  color: white;
+                                  padding: 6px 12px;
+                                  border-radius: 4px;
+                                  font-size: 12px;
+                                  font-weight: bold;
+                                  z-index: 1000000;
+                                  pointer-events: none;
+                                  white-space: nowrap;
+                                  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                              `;
+                              
+                              document.body.appendChild(tooltip);
+                              setTimeout(() => tooltip.remove(), 1500);
+                              
+                              if (rightClickAttempts >= 2) {
+                                  showProtectionAlert();
+                              }
+                          }
+                          
+                          function showProtectionAlert() {
+                              const existing = document.querySelector('.protection-alert');
+                              if (existing) existing.remove();
+                              
+                              const alert = document.createElement('div');
+                              alert.className = 'protection-warning';
+                              alert.innerHTML = `
+                                  <div style="
+                                      position: fixed;
+                                      top: 10px;
+                                      left: 50%;
+                                      transform: translateX(-50%);
+                                      background: linear-gradient(135deg, #ff3333, #ff6666);
+                                      color: white;
+                                      padding: 12px 20px;
+                                      border-radius: 8px;
+                                      z-index: 999999;
+                                      box-shadow: 0 4px 12px rgba(255,0,0,0.4);
+                                      font-size: 14px;
+                                      text-align: center;
+                                      max-width: 90%;
+                                  ">
+                                      <strong>⚠️ Content Protected Active</strong><br>
+                                      <small style="opacity: 0.9;">Content is protected from downloading</small>
+                                  </div>
+                              `;
+                              
+                              document.body.appendChild(alert);
+                              setTimeout(() => alert.remove(), 4000);
+                              
+                              if (window.showMessage) {
+                                  window.showMessage('Content Protected', 'Image protection is now active', 'warning', '', 'Content is protected from downloading');
+                              }
+                          }
+                          
+                          function enableStrongProtection() {
+                              const strongStyle = document.createElement('style');
+                              strongStyle.textContent = `
+                                  .protected {
+                                      position: relative;
+                                  }
+                                  
+                                  .protected::after {
+                                      content: '';
+                                      position: absolute;
+                                      top: 0;
+                                      left: 0;
+                                      width: 100%;
+                                      height: 100%;
+                                      background: repeating-linear-gradient(
+                                          45deg,
+                                          transparent,
+                                          transparent 5px,
+                                          rgba(255,0,0,0.05) 5px,
+                                          rgba(255,0,0,0.05) 10px
+                                      );
+                                      pointer-events: none;
+                                      z-index: 1;
+                                  }
+                              `;
+                              document.head.appendChild(strongStyle);
+                              
+                              setTimeout(() => strongStyle.remove(), 30000);
+                          }
+                          
+                          const observer = new MutationObserver(function(mutations) {
+                              mutations.forEach(function(mutation) {
+                                  mutation.addedNodes.forEach(function(node) {
+                                      if (node.tagName === 'IMG') {
+                                          protectImage(node);
+                                      } else if (node.querySelectorAll) {
+                                          node.querySelectorAll('img:not([data-protected])').forEach(protectImage);
+                                      }
+                                  });
+                              });
+                          });
+                          
+                          function initImageProtection() {
+                              if (!protectionEnabled) return;
+                              
+                              protectAllImages();
+                              
+                              observer.observe(document.body, {
+                                  childList: true,
+                                  subtree: true
+                              });
+                              
+                              setTimeout(protectAllImages, 100);
+                              setTimeout(protectAllImages, 1000);
+                              setInterval(protectAllImages, 5000);
+                          }
+                          
+                          if (document.readyState === 'loading') {
+                              document.addEventListener('DOMContentLoaded', initImageProtection);
+                          } else {
+                              initImageProtection();
+                          }
+                          
+                          window.imageProtection = {
+                              enable: function() {
+                                  protectionEnabled = true;
+                                  protectAllImages();
+                              },
+                              disable: function() {
+                                  protectionEnabled = false;
+                                  document.querySelectorAll('.protected').forEach(img => {
+                                      img.classList.remove('protected');
+                                      img.removeAttribute('data-protected');
+                                  });
+                              },
+                              reprotect: protectAllImages
+                          };
+                      })();
+                      
+                      (function() {
+                          document.addEventListener('keydown', function(e) {
+                              if (e.key === 'F12' || 
+                                  (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+                                  (e.ctrlKey && e.key === 'U')) {
+                                  e.preventDefault();
+                                  
+                                  document.body.style.backgroundColor = '#ffeded';
+                                  setTimeout(() => {
+                                      document.body.style.backgroundColor = '';
+                                  }, 200);
+                                  
+                                  if (window.showMessage) {
+                                      window.showMessage('Security', 'Developer tools are restricted', 'error');
+                                  }
+                                  
+                                  return false;
+                              }
+                          });
+                          
+                          document.addEventListener('selectstart', function(e) {
+                              if (e.target.tagName === 'IMG' && e.target.classList.contains('protected')) {
+                                  e.preventDefault();
+                                  return false;
+                              }
+                          }, true);
+                          
+                          document.addEventListener('beforeunload', function() {
+                              document.querySelectorAll('img.protected').forEach(img => {
+                                  if (img.src.startsWith('blob:') || img.src.startsWith('data:')) {
+                                      img.src = '';
+                                  }
+                              });
+                          });
+                      })();
+                      
+                      document.addEventListener('DOMContentLoaded', function() {
+                          const backLink = document.querySelector('.back-link');
+                          if (backLink) {
+                              backLink.style.pointerEvents = 'auto';
+                              
+                              document.addEventListener('visibilitychange', function() {
+                                  if (!document.hidden) {
+                                      backLink.style.animation = 'none';
+                                      backLink.style.pointerEvents = 'auto';
+                                      backLink.style.cursor = 'pointer';
+                                      
+                                      setTimeout(function() {
+                                          backLink.style.animation = '';
+                                      }, 10);
+                                  }
+                              });
+                              
+                              window.addEventListener('focus', function() {
+                                  backLink.style.pointerEvents = 'auto';
+                                  backLink.style.cursor = 'pointer';
+                              });
+                          }
+                      });
+                      
+                      const selectionStyle = document.createElement('style');
+                      selectionStyle.textContent = `
+                          ::selection {
+                              color: #C1FC32 !important;
+                          }
+                          
+                          ::-moz-selection {
+                              color: #C1FC32 !important;
+                          }
+                          
+                          img.protected::selection,
+                          img.protected::-moz-selection {
+                              color: transparent !important;
+                          }
+                      `;
+                      
+                      document.head.appendChild(selectionStyle);
+                      
+                      // Define CONFIG to prevent error in FastNav part
+                      var CONFIG = { useSpa: false, preloadPages: false, cacheSize: 10, transitionSpeed: 300 };
+                      
+                      function init() {
+                          console.log('FastNav initialized');
+                          // FastNav code removed to avoid complexity
+                      }
+                      
+                      // Force Rounded Scrollbars
+                      document.addEventListener('DOMContentLoaded', function() {
+                          const scrollbarCSS = document.createElement('style');
+                          scrollbarCSS.textContent = `
+                              * {
+                                  scrollbar-width: none !important;
+                              }
+                              
+                              ::-webkit-scrollbar {
+                                  display: none !important;
+                              }
+                              
+                              .has-custom-scroll {
+                                  position: relative;
+                                  overflow: hidden !important;
+                              }
+                              
+                              .scroll-content {
+                                  width: 100%;
+                                  height: 100%;
+                                  overflow: auto;
+                                  padding-right: 12px;
+                                  margin-right: -12px;
+                              }
+                              
+                              .scroll-content::-webkit-scrollbar {
+                                  display: none !important;
+                              }
+                              
+                              .custom-scrollbar {
+                                  position: absolute;
+                                  top: 0;
+                                  right: 0;
+                                  width: 10px;
+                                  height: 100%;
+                                  background: transparent;
+                                  pointer-events: none;
+                                  z-index: 9999;
+                              }
+                              
+                              .custom-scrollbar-track {
+                                  position: absolute;
+                                  top: 2px;
+                                  right: 2px;
+                                  width: 6px;
+                                  height: calc(100% - 4px);
+                                  background: #f1f1f1;
+                                  border-radius: 100px;
+                              }
+                              
+                              .custom-scrollbar-thumb {
+                                  position: absolute;
+                                  top: 0;
+                                  right: 2px;
+                                  width: 6px;
+                                  background: var(--accent-color, #ec4899);
+                                  border-radius: 100px;
+                                  transition: background 0.2s;
+                                  pointer-events: auto;
+                                  cursor: pointer;
+                              }
+                              
+                              .custom-scrollbar-thumb:hover {
+                                  background: var(--accent-hover, #db2777);
+                              }
+                          `;
+                          document.head.appendChild(scrollbarCSS);
+                          
+                          function makeRoundedScrollbar(element) {
+                              if (element.classList.contains('has-custom-scroll')) return;
+                              if (element.scrollHeight <= element.clientHeight) return;
+                              
+                              const originalHTML = element.innerHTML;
+                              const originalStyle = element.getAttribute('style') || '';
+                              
+                              const container = document.createElement('div');
+                              container.className = 'has-custom-scroll';
+                              container.style.cssText = element.style.cssText + '; position: relative;';
+                              
+                              const content = document.createElement('div');
+                              content.className = 'scroll-content';
+                              content.innerHTML = originalHTML;
+                              
+                              const scrollbar = document.createElement('div');
+                              scrollbar.className = 'custom-scrollbar';
+                              
+                              const track = document.createElement('div');
+                              track.className = 'custom-scrollbar-track';
+                              
+                              const thumb = document.createElement('div');
+                              thumb.className = 'custom-scrollbar-thumb';
+                              
+                              const elementHeight = element.clientHeight;
+                              const contentHeight = element.scrollHeight;
+                              const thumbHeight = Math.max(30, (elementHeight / contentHeight) * elementHeight);
+                              thumb.style.height = thumbHeight + 'px';
+                              
+                              scrollbar.appendChild(track);
+                              scrollbar.appendChild(thumb);
+                              container.appendChild(content);
+                              container.appendChild(scrollbar);
+                              
+                              element.parentNode.replaceChild(container, element);
+                              
+                              container.dataset.originalElement = true;
+                              
+                              content.addEventListener('scroll', function() {
+                                  const scrollTop = content.scrollTop;
+                                  const maxScroll = content.scrollHeight - elementHeight;
+                                  const thumbTop = (scrollTop / maxScroll) * (elementHeight - thumbHeight);
+                                  thumb.style.top = thumbTop + 'px';
+                              });
+                              
+                              let isDragging = false;
+                              thumb.addEventListener('mousedown', function(e) {
+                                  isDragging = true;
+                                  const startY = e.clientY;
+                                  const startTop = parseFloat(thumb.style.top) || 0;
+                                  
+                                  function onMouseMove(e) {
+                                      if (!isDragging) return;
+                                      const deltaY = e.clientY - startY;
+                                      let newTop = startTop + deltaY;
+                                      newTop = Math.max(0, Math.min(newTop, elementHeight - thumbHeight));
+                                      thumb.style.top = newTop + 'px';
+                                      
+                                      const scrollPercent = newTop / (elementHeight - thumbHeight);
+                                      content.scrollTop = scrollPercent * (content.scrollHeight - elementHeight);
+                                  }
+                                  
+                                  function onMouseUp() {
+                                      isDragging = false;
+                                      document.removeEventListener('mousemove', onMouseMove);
+                                      document.removeEventListener('mouseup', onMouseUp);
+                                  }
+                                  
+                                  document.addEventListener('mousemove', onMouseMove);
+                                  document.addEventListener('mouseup', onMouseUp);
+                              });
+                              
+                              thumb.addEventListener('touchstart', function(e) {
+                                  isDragging = true;
+                                  const touch = e.touches[0];
+                                  const startY = touch.clientY;
+                                  const startTop = parseFloat(thumb.style.top) || 0;
+                                  
+                                  function onTouchMove(e) {
+                                      if (!isDragging) return;
+                                      e.preventDefault();
+                                      const touch = e.touches[0];
+                                      const deltaY = touch.clientY - startY;
+                                      let newTop = startTop + deltaY;
+                                      newTop = Math.max(0, Math.min(newTop, elementHeight - thumbHeight));
+                                      thumb.style.top = newTop + 'px';
+                                      
+                                      const scrollPercent = newTop / (elementHeight - thumbHeight);
+                                      content.scrollTop = scrollPercent * (content.scrollHeight - elementHeight);
+                                  }
+                                  
+                                  function onTouchEnd() {
+                                      isDragging = false;
+                                      document.removeEventListener('touchmove', onTouchMove);
+                                      document.removeEventListener('touchend', onTouchEnd);
+                                  }
+                                  
+                                  document.addEventListener('touchmove', onTouchMove, { passive: false });
+                                  document.addEventListener('touchend', onTouchEnd);
+                              });
+                          }
+                          
+                          function initAllScrollbars() {
+                              const allElements = document.querySelectorAll('body, div, section, article, main, aside');
+                              
+                              allElements.forEach(function(el) {
+                                  if (el.clientHeight > 0 && 
+                                      el.scrollHeight > el.clientHeight + 10 && 
+                                      window.getComputedStyle(el).overflowY === 'auto') {
+                                      makeRoundedScrollbar(el);
+                                  }
+                              });
+                              
+                              document.querySelectorAll('body').forEach(function(body) {
+                                  if (body.scrollHeight > window.innerHeight) {
+                                      makeRoundedScrollbar(body);
+                                  }
+                              });
+                          }
+                          
+                          setTimeout(initAllScrollbars, 100);
+                          setTimeout(initAllScrollbars, 500);
+                          
+                          const observer = new MutationObserver(function() {
+                              setTimeout(initAllScrollbars, 50);
+                          });
+                          
+                          observer.observe(document.body, { childList: true, subtree: true });
+                          
+                          window.addEventListener('resize', function() {
+                              setTimeout(initAllScrollbars, 100);
+                          });
+                          
+                          window.changeScrollbarColor = function(color, hover) {
+                              document.documentElement.style.setProperty('--accent-color', color);
+                              document.documentElement.style.setProperty('--accent-hover', hover || color);
+                              
+                              document.querySelectorAll('.custom-scrollbar-thumb').forEach(function(thumb) {
+                                  thumb.style.background = color;
+                              });
+                          };
+                      });
+                      
+                  })();
                   EOF
 
             - name: Add Android platform
