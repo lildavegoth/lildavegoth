@@ -104,17 +104,6 @@ jobs:
                                   android:exported="true"
                                   android:grantUriPermissions="true" />
                           </config-file>
-                          <!-- Intent filter for launcher detection -->
-                          <config-file target="AndroidManifest.xml" parent="/manifest/application/activity">
-                              <intent-filter>
-                                  <action android:name="org.adw.launcher.THEMES" />
-                                  <category android:name="android.intent.category.DEFAULT" />
-                              </intent-filter>
-                          </config-file>
-                          <!-- Metadata pointing to iconpack.xml -->
-                          <config-file target="AndroidManifest.xml" parent="/manifest/application">
-                              <meta-data android:name="org.adw.launcher.icons" android:resource="@xml/iconpack" />
-                          </config-file>
                           <resource-file src="res/xml/iconpack.xml" target="res/xml/iconpack.xml" />
                           <config-file target="AndroidManifest.xml" parent="/manifest">
                               <uses-permission android:name="android.permission.INTERNET" />
@@ -139,11 +128,15 @@ jobs:
                   EOF
 
                   cat > "$PLUGIN_DIR/www/KakoiKirakuIconPack.js" << 'EOF'
-                  var exec = require('cordova/exec');
-                  exports.authenticate = function(token,success,error){exec(success,error,'KakoiKirakuIconPack','authenticate',[token]);};
-                  exports.syncIcons = function(manifestUrl,success,error){exec(success,error,'KakoiKirakuIconPack','syncIcons',[manifestUrl]);};
-                  exports.addIcon = function(pkg,activity,base64Image,success,error){exec(success,error,'KakoiKirakuIconPack','addIcon',[pkg,activity,base64Image]);};
-                  exports.test = function(success,error){exec(success,error,'KakoiKirakuIconPack','test',[]);};
+                  alert('KakoiKirakuIconPack.js is loading');
+                  cordova.define("cordova-plugin-kakoikiraku-iconpack.KakoiKirakuIconPack", function(require, exports, module) {
+                      alert('Define is running');
+                      var exec = require('cordova/exec');
+                      exports.authenticate = function(token,success,error){exec(success,error,'KakoiKirakuIconPack','authenticate',[token]);};
+                      exports.syncIcons = function(manifestUrl,success,error){exec(success,error,'KakoiKirakuIconPack','syncIcons',[manifestUrl]);};
+                      exports.addIcon = function(pkg,activity,base64Image,success,error){exec(success,error,'KakoiKirakuIconPack','addIcon',[pkg,activity,base64Image]);};
+                      exports.test = function(success,error){exec(success,error,'KakoiKirakuIconPack','test',[]);};
+                  });
                   EOF
 
                   cat > "$PLUGIN_DIR/src/android/KakoiKirakuIconPack.java" << 'EOF'
@@ -422,6 +415,9 @@ jobs:
                   if [ -d "kakoikiraku-iconpack-plugin" ]; then
                       cordova plugin add ./kakoikiraku-iconpack-plugin --nofetch
                   fi
+
+            - name: Prepare Cordova
+              run: cordova prepare
 
             - name: Decode Keystore
               run: |
