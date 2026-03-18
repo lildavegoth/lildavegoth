@@ -40,7 +40,7 @@ jobs:
             - name: Install dependencies
               run: npm install
 
-            - name: Create Eleventy layout
+            - name: Create Eleventy layout and protection script
               run: |
                   mkdir -p _includes
                   cat > _includes/layout.njk << 'EOF'
@@ -51,24 +51,26 @@ jobs:
                       <meta name="viewport" content="width=device-width, initial-scale=1.0">
                       <title>{{ title if title else "Kiraku Home" }}</title>
                       <script src="/protections.js"></script>
-                      <script>
-                      (function() {
-                          var allowed = ['lildavegoth.github.io', 'kakoi-kiraku-home.vercel.app'];
-                          var host = window.location.hostname;
-                          var isFile = window.location.protocol === 'file:';
-                          if (isFile || allowed.indexOf(host) === -1 || typeof window.__PROTECTIONS_LOADED__ === 'undefined') {
-                              document.addEventListener('DOMContentLoaded', function() {
-                                  document.body.innerHTML = '<div style="text-align:center;margin-top:50px;font-family:sans-serif"><h1>🔒 Content Protected</h1><p>This content cannot be viewed outside the official site.</p></div>';
-                              });
-                              throw new Error('Access denied');
-                          }
-                      })();
-                      </script>
+                      <script src="/inline-protection.js"></script>
                   </head>
                   <body>
                       {{ content | safe }}
                   </body>
                   </html>
+                  EOF
+
+                  cat > inline-protection.js << 'EOF'
+                  (function() {
+                      var allowed = ['lildavegoth.github.io', 'kakoi-kiraku-home.vercel.app'];
+                      var host = window.location.hostname;
+                      var isFile = window.location.protocol === 'file:';
+                      if (isFile || allowed.indexOf(host) === -1 || typeof window.__PROTECTIONS_LOADED__ === 'undefined') {
+                          document.addEventListener('DOMContentLoaded', function() {
+                              document.body.innerHTML = '<div style="text-align:center;margin-top:50px;font-family:sans-serif"><h1>🔒 Content Protected</h1><p>This content cannot be viewed outside the official site.</p></div>';
+                          });
+                          throw new Error('Access denied');
+                      }
+                  })();
                   EOF
 
             - name: Create Eleventy config
@@ -80,6 +82,7 @@ jobs:
                       eleventyConfig.addPassthroughCopy("js");
                       eleventyConfig.addPassthroughCopy("*.css");
                       eleventyConfig.addPassthroughCopy("*.js");
+                      eleventyConfig.addPassthroughCopy("inline-protection.js");
                       eleventyConfig.addPassthroughCopy("sw.js");
                       eleventyConfig.addPassthroughCopy("robots.txt");
                       eleventyConfig.addPassthroughCopy("sitemap.xml");
@@ -122,6 +125,13 @@ jobs:
 
             - name: Build with Eleventy
               run: npx eleventy
+
+            - name: Install javascript-obfuscator
+              run: npm install -g javascript-obfuscator
+
+            - name: Obfuscate all JavaScript files in _site
+              run: |
+                  find ./_site -name "*.js" -type f -exec javascript-obfuscator {} --output {} --compact true --self-defending true --disable-console-output true \;
 
             - name: Upload GitHub Pages artifact
               uses: actions/upload-pages-artifact@v3
