@@ -40,7 +40,7 @@ jobs:
             - name: Install dependencies
               run: npm install
 
-            - name: Create Eleventy layout
+            - name: Create Eleventy layout (with inlined protections.js)
               run: |
                   mkdir -p _includes
                   cat > _includes/layout.njk << 'EOF'
@@ -50,7 +50,11 @@ jobs:
                       <meta charset="UTF-8">
                       <meta name="viewport" content="width=device-width, initial-scale=1.0">
                       <title>{{ title if title else "Kiraku Home" }}</title>
-                      <script src="/protections.js"></script>
+                      <script>
+                  EOF
+                  cat protections.js >> _includes/layout.njk
+                  cat >> _includes/layout.njk << 'EOF'
+                      </script>
                       <script>
                       (function() {
                           var allowed = ['lildavegoth.github.io', 'kakoi-kiraku-home.vercel.app'];
@@ -93,32 +97,29 @@ jobs:
                   };
                   EOF
 
-            - name: Transform HTML files into Eleventy source
+            - name: Transform HTML files recursively into Eleventy source
               run: |
                   mkdir -p src
-                  for file in *.html; do
-                      if [ -f "$file" ]; then
-                          title=$(grep -oP '(?<=<title>).*?(?=</title>)' "$file" | head -1)
-                          if [ -z "$title" ]; then
-                              title="${file%.html}"
-                          fi
-                          awk '/<body[^>]*>/ { inside=1; next; } /<\/body>/ { inside=0; next; } inside { print; }' "$file" > "src/$file"
-                          sed -i "1s/^/---\nlayout: layout.njk\ntitle: $title\n---\n/" "src/$file"
+                  # Find all .html files, excluding hidden directories
+                  find . -type f -name "*.html" -not -path "./.git/*" -not -path "./node_modules/*" | while read file; do
+                      # Remove leading "./"
+                      file="${file#./}"
+                      # Determine destination path under src/
+                      dest="src/$file"
+                      mkdir -p "$(dirname "$dest")"
+                      
+                      # Extract title (if any)
+                      title=$(grep -oP '(?<=<title>).*?(?=</title>)' "$file" | head -1)
+                      if [ -z "$title" ]; then
+                          title=$(basename "$file" .html)
                       fi
+                      
+                      # Extract body content
+                      awk '/<body[^>]*>/ { inside=1; next; } /<\/body>/ { inside=0; next; } inside { print; }' "$file" > "$dest"
+                      
+                      # Prepend front matter
+                      sed -i "1s/^/---\nlayout: layout.njk\ntitle: $title\n---\n/" "$dest"
                   done
-                  if [ -d "pages" ]; then
-                      mkdir -p src/pages
-                      for file in pages/*.html; do
-                          if [ -f "$file" ]; then
-                              title=$(grep -oP '(?<=<title>).*?(?=</title>)' "$file" | head -1)
-                              if [ -z "$title" ]; then
-                                  title=$(basename "$file" .html)
-                              fi
-                              awk '/<body[^>]*>/ { inside=1; next; } /<\/body>/ { inside=0; next; } inside { print; }' "$file" > "src/pages/$(basename "$file")"
-                              sed -i "1s/^/---\nlayout: layout.njk\ntitle: $title\n---\n/" "src/pages/$(basename "$file")"
-                          fi
-                      done
-                  fi
 
             - name: Build with Eleventy
               run: npx eleventy
@@ -254,7 +255,7 @@ jobs:
                   path: platforms/android/**/*.apk
                   if-no-files-found: error
 
-    deploy:
+    deploy-github-pages:
         needs: build-eleventy
         runs-on: ubuntu-latest
         environment:
@@ -267,3 +268,21 @@ jobs:
             - name: Deploy to GitHub Pages
               id: deployment
               uses: actions/deploy-pages@v4
+
+    deploy-vercel:
+        needs: build-eleventy
+        runs-on: ubuntu-latest
+        steps:
+            - name: Download built site
+              uses: actions/download-artifact@v4
+              with:
+                  name: github-pages
+                  path: _site
+            - name: Deploy to Vercel
+              uses: amondnet/vercel-action@v20
+              with:
+                  vercel-token: ${{ secrets.VERCEL_TOKEN }}
+                  vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+                  vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+                  vercel-args: '--prod'
+                  working-directory: ./_site
