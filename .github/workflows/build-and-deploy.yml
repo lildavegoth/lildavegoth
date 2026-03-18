@@ -32,7 +32,8 @@ jobs:
                           "build": "eleventy"
                       },
                       "devDependencies": {
-                          "@11ty/eleventy": "^2.0.1"
+                          "@11ty/eleventy": "^2.0.1",
+                          "html-minifier": "^4.0.0"
                       }
                   }
                   EOF
@@ -53,11 +54,14 @@ jobs:
                       <script src="/protections.js"></script>
                       <script>
                       (function() {
-                          if (typeof window.__PROTECTIONS_LOADED__ === 'undefined') {
+                          var allowed = ['lildavegoth.github.io', 'kakoi-kiraku-home.vercel.app'];
+                          var host = window.location.hostname;
+                          var isFile = window.location.protocol === 'file:';
+                          if (isFile || allowed.indexOf(host) === -1 || typeof window.__PROTECTIONS_LOADED__ === 'undefined') {
                               document.addEventListener('DOMContentLoaded', function() {
-                                  document.body.innerHTML = '<div style="text-align:center;margin-top:50px;font-family:sans-serif"><h1>🔒 Content Protected</h1><p>This content cannot be viewed directly.</p></div>';
+                                  document.body.innerHTML = '<div style="text-align:center;margin-top:50px;font-family:sans-serif"><h1>🔒 Content Protected</h1><p>This content cannot be viewed outside the official site.</p></div>';
                               });
-                              throw new Error('Protection script not loaded');
+                              throw new Error('Access denied');
                           }
                       })();
                       </script>
@@ -119,6 +123,10 @@ jobs:
 
             - name: Build with Eleventy
               run: npx eleventy
+
+            - name: Minify HTML output
+              run: |
+                  npx html-minifier --collapse-whitespace --remove-comments --remove-redundant-attributes --remove-script-type-attributes --remove-style-link-type-attributes --use-short-doctype --minify-css true --minify-js true --input-dir ./_site --output-dir ./_site --file-ext html
 
             - name: Upload GitHub Pages artifact
               uses: actions/upload-pages-artifact@v3
