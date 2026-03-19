@@ -97,7 +97,7 @@ jobs:
                   };
                   EOF
 
-            - name: Convert HTML files to Eleventy markdown/njk
+            - name: Convert HTML to Eleventy format
               run: |
                   mkdir -p src/pages
                   for file in *.html; do
@@ -107,7 +107,6 @@ jobs:
                       sed -i "1s/^/---\nlayout: layout.njk\ntitle: $title\n---\n/" "src/${file}"
                     fi
                   done
-
                   if [ -d "pages" ]; then
                     for file in pages/*.html; do
                       if [ -f "$file" ]; then
@@ -121,7 +120,7 @@ jobs:
             - name: Build Eleventy site
               run: npx eleventy
 
-            - name: Upload artifact for Pages
+            - name: Upload Pages artifact
               uses: actions/upload-pages-artifact@v3
               with:
                   path: ./_site
@@ -147,11 +146,11 @@ jobs:
             - name: Setup Android SDK
               uses: android-actions/setup-android@v3
 
-            - name: Install required SDK components
+            - name: Install SDK components
               run: yes | sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
             - name: Install Cordova CLI
-              run: npm install -g cordova@12
+              run: npm install -g cordova@11.1.0
 
             - name: Download www artifact
               uses: actions/download-artifact@v4
@@ -298,12 +297,12 @@ jobs:
                   }
                   EOF
 
-            - name: Add Android platform
+            - name: Add Android platform first
               run: |
                   cordova platform rm android || true
-                  cordova platform add android@13
+                  cordova platform add android@13.0.0
 
-            - name: Install plugins
+            - name: Install all plugins
               run: |
                   cordova plugin add cordova-plugin-file --save
                   cordova plugin add cordova-plugin-file-opener2 --save
@@ -316,9 +315,8 @@ jobs:
                   cordova plugin add cordova-plugin-deeplinks \
                     --variable URL_SCHEME=kiraku \
                     --variable HOST_NAME=kakoi-kiraku-home.vercel.app --save
+                  cordova plugin add ./plugins/cordova-plugin-userdictionary --save
 
-                  cordova plugin add https://github.com/lildavegoth/cordova-plugin-userdictionary.git --save
-                  
             - name: Build release APK
               env:
                   KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -341,7 +339,7 @@ jobs:
                   }
                   EOF
 
-                  cordova build android --release -- --packageType=apk
+                  cordova build android --release
 
             - name: Upload APK artifact
               uses: actions/upload-artifact@v4
