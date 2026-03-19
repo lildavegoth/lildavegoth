@@ -190,12 +190,101 @@ jobs:
                               <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
                               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
                               <uses-permission android:name="android.permission.VIBRATE" />
+                              <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY" />
+                              <uses-permission android:name="android.permission.READ_USER_DICTIONARY" />
                           </config-file>
                           <icon src="icon.png" />
                       </platform>
                   </widget>
                   EOF
                   sed -i 's/^          //' config.xml
+
+            - name: Create custom UserDictionary plugin
+              run: |
+                  mkdir -p plugins/cordova-plugin-userdictionary/src/android
+                  cat > plugins/cordova-plugin-userdictionary/plugin.xml << 'EOF'
+                  <?xml version='1.0' encoding='utf-8'?>
+                  <plugin id="cordova-plugin-userdictionary" version="1.0.0" xmlns="http://apache.org/cordova/ns/plugins/1.0">
+                      <name>UserDictionary</name>
+                      <description>Cordova User Dictionary Plugin</description>
+                      <license>MIT</license>
+                      <keywords>cordova,android,userdictionary</keywords>
+                      <platform name="android">
+                          <config-file target="res/xml/config.xml" parent="/*">
+                              <feature name="UserDictionary">
+                                  <param name="android-package" value="com.kakoikiraku.userdictionary.UserDictionaryPlugin"/>
+                              </feature>
+                          </config-file>
+                          <config-file target="AndroidManifest.xml" parent="/manifest">
+                              <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY"/>
+                              <uses-permission android:name="android.permission.READ_USER_DICTIONARY"/>
+                          </config-file>
+                          <source-file src="src/android/UserDictionaryPlugin.java" target-dir="src/com/kakoikiraku/userdictionary"/>
+                      </platform>
+                  </plugin>
+                  EOF
+                  cat > plugins/cordova-plugin-userdictionary/src/android/UserDictionaryPlugin.java << 'EOF'
+                  package com.kakoikiraku.userdictionary;
+                  import org.apache.cordova.CordovaPlugin;
+                  import org.apache.cordova.CallbackContext;
+                  import org.json.JSONArray;
+                  import org.json.JSONException;
+                  import android.content.ContentValues;
+                  import android.net.Uri;
+                  import android.provider.UserDictionary;
+                  import android.content.pm.PackageManager;
+                  import androidx.core.content.ContextCompat;
+                  import androidx.core.app.ActivityCompat;
+                  public class UserDictionaryPlugin extends CordovaPlugin {
+                      private static final int PERMISSION_REQUEST_CODE = 123;
+                      private CallbackContext pendingCallback;
+                      @Override
+                      public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+                          if ("addWord".equals(action)) {
+                              String word = args.getString(0);
+                              String shortcut = args.getString(1);
+                              addWord(word, shortcut, callbackContext);
+                              return true;
+                          }
+                          return false;
+                      }
+                      private void addWord(String word, String shortcut, CallbackContext callbackContext) {
+                          if (ContextCompat.checkSelfPermission(cordova.getActivity(), android.Manifest.permission.WRITE_USER_DICTIONARY)
+                                  != PackageManager.PERMISSION_GRANTED) {
+                              pendingCallback = callbackContext;
+                              ActivityCompat.requestPermissions(cordova.getActivity(),
+                                      new String[]{android.Manifest.permission.WRITE_USER_DICTIONARY},
+                                      PERMISSION_REQUEST_CODE);
+                              return;
+                          }
+                          ContentValues values = new ContentValues();
+                          values.put(UserDictionary.Words.WORD, word);
+                          if (shortcut != null && !shortcut.isEmpty()) {
+                              values.put(UserDictionary.Words.SHORTCUT, shortcut);
+                          }
+                          values.put(UserDictionary.Words.LOCALE, "en");
+                          values.put(UserDictionary.Words.FREQUENCY, 100);
+                          Uri uri = UserDictionary.Words.CONTENT_URI;
+                          try {
+                              cordova.getActivity().getContentResolver().insert(uri, values);
+                              callbackContext.success();
+                          } catch (Exception e) {
+                              callbackContext.error(e.getMessage());
+                          }
+                      }
+                      @Override
+                      public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
+                          if (requestCode == PERMISSION_REQUEST_CODE && pendingCallback != null) {
+                              if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                                  pendingCallback.success();
+                              } else {
+                                  pendingCallback.error("Permission denied");
+                              }
+                              pendingCallback = null;
+                          }
+                      }
+                  }
+                  EOF
 
             - name: Add Android platform
               run: |
@@ -215,6 +304,7 @@ jobs:
                   cordova plugin add cordova-plugin-deeplinks \
                       --variable URL_SCHEME=kiraku \
                       --variable HOST_NAME=kakoi-kiraku-home.vercel.app
+                  cordova plugin add ./plugins/cordova-plugin-userdictionary
 
             - name: Decode Keystore
               run: |
