@@ -11,121 +11,117 @@ permissions:
     id-token: write
 
 jobs:
+
     build-eleventy:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
 
-            - name: Setup Node.js 20
+            - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: 20
 
-            - name: Create package.json
+            - name: Create minimal package.json
               run: |
                   cat > package.json << 'EOF'
                   {
-                      "name": "kiraku-site",
-                      "version": "1.0.0",
-                      "scripts": {
-                          "build": "eleventy"
-                      },
-                      "devDependencies": {
-                          "@11ty/eleventy": "^2.0.1"
-                      }
+                    "name": "kiraku-site",
+                    "version": "1.0.0",
+                    "scripts": {
+                      "build": "eleventy"
+                    },
+                    "devDependencies": {
+                      "@11ty/eleventy": "^2.0.1"
+                    }
                   }
                   EOF
 
             - name: Install dependencies
               run: npm install
 
-            - name: Create Eleventy layout
+            - name: Create layout
               run: |
                   mkdir -p _includes
                   cat > _includes/layout.njk << 'EOF'
                   <!DOCTYPE html>
                   <html lang="en">
                   <head>
-                      <meta charset="UTF-8">
-                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                      <title>{{ title if title else "Kiraku Home" }}</title>
-                      <script src="/protections.js"></script>
-                      <script>
-                      (function() {
-                          var allowed = ['lildavegoth.github.io', 'kakoi-kiraku-home.vercel.app'];
-                          var host = window.location.hostname;
-                          var isFile = window.location.protocol === 'file:';
-                          if (isFile || allowed.indexOf(host) === -1 || typeof window.__PROTECTIONS_LOADED__ === 'undefined') {
-                              document.addEventListener('DOMContentLoaded', function() {
-                                  document.body.innerHTML = '<div style="text-align:center;margin-top:50px;font-family:sans-serif"><h1>🔒 Content Protected</h1><p>This content cannot be viewed outside the official site.</p></div>';
-                              });
-                              throw new Error('Access denied');
-                          }
-                      })();
-                      </script>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>{{ title or "Kiraku Home" }}</title>
+                    <script src="/protections.js"></script>
+                    <script>
+                    (function(){
+                      var allowed = ['lildavegoth.github.io','kakoi-kiraku-home.vercel.app'];
+                      var host = window.location.hostname;
+                      var isFile = window.location.protocol === 'file:';
+                      if (isFile || allowed.indexOf(host) === -1 || typeof window.__PROTECTIONS_LOADED__ === 'undefined') {
+                        document.addEventListener('DOMContentLoaded',function(){
+                          document.body.innerHTML = '<div style="text-align:center;margin-top:50px;font-family:sans-serif"><h1>🔒 Content Protected</h1><p>This content cannot be viewed outside the official site.</p></div>';
+                        });
+                        throw new Error('Access denied');
+                      }
+                    })();
+                    </script>
                   </head>
                   <body>
-                      {{ content | safe }}
+                    {{ content | safe }}
                   </body>
                   </html>
                   EOF
 
-            - name: Create Eleventy config
+            - name: Create .eleventy.js
               run: |
                   cat > .eleventy.js << 'EOF'
                   module.exports = function(eleventyConfig) {
-                      eleventyConfig.addPassthroughCopy("images");
-                      eleventyConfig.addPassthroughCopy("css");
-                      eleventyConfig.addPassthroughCopy("js");
-                      eleventyConfig.addPassthroughCopy("cssjs");
-                      eleventyConfig.addPassthroughCopy("*.css");
-                      eleventyConfig.addPassthroughCopy("*.js");
-                      eleventyConfig.addPassthroughCopy("*.cssjs");
-                      eleventyConfig.addPassthroughCopy("sw.js");
-                      eleventyConfig.addPassthroughCopy("robots.txt");
-                      eleventyConfig.addPassthroughCopy("sitemap.xml");
-                      return {
-                          dir: {
-                              input: "src",
-                              output: "_site",
-                              includes: "../_includes"
-                          }
-                      };
+                    eleventyConfig.addPassthroughCopy("images");
+                    eleventyConfig.addPassthroughCopy("css");
+                    eleventyConfig.addPassthroughCopy("js");
+                    eleventyConfig.addPassthroughCopy("cssjs");
+                    eleventyConfig.addPassthroughCopy("*.css");
+                    eleventyConfig.addPassthroughCopy("*.js");
+                    eleventyConfig.addPassthroughCopy("*.cssjs");
+                    eleventyConfig.addPassthroughCopy("sw.js");
+                    eleventyConfig.addPassthroughCopy("robots.txt");
+                    eleventyConfig.addPassthroughCopy("sitemap.xml");
+
+                    return {
+                      dir: {
+                        input: "src",
+                        output: "_site",
+                        includes: "../_includes"
+                      }
+                    };
                   };
                   EOF
 
-            - name: Transform HTML files into Eleventy source
+            - name: Convert HTML files to Eleventy markdown/njk
               run: |
-                  mkdir -p src
+                  mkdir -p src/pages
                   for file in *.html; do
-                      if [ -f "$file" ]; then
-                          title=$(grep -oP '(?<=<title>).*?(?=</title>)' "$file" | head -1)
-                          if [ -z "$title" ]; then
-                              title="${file%.html}"
-                          fi
-                          awk '/<body[^>]*>/ { inside=1; next; } /<\/body>/ { inside=0; next; } inside { print; }' "$file" > "src/$file"
-                          sed -i "1s/^/---\nlayout: layout.njk\ntitle: $title\n---\n/" "src/$file"
-                      fi
+                    if [ -f "$file" ]; then
+                      title=$(grep -oP '(?<=<title>).*?(?=</title>)' "$file" | head -1 || echo "${file%.html}")
+                      awk '/<body[^>]*>/ {inside=1; next} /<\/body>/ {inside=0; next} inside {print}' "$file" > "src/${file}"
+                      sed -i "1s/^/---\nlayout: layout.njk\ntitle: $title\n---\n/" "src/${file}"
+                    fi
                   done
+
                   if [ -d "pages" ]; then
-                      mkdir -p src/pages
-                      for file in pages/*.html; do
-                          if [ -f "$file" ]; then
-                              title=$(grep -oP '(?<=<title>).*?(?=</title>)' "$file" | head -1)
-                              if [ -z "$title" ]; then
-                                  title=$(basename "$file" .html)
-                              fi
-                              awk '/<body[^>]*>/ { inside=1; next; } /<\/body>/ { inside=0; next; } inside { print; }' "$file" > "src/pages/$(basename "$file")"
-                              sed -i "1s/^/---\nlayout: layout.njk\ntitle: $title\n---\n/" "src/pages/$(basename "$file")"
-                          fi
-                      done
+                    for file in pages/*.html; do
+                      if [ -f "$file" ]; then
+                        title=$(grep -oP '(?<=<title>).*?(?=</title>)' "$file" | head -1 || basename "$file" .html)
+                        awk '/<body[^>]*>/ {inside=1; next} /<\/body>/ {inside=0; next} inside {print}' "$file" > "src/pages/$(basename "$file")"
+                        sed -i "1s/^/---\nlayout: layout.njk\ntitle: $title\n---\n/" "src/pages/$(basename "$file")"
+                      fi
+                    done
                   fi
 
-            - name: Build with Eleventy
+            - name: Build Eleventy site
               run: npx eleventy
 
-            - name: Upload GitHub Pages artifact
+            - name: Upload artifact for Pages
               uses: actions/upload-pages-artifact@v3
               with:
                   path: ./_site
@@ -137,12 +133,12 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
 
-            - name: Setup Node.js 20
+            - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: 20
 
-            - name: Setup Java JDK 17
+            - name: Setup Java
               uses: actions/setup-java@v4
               with:
                   distribution: temurin
@@ -151,220 +147,207 @@ jobs:
             - name: Setup Android SDK
               uses: android-actions/setup-android@v3
 
-            - name: Install Android SDK 35
-              run: yes | sdkmanager "platforms;android-35"
+            - name: Install required SDK components
+              run: yes | sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-            - name: Install Cordova
-              run: npm install -g cordova
+            - name: Install Cordova CLI
+              run: npm install -g cordova@12
 
-            - name: Download built site from Eleventy
+            - name: Download www artifact
               uses: actions/download-artifact@v4
               with:
                   name: github-pages
                   path: www
 
-            - name: Prepare project
+            - name: Prepare config.xml and icon
               run: |
-                  curl -L -o icon.png "https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/images/icons/kiraku-home.png"
+                  curl -L -o icon.png "https://raw.githubusercontent.com/lildavegoth/lildavegoth/homepage/images/icons/kiraku-home.png"
+
                   cat > config.xml << 'EOF'
                   <?xml version='1.0' encoding='utf-8'?>
                   <widget id="com.kakoikiraku.home" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
-                      <name>Kakoi Kiraku Home</name>
-                      <description>Conveys the Idea of a Protected and Inspiring Space for Creative Expression</description>
-                      <content src="index.html" />
-                      <access origin="*" />
-                      <allow-intent href="http://*/*" />
-                      <allow-intent href="https://*/*" />
-                      <allow-intent href="tel:*" />
-                      <allow-intent href="mailto:*" />
-                      <platform name="android">
-                          <preference name="android-minSdkVersion" value="24" />
-                          <preference name="android-targetSdkVersion" value="35" />
-                          <preference name="AndroidXEnabled" value="true" />
-                          <config-file target="AndroidManifest.xml" parent="/manifest" xmlns:android="http://schemas.android.com/apk/res/android">
-                              <uses-permission android:name="android.permission.INTERNET" />
-                              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-                              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-                              <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-                              <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-                              <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-                              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-                              <uses-permission android:name="android.permission.VIBRATE" />
-                              <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY" />
-                              <uses-permission android:name="android.permission.READ_USER_DICTIONARY" />
-                          </config-file>
-                          <icon src="icon.png" />
-                      </platform>
+                    <name>Kakoi Kiraku Home</name>
+                    <description>Protected creative expression space</description>
+                    <content src="index.html"/>
+                    <access origin="*"/>
+                    <allow-intent href="http://*/*"/>
+                    <allow-intent href="https://*/*"/>
+                    <allow-intent href="tel:*"/>
+                    <allow-intent href="mailto:*"/>
+                    <platform name="android">
+                      <preference name="android-minSdkVersion" value="24"/>
+                      <preference name="android-targetSdkVersion" value="35"/>
+                      <preference name="AndroidXEnabled" value="true"/>
+                      <config-file target="AndroidManifest.xml" parent="/manifest">
+                        <uses-permission android:name="android.permission.INTERNET"/>
+                        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+                        <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+                        <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+                        <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+                        <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+                        <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+                        <uses-permission android:name="android.permission.VIBRATE"/>
+                        <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY"/>
+                        <uses-permission android:name="android.permission.READ_USER_DICTIONARY"/>
+                      </config-file>
+                      <icon src="icon.png"/>
+                    </platform>
                   </widget>
                   EOF
-                  sed -i 's/^          //' config.xml
 
-            - name: Create custom UserDictionary plugin
+            - name: Create local userdictionary plugin
               run: |
                   mkdir -p plugins/cordova-plugin-userdictionary/src/android
+
                   cat > plugins/cordova-plugin-userdictionary/package.json << 'EOF'
                   {
                     "name": "cordova-plugin-userdictionary",
                     "version": "1.0.0",
-                    "description": "Cordova User Dictionary Plugin",
                     "cordova": {
                       "id": "cordova-plugin-userdictionary",
                       "platforms": ["android"]
-                    },
-                    "keywords": ["cordova", "android", "userdictionary"],
-                    "author": "",
-                    "license": "MIT"
+                    }
                   }
                   EOF
+
                   cat > plugins/cordova-plugin-userdictionary/plugin.xml << 'EOF'
                   <?xml version='1.0' encoding='utf-8'?>
                   <plugin id="cordova-plugin-userdictionary" version="1.0.0" xmlns="http://apache.org/cordova/ns/plugins/1.0">
-                      <name>UserDictionary</name>
-                      <description>Cordova User Dictionary Plugin</description>
-                      <license>MIT</license>
-                      <keywords>cordova,android,userdictionary</keywords>
-                      <platform name="android">
-                          <config-file target="res/xml/config.xml" parent="/*">
-                              <feature name="UserDictionary">
-                                  <param name="android-package" value="com.kakoikiraku.userdictionary.UserDictionaryPlugin"/>
-                              </feature>
-                          </config-file>
-                          <config-file target="AndroidManifest.xml" parent="/manifest">
-                              <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY"/>
-                              <uses-permission android:name="android.permission.READ_USER_DICTIONARY"/>
-                          </config-file>
-                          <source-file src="src/android/UserDictionaryPlugin.java" target-dir="src/com/kakoikiraku/userdictionary"/>
-                      </platform>
+                    <name>User Dictionary</name>
+                    <platform name="android">
+                      <config-file target="res/xml/config.xml" parent="/*">
+                        <feature name="UserDictionary">
+                          <param name="android-package" value="com.kakoikiraku.userdictionary.UserDictionaryPlugin"/>
+                        </feature>
+                      </config-file>
+                      <config-file target="AndroidManifest.xml" parent="/manifest">
+                        <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY"/>
+                        <uses-permission android:name="android.permission.READ_USER_DICTIONARY"/>
+                      </config-file>
+                      <source-file src="src/android/UserDictionaryPlugin.java" target-dir="src/com/kakoikiraku/userdictionary"/>
+                    </platform>
                   </plugin>
                   EOF
+
                   cat > plugins/cordova-plugin-userdictionary/src/android/UserDictionaryPlugin.java << 'EOF'
                   package com.kakoikiraku.userdictionary;
+
                   import org.apache.cordova.CordovaPlugin;
                   import org.apache.cordova.CallbackContext;
                   import org.json.JSONArray;
                   import org.json.JSONException;
+
                   import android.content.ContentValues;
                   import android.net.Uri;
                   import android.provider.UserDictionary;
                   import android.content.pm.PackageManager;
                   import androidx.core.content.ContextCompat;
                   import androidx.core.app.ActivityCompat;
+
                   public class UserDictionaryPlugin extends CordovaPlugin {
-                      private static final int PERMISSION_REQUEST_CODE = 123;
-                      private CallbackContext pendingCallback;
+
+                      private static final int REQ_CODE = 923;
+                      private CallbackContext pending;
+
                       @Override
-                      public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+                      public boolean execute(String action, JSONArray args, CallbackContext cb) throws JSONException {
                           if ("addWord".equals(action)) {
-                              String word = args.getString(0);
-                              String shortcut = args.getString(1);
-                              addWord(word, shortcut, callbackContext);
+                              addWord(args.getString(0), args.optString(1, null), cb);
                               return true;
                           }
                           return false;
                       }
-                      private void addWord(String word, String shortcut, CallbackContext callbackContext) {
+
+                      private void addWord(String word, String shortcut, CallbackContext cb) {
                           if (ContextCompat.checkSelfPermission(cordova.getActivity(), android.Manifest.permission.WRITE_USER_DICTIONARY)
                                   != PackageManager.PERMISSION_GRANTED) {
-                              pendingCallback = callbackContext;
+                              pending = cb;
                               ActivityCompat.requestPermissions(cordova.getActivity(),
                                       new String[]{android.Manifest.permission.WRITE_USER_DICTIONARY},
-                                      PERMISSION_REQUEST_CODE);
+                                      REQ_CODE);
                               return;
                           }
+
                           ContentValues values = new ContentValues();
                           values.put(UserDictionary.Words.WORD, word);
                           if (shortcut != null && !shortcut.isEmpty()) {
                               values.put(UserDictionary.Words.SHORTCUT, shortcut);
                           }
-                          values.put(UserDictionary.Words.LOCALE, "en");
+                          values.put(UserDictionary.Words.LOCALE, "en_US");
                           values.put(UserDictionary.Words.FREQUENCY, 100);
-                          Uri uri = UserDictionary.Words.CONTENT_URI;
+
                           try {
-                              cordova.getActivity().getContentResolver().insert(uri, values);
-                              callbackContext.success();
+                              cordova.getActivity().getContentResolver().insert(UserDictionary.Words.CONTENT_URI, values);
+                              cb.success();
                           } catch (Exception e) {
-                              callbackContext.error(e.getMessage());
+                              cb.error(e.getMessage());
                           }
                       }
+
                       @Override
-                      public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
-                          if (requestCode == PERMISSION_REQUEST_CODE && pendingCallback != null) {
-                              if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                                  pendingCallback.success();
+                      public void onRequestPermissionsResult(int requestCode, String[] perms, int[] grants) {
+                          if (requestCode == REQ_CODE && pending != null) {
+                              if (grants.length > 0 && grants[0] == PackageManager.PERMISSION_GRANTED) {
+                                  pending.success();
                               } else {
-                                  pendingCallback.error("Permission denied");
+                                  pending.error("Permission denied");
                               }
-                              pendingCallback = null;
+                              pending = null;
                           }
                       }
                   }
                   EOF
 
-            - name: Verify plugin directory
-              run: |
-                  echo "Current directory: $(pwd)"
-                  ls -la ${{ github.workspace }}/plugins/
-                  ls -la ${{ github.workspace }}/plugins/cordova-plugin-userdictionary
-                  cat ${{ github.workspace }}/plugins/cordova-plugin-userdictionary/package.json
-
             - name: Add Android platform
               run: |
-                  cordova platform rm android --no-fetch || true
-                  cordova platform add android@13 --no-fetch
+                  cordova platform rm android || true
+                  cordova platform add android@13
 
-            - name: Add plugins
+            - name: Install plugins
               run: |
-                  cordova plugin add cordova-plugin-file
-                  cordova plugin add cordova-plugin-file-opener2
-                  cordova plugin add cordova-plugin-intent
-                  cordova plugin add cordova-plugin-local-notification
-                  cordova plugin add cordova-plugin-device
-                  cordova plugin add cordova-plugin-inappbrowser
-                  cordova plugin add cordova-plugin-android-permissions
-                  cordova plugin add cordova-plugin-media-capture
+                  cordova plugin add cordova-plugin-file --save
+                  cordova plugin add cordova-plugin-file-opener2 --save
+                  cordova plugin add https://github.com/napolitano/cordova-plugin-intent.git --save
+                  cordova plugin add cordova-plugin-local-notification --save
+                  cordova plugin add cordova-plugin-device --save
+                  cordova plugin add cordova-plugin-inappbrowser --save
+                  cordova plugin add cordova-plugin-android-permissions --save
+                  cordova plugin add cordova-plugin-media-capture --save
                   cordova plugin add cordova-plugin-deeplinks \
-                      --variable URL_SCHEME=kiraku \
-                      --variable HOST_NAME=kakoi-kiraku-home.vercel.app
-                  cordova plugin add ./plugins/cordova-plugin-userdictionary
+                    --variable URL_SCHEME=kiraku \
+                    --variable HOST_NAME=kakoi-kiraku-home.vercel.app --save
 
-            - name: Decode Keystore
-              run: |
-                  echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
+                  cordova plugin add ./plugins/cordova-plugin-userdictionary --save
 
-            - name: Verify keystore
+            - name: Build release APK
+              env:
+                  KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+                  KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+                  KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+                  KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
               run: |
-                  keytool -list -v -keystore keystore.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -alias "${{ secrets.KEY_ALIAS }}"
+                  echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
 
-            - name: Create build.json
-              run: |
-                  cat > build.json << EOF
+                  cat > build-extras.json << EOF
                   {
                     "android": {
                       "release": {
                         "keystore": "keystore.jks",
-                        "alias": "${{ secrets.KEY_ALIAS }}",
-                        "storePassword": "${{ secrets.KEYSTORE_PASSWORD }}",
-                        "password": "${{ secrets.KEY_PASSWORD }}"
+                        "alias": "$KEY_ALIAS",
+                        "storePassword": "$KEYSTORE_PASSWORD",
+                        "password": "$KEY_PASSWORD"
                       }
                     }
                   }
                   EOF
 
-            - name: Build release APK
-              run: cordova build android --release -- --packageType=apk
+                  cordova build android --release -- --packageType=apk
 
-            - name: List generated files
-              run: |
-                  echo "=== APK output directory ==="
-                  ls -la platforms/android/app/build/outputs/apk/release/ || true
-                  echo "=== Search for any APK ==="
-                  find platforms/android -name "*.apk" | sort
-
-            - name: Upload APK
+            - name: Upload APK artifact
               uses: actions/upload-artifact@v4
               with:
                   name: kakoi-kiraku-home-release-apk
-                  path: platforms/android/**/*.apk
+                  path: platforms/android/app/build/outputs/apk/release/*.apk
                   if-no-files-found: error
 
     deploy:
@@ -372,11 +355,11 @@ jobs:
         runs-on: ubuntu-latest
         environment:
             name: github-pages
-            url: ${{ steps.deployment.outputs.page_url }}
+            url: ${{ steps.deploy.outputs.page_url }}
         concurrency:
             group: pages
             cancel-in-progress: false
         steps:
             - name: Deploy to GitHub Pages
-              id: deployment
+              id: deploy
               uses: actions/deploy-pages@v4
