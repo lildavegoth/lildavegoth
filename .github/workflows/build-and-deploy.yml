@@ -117,7 +117,6 @@ jobs:
                   path: ./_site
 
     build-cordova:
-        needs: build-eleventy
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
@@ -143,15 +142,17 @@ jobs:
             - name: Install Cordova
               run: npm install -g cordova
 
-            - name: Download built site from Eleventy
-              uses: actions/download-artifact@v4
-              with:
-                  name: github-pages
-                  path: www
+            - name: Copy raw HTML files to www
+              run: |
+                  mkdir -p www
+                  rsync -av --exclude='.git' --exclude='.github' ./ www/
 
-            - name: Prepare project
+            - name: Download app icon
               run: |
                   curl -L -o icon.png "https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/images/icons/kiraku-home.png"
+
+            - name: Prepare config.xml
+              run: |
                   cat > config.xml << 'EOF'
                   <?xml version='1.0' encoding='utf-8'?>
                   <widget id="com.kakoikiraku.home" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
