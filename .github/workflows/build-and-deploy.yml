@@ -11,23 +11,7 @@ permissions:
     id-token: write
 
 jobs:
-    build-jekyll:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-            - name: Setup Pages
-              uses: actions/configure-pages@v5
-            - name: Build with Jekyll
-              uses: actions/jekyll-build-pages@v1
-              with:
-                  source: ./
-                  destination: ./_site
-            - name: Upload artifact
-              uses: actions/upload-pages-artifact@v3
-
     build-cordova:
-        needs: build-jekyll
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
@@ -53,15 +37,14 @@ jobs:
             - name: Install Cordova
               run: npm install -g cordova
 
-            - name: Download built site from Jekyll
-              uses: actions/download-artifact@v4
-              with:
-                  name: github-pages
-                  path: www
-
             - name: Prepare project
               run: |
+                  mkdir -p www
+                  mv *.html *.css *.js *.cssjs *.json sw.js robots.txt sitemap.xml www/ 2>/dev/null || true
+                  mv images pages www/ 2>/dev/null || true
+
                   curl -L -o icon.png "https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/images/icons/kiraku-home.png"
+
                   cat > config.xml << 'EOF'
                   <?xml version='1.0' encoding='utf-8'?>
                   <widget id="com.kakoikiraku.home" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
@@ -92,6 +75,7 @@ jobs:
                       </platform>
                   </widget>
                   EOF
+
                   sed -i 's/^          //' config.xml
 
             - name: Add Android platform
@@ -108,11 +92,10 @@ jobs:
                   cordova plugin add cordova-plugin-device
                   cordova plugin add cordova-plugin-inappbrowser
                   cordova plugin add cordova-plugin-android-permissions
-                  cordova plugin add cordova-plugin-media-capture
+                  cordova plugin add cordova-plugin-media-capturecordova plugin add cordova-plugin-splashscreen
                   cordova plugin add cordova-plugin-deeplinks \
                       --variable URL_SCHEME=kiraku \
                       --variable HOST_NAME=kakoi-kiraku-home.vercel.app
-                  cordova plugin add cordova-plugin-splashscreen
 
             - name: Decode Keystore
               run: |
@@ -154,7 +137,22 @@ jobs:
                   path: platforms/android/**/*.apk
                   if-no-files-found: error
 
-    deploy:
+    build-jekyll:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Setup Pages
+              uses: actions/configure-pages@v5
+            - name: Build with Jekyll
+              uses: actions/jekyll-build-pages@v1
+              with:
+                  source: ./
+                  destination: ./_site
+            - name: Upload artifact
+              uses: actions/upload-pages-artifact@v3
+
+    deploy-jekyll:
         needs: build-jekyll
         runs-on: ubuntu-latest
         environment:
