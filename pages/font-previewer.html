@@ -134,7 +134,7 @@
         }
 
         .arc-title {
-            font-size: 2.8rem;
+            font-size: 2.2rem;
             font-weight: 900;
             margin-bottom: var(--spacing-sm);
         }
@@ -165,25 +165,6 @@
             font-weight: bold;
         }
 
-        .ink-brush {
-            position: absolute;
-            right: 10px;
-            bottom: 10px;
-            opacity: 0.25;
-        }
-
-        .ink-brush i:first-child {
-            font-size: 110px;
-            transform: rotate(30deg);
-        }
-
-        .ink-brush i:last-child {
-            font-size: 70px;
-            position: absolute;
-            top: -50px;
-            left: 30px;
-        }
-
         .recommended-volumes {
             background: var(--bg-card);
             border-radius: var(--radius-large);
@@ -194,10 +175,15 @@
         .volume-entry {
             padding: var(--spacing-sm) 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
         }
 
         .volume-entry:last-child {
             border-bottom: none;
+        }
+
+        .volume-entry.hidden {
+            display: none;
         }
 
         .volume-title {
@@ -216,6 +202,14 @@
         .volume-genres {
             color: var(--accent-color);
             font-size: 0.85rem;
+        }
+
+        .highlight-volume {
+            border-left: 3px solid var(--accent-color);
+            padding-left: 12px;
+            background: rgba(193, 252, 50, 0.05);
+            border-radius: 8px;
+            transition: all 0.3s ease;
         }
 
         .narration-panel {
@@ -248,16 +242,121 @@
 
         .comments-input {
             width: 100%;
-            height: 10px;
-            padding: var(--spacing-md);
+            padding: var(--spacing-sm);
             background: rgba(30, 30, 30, 0.9);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 15px;
             color: var(--text-primary);
             font-size: 1.2rem;
             margin-top: 10px;
+            font-family: inherit;
         }
-        
+
+        .search-container {
+            margin-bottom: var(--spacing-md);
+            position: relative;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 12px 44px 12px 16px;
+            border-radius: var(--radius-medium);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .search-container input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .search-icon i {
+            color: var(--accent-color);
+            margin-right: 5px;
+        }
+
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        .search-suggestions::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .search-suggestions::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .search-suggestions::-webkit-scrollbar-thumb {
+            background: rgba(193, 252, 50, 0.3);
+            border-radius: 3px;
+        }
+
+        .search-suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .search-suggestion-item:hover {
+            background: rgba(193, 252, 50, 0.1);
+        }
+
+        .suggestion-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .suggestion-description {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .suggestion-category {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-top: 4px;
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+
+        .font-preview-text {
+            font-family: inherit;
+        }
     </style>
 </head>
 <body>
@@ -266,12 +365,12 @@
             <i class="fas fa-arrow-left"></i> Back to Home
         </a>
         
-        <header style="margin-bottom: 30px;" class="fade-in">
+        <app-header class="fade-in">
             <div>
-                <h1 class="tool-title">Font Previewer</h1>
-                <p class="tool-description">Import your favorites fonts with text visuals and free input text that you can use for test the fonts with TTF and OTF supports</p>
+                <h1 class="username">Font Previewer</h1>
+                <p class="tagline">Import your favorites fonts with text visuals and free input text that you can use for test the fonts with TTF and OTF supports</p>
             </div>
-        </header>
+        </app-header>
         
         <div class="glyph-importer">
             <div class="import-controls">
@@ -285,33 +384,47 @@
         <div id="preview">
             <div class="arcs-grid">
                 <div class="current-arc">
-                    <div class="arc-title">Berserk</div>
-                    <div class="arc-synopsis">Guts, a lone mercenary, joins the Band of the Hawk, led by the ambitious Griffith. He becomes Griffith's top warrior but later decides to leave to forge his own path. Griffith, shattered by this loss, acts recklessly and is subsequently imprisoned and brutally tortured. A year later, Guts and the Hawks rescue a broken, mutilated Griffith. In his despair, Griffith accidentally activates a demonic relic called a Behelit, triggering an apocalyptic event called the Eclipse. He is offered godlike power by demonic beings called the God Hand, but at the cost of sacrificing his entire band. Griffith accepts, becoming the demon Femto. The Hawks are slaughtered, Casca is brutally raped by Femto, and Guts loses an eye and an arm. The story flashes forward to Guts, now known as the Black Swordsman, embarking on a relentless quest for vengeance against the God Hand and their demonic apostles.</div>
-                    <div class="additional-synopsis">After a year away, Guts returns to find the Band of the Hawk outlawed. He and Casca rescue Griffith, who has been horrifically mutilated and broken. In a moment of despair, Griffith flees and, while attempting suicide, accidentally activates a demonic Behelit with his blood. This triggers the Eclipse, transporting them to a nightmarish realm. There, the God Hand offer Griffith ultimate power in exchange for sacrificing his comrades. Griffith accepts, reborn as the demon Femto. The Hawks are branded and slaughtered by apostles. Femto brutally rapes Casca before Guts, who loses an arm and an eye trying to stop it. Guts alone survives this atrocity, emerging later as the vengeful "Black Swordsman" sworn to destroy the God Hand and their apostles.</div>
-                    <div style="margin-top: 5px;" class="mangaka">Kentaro Miura</div>
-                    <div class="ink-brush">
-                        <i class="fas fa-hand-fist-raised"></i>
-                        <i class="fas fa-star"></i>
+                    <div class="arc-title">Legends</div>
+                    <div class="arc-synopsis">
+                        Discover five masterpieces that shaped the world of manga.
                     </div>
+                    <div class="additional-synopsis">
+                        Use the search bar to filter by title or synopsis. Import any TTF or OTF font to preview how these legendary stories look in your chosen typeface. The text in the left panel and all manga descriptions will adopt your font, while icons remain untouched.
+                    </div>
+                    <div class="mangaka">Explore — Inspire — Create</div>
                 </div>
-
-                <div class="recommended-volumes">
-                    <div class="volume-entry">
+                <div class="recommended-volumes" id="recommendedVolumes">
+                    <div class="search-container">
+                        <div style="position: relative;">
+                            <input type="text" id="volumeSearch" placeholder="Search manga titles or synopsis...">
+                            <div class="search-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                        </div>
+                        <div class="search-suggestions" id="searchSuggestions"></div>
+                    </div>
+                    
+                    <div class="volume-entry" data-title="Berserk" data-synopsis="Guts, a lone mercenary, joins the Band of the Hawk, led by the ambitious Griffith. He becomes Griffith's top warrior but later decides to leave to forge his own path. Griffith, shattered by this loss, acts recklessly and is subsequently imprisoned and brutally tortured. A year later, Guts and the Hawks rescue a broken, mutilated Griffith. In his despair, Griffith accidentally activates a demonic relic called a Behelit, triggering an apocalyptic event called the Eclipse. He is offered godlike power by demonic beings called the God Hand, but at the cost of sacrificing his entire band. Griffith accepts, becoming the demon Femto. The Hawks are slaughtered, Casca is brutally raped by Femto, and Guts loses an eye and an arm. The story flashes forward to Guts, now known as the Black Swordsman, embarking on a relentless quest for vengeance against the God Hand and their demonic apostles. After a year away, Guts returns to find the Band of the Hawk outlawed. He and Casca rescue Griffith, who has been horrifically mutilated and broken. In a moment of despair, Griffith flees and, while attempting suicide, accidentally activates a demonic Behelit with his blood. This triggers the Eclipse, transporting them to a nightmarish realm. There, the God Hand offer Griffith ultimate power in exchange for sacrificing his comrades. Griffith accepts, reborn as the demon Femto. The Hawks are branded and slaughtered by apostles. Femto brutally rapes Casca before Guts, who loses an arm and an eye trying to stop it. Guts alone survives this atrocity, emerging later as the vengeful Black Swordsman sworn to destroy the God Hand and their apostles.">
+                        <div class="volume-title">Berserk</div>
+                        <div class="volume-synopsis">Guts, a lone mercenary, joins the Band of the Hawk, led by the ambitious Griffith. He becomes Griffith's top warrior but later decides to leave to forge his own path. Griffith, shattered by this loss, acts recklessly and is subsequently imprisoned and brutally tortured. A year later, Guts and the Hawks rescue a broken, mutilated Griffith. In his despair, Griffith accidentally activates a demonic relic called a Behelit, triggering an apocalyptic event called the Eclipse. He is offered godlike power by demonic beings called the God Hand, but at the cost of sacrificing his entire band. Griffith accepts, becoming the demon Femto. The Hawks are slaughtered, Casca is brutally raped by Femto, and Guts loses an eye and an arm. The story flashes forward to Guts, now known as the Black Swordsman, embarking on a relentless quest for vengeance against the God Hand and their demonic apostles. After a year away, Guts returns to find the Band of the Hawk outlawed. He and Casca rescue Griffith, who has been horrifically mutilated and broken. In a moment of despair, Griffith flees and, while attempting suicide, accidentally activates a demonic Behelit with his blood. This triggers the Eclipse, transporting them to a nightmarish realm. There, the God Hand offer Griffith ultimate power in exchange for sacrificing his comrades. Griffith accepts, reborn as the demon Femto. The Hawks are branded and slaughtered by apostles. Femto brutally rapes Casca before Guts, who loses an arm and an eye trying to stop it. Guts alone survives this atrocity, emerging later as the vengeful Black Swordsman sworn to destroy the God Hand and their apostles.</div>
+                        <div class="volume-genres">Adventure, Fantasy, Shounen | <strong>1997</strong></div>
+                    </div>
+                    <div class="volume-entry" data-title="One Piece" data-synopsis="The undisputed king of manga in terms of sales (over 500 million copies worldwide) and longevity. Its epic world-building, unforgettable characters, and masterfully woven plot exploring themes of freedom and dreams have captivated readers for over 25 years. It's a cultural landmark.">
                         <div class="volume-title">One Piece</div>
                         <div class="volume-synopsis">The undisputed king of manga in terms of sales (over 500 million copies worldwide) and longevity. Its epic world-building, unforgettable characters, and masterfully woven plot exploring themes of freedom and dreams have captivated readers for over 25 years. It's a cultural landmark.</div>
                         <div class="volume-genres">Adventure, Fantasy, Shounen | <strong>1997</strong></div>
                     </div>
-                    <div class="volume-entry">
+                    <div class="volume-entry" data-title="Fullmetal Alchemist" data-synopsis="Hailed as the most perfectly crafted shounen manga. It delivers a tight, intelligent plot with zero filler, brilliant character development, consistent internal logic, and a powerful balance of action, humor, and profound philosophical themes. It's consistently satisfying from start to finish.">
                         <div class="volume-title">Fullmetal Alchemist</div>
                         <div class="volume-synopsis">Hailed as the most perfectly crafted shounen manga. It delivers a tight, intelligent plot with zero filler, brilliant character development, consistent internal logic, and a powerful balance of action, humor, and profound philosophical themes. It's consistently satisfying from start to finish.</div>
                         <div class="volume-genres">Adventure, Fantasy, Steampunk | <strong>2001</strong></div>
                     </div>
-                    <div class="volume-entry">
+                    <div class="volume-entry" data-title="Monster" data-synopsis="A gripping, mature thriller that explores the nature of evil. With its realistic art, morally complex characters, and a plot that unfolds like a meticulously paced European thriller, Monster is a work of profound psychological depth that will keep you on the edge of your seat.">
                         <div class="volume-title">Monster</div>
                         <div class="volume-synopsis">A gripping, mature thriller that explores the nature of evil. With its realistic art, morally complex characters, and a plot that unfolds like a meticulously paced European thriller, Monster is a work of profound psychological depth that will keep you on the edge of your seat.</div>
                         <div class="volume-genres">Psychological Thriller, Mystery, Seinen | <strong>1994</strong></div>
                     </div>
-                    <div class="volume-entry">
+                    <div class="volume-entry" data-title="Vagabond" data-synopsis="Based on the life of legendary swordsman Miyamoto Musashi, Vagabond is celebrated as one of the most visually stunning works ever drawn. It transcends its historical setting to deliver a deep, introspective journey on what it means to strive for mastery, purpose, and peace.">
                         <div class="volume-title">Vagabond</div>
                         <div class="volume-synopsis">Based on the life of legendary swordsman Miyamoto Musashi, Vagabond is celebrated as one of the most visually stunning works ever drawn. It transcends its historical setting to deliver a deep, introspective journey on what it means to strive for mastery, purpose, and peace.</div>
                         <div class="volume-genres">Historical, Philosophical, Seinen | <strong>1998</strong></div>
@@ -319,8 +432,6 @@
                     <input type="text" id="textInput" class="comments-input" placeholder="Comment here...">
                 </div>
             </div>
-
-            
         </div>
         
         <footer>
@@ -338,6 +449,30 @@
     <script>
         let currentFontUrl = null;
         let currentStyle = null;
+
+        function applyFontToTextElements(fontFamily, format, url) {
+            const style = document.createElement('style');
+            style.textContent = `
+                @font-face {
+                    font-family: '${fontFamily}';
+                    src: url('${url}') format('${format}');
+                    font-display: swap;
+                }
+                .volume-title,
+                .volume-synopsis,
+                .volume-genres,
+                .arc-title,
+                .arc-synopsis,
+                .additional-synopsis,
+                .mangaka,
+                .comments-input,
+                #volumeSearch {
+                    font-family: '${fontFamily}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif !important;
+                }
+            `;
+            document.head.appendChild(style);
+            return style;
+        }
 
         document.getElementById('fontUpload').addEventListener('change', function(e) {
             if (!e.target.files.length) return;
@@ -358,23 +493,7 @@
             const format = ext === '.ttf' ? 'truetype' : 'opentype';
             const fontFamily = 'PreviewFont';
 
-            const style = document.createElement('style');
-            style.textContent = `
-                @font-face {
-                    font-family: '${fontFamily}';
-                    src: url('${url}') format('${format}');
-                    font-display: swap;
-                }
-                #preview * {
-                    font-family: '${fontFamily}', sans-serif !important;
-                }
-                .comments-input {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif !important;
-                }
-            `;
-            document.head.appendChild(style);
-            currentStyle = style;
-
+            currentStyle = applyFontToTextElements(fontFamily, format, url);
             document.getElementById('fontName').textContent = `Preview of ${file.name}`;
         });
 
@@ -390,9 +509,135 @@
             document.getElementById('fontName').textContent = 'No font loaded';
         });
 
-        document.getElementById('textInput').addEventListener('input', function() {
-        });
-        
+        const searchInput = document.getElementById('volumeSearch');
+        const suggestionsContainer = document.getElementById('searchSuggestions');
+        const volumeEntries = document.querySelectorAll('.volume-entry');
+
+        function filterVolumes(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+            volumeEntries.forEach(entry => {
+                const title = entry.querySelector('.volume-title').textContent.toLowerCase();
+                const synopsis = entry.querySelector('.volume-synopsis').textContent.toLowerCase();
+                const matches = term === '' || title.includes(term) || synopsis.includes(term);
+                if (matches) {
+                    entry.classList.remove('hidden');
+                } else {
+                    entry.classList.add('hidden');
+                }
+            });
+        }
+
+        function getMatchingVolumes(term) {
+            const matches = [];
+            const searchTerm = term.toLowerCase().trim();
+            if (!searchTerm) return matches;
+            volumeEntries.forEach(entry => {
+                const title = entry.querySelector('.volume-title').textContent;
+                const synopsis = entry.querySelector('.volume-synopsis').textContent;
+                if (title.toLowerCase().includes(searchTerm) || synopsis.toLowerCase().includes(searchTerm)) {
+                    matches.push({
+                        title: title,
+                        description: synopsis.length > 100 ? synopsis.substring(0, 100) + '...' : synopsis,
+                        element: entry
+                    });
+                }
+            });
+            return matches;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        function renderSuggestions(searchTerm) {
+            const matches = getMatchingVolumes(searchTerm);
+            if (matches.length === 0 || searchTerm.trim() === '') {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            suggestionsContainer.innerHTML = matches.slice(0, 6).map(match => `
+                <div class="search-suggestion-item" data-title="${escapeHtml(match.title)}">
+                    <div class="suggestion-title">${escapeHtml(match.title)}</div>
+                    <div class="suggestion-description">${escapeHtml(match.description)}</div>
+                    <div class="suggestion-category">Manga</div>
+                </div>
+            `).join('');
+            suggestionsContainer.style.display = 'block';
+        }
+
+        function selectSuggestion(suggestionItem) {
+            const title = suggestionItem.getAttribute('data-title');
+            if (!title) return;
+            searchInput.value = title;
+            suggestionsContainer.style.display = 'none';
+            filterVolumes(title);
+            volumeEntries.forEach(entry => {
+                const entryTitle = entry.querySelector('.volume-title').textContent;
+                if (entryTitle === title) {
+                    entry.classList.remove('hidden');
+                    entry.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    entry.style.transition = 'all 0.3s ease';
+                    entry.style.borderLeft = '3px solid var(--accent-color)';
+                    entry.style.paddingLeft = '12px';
+                    entry.style.background = 'rgba(193, 252, 50, 0.05)';
+                    setTimeout(() => {
+                        entry.style.borderLeft = '';
+                        entry.style.paddingLeft = '';
+                        entry.style.background = '';
+                    }, 2000);
+                }
+            });
+        }
+
+        let debounceTimeout;
+        function handleSearchInput() {
+            clearTimeout(debounceTimeout);
+            const value = searchInput.value;
+            debounceTimeout = setTimeout(() => {
+                filterVolumes(value);
+                renderSuggestions(value);
+            }, 200);
+        }
+
+        function setupSearchEvents() {
+            searchInput.addEventListener('input', handleSearchInput);
+            searchInput.addEventListener('focus', function() {
+                if (this.value.trim()) {
+                    renderSuggestions(this.value);
+                }
+            });
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    suggestionsContainer.style.display = 'none';
+                    filterVolumes(this.value);
+                }
+            });
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+            suggestionsContainer.addEventListener('click', function(e) {
+                const item = e.target.closest('.search-suggestion-item');
+                if (item) {
+                    selectSuggestion(item);
+                }
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && suggestionsContainer.style.display === 'block') {
+                    suggestionsContainer.style.display = 'none';
+                    searchInput.blur();
+                }
+            });
+        }
+
+        setupSearchEvents();
+        filterVolumes('');
     </script>
 </body>
 </html>
