@@ -1,52 +1,64 @@
 name: Build and Deploy
+
 on:
     push:
         branches: [homepage]
     workflow_dispatch:
+
 permissions:
     contents: read
     pages: write
     id-token: write
+
 jobs:
-    build-eleventy:
+    build-jekyll:
         runs-on: ubuntu-latest
         steps:
-            - name: Checkout code
+            - name: Checkout
               uses: actions/checkout@v4
-            - name: Copy files to _site
-              run: |
-                  mkdir -p _site
-                  rsync -av --exclude='.git' --exclude='.github' --exclude='_site' ./ _site/
-            - name: Upload GitHub Pages artifact
-              uses: actions/upload-pages-artifact@v3
+            - name: Setup Pages
+              uses: actions/configure-pages@v5
+            - name: Build with Jekyll
+              uses: actions/jekyll-build-pages@v1
               with:
-                  path: ./_site
+                  source: ./
+                  destination: ./_site
+            - name: Upload artifact
+              uses: actions/upload-pages-artifact@v3
+
     build-cordova:
-        needs: build-eleventy
+        needs: build-jekyll
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
+
             - name: Setup Node.js 20
               uses: actions/setup-node@v4
               with:
                   node-version: 20
+
             - name: Setup Java JDK 17
               uses: actions/setup-java@v4
               with:
                   distribution: temurin
                   java-version: 17
+
             - name: Setup Android SDK
               uses: android-actions/setup-android@v3
+
             - name: Install Android SDK 35
               run: yes | sdkmanager "platforms;android-35"
+
             - name: Install Cordova
               run: npm install -g cordova
-            - name: Download built site from Eleventy
+
+            - name: Download built site from Jekyll
               uses: actions/download-artifact@v4
               with:
                   name: github-pages
                   path: www
+
             - name: Prepare project
               run: |
                   curl -L -o icon.png "https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/images/icons/kiraku-home.png"
@@ -65,8 +77,6 @@ jobs:
                           <preference name="android-minSdkVersion" value="24" />
                           <preference name="android-targetSdkVersion" value="35" />
                           <preference name="AndroidXEnabled" value="true" />
-                          <preference name="SplashScreenDelay" value="3000" />
-                          <preference name="AutoHideSplashScreen" value="true" />
                           <config-file target="AndroidManifest.xml" parent="/manifest" xmlns:android="http://schemas.android.com/apk/res/android">
                               <uses-permission android:name="android.permission.INTERNET" />
                               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -83,10 +93,12 @@ jobs:
                   </widget>
                   EOF
                   sed -i 's/^          //' config.xml
+
             - name: Add Android platform
               run: |
                   cordova platform rm android --no-fetch || true
                   cordova platform add android@13 --no-fetch
+
             - name: Add plugins
               run: |
                   cordova plugin add cordova-plugin-file
@@ -97,16 +109,19 @@ jobs:
                   cordova plugin add cordova-plugin-inappbrowser
                   cordova plugin add cordova-plugin-android-permissions
                   cordova plugin add cordova-plugin-media-capture
-                  cordova plugin add cordova-plugin-splashscreen
                   cordova plugin add cordova-plugin-deeplinks \
                       --variable URL_SCHEME=kiraku \
                       --variable HOST_NAME=kakoi-kiraku-home.vercel.app
+                  cordova plugin add cordova-plugin-splashscreen
+
             - name: Decode Keystore
               run: |
                   echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
+
             - name: Verify keystore
               run: |
                   keytool -list -v -keystore keystore.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -alias "${{ secrets.KEY_ALIAS }}"
+
             - name: Create build.json
               run: |
                   cat > build.json << EOF
@@ -121,22 +136,26 @@ jobs:
                     }
                   }
                   EOF
+
             - name: Build release APK
               run: cordova build android --release -- --packageType=apk
+
             - name: List generated files
               run: |
                   echo "=== APK output directory ==="
                   ls -la platforms/android/app/build/outputs/apk/release/ || true
                   echo "=== Search for any APK ==="
                   find platforms/android -name "*.apk" | sort
+
             - name: Upload APK
               uses: actions/upload-artifact@v4
               with:
                   name: kakoi-kiraku-home-release-apk
                   path: platforms/android/**/*.apk
                   if-no-files-found: error
+
     deploy:
-        needs: build-eleventy
+        needs: build-jekyll
         runs-on: ubuntu-latest
         environment:
             name: github-pages
