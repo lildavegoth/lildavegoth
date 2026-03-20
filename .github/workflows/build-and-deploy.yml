@@ -1,158 +1,55 @@
 name: Build and Deploy
-
 on:
     push:
         branches: [homepage]
     workflow_dispatch:
-
 permissions:
     contents: read
     pages: write
     id-token: write
-
 jobs:
     build-eleventy:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
-
-            - name: Setup Node.js 20
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 20
-
-            - name: Create package.json
+            - name: Copy files to _site
               run: |
-                  cat > package.json << 'EOF'
-                  {
-                      "name": "kiraku-site",
-                      "version": "1.0.0",
-                      "scripts": {
-                          "build": "eleventy"
-                      },
-                      "devDependencies": {
-                          "@11ty/eleventy": "^2.0.1"
-                      }
-                  }
-                  EOF
-
-            - name: Install dependencies
-              run: npm install
-
-            - name: Create Eleventy layout
-              run: |
-                  mkdir -p _includes
-                  cat > _includes/layout.njk << 'EOF'
-                  <!DOCTYPE html>
-                  <html lang="en">
-                  <head>
-                      <meta charset="UTF-8">
-                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                      <title>{{ title if title else "Kiraku Home" }}</title>
-                  </head>
-                  <body>
-                      {{ content | safe }}
-                  </body>
-                  </html>
-                  EOF
-
-            - name: Create Eleventy config
-              run: |
-                  cat > .eleventy.js << 'EOF'
-                  module.exports = function(eleventyConfig) {
-                      eleventyConfig.addPassthroughCopy("images");
-                      eleventyConfig.addPassthroughCopy("css");
-                      eleventyConfig.addPassthroughCopy("js");
-                      eleventyConfig.addPassthroughCopy("cssjs");
-                      eleventyConfig.addPassthroughCopy("*.css");
-                      eleventyConfig.addPassthroughCopy("*.js");
-                      eleventyConfig.addPassthroughCopy("*.cssjs");
-                      eleventyConfig.addPassthroughCopy("sw.js");
-                      eleventyConfig.addPassthroughCopy("robots.txt");
-                      eleventyConfig.addPassthroughCopy("sitemap.xml");
-                      return {
-                          dir: {
-                              input: "src",
-                              output: "_site",
-                              includes: "../_includes"
-                          }
-                      };
-                  };
-                  EOF
-
-            - name: Transform HTML files into Eleventy source
-              run: |
-                  mkdir -p src
-                  for file in *.html; do
-                      if [ -f "$file" ]; then
-                          title=$(grep -oP '(?<=<title>).*?(?=</title>)' "$file" | head -1)
-                          if [ -z "$title" ]; then
-                              title="${file%.html}"
-                          fi
-                          awk '/<body[^>]*>/ { inside=1; next; } /<\/body>/ { inside=0; next; } inside { print; }' "$file" > "src/$file"
-                          sed -i "1s/^/---\nlayout: layout.njk\ntitle: $title\n---\n/" "src/$file"
-                      fi
-                  done
-                  if [ -d "pages" ]; then
-                      mkdir -p src/pages
-                      for file in pages/*.html; do
-                          if [ -f "$file" ]; then
-                              title=$(grep -oP '(?<=<title>).*?(?=</title>)' "$file" | head -1)
-                              if [ -z "$title" ]; then
-                                  title=$(basename "$file" .html)
-                              fi
-                              awk '/<body[^>]*>/ { inside=1; next; } /<\/body>/ { inside=0; next; } inside { print; }' "$file" > "src/pages/$(basename "$file")"
-                              sed -i "1s/^/---\nlayout: layout.njk\ntitle: $title\n---\n/" "src/pages/$(basename "$file")"
-                          fi
-                      done
-                  fi
-
-            - name: Build with Eleventy
-              run: npx eleventy
-
+                  mkdir -p _site
+                  rsync -av --exclude='.git' --exclude='.github' --exclude='_site' ./ _site/
             - name: Upload GitHub Pages artifact
               uses: actions/upload-pages-artifact@v3
               with:
                   path: ./_site
-
     build-cordova:
+        needs: build-eleventy
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
-
             - name: Setup Node.js 20
               uses: actions/setup-node@v4
               with:
                   node-version: 20
-
             - name: Setup Java JDK 17
               uses: actions/setup-java@v4
               with:
                   distribution: temurin
                   java-version: 17
-
             - name: Setup Android SDK
               uses: android-actions/setup-android@v3
-
             - name: Install Android SDK 35
               run: yes | sdkmanager "platforms;android-35"
-
             - name: Install Cordova
               run: npm install -g cordova
-
-            - name: Copy raw HTML files to www
-              run: |
-                  mkdir -p www
-                  rsync -av --exclude='.git' --exclude='.github' ./ www/
-
-            - name: Download app icon
+            - name: Download built site from Eleventy
+              uses: actions/download-artifact@v4
+              with:
+                  name: github-pages
+                  path: www
+            - name: Prepare project
               run: |
                   curl -L -o icon.png "https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/images/icons/kiraku-home.png"
-
-            - name: Prepare config.xml
-              run: |
                   cat > config.xml << 'EOF'
                   <?xml version='1.0' encoding='utf-8'?>
                   <widget id="com.kakoikiraku.home" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
@@ -168,6 +65,8 @@ jobs:
                           <preference name="android-minSdkVersion" value="24" />
                           <preference name="android-targetSdkVersion" value="35" />
                           <preference name="AndroidXEnabled" value="true" />
+                          <preference name="SplashScreenDelay" value="3000" />
+                          <preference name="AutoHideSplashScreen" value="true" />
                           <config-file target="AndroidManifest.xml" parent="/manifest" xmlns:android="http://schemas.android.com/apk/res/android">
                               <uses-permission android:name="android.permission.INTERNET" />
                               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -180,20 +79,14 @@ jobs:
                           </config-file>
                           <icon src="icon.png" />
                           <splash src="icon.png" />
-                          <preference name="AutoHideSplashScreen" value="true" />
-                          <preference name="SplashScreenDelay" value="3000" />
-                          <preference name="FadeSplashScreen" value="false" />
-                          <preference name="SplashScreenBackgroundColor" value="0xFFFFFFFF" />
                       </platform>
                   </widget>
                   EOF
                   sed -i 's/^          //' config.xml
-
             - name: Add Android platform
               run: |
                   cordova platform rm android --no-fetch || true
                   cordova platform add android@13 --no-fetch
-
             - name: Add plugins
               run: |
                   cordova plugin add cordova-plugin-file
@@ -204,19 +97,16 @@ jobs:
                   cordova plugin add cordova-plugin-inappbrowser
                   cordova plugin add cordova-plugin-android-permissions
                   cordova plugin add cordova-plugin-media-capture
+                  cordova plugin add cordova-plugin-splashscreen
                   cordova plugin add cordova-plugin-deeplinks \
                       --variable URL_SCHEME=kiraku \
                       --variable HOST_NAME=kakoi-kiraku-home.vercel.app
-                  cordova plugin add cordova-plugin-splashscreen
-
             - name: Decode Keystore
               run: |
                   echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
-
             - name: Verify keystore
               run: |
                   keytool -list -v -keystore keystore.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -alias "${{ secrets.KEY_ALIAS }}"
-
             - name: Create build.json
               run: |
                   cat > build.json << EOF
@@ -231,24 +121,20 @@ jobs:
                     }
                   }
                   EOF
-
             - name: Build release APK
               run: cordova build android --release -- --packageType=apk
-
             - name: List generated files
               run: |
                   echo "=== APK output directory ==="
                   ls -la platforms/android/app/build/outputs/apk/release/ || true
                   echo "=== Search for any APK ==="
                   find platforms/android -name "*.apk" | sort
-
             - name: Upload APK
               uses: actions/upload-artifact@v4
               with:
                   name: kakoi-kiraku-home-release-apk
                   path: platforms/android/**/*.apk
                   if-no-files-found: error
-
     deploy:
         needs: build-eleventy
         runs-on: ubuntu-latest
