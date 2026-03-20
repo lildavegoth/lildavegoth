@@ -433,321 +433,318 @@
         }
     });
     
-    const selectionStyle = document.createElement('style');
-    selectionStyle.textContent = `
-        ::selection {
-            color: #C1FC32 !important;
+    (function() {
+        const ACCENT_COLOR_HEX = '#C1FC32';
+        
+        function rgbToHex(rgb) {
+            const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (!match) return rgb;
+            return '#' + ((1 << 24) + (parseInt(match[1]) << 16) + (parseInt(match[2]) << 8) + parseInt(match[3])).toString(16).slice(1).toUpperCase();
         }
         
-        ::-moz-selection {
-            color: #C1FC32 !important;
-        }
-        
-        img.protected::selection,
-        img.protected::-moz-selection {
-            color: transparent !important;
-        }
-    `;
-    
-    document.head.appendChild(selectionStyle);
-    
-    // Initialize when DOM is ready
-    document.addEventListener('DOMContentLoaded', init);
-    
-    function init() {
-        console.log('FastNav initialized');
-        
-        // Extract current page ID from URL
-        currentPage = getCurrentPageId();
-        
-        if (CONFIG.useSpa) {
-            setupSpaNavigation();
-        } else {
-            setupFastTraditionalNav();
-        }
-        
-        // Preload linked pages in background
-        if (CONFIG.preloadPages) {
-            preloadLinkedPages();
-        }
-    }
-    
-    // ==================== SPA MODE ====================
-    function setupSpaNavigation() {
-        // Hide original body content, show in SPA container
-        const originalContent = document.body.innerHTML;
-        document.body.innerHTML = `
-            <div id="spa-container">
-                <div id="page-${currentPage}" class="spa-page active">
-                    ${originalContent}
-                </div>
-            </div>
-            <div id="spa-loading" style="display:none;">Loading...</div>
-        `;
-        
-        // Intercept ALL link clicks
-        document.addEventListener('click', handleSpaClick);
-        
-        // Handle browser back/forward
-        window.addEventListener('popstate', handlePopState);
-    }
-    
-    function handleSpaClick(e) {
-        const link = e.target.closest('a[href]');
-        if (!link) return;
-        
-        const href = link.getAttribute('href');
-        
-        // Skip external links and anchors
-        if (href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) {
-            return;
-        }
-        
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Remove .html extension for page ID
-        const pageId = href.replace('.html', '').replace('./', '') || 'index';
-        
-        // Load the page
-        loadSpaPage(pageId, href);
-    }
-    
-    async function loadSpaPage(pageId, url) {
-        // Show loading indicator
-        showLoading(true);
-        
-        try {
-            let content;
-            
-            // Check cache first
-            if (pageCache.has(pageId)) {
-                content = pageCache.get(pageId);
-            } else {
-                // Fetch the page
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Failed to load');
-                
-                const html = await response.text();
-                
-                // Extract body content (remove head, scripts, etc)
-                const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-                content = bodyMatch ? bodyMatch[1] : html;
-                
-                // Cache it
-                pageCache.set(pageId, content);
-                trimCache();
+        function getBackgroundColorHex(element) {
+            if (!element) return null;
+            const style = window.getComputedStyle(element);
+            const bgColor = style.backgroundColor;
+            if (bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
+                return getBackgroundColorHex(element.parentElement);
             }
+            return rgbToHex(bgColor);
+        }
+        
+        function updateSelectionColor() {
+            const selection = window.getSelection();
+            let targetColor = ACCENT_COLOR_HEX;
             
-            // Create new page container
-            const newPage = document.createElement('div');
-            newPage.id = `page-${pageId}`;
-            newPage.className = 'spa-page';
-            newPage.innerHTML = content;
-            
-            // Add to container
-            const container = document.getElementById('spa-container');
-            const oldPage = container.querySelector('.active');
-            
-            container.appendChild(newPage);
-            
-            // Animate transition
-            setTimeout(() => {
-                if (oldPage) oldPage.classList.remove('active');
-                newPage.classList.add('active');
-                
-                // Update URL without reload
-                window.history.pushState({pageId}, '', url);
-                
-                // Update current page
-                currentPage = pageId;
-                
-                // Remove old page after animation
-                setTimeout(() => {
-                    if (oldPage && oldPage.id !== `page-${pageId}`) {
-                        oldPage.remove();
+            if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const startContainer = range.startContainer;
+                let element = startContainer.nodeType === Node.TEXT_NODE ? startContainer.parentElement : startContainer;
+                if (element) {
+                    const bgHex = getBackgroundColorHex(element);
+                    if (bgHex && bgHex.toUpperCase() === ACCENT_COLOR_HEX.toUpperCase()) {
+                        targetColor = '#C42833';
                     }
-                    showLoading(false);
-                    
-                    // Reinitialize scripts for new page
-                    initScripts(newPage);
-                }, CONFIG.transitionSpeed);
-            }, 10);
-            
-        } catch (error) {
-            console.error('Failed to load page:', error);
-            showLoading(false);
-            // Fallback to traditional navigation
-            window.location.href = url;
-        }
-    }
-    
-    // ==================== FAST TRADITIONAL MODE ====================
-    function setupFastTraditionalNav() {
-        // Add fast-click handler
-        document.addEventListener('click', function(e) {
-            const link = e.target.closest('a[href$=".html"]');
-            if (!link || link.href.startsWith('http')) return;
-            
-            const url = link.getAttribute('href');
-            
-            // Check cache for instant preview
-            if (pageCache.has(url)) {
-                e.preventDefault();
-                showLoading(true);
-                
-                // Quick navigation with cached preview
-                setTimeout(() => {
-                    window.location.href = url;
-                }, 50);
+                }
             }
+            
+            let styleEl = document.getElementById('dynamic-selection-style');
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'dynamic-selection-style';
+                document.head.appendChild(styleEl);
+            }
+            
+            styleEl.textContent = `
+                ::selection {
+                    color: ${targetColor} !important;
+                    background: transparent !important;
+                }
+                ::-moz-selection {
+                    color: ${targetColor} !important;
+                    background: transparent !important;
+                }
+            `;
+        }
+        
+        document.addEventListener('selectionchange', updateSelectionColor);
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSelectionColor();
         });
         
-        // Accelerate page transitions
-        if ('connection' in navigator) {
-            document.body.classList.add(
-                navigator.connection.saveData ? 'save-data' : 'no-save-data'
-            );
+        const staticSelectionStyle = document.createElement('style');
+        staticSelectionStyle.textContent = `
+            img.protected::selection,
+            img.protected::-moz-selection {
+                color: transparent !important;
+                background: transparent !important;
+            }
+        `;
+        document.head.appendChild(staticSelectionStyle);
+    })();
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const CONFIG = {
+            useSpa: true,
+            preloadPages: true,
+            transitionSpeed: 200,
+            cacheSize: 10
+        };
+        
+        let currentPage = '';
+        const pageCache = new Map();
+        
+        function getCurrentPageId() {
+            const path = window.location.pathname;
+            const page = path.split('/').pop().replace('.html', '') || 'index';
+            return page;
         }
-    }
-    
-    // ==================== UTILITY FUNCTIONS ====================
-    function getCurrentPageId() {
-        const path = window.location.pathname;
-        const page = path.split('/').pop().replace('.html', '') || 'index';
-        return page;
-    }
-    
-    function showLoading(show) {
-        const loader = document.getElementById('spa-loading') || 
-                      (() => {
-                          const div = document.createElement('div');
-                          div.id = 'spa-loading';
-                          div.style.cssText = `
-                              position: fixed;
-                              top: 0;
-                              left: 0;
-                              width: 100%;
-                              height: 3px;
-                              background: linear-gradient(90deg, #007aff, #00c6ff);
-                              z-index: 9999;
-                              display: none;
-                              animation: loading 1s infinite;
-                          `;
-                          document.body.appendChild(div);
-                          
-                          // Add animation
-                          const style = document.createElement('style');
-                          style.textContent = `
-                              @keyframes loading {
-                                  0% { transform: translateX(-100%); }
-                                  100% { transform: translateX(100%); }
-                              }
-                          `;
-                          document.head.appendChild(style);
-                          return div;
-                      })();
         
-        loader.style.display = show ? 'block' : 'none';
-    }
-    
-    async function preloadLinkedPages() {
-        // Find all internal links
-        const links = Array.from(document.querySelectorAll('a[href$=".html"]'))
-            .map(link => link.getAttribute('href'))
-            .filter(href => !href.startsWith('http'))
-            .slice(0, CONFIG.cacheSize);
+        function showLoading(show) {
+            const loader = document.getElementById('spa-loading') || 
+                          (() => {
+                              const div = document.createElement('div');
+                              div.id = 'spa-loading';
+                              div.style.cssText = `
+                                  position: fixed;
+                                  top: 0;
+                                  left: 0;
+                                  width: 100%;
+                                  height: 3px;
+                                  background: linear-gradient(90deg, #007aff, #00c6ff);
+                                  z-index: 9999;
+                                  display: none;
+                                  animation: loading 1s infinite;
+                              `;
+                              document.body.appendChild(div);
+                              
+                              const style = document.createElement('style');
+                              style.textContent = `
+                                  @keyframes loading {
+                                      0% { transform: translateX(-100%); }
+                                      100% { transform: translateX(100%); }
+                                  }
+                              `;
+                              document.head.appendChild(style);
+                              return div;
+                          })();
+            
+            loader.style.display = show ? 'block' : 'none';
+        }
         
-        // Preload in background
-        for (const url of links) {
-            if (!pageCache.has(url)) {
-                try {
-                    const response = await fetch(url);
-                    const html = await response.text();
-                    pageCache.set(url, html);
-                    console.log('Preloaded:', url);
-                } catch (e) {
-                    // Silent fail - network might be offline
+        function trimCache() {
+            if (pageCache.size > CONFIG.cacheSize) {
+                const firstKey = pageCache.keys().next().value;
+                pageCache.delete(firstKey);
+            }
+        }
+        
+        async function preloadLinkedPages() {
+            const links = Array.from(document.querySelectorAll('a[href$=".html"]'))
+                .map(link => link.getAttribute('href'))
+                .filter(href => !href.startsWith('http'))
+                .slice(0, CONFIG.cacheSize);
+            
+            for (const url of links) {
+                if (!pageCache.has(url)) {
+                    try {
+                        const response = await fetch(url);
+                        const html = await response.text();
+                        pageCache.set(url, html);
+                    } catch (e) {}
                 }
             }
         }
-    }
-    
-    function trimCache() {
-        if (pageCache.size > CONFIG.cacheSize) {
-            const firstKey = pageCache.keys().next().value;
-            pageCache.delete(firstKey);
-        }
-    }
-    
-    function handlePopState(event) {
-        if (event.state && event.state.pageId) {
-            loadSpaPage(event.state.pageId, `${event.state.pageId}.html`);
-        }
-    }
-    
-    function initScripts(container) {
-        // Reinitialize any scripts in the new page
-        const scripts = container.querySelectorAll('script');
-        scripts.forEach(oldScript => {
-            const newScript = document.createElement('script');
-            
-            // Copy all attributes
-            Array.from(oldScript.attributes).forEach(attr => {
-                newScript.setAttribute(attr.name, attr.value);
+        
+        function initScripts(container) {
+            const scripts = container.querySelectorAll('script');
+            scripts.forEach(oldScript => {
+                const newScript = document.createElement('script');
+                Array.from(oldScript.attributes).forEach(attr => {
+                    newScript.setAttribute(attr.name, attr.value);
+                });
+                if (oldScript.textContent) {
+                    newScript.textContent = oldScript.textContent;
+                }
+                oldScript.parentNode.replaceChild(newScript, oldScript);
             });
+            container.dispatchEvent(new Event('pageinit', { bubbles: true }));
+        }
+        
+        function setupSpaNavigation() {
+            const originalContent = document.body.innerHTML;
+            document.body.innerHTML = `
+                <div id="spa-container">
+                    <div id="page-${currentPage}" class="spa-page active">
+                        ${originalContent}
+                    </div>
+                </div>
+                <div id="spa-loading" style="display:none;">Loading...</div>
+            `;
             
-            // Copy inline script content
-            if (oldScript.textContent) {
-                newScript.textContent = oldScript.textContent;
+            document.addEventListener('click', handleSpaClick);
+            window.addEventListener('popstate', handlePopState);
+        }
+        
+        function handleSpaClick(e) {
+            const link = e.target.closest('a[href]');
+            if (!link) return;
+            
+            const href = link.getAttribute('href');
+            if (href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) {
+                return;
             }
             
-            oldScript.parentNode.replaceChild(newScript, oldScript);
-        });
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const pageId = href.replace('.html', '').replace('./', '') || 'index';
+            loadSpaPage(pageId, href);
+        }
         
-        // Dispatch event for page-specific initialization
-        container.dispatchEvent(new Event('pageinit', { bubbles: true }));
-    }
-    
-    // Add SPA styles
-    const spaStyles = `
-        .spa-page {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            min-height: 100vh;
-            opacity: 0;
-            transform: translateX(10px);
-            transition: opacity ${CONFIG.transitionSpeed}ms ease, 
-                        transform ${CONFIG.transitionSpeed}ms ease;
-            pointer-events: none;
+        async function loadSpaPage(pageId, url) {
+            showLoading(true);
+            
+            try {
+                let content;
+                if (pageCache.has(pageId)) {
+                    content = pageCache.get(pageId);
+                } else {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Failed to load');
+                    const html = await response.text();
+                    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+                    content = bodyMatch ? bodyMatch[1] : html;
+                    pageCache.set(pageId, content);
+                    trimCache();
+                }
+                
+                const newPage = document.createElement('div');
+                newPage.id = `page-${pageId}`;
+                newPage.className = 'spa-page';
+                newPage.innerHTML = content;
+                
+                const container = document.getElementById('spa-container');
+                const oldPage = container.querySelector('.active');
+                container.appendChild(newPage);
+                
+                setTimeout(() => {
+                    if (oldPage) oldPage.classList.remove('active');
+                    newPage.classList.add('active');
+                    window.history.pushState({pageId}, '', url);
+                    currentPage = pageId;
+                    setTimeout(() => {
+                        if (oldPage && oldPage.id !== `page-${pageId}`) {
+                            oldPage.remove();
+                        }
+                        showLoading(false);
+                        initScripts(newPage);
+                    }, CONFIG.transitionSpeed);
+                }, 10);
+            } catch (error) {
+                showLoading(false);
+                window.location.href = url;
+            }
         }
-        .spa-page.active {
-            opacity: 1;
-            transform: translateX(0);
-            position: relative;
-            pointer-events: all;
+        
+        function handlePopState(event) {
+            if (event.state && event.state.pageId) {
+                loadSpaPage(event.state.pageId, `${event.state.pageId}.html`);
+            }
         }
-        .save-data .image {
-            opacity: 0.8;
-            filter: blur(0.5px);
+        
+        function setupFastTraditionalNav() {
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a[href$=".html"]');
+                if (!link || link.href.startsWith('http')) return;
+                
+                const url = link.getAttribute('href');
+                if (pageCache.has(url)) {
+                    e.preventDefault();
+                    showLoading(true);
+                    setTimeout(() => {
+                        window.location.href = url;
+                    }, 50);
+                }
+            });
+            
+            if ('connection' in navigator) {
+                document.body.classList.add(
+                    navigator.connection.saveData ? 'save-data' : 'no-save-data'
+                );
+            }
         }
-    `;
+        
+        function init() {
+            currentPage = getCurrentPageId();
+            if (CONFIG.useSpa) {
+                setupSpaNavigation();
+            } else {
+                setupFastTraditionalNav();
+            }
+            if (CONFIG.preloadPages) {
+                preloadLinkedPages();
+            }
+        }
+        
+        const spaStyles = `
+            .spa-page {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                min-height: 100vh;
+                opacity: 0;
+                transform: translateX(10px);
+                transition: opacity ${CONFIG.transitionSpeed}ms ease, 
+                            transform ${CONFIG.transitionSpeed}ms ease;
+                pointer-events: none;
+            }
+            .spa-page.active {
+                opacity: 1;
+                transform: translateX(0);
+                position: relative;
+                pointer-events: all;
+            }
+            .save-data .image {
+                opacity: 0.8;
+                filter: blur(0.5px);
+            }
+        `;
+        
+        const styleEl = document.createElement('style');
+        styleEl.textContent = spaStyles;
+        document.head.appendChild(styleEl);
+        
+        window.FastNav = {
+            clearCache: () => pageCache.clear(),
+            preloadPage: (url) => preloadLinkedPages(),
+            navigateTo: (pageId) => loadSpaPage(pageId, `${pageId}.html`)
+        };
+        
+        init();
+    })();
     
-    // Inject styles
-    const styleEl = document.createElement('style');
-    styleEl.textContent = spaStyles;
-    document.head.appendChild(styleEl);
-    
-    // Make functions available globally (optional)
-    window.FastNav = {
-        clearCache: () => pageCache.clear(),
-        preloadPage: (url) => preloadPage(url),
-        navigateTo: (pageId) => loadSpaPage(pageId, `${pageId}.html`)
-    };
-    
-    // Force Rounded Scrollbars
     document.addEventListener('DOMContentLoaded', function() {
         const scrollbarCSS = document.createElement('style');
         scrollbarCSS.textContent = `
