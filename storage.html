@@ -646,7 +646,8 @@
             { name: 'Subscription Manager', keys: ['subscriptionsManager'] },
             { name: 'Storage', keys: ['usernameStorage', 'avatarStorage', 'username'] },
             { name: 'Dictionary Manager', keys: ['userDictionary'] },
-            { name: 'Browser Homepage', keys: ['weatherCity', 'deadlineDate', 'deadlineDesc'] }
+            { name: 'Browser Homepage', keys: ['weatherCity', 'deadlineDate', 'deadlineDesc'] },
+            { name: 'Account', keys: ['currentUser', 'profilePhoto'] }
         ];
 
         const excludedKeys = [
@@ -780,7 +781,17 @@
             });
 
             filtered = filtered.filter(key => {
-                return key.toLowerCase().includes(search) || localStorage.getItem(key).toLowerCase().includes(search);
+                let val = localStorage.getItem(key);
+                if (key === 'currentUser') {
+                    try {
+                        let user = JSON.parse(val);
+                        if (user && typeof user === 'object') {
+                            const { admin, ...cleanUser } = user;
+                            val = JSON.stringify(cleanUser);
+                        }
+                    } catch (e) {}
+                }
+                return key.toLowerCase().includes(search) || val.toLowerCase().includes(search);
             });
 
             filtered.sort((a, b) => {
@@ -823,33 +834,50 @@
                 pill.style.color = '#000';
 
                 filtered.forEach(key => {
-                    let value = localStorage.getItem(key);
-                    let displayValue = value;
+                    let rawValue = localStorage.getItem(key);
+                    let valueForDisplay = rawValue;
                     let isJSON = false;
                     let isBase64 = false;
 
-                    if (typeof value === 'string' && value.length > 500 && value.startsWith('data:image')) {
-                        displayValue = '[Base64 Image] ' + value.substring(0, 40) + '...';
-                        isBase64 = true;
-                    } else {
+                    if (key === 'currentUser') {
                         try {
-                            let parsed = JSON.parse(value);
-                            if (typeof parsed === 'object' && parsed !== null) {
-                                displayValue = JSON.stringify(parsed, null, 2);
-                                if (displayValue.length > 300) {
-                                    displayValue = displayValue.substring(0, 300) + '...';
-                                }
+                            let userObj = JSON.parse(rawValue);
+                            if (userObj && typeof userObj === 'object') {
+                                const { admin, ...cleanUser } = userObj;
+                                valueForDisplay = JSON.stringify(cleanUser, null, 2);
                                 isJSON = true;
                             }
-                        } catch {
-                            if (value.length > 300) {
-                                displayValue = value.substring(0, 300) + '...';
+                        } catch (e) {}
+                    } else {
+                        if (typeof rawValue === 'string' && rawValue.length > 500 && rawValue.startsWith('data:image')) {
+                            valueForDisplay = '[Base64 Image] ' + rawValue.substring(0, 40) + '...';
+                            isBase64 = true;
+                        } else {
+                            try {
+                                let parsed = JSON.parse(rawValue);
+                                if (typeof parsed === 'object' && parsed !== null) {
+                                    valueForDisplay = JSON.stringify(parsed, null, 2);
+                                    if (valueForDisplay.length > 300) {
+                                        valueForDisplay = valueForDisplay.substring(0, 300) + '...';
+                                    }
+                                    isJSON = true;
+                                }
+                            } catch {
+                                if (rawValue.length > 300) {
+                                    valueForDisplay = rawValue.substring(0, 300) + '...';
+                                } else {
+                                    valueForDisplay = rawValue;
+                                }
                             }
                         }
                     }
 
-                    let percent = value.length ? Math.min(100, Math.round((value.length / 500) * 100)) : 0;
-                    let itemSizeBytes = key.length + value.length;
+                    if (!isJSON && !isBase64 && valueForDisplay.length > 300 && typeof valueForDisplay === 'string') {
+                        valueForDisplay = valueForDisplay.substring(0, 300) + '...';
+                    }
+
+                    let percent = rawValue.length ? Math.min(100, Math.round((rawValue.length / 500) * 100)) : 0;
+                    let itemSizeBytes = key.length + rawValue.length;
                     let itemSizeFormatted = formatSize(itemSizeBytes);
 
                     let card = document.createElement('div');
@@ -867,9 +895,9 @@
                             </button>
                         </div>
                         <div class="storage-key">${key.length > 50 ? key.substring(0, 50) + '...' : key}</div>
-                        <div class="storage-value">${displayValue}</div>
+                        <div class="storage-value">${valueForDisplay.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
                         <div class="card-footer">
-                            <div class="due">Length: ${value.length} — ${itemSizeFormatted}</div>
+                            <div class="due">Length: ${rawValue.length} — ${itemSizeFormatted}</div>
                             <div class="progress"><div class="progress-fill" style="width:${percent}%"></div></div>
                         </div>
                     `;
@@ -1028,8 +1056,17 @@
             const term = searchTerm.toLowerCase();
 
             const matches = allKeys.filter(key => {
-                const value = localStorage.getItem(key) || '';
-                return key.toLowerCase().includes(term) || value.toLowerCase().includes(term);
+                let val = localStorage.getItem(key);
+                if (key === 'currentUser') {
+                    try {
+                        let user = JSON.parse(val);
+                        if (user && typeof user === 'object') {
+                            const { admin, ...cleanUser } = user;
+                            val = JSON.stringify(cleanUser);
+                        }
+                    } catch (e) {}
+                }
+                return key.toLowerCase().includes(term) || val.toLowerCase().includes(term);
             }).slice(0, 7);
 
             if (matches.length === 0) {
@@ -1037,8 +1074,17 @@
             } else {
                 suggestionsContainer.innerHTML = matches.map(key => {
                     const folder = getFolderForKey(key);
-                    const value = localStorage.getItem(key) || '';
-                    const snippet = value.length > 50 ? value.substring(0, 50) + '…' : value;
+                    let val = localStorage.getItem(key) || '';
+                    if (key === 'currentUser') {
+                        try {
+                            let user = JSON.parse(val);
+                            if (user && typeof user === 'object') {
+                                const { admin, ...cleanUser } = user;
+                                val = JSON.stringify(cleanUser);
+                            }
+                        } catch (e) {}
+                    }
+                    const snippet = val.length > 50 ? val.substring(0, 50) + '…' : val;
                     return `
                         <div class="search-suggestion-item" data-key="${key}">
                             <div class="suggestion-title">${key}</div>
@@ -1230,7 +1276,7 @@
                 'giveaway_settings', 'giveaway_participants', 'lastGiveawayWinner',
                 'app_hash_v2', 'app_salt_v2', 'hideImportNote', 'hideSwipeIndicator',
                 'hintModeEnabled', 'hiraganaStars', 'hiraganaStreak', 'moneyTrackerCurrentCardId',
-                'showAllEntries', 'userName', 'currentUser', 'profilePhoto'];
+                'showAllEntries', 'userName'];
 
             const backup = {};
             for (let i = 0; i < localStorage.length; i++) {
