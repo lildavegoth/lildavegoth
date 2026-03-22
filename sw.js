@@ -59,6 +59,7 @@ const urlsToCache = [
     'pages/svg-optimizer.html',
     'pages/svg-rasterizer.html',
     'pages/svg-to-datauri.html',
+    'pages/timer.html',
     'pages/typing-game.html',
     'pages/userscripts-gallery.html',
     'pages/wallet.html',
