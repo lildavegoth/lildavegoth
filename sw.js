@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.5.2';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.5.5';
 const urlsToCache = [
     // Root
     '/',
@@ -17,8 +17,10 @@ const urlsToCache = [
     // Pages
     'pages/2048.html',
     'pages/appflowy-json-converter.html',
+    'pages/apps-store.html',
     'pages/calculator.html',
     'pages/calendar.html',
+    'pages/card-maker.html',
     'pages/code-comparator.html',
     'pages/color-detector.html',
     'pages/currency-converter.html',
@@ -26,6 +28,8 @@ const urlsToCache = [
     'pages/dictionary-manager.html',
     'pages/downloads-task.html',
     'page/font-previewer.html',
+    'pages/heartopia-gcodes.html',
+    'pages/hiragana-learner.html',
     'pages/html-cleaner.html',
     'pages/html-editor.html',
     'pages/html-generator.html',
