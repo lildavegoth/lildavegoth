@@ -3,26 +3,29 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-        <title>Notification Test</title>
-        <script src="cordova.js"></script>
+        <title>Notification Test - Browser & Cordova</title>
         <style>
+            * {
+                box-sizing: border-box;
+            }
             body {
                 font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                background: #eef2ff;
+                background: #f0f4f8;
                 margin: 0;
                 min-height: 100vh;
                 display: flex;
                 justify-content: center;
                 align-items: center;
                 text-align: center;
+                padding: 1rem;
             }
             .card {
                 background: white;
                 border-radius: 2rem;
                 box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.1);
                 padding: 2rem 1.5rem;
-                max-width: 460px;
-                width: 90%;
+                max-width: 480px;
+                width: 100%;
             }
             h1 {
                 font-size: 1.8rem;
@@ -33,7 +36,7 @@
             .sub {
                 color: #475569;
                 font-size: 0.85rem;
-                margin-bottom: 2rem;
+                margin-bottom: 1.8rem;
                 border-bottom: 1px solid #e2e8f0;
                 display: inline-block;
                 padding-bottom: 0.4rem;
@@ -67,43 +70,49 @@
                 padding: 0.5rem 1rem;
                 border-radius: 30px;
                 color: #2d3a5e;
+                word-break: break-word;
+            }
+            .info {
+                margin-top: 1rem;
+                font-size: 0.7rem;
+                color: #5b6e8c;
             }
         </style>
     </head>
     <body>
         <div class="card">
-            <h1>🔔 Notification test</h1>
-            <div class="sub">Cordova + Browser ready</div>
+            <h1>🔔 Notification Test</h1>
+            <div class="sub">Browser + Cordova ready</div>
             <button id="triggerBtn">📢 Show notification</button>
-            <div class="status" id="statusMsg">Ready</div>
+            <div class="status" id="statusMsg">Initializing...</div>
+            <div class="info">Click the button – notification will appear</div>
         </div>
 
         <script>
             (function() {
                 var isCordova = false;
-                var localNotificationPlugin = null;
+                var localPlugin = null;
+                var statusDiv = document.getElementById('statusMsg');
 
-                function updateStatus(message) {
-                    var statusDiv = document.getElementById('statusMsg');
-                    if (statusDiv) {
-                        statusDiv.innerText = message;
-                    }
+                function updateStatus(msg) {
+                    if (statusDiv) statusDiv.innerText = msg;
                 }
 
                 function requestWebPermission() {
                     if (!window.Notification) {
-                        updateStatus('Web notifications not supported');
+                        updateStatus('Web Notifications not supported');
                         return false;
                     }
                     if (Notification.permission === 'granted') {
+                        updateStatus('Web permission granted');
                         return true;
                     }
                     if (Notification.permission !== 'denied') {
-                        Notification.requestPermission().then(function(permission) {
-                            if (permission === 'granted') {
-                                updateStatus('Web notification permission granted');
+                        Notification.requestPermission().then(function(perm) {
+                            if (perm === 'granted') {
+                                updateStatus('Web permission granted');
                             } else {
-                                updateStatus('Web notification permission denied');
+                                updateStatus('Web permission denied');
                             }
                         });
                     }
@@ -112,98 +121,97 @@
 
                 function showWebNotification() {
                     if (!window.Notification) {
-                        alert('Your browser does not support desktop notifications');
+                        updateStatus('Browser does not support notifications');
                         return;
                     }
                     if (Notification.permission === 'granted') {
-                        new Notification('📱 Test from browser', {
-                            body: 'You triggered a notification successfully!',
+                        var notification = new Notification('🔔 Browser Alert', {
+                            body: 'You triggered a notification!',
                             icon: null
                         });
                         updateStatus('Web notification sent');
                     } else if (Notification.permission !== 'denied') {
                         Notification.requestPermission().then(function(perm) {
                             if (perm === 'granted') {
-                                new Notification('📱 Test from browser', {
-                                    body: 'You triggered a notification successfully!',
+                                new Notification('🔔 Browser Alert', {
+                                    body: 'You triggered a notification!',
                                     icon: null
                                 });
                                 updateStatus('Web notification sent');
                             } else {
-                                alert('Please allow notifications to see the alert.');
+                                updateStatus('Web permission denied – cannot show');
                             }
                         });
                     } else {
-                        alert('Notifications are blocked. Please enable them in browser settings.');
+                        updateStatus('Web notifications blocked');
                     }
                 }
 
                 function showCordovaNotification() {
-                    if (!localNotificationPlugin || typeof localNotificationPlugin.schedule !== 'function') {
-                        updateStatus('Cordova plugin not ready, using fallback');
+                    if (!localPlugin || typeof localPlugin.schedule !== 'function') {
+                        updateStatus('Cordova plugin not ready, using web fallback');
                         showWebNotification();
                         return;
                     }
                     var notifId = Math.floor(Date.now() % 9000) + 1000;
-                    localNotificationPlugin.schedule({
+                    localPlugin.schedule({
                         id: notifId,
                         title: 'Cordova Alert',
-                        text: 'Notification from Cordova app',
+                        text: 'Triggered from app!',
                         foreground: true,
-                        priority: 2,
-                        icon: 'res://icon',
-                        smallIcon: 'res://icon'
+                        priority: 2
                     }, function() {
                         updateStatus('Cordova notification scheduled');
-                    }, function(error) {
-                        updateStatus('Plugin error: ' + (error || 'unknown'));
+                    }, function(err) {
+                        updateStatus('Plugin error: ' + (err || 'unknown'));
                         showWebNotification();
                     });
                 }
 
-                function initCordova() {
+                function init() {
                     if (typeof window.cordova !== 'undefined') {
                         isCordova = true;
                         document.addEventListener('deviceready', function() {
+                            var plugin = null;
                             if (window.cordova && window.cordova.plugins && window.cordova.plugins.notification && window.cordova.plugins.notification.local) {
-                                localNotificationPlugin = window.cordova.plugins.notification.local;
-                                updateStatus('Cordova plugin ready');
+                                plugin = window.cordova.plugins.notification.local;
                             } else if (window.plugins && window.plugins.notification && window.plugins.notification.local) {
-                                localNotificationPlugin = window.plugins.notification.local;
-                                updateStatus('Cordova plugin ready (alternate)');
+                                plugin = window.plugins.notification.local;
+                            }
+                            if (plugin) {
+                                localPlugin = plugin;
+                                updateStatus('Cordova plugin ready');
                             } else {
                                 updateStatus('Cordova plugin not found, using web fallback');
                             }
                         }, false);
                     } else {
                         requestWebPermission();
-                        updateStatus('Browser mode - web notifications');
+                        updateStatus('Browser mode – web notifications');
                     }
                 }
 
-                function handleButtonClick() {
-                    if (isCordova && localNotificationPlugin) {
+                function onButtonClick() {
+                    if (isCordova && localPlugin) {
                         showCordovaNotification();
-                    } else if (isCordova && !localNotificationPlugin) {
-                        updateStatus('Plugin not loaded yet, retrying...');
+                    } else if (isCordova && !localPlugin) {
+                        updateStatus('Waiting for plugin...');
                         setTimeout(function() {
-                            if (localNotificationPlugin) {
+                            if (localPlugin) {
                                 showCordovaNotification();
                             } else {
                                 showWebNotification();
                             }
-                        }, 300);
+                        }, 500);
                     } else {
                         showWebNotification();
                     }
                 }
 
                 document.addEventListener('DOMContentLoaded', function() {
-                    initCordova();
+                    init();
                     var btn = document.getElementById('triggerBtn');
-                    if (btn) {
-                        btn.addEventListener('click', handleButtonClick);
-                    }
+                    if (btn) btn.addEventListener('click', onButtonClick);
                 });
             })();
         </script>
