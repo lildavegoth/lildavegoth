@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pixel SVG Maker | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <link rel="stylesheet" href="../media.css">
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --bg-black: #000000;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                              radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+            padding: var(--spacing-md);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .draw-zone {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: 1rem;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: var(--spacing-md);
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 18px;
+            cursor: crosshair;
+            background-color: white;
+            width: 100%;
+            height: auto;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            align-items: center;
+            margin-top: 20px;
+            background: rgba(22, 22, 24, 0.9);
+            padding: 10px 16px;
+            border-radius: 60px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .toolbar::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .toolbar::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+
+        .toolbar::-webkit-scrollbar-thumb {
+            background: rgba(193,252,50,0.3);
+            border-radius: 10px;
+        }
+
+        .tool-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: 0.1s linear;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-primary);
+            flex-shrink: 0;
+        }
+
+        .tool-btn:active {
+            transform: scale(0.96);
+        }
+
+        .tool-btn.primary {
+            background: var(--accent-color);
+            color: #000000;
+            border: none;
+        }
+
+        .color-circle-wrapper {
+            flex-shrink: 0;
+        }
+        .color-circle {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            transition: transform 0.1s ease;
+        }
+        .color-circle:active {
+            transform: scale(0.95);
+        }
+
+        input.color-input {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 50%;
+            padding: 0;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .grid-size-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 10px;
+            border-radius: 40px;
+            flex-shrink: 0;
+        }
+
+        .grid-size-control span {
+            font-weight: 500;
+            font-size: 0.75rem;
+        }
+
+        input#gridSizeInput {
+            width: 55px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 4px;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+        }
+
+        .svg-code-area {
+            background: #0a0f17;
+            border-radius: var(--radius-medium);
+            padding: 12px;
+        }
+
+        .svg-code-area textarea {
+            width: 100%;
+            background: #0a0f17;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            border: none;
+            resize: none;
+            white-space: pre;
+            overflow-x: auto;
+            margin-bottom: -60px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        @media (max-width: 600px) {
+            .tool-btn {
+                padding: 6px 10px;
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in" onclick="window.location.hash='';">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+
+        <app-header class="fade-in">
+            <div>
+                <h1 class="username">Pixel SVG Maker</h1>
+                <p class="tagline">Create a Pixel SVG with live generated codes that you can use anywhere you want</p>
+            </div>
+        </app-header>
+
+        <div class="draw-zone">
+            <canvas id="pixelCanvas" width="512" height="512" style="width:100%; height:auto; max-width:512px; aspect-ratio:1/1"></canvas>
+
+            <div class="toolbar">
+                <div class="color-circle-wrapper" id="colorCircleWrapper">
+                    <div class="color-circle" id="activeColorCircle" style="background-color: #000000;"></div>
+                    <input type="color" id="colorPicker" style="display: none;">
+                </div>
+                <div class="color-circle-wrapper" id="bgCircleWrapper">
+                    <div class="color-circle" id="bgColorCircle" style="background-color: #ffffff;"></div>
+                    <input type="color" id="bgColorPicker" style="display: none;">
+                </div>
+
+                <button class="tool-btn" id="transparentBtn"><i class="fas fa-eye"></i> Transparent</button>
+
+                <button class="tool-btn" id="eraserBtn"><i class="fas fa-eraser"></i> Eraser</button>
+                <button class="tool-btn" id="undoBtn"><i class="fas fa-undo-alt"></i> Undo</button>
+                <button class="tool-btn" id="redoBtn"><i class="fas fa-redo-alt"></i> Redo</button>
+                <button class="tool-btn" id="clearBtn"><i class="fas fa-trash-alt"></i> Clear</button>
+
+                <div class="grid-size-control">
+                    <i class="fas fa-th"></i>
+                    <input type="number" id="gridSizeInput" min="1" max="16" value="16" step="1">
+                    <span>px</span>
+                </div>
+                <button class="tool-btn" id="applySizeBtn"><i class="fas fa-expand-alt"></i> Resize</button>
+            </div>
+        </div>
+
+        <div class="svg-code-area">
+            <h3 style="margin:0 0 8px 0;">Generated SVG</h3>
+            <textarea id="svgCodeOutput" rows="6" readonly wrap="off"></textarea>
+            <div class="action-buttons">
+                <button class="tool-btn" id="copySvgBtn"><i class="fas fa-copy"></i> Copy</button>
+                <button class="tool-btn primary" id="downloadSvgBtn"><i class="fas fa-download"></i> Download</button>
+            </div>
+        </div>
+
+        <footer style="margin-bottom: 100px;">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Pixel SVG Maker</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        let gridSize = 16;
+        let pixelMatrix = [];
+        let currentColor = "#000000";
+        let bgColor = "#ffffff";
+        let isTransparent = false;
+        let drawingActive = false;
+        let eraserMode = false;
+        let history = [];
+        let historyIndex = -1;
+        let pendingChanges = false;
+
+        const canvas = document.getElementById('pixelCanvas');
+        let ctx = canvas.getContext('2d');
+
+        const colorPicker = document.getElementById('colorPicker');
+        const bgColorPicker = document.getElementById('bgColorPicker');
+        const transparentBtn = document.getElementById('transparentBtn');
+        const eraserBtn = document.getElementById('eraserBtn');
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const gridSizeInput = document.getElementById('gridSizeInput');
+        const applySizeBtn = document.getElementById('applySizeBtn');
+        const svgCodeArea = document.getElementById('svgCodeOutput');
+        const copyBtn = document.getElementById('copySvgBtn');
+        const downloadBtn = document.getElementById('downloadSvgBtn');
+
+        function initMatrix(size, fill = null) {
+            return Array(size).fill().map(() => Array(size).fill(fill));
+        }
+
+        function saveState() {
+            const snapshot = pixelMatrix.map(row => [...row]);
+            history = history.slice(0, historyIndex + 1);
+            history.push(snapshot);
+            if (history.length > 50) history.shift();
+            historyIndex = history.length - 1;
+        }
+
+        function restoreState(state) {
+            pixelMatrix = state.map(row => [...row]);
+            drawCanvas();
+            generateAndUpdateSVG();
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                restoreState(history[historyIndex]);
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                restoreState(history[historyIndex]);
+            }
+        }
+
+        function drawCanvas() {
+            const size = gridSize;
+            const canvasSize = 512;
+            const cellW = canvasSize / size;
+            const cellH = canvasSize / size;
+
+            for (let row = 0; row < size; row++) {
+                for (let col = 0; col < size; col++) {
+                    const color = pixelMatrix[row][col];
+                    if (color === null) {
+                        if (isTransparent) {
+                            ctx.clearRect(col * cellW, row * cellH, cellW, cellH);
+                        } else {
+                            ctx.fillStyle = bgColor;
+                            ctx.fillRect(col * cellW, row * cellH, cellW, cellH);
+                        }
+                    } else {
+                        ctx.fillStyle = color;
+                        ctx.fillRect(col * cellW, row * cellH, cellW, cellH);
+                    }
+                }
+            }
+
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(255,255,255,0.3)";
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= size; i++) {
+                const pos = i * cellW;
+                ctx.moveTo(pos, 0);
+                ctx.lineTo(pos, canvasSize);
+                ctx.moveTo(0, pos);
+                ctx.lineTo(canvasSize, pos);
+            }
+            ctx.stroke();
+        }
+
+        function generateSVG() {
+            const n = gridSize;
+            let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges">`;
+
+            if (!isTransparent) {
+                svg += `<rect width="${n}" height="${n}" fill="${bgColor}" />`;
+            }
+
+            for (let y = 0; y < n; y++) {
+                for (let x = 0; x < n; x++) {
+                    const color = pixelMatrix[y][x];
+                    if (color !== null) {
+                        if (isTransparent || color !== bgColor) {
+                            svg += `<rect x="${x}" y="${y}" width="1" height="1" fill="${color}" />`;
+                        }
+                    }
+                }
+            }
+            svg += `</svg>`;
+            return svg;
+        }
+
+        function generateAndUpdateSVG() {
+            svgCodeArea.value = generateSVG();
+        }
+
+        function fullRefresh() {
+            drawCanvas();
+            generateAndUpdateSVG();
+        }
+
+        function setPixel(row, col, color) {
+            if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) return false;
+            if (pixelMatrix[row][col] === color) return false;
+            pixelMatrix[row][col] = color;
+            return true;
+        }
+
+        function drawAtCoord(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const canvasX = (clientX - rect.left) * scaleX;
+            const canvasY = (clientY - rect.top) * scaleY;
+            if (canvasX < 0 || canvasX > canvas.width || canvasY < 0 || canvasY > canvas.height) return;
+
+            const cellW = canvas.width / gridSize;
+            const cellH = canvas.height / gridSize;
+            const col = Math.floor(canvasX / cellW);
+            const row = Math.floor(canvasY / cellH);
+            if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
+                let newColor;
+                if (eraserMode) {
+                    newColor = null;
+                } else {
+                    newColor = currentColor;
+                }
+                if (pixelMatrix[row][col] !== newColor) {
+                    pixelMatrix[row][col] = newColor;
+                    drawCanvas();
+                    generateAndUpdateSVG();
+                    pendingChanges = true;
+                }
+            }
+        }
+
+        function clearAll() {
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    pixelMatrix[i][j] = null;
+                }
+            }
+            fullRefresh();
+            saveState();
+        }
+
+        function resizeGrid(newSize) {
+            if (newSize === gridSize) return;
+            if (newSize < 1) newSize = 1;
+            if (newSize > 16) newSize = 16;
+            gridSize = newSize;
+            const newMatrix = initMatrix(gridSize, null);
+            const oldSize = pixelMatrix.length;
+            for (let y = 0; y < Math.min(oldSize, gridSize); y++) {
+                for (let x = 0; x < Math.min(oldSize, gridSize); x++) {
+                    newMatrix[y][x] = pixelMatrix[y][x];
+                }
+            }
+            pixelMatrix = newMatrix;
+            fullRefresh();
+            saveState();
+        }
+
+        function setCurrentColor(hex) {
+            currentColor = hex;
+            colorPicker.value = hex;
+        }
+
+        function setBgColor(hex) {
+            bgColor = hex;
+            bgColorPicker.value = hex;
+            if (!isTransparent) {
+                fullRefresh();
+            } else {
+                drawCanvas();
+                generateAndUpdateSVG();
+            }
+        }
+
+        function toggleTransparent() {
+            isTransparent = !isTransparent;
+            const icon = transparentBtn.querySelector('i');
+            if (isTransparent) {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+                transparentBtn.style.background = 'rgba(193,252,50,0.3)';
+                transparentBtn.style.borderColor = '#C1FC32';
+            } else {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+                transparentBtn.style.background = '';
+                transparentBtn.style.borderColor = '';
+            }
+            drawCanvas();
+            generateAndUpdateSVG();
+        }
+
+        function startDraw(e) {
+            drawingActive = true;
+            const point = getEventPoint(e);
+            if (point) drawAtCoord(point.x, point.y);
+            e.preventDefault();
+        }
+
+        function drawMove(e) {
+            if (!drawingActive) return;
+            const point = getEventPoint(e);
+            if (point) drawAtCoord(point.x, point.y);
+            e.preventDefault();
+        }
+
+        function endDraw(e) {
+            if (drawingActive && pendingChanges) {
+                saveState();
+                pendingChanges = false;
+            }
+            drawingActive = false;
+            e.preventDefault();
+        }
+
+        function getEventPoint(e) {
+            let clientX, clientY;
+            if (e.touches) {
+                if (e.touches.length === 0) return null;
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            return { x: clientX, y: clientY };
+        }
+
+        function attachCanvasEvents() {
+            canvas.addEventListener('mousedown', startDraw);
+            window.addEventListener('mousemove', drawMove);
+            window.addEventListener('mouseup', endDraw);
+            canvas.addEventListener('touchstart', startDraw, { passive: false });
+            canvas.addEventListener('touchmove', drawMove, { passive: false });
+            canvas.addEventListener('touchend', endDraw);
+            canvas.addEventListener('touchcancel', endDraw);
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        }
+
+        function setupControls() {
+            colorPicker.addEventListener('input', (e) => setCurrentColor(e.target.value));
+            bgColorPicker.addEventListener('input', (e) => setBgColor(e.target.value));
+            transparentBtn.addEventListener('click', toggleTransparent);
+
+            eraserBtn.addEventListener('click', () => {
+                eraserMode = !eraserMode;
+                eraserBtn.style.background = eraserMode ? 'rgba(193,252,50,0.3)' : '';
+                eraserBtn.style.borderColor = eraserMode ? '#C1FC32' : '';
+            });
+
+            undoBtn.addEventListener('click', () => undo());
+            redoBtn.addEventListener('click', () => redo());
+
+            clearBtn.addEventListener('click', () => {
+                clearAll();
+                saveState();
+            });
+
+            applySizeBtn.addEventListener('click', () => {
+                let newSize = parseInt(gridSizeInput.value, 10);
+                if (isNaN(newSize)) newSize = 16;
+                newSize = Math.min(16, Math.max(1, newSize));
+                gridSizeInput.value = newSize;
+                resizeGrid(newSize);
+            });
+
+            copyBtn.addEventListener('click', async () => {
+                const code = svgCodeArea.value;
+                try {
+                    await navigator.clipboard.writeText(code);
+                    const original = copyBtn.innerText;
+                    copyBtn.innerText = "✓ COPIED!";
+                    setTimeout(() => { copyBtn.innerText = original; }, 1500);
+                } catch (err) {
+                    svgCodeArea.select();
+                    document.execCommand('copy');
+                    const original = copyBtn.innerText;
+                    copyBtn.innerText = "✓ COPIED!";
+                    setTimeout(() => { copyBtn.innerText = original; }, 1500);
+                }
+            });
+
+            downloadBtn.addEventListener('click', () => {
+                const svgString = generateSVG();
+                const blob = new Blob([svgString], { type: "image/svg+xml" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `pixel_art_${gridSize}x${gridSize}.svg`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+            
+            const activeColorCircle = document.getElementById('activeColorCircle');
+            const bgColorCircle = document.getElementById('bgColorCircle');
+            
+            activeColorCircle.addEventListener('click', () => colorPicker.click());
+            bgColorCircle.addEventListener('click', () => bgColorPicker.click());
+            
+            colorPicker.addEventListener('input', (e) => {
+                setCurrentColor(e.target.value);
+                activeColorCircle.style.backgroundColor = e.target.value;
+            });
+            
+            bgColorPicker.addEventListener('input', (e) => {
+                setBgColor(e.target.value);
+                bgColorCircle.style.backgroundColor = e.target.value;
+            });
+        }
+
+        function init() {
+            gridSize = 16;
+            pixelMatrix = initMatrix(gridSize, null);
+            canvas.width = 512;
+            canvas.height = 512;
+            ctx = canvas.getContext('2d');
+
+            attachCanvasEvents();
+            setupControls();
+
+            setCurrentColor("#000000");
+            setBgColor("#ffffff");
+            isTransparent = false;
+            eraserMode = false;
+
+            fullRefresh();
+            saveState();
+        }
+
+        init();
+    </script>
+</body>
+</html>
