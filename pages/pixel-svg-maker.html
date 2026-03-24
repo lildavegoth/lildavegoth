@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pixel SVG Maker | lildavegoth</title>
     <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <link rel="stylesheet" href="../media.css">
     <script src="../notification.cssjs"></script>
@@ -81,11 +82,12 @@
             overflow-x: auto;
             white-space: nowrap;
             -webkit-overflow-scrolling: touch;
-            scrollbar-width: thin;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
 
         .toolbar::-webkit-scrollbar {
-            height: 4px;
+            display: none;
         }
 
         .toolbar::-webkit-scrollbar-track {
@@ -152,6 +154,13 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
+        #hexColorInput {
+            font-family: monospace;
+            text-align: center;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+        }
 
         .grid-size-control {
             display: inline-flex;
@@ -196,6 +205,12 @@
             white-space: pre;
             overflow-x: auto;
             margin-bottom: -60px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .svg-code-area textarea::-webkit-scrollbar {
+            display: none;
         }
 
         .action-buttons {
@@ -210,6 +225,10 @@
                 padding: 6px 10px;
                 font-size: 0.7rem;
             }
+        }
+
+        textarea {
+            resize: none;
         }
     </style>
 </head>
@@ -238,6 +257,8 @@
                     <div class="color-circle" id="bgColorCircle" style="background-color: #ffffff;"></div>
                     <input type="color" id="bgColorPicker" style="display: none;">
                 </div>
+                
+                <input type="text" id="hexColorInput" class="tool-btn" placeholder="#000000" maxlength="7" style="width: 90px; text-transform: uppercase;">
 
                 <button class="tool-btn" id="transparentBtn"><i class="fas fa-eye"></i> Transparent</button>
 
@@ -277,6 +298,77 @@
     </div>
 
     <script>
+        async function saveFile(content, filename, mimeType) {
+            return new Promise((resolve, reject) => {
+                if (window.cordova) {
+                    const writeFile = (dirEntry, isDownloads) => {
+                        dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                            fileEntry.createWriter((writer) => {
+                                writer.onwriteend = () => {
+                                    const location = isDownloads ? 'Downloads' : 'app folder';
+                                    window.showMessage(`File saved to ${location}!`, 'success');
+                                    if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                                    }
+                                    resolve();
+                                };
+                                writer.onerror = () => {
+                                    window.showMessage('Download failed', 'error');
+                                    reject();
+                                };
+                                writer.write(content);
+                            }, () => {
+                                window.showMessage('Download failed', 'error');
+                                reject();
+                            });
+                        }, () => {
+                            window.showMessage('Download failed', 'error');
+                            reject();
+                        });
+                    };
+
+                    const saveToDownloads = () => {
+                        window.resolveLocalFileSystemURL(
+                            cordova.file.externalRootDirectory + 'Download/',
+                            (dir) => {
+                                writeFile(dir, true);
+                            },
+                            () => {
+                                window.resolveLocalFileSystemURL(
+                                    cordova.file.dataDirectory,
+                                    (dir) => {
+                                        writeFile(dir, false);
+                                    },
+                                    () => {
+                                        window.showMessage('Download failed', 'error');
+                                        reject();
+                                    }
+                                );
+                            }
+                        );
+                    };
+
+                    if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                        saveToDownloads();
+                    } else {
+                        document.addEventListener('deviceready', saveToDownloads);
+                    }
+                } else {
+                    const blob = new Blob([content], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    window.showMessage('File downloaded!', 'success');
+                    resolve();
+                }
+            });
+        }
+
         let gridSize = 16;
         let pixelMatrix = [];
         let currentColor = "#000000";
@@ -293,6 +385,7 @@
 
         const colorPicker = document.getElementById('colorPicker');
         const bgColorPicker = document.getElementById('bgColorPicker');
+        const hexColorInput = document.getElementById('hexColorInput');
         const transparentBtn = document.getElementById('transparentBtn');
         const eraserBtn = document.getElementById('eraserBtn');
         const undoBtn = document.getElementById('undoBtn');
@@ -468,6 +561,9 @@
         function setCurrentColor(hex) {
             currentColor = hex;
             colorPicker.value = hex;
+            hexColorInput.value = hex.toUpperCase();
+            activeColorCircle.style.backgroundColor = hex;
+            localStorage.setItem('lastColorPSVG', hex);
         }
 
         function setBgColor(hex) {
@@ -547,7 +643,23 @@
         }
 
         function setupControls() {
-            colorPicker.addEventListener('input', (e) => setCurrentColor(e.target.value));
+            colorPicker.addEventListener('input', (e) => {
+                setCurrentColor(e.target.value);
+                hexColorInput.value = e.target.value;
+            });
+            hexColorInput.addEventListener('input', (e) => {
+                let val = e.target.value.trim();
+                if (val.startsWith('#')) {
+                    val = val.slice(0, 7);
+                } else if (val.length === 6) {
+                    val = '#' + val;
+                }
+                if (/^#[0-9A-F]{6}$/i.test(val)) {
+                    setCurrentColor(val);
+                } else {
+                    hexColorInput.value = currentColor;
+                }
+            });
             bgColorPicker.addEventListener('input', (e) => setBgColor(e.target.value));
             transparentBtn.addEventListener('click', toggleTransparent);
 
@@ -589,30 +701,24 @@
                 }
             });
 
-            downloadBtn.addEventListener('click', () => {
+            downloadBtn.addEventListener('click', async () => {
                 const svgString = generateSVG();
-                const blob = new Blob([svgString], { type: "image/svg+xml" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `pixel_art_${gridSize}x${gridSize}.svg`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                const filename = `pixel_art_${gridSize}x${gridSize}.svg`;
+                const mimeType = "image/svg+xml";
+                await saveFile(svgString, filename, mimeType);
             });
-            
+
             const activeColorCircle = document.getElementById('activeColorCircle');
             const bgColorCircle = document.getElementById('bgColorCircle');
-            
+
             activeColorCircle.addEventListener('click', () => colorPicker.click());
             bgColorCircle.addEventListener('click', () => bgColorPicker.click());
-            
+
             colorPicker.addEventListener('input', (e) => {
                 setCurrentColor(e.target.value);
                 activeColorCircle.style.backgroundColor = e.target.value;
             });
-            
+
             bgColorPicker.addEventListener('input', (e) => {
                 setBgColor(e.target.value);
                 bgColorCircle.style.backgroundColor = e.target.value;
@@ -629,7 +735,11 @@
             attachCanvasEvents();
             setupControls();
 
-            setCurrentColor("#000000");
+            setCurrentColor("#C1FC32");
+            const savedColor = localStorage.getItem('lastColorPSVG');
+            if (savedColor && /^#[0-9A-F]{6}$/i.test(savedColor)) {
+                setCurrentColor(savedColor);
+            }
             setBgColor("#ffffff");
             isTransparent = false;
             eraserMode = false;
