@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.5.7';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.5.8';
 const urlsToCache = [
     // Root
     '/',
@@ -49,6 +49,7 @@ const urlsToCache = [
     'pages/o-css-snippets-gallery.html',
     'pages/o-table-formatting.html',
     'pages/ocr-tool.html',
+    'pages/pixel-svg-maker.html',
     'pages/posters-gallery.html',
     'pages/private-storage.html',
     'pages/projects-task.html',
