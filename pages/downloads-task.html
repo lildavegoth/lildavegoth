@@ -849,10 +849,43 @@
                         const taskId = card.getAttribute('data-id')
                         const task = tasks.find(t => t.id == taskId)
                         if (task && task.url) {
-                            navigator.clipboard.writeText(task.url)
-                            window.showMessage('Download URL copied')
-                            card.dataset.longPressed = 'true'
-                            setTimeout(() => delete card.dataset.longPressed, 500)
+                            if (window.plugins && window.plugins.socialsharing) {
+                                window.plugins.socialsharing.share(
+                                    task.title,
+                                    task.title,
+                                    null,
+                                    task.url,
+                                    function() {
+                                        card.dataset.longPressed = 'true';
+                                        setTimeout(() => delete card.dataset.longPressed, 500);
+                                    },
+                                    function() {
+                                        navigator.clipboard.writeText(task.url);
+                                        window.showMessage('Download URL copied');
+                                        card.dataset.longPressed = 'true';
+                                        setTimeout(() => delete card.dataset.longPressed, 500);
+                                    }
+                                );
+                            } else if (navigator.share) {
+                                navigator.share({
+                                    title: task.title,
+                                    text: task.title,
+                                    url: task.url
+                                }).then(() => {
+                                    card.dataset.longPressed = 'true';
+                                    setTimeout(() => delete card.dataset.longPressed, 500);
+                                }).catch(() => {
+                                    navigator.clipboard.writeText(task.url);
+                                    window.showMessage('Download URL copied');
+                                    card.dataset.longPressed = 'true';
+                                    setTimeout(() => delete card.dataset.longPressed, 500);
+                                });
+                            } else {
+                                navigator.clipboard.writeText(task.url);
+                                window.showMessage('Download URL copied');
+                                card.dataset.longPressed = 'true';
+                                setTimeout(() => delete card.dataset.longPressed, 500);
+                            }
                         }
                     }, 500)
                 }
@@ -1563,7 +1596,7 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
 
-        window.onload = () => {
+        function initUI() {
             if(categories.length === 1 && categories[0] === "All") {
                 categories = ["All"]
             } else {
@@ -1577,6 +1610,9 @@
             }
             updateFilterButtonState()
         }
+        
+        window.onload = initUI
+        document.addEventListener('deviceready', initUI, false)
     </script>
 </body>
 </html>
