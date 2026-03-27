@@ -47,12 +47,16 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: var(--spacing-md);
+            padding: var(--spacing-md) var(--spacing-md) 100px var(--spacing-md);
         }
 
         .container {
-            max-width: 500px;
             width: 100%;
+            margin: 0 auto;
+        }
+
+        .account-wrapper {
+            max-width: 500px;
             margin: 0 auto;
         }
 
@@ -355,175 +359,315 @@
         .password-toggle:active {
             transform: translateY(-50%) scale(0.9);
         }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(22, 22, 24, 1.0);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            z-index: 99999;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            width: auto;
+            min-width: 250px;
+        }
+        
+        .nav-button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 12px 24px;
+            border-radius: 30px;
+            min-width: 70px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .nav-button.active {
+            color: var(--accent-color);
+        }
+        
+        .nav-button.active:not(#moreButton) {
+            background: rgba(193, 252, 50, 0.1);
+        }
+        
+        .nav-button:active {
+            transform: scale(0.95);
+            transition: transform 0.1s ease;
+        }
+        
+        .nav-button:hover {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+
+        .page-section {
+            display: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .page-section.active {
+            display: block;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .iframe-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            z-index: 1;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            display: block;
+            margin: 0;
+            padding: 0;
+        }
+
+        .loading-placeholder {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-    <div class="container fade-in">
-        <a href="index.html" class="back-link fade-in">
-            <i class="fas fa-arrow-left"></i> Back to Home
-        </a>
-        
-        <app-header class="fade-in">
-            <div>
-                <h1 class="username">Account</h1>
-                <p class="tagline">Login to your account to access premium and exclusive contents</p>
-            </div>
-        </app-header>
-        
-        <div class="profile-photo-wrapper" id="profilePhotoWrapper">
-            <div class="profile-photo img img-avatar" id="profilePhoto"></div>
-            <input type="file" id="profilePhotoInput" class="profile-photo-input" accept="image/*">
-        </div>
-        <div style="text-align: center; margin-bottom: 24px;">
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                <div>
-                    <div id="displayUsername" style="font-size: 1.5rem; font-weight: 600; cursor: pointer; display: inline-block; padding: 4px 12px; border-radius: 20px; transition: background 0.2s;" onclick="enableUsernameEdit()">
-                        Loading...
-                    </div>
-                    <input type="text" id="editUsernameInput" style="display: none; font-size: 1.5rem; font-weight: 600; background: rgba(255,255,255,0.05); border: 1px solid var(--accent-color); border-radius: 20px; padding: 4px 12px; color: var(--text-primary); text-align: center; width: auto; margin: 0 auto;" onblur="saveUsername()" onkeypress="if(event.key==='Enter') saveUsername()">
-                </div>
-                <div>
-                    <div id="displayUserID" style="color: var(--text-secondary); font-size: 0.9rem; font-family: monospace; cursor: pointer; display: inline-block; padding: 4px 12px;" onclick="enableUserIdEdit()">
-                        Loading...
-                    </div>
-                    <input type="text" id="editUserIdInput" style="display: none; font-size: 0.9rem; font-family: monospace; background: rgba(255,255,255,0.05); border: 1px solid var(--accent-color); border-radius: 20px; padding: 4px 12px; color: var(--text-primary); text-align: center; width: auto; margin: 0 auto;" onblur="saveUserId()" onkeypress="if(event.key==='Enter') saveUserId()">
-                </div>
-                <a href="pages/routine-quest.html" style="text-decoration: none; margin-top: 8px; display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bg-dark); border-radius: 50px;">
-                    <i class="fas fa-fire" style="color: var(--accent-color); font-size: 0.9rem;"></i>
-                    <span id="streakNumberDisplay" style="color: var(--accent-color); font-size: 1.0rem; font-weight: 600;">0</span>
+    <div class="container">
+        <div id="account-page" class="page-section active">
+            <div class="account-wrapper">
+                <a href="index.html" class="back-link fade-in">
+                    <i class="fas fa-arrow-left"></i> Back to Home
                 </a>
-            </div>
-        </div>
-
-        <div class="user-info" id="userInfo">
-            <p class="form-subtitle" style="text-align: left; margin-bottom: var(--spacing-md);">
-                You're signed in! Your data is saved locally in your browser. You can now access all features across the pages.
-            </p>
-            
-            <div class="user-actions">
-                <button class="action-button" id="logoutBtn" style="background: rgba(255,50,50,0.1); color: #ff6b6b; border-color: rgba(255,50,50,0.3);">
-                    Sign Out
-                </button>
-            </div>
-            
-            <div class="pill-container">
-                <a href="giveaway.html" class="pill">Giveaways</a>
-                <a href="pages/kiraku-store.html" class="pill">Kiraku Store</a>
-            </div>
-            <p class="usage-note">The accounts are only used for listed above.</p>
-        </div>
-
-        <div class="form-container calculator" id="signInForm">
-            <h2 class="form-title">Sign In</h2>
-            <p class="form-subtitle">
-                Enter your username and password to sign in.
-            </p>
-            
-            <div class="message" id="signInMessage"></div>
-            
-            <div style="margin-top: -5px;" class="form-group">
-                <label class="form-label" for="signInUsername">Username</label>
-                <input type="text" id="signInUsername" class="form-input" placeholder="Enter your username">
-            </div>
-            
-            <div style="margin-top: -5px;" class="form-group">
-                <label class="form-label" for="signInPassword">Password</label>
-                <div style="position: relative;">
-                    <input type="password" id="signInPassword" class="form-input" placeholder="Enter your password" style="padding-right: 40px;">
-                    <button type="button" id="toggleSignInPassword" class="password-toggle" onclick="togglePassword('signInPassword', 'toggleSignInPassword')">
-                        <i class="fa-regular fa-eye-slash"></i>
-                    </button>
+                
+                <app-header class="fade-in">
+                    <div>
+                        <h1 class="username">Account</h1>
+                        <p class="tagline">Login to your account to access premium and exclusive contents</p>
+                    </div>
+                </app-header>
+                
+                <div class="profile-photo-wrapper" id="profilePhotoWrapper">
+                    <div class="profile-photo img img-avatar" id="profilePhoto"></div>
+                    <input type="file" id="profilePhotoInput" class="profile-photo-input" accept="image/*">
                 </div>
-            </div>
-            
-            <button style="margin-top: -5px;" class="form-button" id="signInBtn">
-                <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i>
-                Sign In
-            </button>
-            
-            <div class="form-switch">
-                Don't have an account? <a id="switchToSignUp">Create Account</a>
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <div>
+                            <div id="displayUsername" style="font-size: 1.5rem; font-weight: 600; cursor: pointer; display: inline-block; padding: 4px 12px; border-radius: 20px; transition: background 0.2s;" onclick="enableUsernameEdit()">
+                                Loading...
+                            </div>
+                            <input type="text" id="editUsernameInput" style="display: none; font-size: 1.5rem; font-weight: 600; background: rgba(255,255,255,0.05); border: 1px solid var(--accent-color); border-radius: 20px; padding: 4px 12px; color: var(--text-primary); text-align: center; width: auto; margin: 0 auto;" onblur="saveUsername()" onkeypress="if(event.key==='Enter') saveUsername()">
+                        </div>
+                        <div>
+                            <div id="displayUserID" style="color: var(--text-secondary); font-size: 0.9rem; font-family: monospace; cursor: pointer; display: inline-block; padding: 4px 12px;" onclick="enableUserIdEdit()">
+                                Loading...
+                            </div>
+                            <input type="text" id="editUserIdInput" style="display: none; font-size: 0.9rem; font-family: monospace; background: rgba(255,255,255,0.05); border: 1px solid var(--accent-color); border-radius: 20px; padding: 4px 12px; color: var(--text-primary); text-align: center; width: auto; margin: 0 auto;" onblur="saveUserId()" onkeypress="if(event.key==='Enter') saveUserId()">
+                        </div>
+                        <a href="pages/routine-quest.html" style="text-decoration: none; margin-top: 8px; display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bg-dark); border-radius: 50px;">
+                            <i class="fas fa-fire" style="color: var(--accent-color); font-size: 0.9rem;"></i>
+                            <span id="streakNumberDisplay" style="color: var(--accent-color); font-size: 1.0rem; font-weight: 600;">0</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="user-info" id="userInfo">
+                    <p class="form-subtitle" style="text-align: left; margin-bottom: var(--spacing-md);">
+                        You're signed in! Your data is saved locally in your browser. You can now access all features across the pages.
+                    </p>
+                    
+                    <div class="user-actions">
+                        <button class="action-button" id="logoutBtn" style="background: rgba(255,50,50,0.1); color: #ff6b6b; border-color: rgba(255,50,50,0.3);">
+                            Sign Out
+                        </button>
+                    </div>
+                    
+                    <div class="pill-container">
+                        <a href="giveaway.html" class="pill">Giveaways</a>
+                        <a href="pages/kiraku-store.html" class="pill">Kiraku Store</a>
+                    </div>
+                    <p class="usage-note">The accounts are only used for listed above.</p>
+                </div>
+
+                <div class="form-container calculator" id="signInForm">
+                    <h2 class="form-title">Sign In</h2>
+                    <p class="form-subtitle">
+                        Enter your username and password to sign in.
+                    </p>
+                    
+                    <div class="message" id="signInMessage"></div>
+                    
+                    <div style="margin-top: -5px;" class="form-group">
+                        <label class="form-label" for="signInUsername">Username</label>
+                        <input type="text" id="signInUsername" class="form-input" placeholder="Enter your username">
+                    </div>
+                    
+                    <div style="margin-top: -5px;" class="form-group">
+                        <label class="form-label" for="signInPassword">Password</label>
+                        <div style="position: relative;">
+                            <input type="password" id="signInPassword" class="form-input" placeholder="Enter your password" style="padding-right: 40px;">
+                            <button type="button" id="toggleSignInPassword" class="password-toggle" onclick="togglePassword('signInPassword', 'toggleSignInPassword')">
+                                <i class="fa-regular fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button style="margin-top: -5px;" class="form-button" id="signInBtn">
+                        <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i>
+                        Sign In
+                    </button>
+                    
+                    <div class="form-switch">
+                        Don't have an account? <a id="switchToSignUp">Create Account</a>
+                    </div>
+                </div>
+
+                <p class="form-subtitle">
+                    Accounts are used for protecting my contents, permissions & giveaway only. <strong>There is nothing important i collects or receives at all</strong>!
+                </p>
+
+                <div class="form-container calculator" id="signUpForm" style="display: none;">
+                    <h2 class="form-title">Create Account</h2>
+                    <p class="form-subtitle">
+                        Create a new account with username and password.
+                    </p>
+                    
+                    <div class="message" id="signUpMessage"></div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="signUpUsername">Username</label>
+                        <input type="text" id="signUpUsername" class="form-input" placeholder="Choose a username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="signUpEmail">Email Address (optional)</label>
+                        <input type="email" id="signUpEmail" class="form-input" placeholder="Enter your email">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="signUpPassword">Password</label>
+                        <div style="position: relative;">
+                            <input type="password" id="signUpPassword" class="form-input" placeholder="Choose a password" style="padding-right: 40px;">
+                            <button type="button" id="toggleSignUpPassword" class="password-toggle" onclick="togglePassword('signUpPassword', 'toggleSignUpPassword')">
+                                <i class="fa-regular fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="signUpConfirmPassword">Confirm Password</label>
+                        <div style="position: relative;">
+                            <input type="password" id="signUpConfirmPassword" class="form-input" placeholder="Confirm your password" style="padding-right: 40px;">
+                            <button type="button" id="toggleSignUpConfirmPassword" class="password-toggle" onclick="togglePassword('signUpConfirmPassword', 'toggleSignUpConfirmPassword')">
+                                <i class="fa-regular fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button class="form-button" id="signUpBtn">
+                        <i class="fas fa-user-plus" style="margin-right: 8px;"></i>
+                        Create Account
+                    </button>
+                    
+                    <div class="form-switch">
+                        Already have an account? <a id="switchToSignIn">Sign In</a>
+                    </div>
+                </div>
+
+                <footer>
+                    <div class="social-links">
+                        <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                        <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+                    </div>
+                    <p>© 2026 lildavegoth | Account</p>
+                    <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                        Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+                    </p>
+                </footer>
             </div>
         </div>
 
-        <p class="form-subtitle">
-            Accounts are used for protecting my contents, permissions & giveaways only. <strong>There is nothing important i collects or receives at all</strong>!
-        </p>
-
-        <div class="form-container calculator" id="signUpForm" style="display: none;">
-            <h2 class="form-title">Create Account</h2>
-            <p class="form-subtitle">
-                Create a new account with username and password.
-            </p>
-            
-            <div class="message" id="signUpMessage"></div>
-            
-            <div class="form-group">
-                <label class="form-label" for="signUpUsername">Username</label>
-                <input type="text" id="signUpUsername" class="form-input" placeholder="Choose a username">
+        <div id="giveaway-page" class="page-section">
+            <div class="iframe-container">
+                <iframe id="giveawayIframe" src="about:blank"></iframe>
             </div>
-            
-            <div class="form-group">
-                <label class="form-label" for="signUpEmail">Email Address (optional)</label>
-                <input type="email" id="signUpEmail" class="form-input" placeholder="Enter your email">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label" for="signUpPassword">Password</label>
-                <div style="position: relative;">
-                    <input type="password" id="signUpPassword" class="form-input" placeholder="Choose a password" style="padding-right: 40px;">
-                    <button type="button" id="toggleSignUpPassword" class="password-toggle" onclick="togglePassword('signUpPassword', 'toggleSignUpPassword')">
-                        <i class="fa-regular fa-eye-slash"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label" for="signUpConfirmPassword">Confirm Password</label>
-                <div style="position: relative;">
-                    <input type="password" id="signUpConfirmPassword" class="form-input" placeholder="Confirm your password" style="padding-right: 40px;">
-                    <button type="button" id="toggleSignUpConfirmPassword" class="password-toggle" onclick="togglePassword('signUpConfirmPassword', 'toggleSignUpConfirmPassword')">
-                        <i class="fa-regular fa-eye-slash"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <button class="form-button" id="signUpBtn">
-                <i class="fas fa-user-plus" style="margin-right: 8px;"></i>
-                Create Account
-            </button>
-            
-            <div class="form-switch">
-                Already have an account? <a id="switchToSignIn">Sign In</a>
+            <div id="giveawayLoader" class="loading-placeholder">
+                <div class="spinner"></div>
+                <p>Loading Giveaways...</p>
             </div>
         </div>
 
-        <footer>
-            <div class="social-links">
-                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
-                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+        <div id="storage-page" class="page-section">
+            <div class="iframe-container">
+                <iframe id="storageIframe" src="about:blank"></iframe>
             </div>
-            <p>© 2026 lildavegoth | Account</p>
-            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
-                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
-            </p>
-        </footer>
+            <div id="storageLoader" class="loading-placeholder">
+                <div class="spinner"></div>
+                <p>Loading Storage...</p>
+            </div>
+        </div>
     </div>
 
-    <!-- Google Apps Script URL – replace with your deployed web app URL -->
-    <script>
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyhdej9hL1MfkC7LxcDTJQLxjpP7sy1XquRzU-W478QXvCJ6J3pgxzSQgpjLb8ucEQ/exec';
-    </script>
+    <div class="bottom-nav">
+        <button class="nav-button active" data-page="account" onclick="switchPage('account', event)">
+            <div class="nav-icon">
+                <span class="icon icon-user"></span>
+            </div>
+        </button>
+        <button class="nav-button" data-page="giveaway" onclick="switchPage('giveaway', event)">
+            <div class="nav-icon">
+                <span class="icon icon-celebrate"></span>
+            </div>
+        </button>
+        <button class="nav-button" data-page="storage" onclick="switchPage('storage', event)">
+            <div class="nav-icon">
+                <span class="icon icon-storage"></span>
+            </div>
+        </button>
+    </div>
 
     <script>
-        function generateUserId() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            let part1 = '', part2 = '';
-            for (let i = 0; i < 9; i++) part1 += chars.charAt(Math.floor(Math.random() * chars.length));
-            for (let i = 0; i < 9; i++) part2 += chars.charAt(Math.floor(Math.random() * chars.length));
-            return part1 + '_' + part2;
-        }
-        
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyhdej9hL1MfkC7LxcDTJQLxjpP7sy1XquRzU-W478QXvCJ6J3pgxzSQgpjLb8ucEQ/exec';
+
+        let giveawayIframeLoaded = false;
+        let storageIframeLoaded = false;
+
         function togglePassword(inputId, buttonId) {
             const input = document.getElementById(inputId);
             const button = document.getElementById(buttonId);
@@ -678,12 +822,124 @@
             if (streakEl) streakEl.textContent = streak;
         }
 
+        window.showMessage = function(msg, isError = true) {
+            const target = isError ? document.getElementById('signInMessage') : document.getElementById('signUpMessage');
+            if (target) {
+                target.textContent = msg;
+                target.className = isError ? 'message error' : 'message success';
+                setTimeout(() => {
+                    target.className = 'message';
+                    target.textContent = '';
+                }, 3000);
+            } else {
+                alert(msg);
+            }
+        };
+
+        function loadGiveaway() {
+            if (giveawayIframeLoaded) return;
+            const iframe = document.getElementById('giveawayIframe');
+            const loader = document.getElementById('giveawayLoader');
+            iframe.onload = function() {
+                hideIframeScrollbars(iframe);
+                giveawayIframeLoaded = true;
+                loader.style.display = 'none';
+                iframe.style.display = 'block';
+            };
+            iframe.src = 'giveaway.html';
+        }
+        
+        function loadStorage() {
+            if (storageIframeLoaded) return;
+            const iframe = document.getElementById('storageIframe');
+            const loader = document.getElementById('storageLoader');
+            iframe.onload = function() {
+                hideIframeScrollbars(iframe);
+                storageIframeLoaded = true;
+                loader.style.display = 'none';
+                iframe.style.display = 'block';
+            };
+            iframe.src = 'storage.html';
+        }
+        
+        function hideIframeScrollbars(iframe) {
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                if (!doc) return;
+                const style = doc.createElement('style');
+                style.textContent = `
+                    ::-webkit-scrollbar { display: none; }
+                    * { scrollbar-width: none; }
+                    body { overflow-y: auto; }
+                `;
+                doc.head.appendChild(style);
+            } catch (e) {}
+        }
+
+        function switchPage(page, event) {
+            const currentActivePage = document.querySelector('.page-section.active');
+            const targetPage = document.getElementById(page + '-page');
+            
+            if (currentActivePage === targetPage) return;
+            
+            document.querySelectorAll('.nav-button').forEach(button => {
+                button.classList.remove('active');
+                button.style.transform = 'scaleX(1)';
+                button.style.padding = '10px 20px';
+            });
+            
+            const clickedButton = event.currentTarget;
+            
+            if (currentActivePage) {
+                currentActivePage.style.opacity = '0';
+                currentActivePage.style.visibility = 'hidden';
+                
+                setTimeout(() => {
+                    currentActivePage.classList.remove('active');
+                    currentActivePage.style.height = '0';
+                    currentActivePage.style.overflow = 'hidden';
+                    
+                    targetPage.style.height = 'auto';
+                    targetPage.style.overflow = 'visible';
+                    targetPage.classList.add('active');
+                    
+                    if (page === 'giveaway') loadGiveaway();
+                    if (page === 'storage') loadStorage();
+                    
+                    setTimeout(() => {
+                        targetPage.style.opacity = '1';
+                        targetPage.style.visibility = 'visible';
+                        
+                        clickedButton.classList.add('active');
+                        clickedButton.style.transform = 'scaleX(1.1)';
+                        clickedButton.style.padding = '10px 25px';
+                        
+                        window.scrollTo(0, 0);
+                    }, 50);
+                }, 300);
+            } else {
+                targetPage.style.height = 'auto';
+                targetPage.style.overflow = 'visible';
+                targetPage.classList.add('active');
+                targetPage.style.opacity = '1';
+                targetPage.style.visibility = 'visible';
+                
+                clickedButton.classList.add('active');
+                clickedButton.style.transform = 'scaleX(1.1)';
+                clickedButton.style.padding = '10px 25px';
+                
+                if (page === 'giveaway') loadGiveaway();
+                if (page === 'storage') loadStorage();
+                
+                window.scrollTo(0, 0);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             if (currentUser) {
                 showUserInfo(currentUser);
             }
-
             const profilePhoto = document.getElementById('profilePhoto');
             const profileInput = document.getElementById('profilePhotoInput');
             const savedPhoto = localStorage.getItem('profilePhoto');
@@ -702,9 +958,13 @@
                     reader.readAsDataURL(file);
                 }
             });
-
             updateProfileDisplay();
             updateStreakNumberDisplay();
+
+            const giveawayIframe = document.getElementById('giveawayIframe');
+            const storageIframe = document.getElementById('storageIframe');
+            giveawayIframe.style.display = 'none';
+            storageIframe.style.display = 'none';
         });
 
         document.getElementById('switchToSignUp').addEventListener('click', function() {
