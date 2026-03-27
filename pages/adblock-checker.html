@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="dark">
+    <title>AdBlocker Checker | lildavegoth</title>
+    <script src="../protections.js"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: #1a1a1a;
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+            --red: #c42833;
+            --orange: #ff9500;
+            --blue: #007aff;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+            min-height: calc(100vh - 90px);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-xl);
+        }
+        .stat-card {
+            background: var(--bg-dark);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            transition: transform 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: #2a2a2a;
+        }
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-small);
+            background: rgba(193, 252, 50, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            font-size: 1.2rem;
+        }
+        .stat-info h3 {
+            font-size: 1.8rem;
+            margin-bottom: 2px;
+        }
+        .stat-info p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-lg);
+        }
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        .project-card {
+            background: var(--bg-dark);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .project-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(193, 252, 50, 0.3);
+        }
+        .project-title {
+            font-size: 1.3rem;
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .project-title h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        .project-description {
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: var(--spacing-md);
+            font-size: 0.95rem;
+        }
+        .tech-tag {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-outline:hover {
+            background: rgba(193, 252, 50, 0.1);
+        }
+        .liquid-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: var(--spacing-lg);
+            margin-top: var(--spacing-lg);
+        }
+        .lt_cwrap {
+            position: relative;
+            width: 180px;
+            height: 180px;
+        }
+        .lt_circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #1e1e2a;
+            overflow: hidden;
+            position: relative;
+        }
+        .lt_wave {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: var(--accent-color);
+            transition: height 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+        .lt_value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5rem;
+            font-weight: bold;
+            z-index: 2;
+            transition: color 0.2s;
+        }
+        .test-block {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+        .test-result {
+            font-weight: bold;
+            margin-top: 8px;
+        }
+        .test-pass {
+            color: var(--accent-color);
+        }
+        .test-fail {
+            color: var(--red);
+        }
+        .host-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .warning {
+            background: rgba(255, 149, 0, 0.2);
+            border-left: 3px solid var(--orange);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+        .popup-content {
+            background: var(--bg-dark);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 650px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .close-popup:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .popup-data-container {
+            padding: var(--spacing-md);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .info-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-medium);
+            padding: 16px;
+        }
+        .info-card p {
+            margin-top: 6px;
+            color: var(--text-secondary);
+        }
+        .script-item {
+            background: var(--bg-dark);
+            border-radius: var(--radius-small);
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .arrow-toggle {
+            background: transparent;
+            border: none;
+            color: var(--accent-color);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 4px;
+            width: 32px;
+            height: 32px;
+        }
+        .category-group {
+            margin-bottom: 20px;
+        }
+        .category-group h3 {
+            color: var(--accent-color);
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            border-left: 2px solid var(--accent-color);
+            padding-left: 10px;
+        }
+        .domain-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+        }
+        .domain-tag {
+            background: rgba(255,255,255,0.05);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+        @media (max-width: 768px) {
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+            .username {
+                font-size: 1.8rem;
+            }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.6s ease forwards;
+        }
+        .delay-1 {
+            animation-delay: 0.1s;
+        }
+        .icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--accent-color);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 6px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        .icon-btn:hover {
+            background: rgba(193,252,50,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+    
+        <app-header class="fade-in">
+            <div>
+                <h1 class="username">AdBlock Checker</h1>
+                <p class="tagline">Check how stronger your AdBlocker are</p>
+            </div>
+        </app-header>
+    
+        <div class="liquid-wrap fade-in">
+            <div class="lt_cwrap">
+                <div class="lt_circle"><div class="lt_wave" id="liquidWave"></div></div>
+                <div class="lt_value" id="scoreValue">0%</div>
+            </div>
+        </div>
+    
+        <div class="stats-grid fade-in delay-1">
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-shield-alt"></i></div><div class="stat-info"><h3 id="totalBlocked">0</h3><p>Total Blocked</p></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-info"><h3 id="blockRate">0%</h3><p>Protection Score</p></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-bug"></i></div><div class="stat-info"><h3 id="totalTests">0</h3><p>Total Tests</p></div></div>
+        </div>
+    
+        <div id="networkWarning" class="warning fade-in" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i> <strong>Network connectivity issue detected</strong> – Some requests may be failing due to network problems, not ad blocking. Results may be inaccurate.
+        </div>
+    
+        <div class="projects-header">
+            <h2 style="margin-bottom: 10px;" class="section-title">Results</h2>
+            <button style="margin-bottom: 20px;" class="btn-outline" id="retestBtn"><i class="fas fa-sync-alt"></i> Re-test</button>
+        </div>
+    
+        <div class="projects-grid" id="testsContainer">
+            <div class="project-card">
+                <div class="project-title">
+                    <h3><i class="fas fa-eye-slash"></i> Cosmetic Filters</h3>
+                    <button class="icon-btn" id="cosmeticGuideBtn"><i class="fas fa-info-circle"></i></button>
+                </div>
+                <div class="test-block"><span>Ad element (class "adsbygoogle")</span><div id="cosmeticStaticResult" class="test-result">—</div></div>
+                <div class="test-block"><span>Ad element (class "advertisement")</span><div id="cosmeticDynamicResult" class="test-result">—</div></div>
+                <div class="tech-tag">Hiding rules</div>
+            </div>
+            <div class="project-card">
+                <div class="project-title"><h3><i class="fas fa-code"></i> Script Loading</h3></div>
+                <div id="scriptTestsContainer"></div>
+                <div class="tech-tag">Network blocking</div>
+            </div>
+            <div class="project-card">
+                <div class="project-title">
+                    <h3>Host Blocking</h3>
+                    <div>
+                        <button class="icon-btn" id="hostCategoriesBtn"><i class="fas fa-list-ul"></i></button>
+                        <button class="arrow-toggle" id="toggleHostsBtn"><i class="fas fa-chevron-down"></i></button>
+                    </div>
+                </div>
+                <div id="hostSummary">Loading hosts...</div>
+                <div id="hostDetails" style="display:none; margin-top:12px;"></div>
+            </div>
+        </div>
+    
+        <div class="projects-header">
+            <h2 class="section-title">Details</h2>
+        </div>
+        <div class="projects-grid">
+            <div class="project-card">
+                <div class="project-title"><h3>Reports</h3><button class="btn-outline" id="showReportsBtn"><i class="fas fa-chart-simple"></i> Open</button></div>
+                <p class="project-description">Last 10 test results history</p>
+            </div>
+            <div class="project-card">
+                <div class="project-title"><h3>FAQ</h3><button class="btn-outline" id="showFaqBtn"><i class="fas fa-question-circle"></i> Read</button></div>
+                <p class="project-description">How test works & why some results vary</p>
+            </div>
+            <div class="project-card">
+                <div class="project-title"><h3>Logs</h3><button class="btn-outline" id="showLogsBtn"><i class="fas fa-terminal"></i> View</button></div>
+                <p class="project-description">Detailed blocking events</p>
+            </div>
+        </div>
+    
+        <footer style="margin-bottom: 100px;">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Kiraku Store</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+    
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" id="closePopupBtn"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="popupContent" class="popup-data-container"></div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const hostDomains = [
+                "doubleclick.net", "stats.g.doubleclick.net", "ad.doubleclick.net", "static.doubleclick.net", "m.doubleclick.net", "mediavisor.doubleclick.net",
+                "media.net", "static.media.net", "adservetx.media.net",
+                "ads30.adcolony.com", "adc3-launch.adcolony.com", "events3alt.adcolony.com", "wd.adcolony.com",
+                "analytics.google.com", "click.googleanalytics.com", "google-analytics.com", "ssl.google-analytics.com",
+                "mouseflow.com", "cdn.mouseflow.com", "o2.mouseflow.com", "gtm.mouseflow.com", "api.mouseflow.com", "tools.mouseflow.com", "cdn-test.mouseflow.com",
+                "luckyorange.com", "api.luckyorange.com", "realtime.luckyorange.com", "cdn.luckyorange.com", "w1.luckyorange.com", "upload.luckyorange.net", "cs.luckyorange.net", "settings.luckyorange.net",
+                "adm.hotjar.com", "identify.hotjar.com", "insights.hotjar.com", "script.hotjar.com", "surveys.hotjar.com", "careers.hotjar.com", "events.hotjar.io",
+                "freshmarketer.com", "claritybt.freshmarketer.com", "fwtracks.freshmarketer.com",
+                "stats.wp.com",
+                "notify.bugsnag.com", "sessions.bugsnag.com", "api.bugsnag.com", "app.bugsnag.com",
+                "browser.sentry-cdn.com", "app.getsentry.com",
+                "ads.linkedin.com", "analytics.pointdrive.linkedin.com",
+                "events.reddit.com", "events.redditmedia.com",
+                "ads-api.tiktok.com", "analytics.tiktok.com", "ads-sg.tiktok.com", "analytics-sg.tiktok.com", "business-api.tiktok.com", "ads.tiktok.com", "log.byteoversea.com",
+                "static.ads-twitter.com", "ads-api.twitter.com",
+                "ads.pinterest.com", "log.pinterest.com", "trk.pinterest.com",
+                "ads.youtube.com",
+                "ads.yahoo.com", "analytics.yahoo.com", "geo.yahoo.com", "udcm.yahoo.com", "analytics.query.yahoo.com", "partnerads.ysm.yahoo.com", "log.fc.yahoo.com", "gemini.yahoo.com", "adtech.yahooinc.com",
+                "auction.unityads.unity3d.com", "webview.unityads.unity3d.com", "config.unityads.unity3d.com", "adserver.unityads.unity3d.com",
+                "extmaps-api.yandex.net", "appmetrica.yandex.ru", "adfstat.yandex.ru", "metrika.yandex.ru", "offerwall.yandex.net", "adfox.yandex.ru",
+                "iadsdk.apple.com", "metrics.icloud.com", "metrics.mzstatic.com", "books-analytics-events.apple.com", "api-adservices.apple.com", "notes-analytics-events.apple.com", "weather-analytics-events.apple.com",
+                "api.ad.xiaomi.com", "data.mistat.xiaomi.com", "data.mistat.india.xiaomi.com", "data.mistat.rus.xiaomi.com", "sdkconfig.ad.xiaomi.com", "sdkconfig.ad.intl.xiaomi.com", "tracking.rus.miui.com",
+                "metrics.data.hicloud.com", "metrics2.data.hicloud.com", "grs.hicloud.com", "logservice1.hicloud.com", "logservice.hicloud.com",
+                "samsungads.com", "smetrics.samsung.com", "nmetrics.samsung.com", "analytics-api.samsunghealthcn.com", "samsung-com.112.2o7.net"
+            ];
+            
+            const categories = {
+                "Google": ["doubleclick.net", "stats.g.doubleclick.net", "ad.doubleclick.net", "static.doubleclick.net", "m.doubleclick.net", "mediavisor.doubleclick.net", "analytics.google.com", "click.googleanalytics.com", "google-analytics.com", "ssl.google-analytics.com"],
+                "Media.net": ["media.net", "static.media.net", "adservetx.media.net"],
+                "AdColony": ["ads30.adcolony.com", "adc3-launch.adcolony.com", "events3alt.adcolony.com", "wd.adcolony.com"],
+                "MouseFlow": ["mouseflow.com", "cdn.mouseflow.com", "o2.mouseflow.com", "gtm.mouseflow.com", "api.mouseflow.com", "tools.mouseflow.com", "cdn-test.mouseflow.com"],
+                "LuckyOrange": ["luckyorange.com", "api.luckyorange.com", "realtime.luckyorange.com", "cdn.luckyorange.com", "w1.luckyorange.com", "upload.luckyorange.net", "cs.luckyorange.net", "settings.luckyorange.net"],
+                "Hotjar": ["adm.hotjar.com", "identify.hotjar.com", "insights.hotjar.com", "script.hotjar.com", "surveys.hotjar.com", "careers.hotjar.com", "events.hotjar.io"],
+                "FreshWorks": ["freshmarketer.com", "claritybt.freshmarketer.com", "fwtracks.freshmarketer.com"],
+                "WordPress Stats": ["stats.wp.com"],
+                "Bugsnag": ["notify.bugsnag.com", "sessions.bugsnag.com", "api.bugsnag.com", "app.bugsnag.com"],
+                "Sentry": ["browser.sentry-cdn.com", "app.getsentry.com"],
+                "LinkedIn": ["ads.linkedin.com", "analytics.pointdrive.linkedin.com"],
+                "Reddit": ["events.reddit.com", "events.redditmedia.com"],
+                "TikTok": ["ads-api.tiktok.com", "analytics.tiktok.com", "ads-sg.tiktok.com", "analytics-sg.tiktok.com", "business-api.tiktok.com", "ads.tiktok.com", "log.byteoversea.com"],
+                "Twitter": ["static.ads-twitter.com", "ads-api.twitter.com"],
+                "Pinterest": ["ads.pinterest.com", "log.pinterest.com", "trk.pinterest.com"],
+                "YouTube": ["ads.youtube.com"],
+                "Yahoo": ["ads.yahoo.com", "analytics.yahoo.com", "geo.yahoo.com", "udcm.yahoo.com", "analytics.query.yahoo.com", "partnerads.ysm.yahoo.com", "log.fc.yahoo.com", "gemini.yahoo.com", "adtech.yahooinc.com"],
+                "Unity": ["auction.unityads.unity3d.com", "webview.unityads.unity3d.com", "config.unityads.unity3d.com", "adserver.unityads.unity3d.com"],
+                "Yandex": ["extmaps-api.yandex.net", "appmetrica.yandex.ru", "adfstat.yandex.ru", "metrika.yandex.ru", "offerwall.yandex.net", "adfox.yandex.ru"],
+                "Apple": ["iadsdk.apple.com", "metrics.icloud.com", "metrics.mzstatic.com", "books-analytics-events.apple.com", "api-adservices.apple.com", "notes-analytics-events.apple.com", "weather-analytics-events.apple.com"],
+                "Xiaomi": ["api.ad.xiaomi.com", "data.mistat.xiaomi.com", "data.mistat.india.xiaomi.com", "data.mistat.rus.xiaomi.com", "sdkconfig.ad.xiaomi.com", "sdkconfig.ad.intl.xiaomi.com", "tracking.rus.miui.com"],
+                "Huawei": ["metrics.data.hicloud.com", "metrics2.data.hicloud.com", "grs.hicloud.com", "logservice1.hicloud.com", "logservice.hicloud.com"],
+                "Samsung": ["samsungads.com", "smetrics.samsung.com", "nmetrics.samsung.com", "analytics-api.samsunghealthcn.com", "samsung-com.112.2o7.net"]
+            };
+            
+            const scriptItems = [
+                { url: "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js", name: "Google AdSense" },
+                { url: "https://securepubads.g.doubleclick.net/tag/js/gpt.js", name: "DoubleClick GPT" },
+                { url: "https://www.googletagmanager.com/gtag/js", name: "Google Tag Manager" },
+                { url: "https://connect.facebook.net/en_US/fbevents.js", name: "Facebook Pixel" },
+                { url: "https://bat.bing.com/bat.js", name: "Bing Ads" },
+                { url: "https://c.amazon-adsystem.com/aax2/amzn_ads.js", name: "Amazon Ads" }
+            ];
+            
+            let currentTestResults = {
+                cosmeticStatic: false,
+                cosmeticDynamic: false,
+                scripts: [],
+                hosts: []
+            };
+            
+            let testLogs = [];
+            let reportHistory = [];
+            
+            function addLog(message) {
+                testLogs.unshift(`[${new Date().toLocaleTimeString()}] ${message}`);
+                if (testLogs.length > 50) testLogs.pop();
+            }
+            
+            function saveReport() {
+                let total = 2 + scriptItems.length + hostDomains.length;
+                let blocked = (currentTestResults.cosmeticStatic?1:0) + (currentTestResults.cosmeticDynamic?1:0) +
+                              (currentTestResults.scripts.filter(b=>b===true).length) +
+                              (currentTestResults.hosts.filter(b=>b===true).length);
+                let percent = Math.round((blocked / total) * 100);
+                reportHistory.unshift({ timestamp: Date.now(), score: percent, blocked, total });
+                if (reportHistory.length > 10) reportHistory.pop();
+                localStorage.setItem('abcReports', JSON.stringify(reportHistory));
+            }
+            
+            function loadReports() {
+                let stored = localStorage.getItem('abcReports');
+                if (stored) reportHistory = JSON.parse(stored);
+            }
+            
+            async function checkConnectivity() {
+                try {
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 3000);
+                    const response = await fetch('https://httpbin.org/status/200', { method: 'HEAD', signal: controller.signal });
+                    clearTimeout(timeout);
+                    return response.ok;
+                } catch (e) {
+                    return false;
+                }
+            }
+            
+            function updateUITextColor(percentage) {
+                const scoreElem = document.getElementById('scoreValue');
+                if (percentage >= 70) {
+                    scoreElem.style.color = '#000000';
+                } else {
+                    scoreElem.style.color = '#ffffff';
+                }
+                let color = percentage >= 70 ? 'var(--accent-color)' : (percentage >= 40 ? 'var(--orange)' : 'var(--red)');
+                document.getElementById('liquidWave').style.backgroundColor = color;
+            }
+            
+            function renderScriptResults() {
+                const container = document.getElementById('scriptTestsContainer');
+                if (!container) return;
+                let html = '';
+                scriptItems.forEach((item, idx) => {
+                    let blocked = currentTestResults.scripts[idx];
+                    let statusHtml = blocked ? '<span class="test-pass"><i class="fas fa-check-circle"></i></span>' : '<span class="test-fail"><i class="fas fa-times-circle"></i> Not blocked</span>';
+                    html += `<div class="script-item"><span><i class="fas fa-file-code"></i> ${item.name}</span><div class="test-result" style="margin-top:0;">${statusHtml}</div></div>`;
+                });
+                container.innerHTML = html;
+            }
+            
+            function updateUI(networkOk) {
+                let totalTests = 2 + scriptItems.length + hostDomains.length;
+                let blockedCount = (currentTestResults.cosmeticStatic?1:0) + (currentTestResults.cosmeticDynamic?1:0) +
+                                   (currentTestResults.scripts.filter(b=>b===true).length) +
+                                   (currentTestResults.hosts.filter(b=>b===true).length);
+                let percentage = Math.round((blockedCount / totalTests) * 100);
+                document.getElementById('totalBlocked').innerText = blockedCount;
+                document.getElementById('blockRate').innerText = percentage + '%';
+                document.getElementById('totalTests').innerText = totalTests;
+                document.getElementById('scoreValue').innerHTML = percentage + '%';
+                let wave = document.getElementById('liquidWave');
+                wave.style.height = percentage + '%';
+                updateUITextColor(percentage);
+                
+                document.getElementById('cosmeticStaticResult').innerHTML = currentTestResults.cosmeticStatic ? '<span class="test-pass"><i class="fas fa-check-circle"></i></span>' : '<span class="test-fail"><i class="fas fa-times-circle"></i> Not blocked</span>';
+                document.getElementById('cosmeticDynamicResult').innerHTML = currentTestResults.cosmeticDynamic ? '<span class="test-pass"><i class="fas fa-check-circle"></i></span>' : '<span class="test-fail"><i class="fas fa-times-circle"></i> Not blocked</span>';
+                renderScriptResults();
+                
+                let hostHtml = `<div>Blocked ${currentTestResults.hosts.filter(b=>b===true).length} / ${hostDomains.length} domains</div>`;
+                document.getElementById('hostSummary').innerHTML = hostHtml;
+                let detailsHtml = '';
+                for (let i = 0; i < hostDomains.length; i++) {
+                    let blocked = currentTestResults.hosts[i];
+                    detailsHtml += `<div class="host-item"><span>${hostDomains[i]}</span><span class="${blocked ? 'test-pass' : 'test-fail'}">${blocked ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-globe"></i> Not blocked'}</span></div>`;
+                }
+                document.getElementById('hostDetails').innerHTML = detailsHtml;
+                
+                if (networkOk === false) {
+                    document.getElementById('networkWarning').style.display = 'block';
+                } else {
+                    document.getElementById('networkWarning').style.display = 'none';
+                }
+                saveReport();
+            }
+            
+            async function testCosmeticStatic() {
+                let existing = document.querySelector('.adsbygoogle');
+                if (existing) existing.remove();
+                let div = document.createElement('div');
+                div.className = 'adsbygoogle';
+                div.style.cssText = 'width:300px;height:250px;background:red;position:absolute;left:-9999px;';
+                div.innerHTML = 'Ad';
+                document.body.appendChild(div);
+                await new Promise(r => setTimeout(r, 50));
+                let style = window.getComputedStyle(div);
+                let hidden = (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0');
+                div.remove();
+                currentTestResults.cosmeticStatic = hidden;
+                addLog(`Cosmetic (adsbygoogle) ${hidden ? 'BLOCKED' : 'visible'}`);
+            }
+            
+            async function testCosmeticDynamic() {
+                let existing = document.querySelector('.advertisement');
+                if (existing) existing.remove();
+                let div = document.createElement('div');
+                div.className = 'advertisement';
+                div.style.cssText = 'width:300px;height:250px;background:blue;position:absolute;left:-9999px;';
+                div.innerHTML = 'Ad';
+                document.body.appendChild(div);
+                await new Promise(r => setTimeout(r, 50));
+                let style = window.getComputedStyle(div);
+                let hidden = (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0');
+                div.remove();
+                currentTestResults.cosmeticDynamic = hidden;
+                addLog(`Cosmetic (advertisement) ${hidden ? 'BLOCKED' : 'not blocked'}`);
+            }
+            
+            async function testScriptBlocking(url) {
+                return new Promise((resolve) => {
+                    let script = document.createElement('script');
+                    script.src = url;
+                    let timeout = setTimeout(() => {
+                        script.remove();
+                        resolve(false);
+                    }, 5000);
+                    script.onload = () => {
+                        clearTimeout(timeout);
+                        script.remove();
+                        resolve(false);
+                    };
+                    script.onerror = () => {
+                        clearTimeout(timeout);
+                        script.remove();
+                        resolve(true);
+                    };
+                    document.head.appendChild(script);
+                });
+            }
+            
+            async function testHostBlocking(domain) {
+                return new Promise((resolve) => {
+                    let img = new Image();
+                    let timeout = setTimeout(() => { img.onload = img.onerror = null; resolve(false); }, 4000);
+                    img.onload = () => { clearTimeout(timeout); resolve(false); };
+                    img.onerror = () => { clearTimeout(timeout); resolve(true); };
+                    img.src = `https://${domain}/__abt_${Date.now()}.gif`;
+                });
+            }
+            
+            async function runFullTest() {
+                addLog('Starting full adblock test...');
+                const retestBtn = document.getElementById('retestBtn');
+                if (retestBtn) retestBtn.disabled = true;
+                const networkOk = await checkConnectivity();
+                addLog(`Network connectivity: ${networkOk ? 'OK' : 'FAILED'}`);
+                
+                await testCosmeticStatic();
+                await testCosmeticDynamic();
+                
+                let scriptResults = [];
+                for (let item of scriptItems) {
+                    let blocked = await testScriptBlocking(item.url);
+                    scriptResults.push(blocked);
+                    addLog(`Script ${item.name} -> ${blocked ? 'blocked' : 'reachable'}`);
+                    await new Promise(r => setTimeout(r, 30));
+                }
+                currentTestResults.scripts = scriptResults;
+                
+                let hostResults = [];
+                for (let domain of hostDomains) {
+                    let blocked = await testHostBlocking(domain);
+                    hostResults.push(blocked);
+                    addLog(`Host ${domain} -> ${blocked ? 'blocked' : 'reachable'}`);
+                    await new Promise(r => setTimeout(r, 20));
+                }
+                currentTestResults.hosts = hostResults;
+                
+                updateUI(networkOk);
+                if (retestBtn) retestBtn.disabled = false;
+                addLog('Test completed.');
+            }
+            
+            function renderReportsPopup() {
+                const container = document.getElementById('popupContent');
+                if (!reportHistory.length) {
+                    container.innerHTML = '<div class="info-card"><i class="fas fa-info-circle"></i> No previous tests. Click re-test to generate.</div>';
+                    return;
+                }
+                let html = '';
+                reportHistory.forEach(r => {
+                    let date = new Date(r.timestamp).toLocaleString();
+                    html += `<div class="info-card"><i class="fas fa-chart-line"></i> <strong>${date}</strong><br>Score: ${r.score}% (${r.blocked}/${r.total} blocked)</div>`;
+                });
+                container.innerHTML = html;
+            }
+            
+            function renderLogsPopup() {
+                const container = document.getElementById('popupContent');
+                if (testLogs.length === 0) {
+                    container.innerHTML = '<div class="info-card"><i class="fas fa-terminal"></i> No logs yet, run test.</div>';
+                    return;
+                }
+                let html = '';
+                testLogs.forEach(log => {
+                    html += `<div class="info-card"><i class="fas fa-caret-right"></i> ${log}</div>`;
+                });
+                container.innerHTML = html;
+            }
+            
+            function renderFaqPopup() {
+                const container = document.getElementById('popupContent');
+                container.innerHTML = `
+                    <div class="info-card"><i class="fas fa-microchip"></i> <strong>How it works?</strong><p>The test tries to load resources from known ad/tracker domains and checks if they are blocked.</p></div>
+                    <div class="info-card"><i class="fas fa-palette"></i> <strong>Cosmetic filter:</strong><p>We insert elements with classes commonly blocked (adsbygoogle, advertisement) and check if they are hidden.</p></div>
+                    <div class="info-card"><i class="fas fa-file-code"></i> <strong>Script loading:</strong><p>Attempts to load real ad scripts (Google, Facebook, Amazon, etc). If they fail, it's blocked.</p></div>
+                    <div class="info-card"><i class="fas fa-network-wired"></i> <strong>Host blocking:</strong><p>Image requests to known ad/tracker domains. If request fails, it's blocked.</p></div>
+                    <div class="info-card"><i class="fas fa-chart-simple"></i> <strong>Score:</strong><p>Percentage of blocked items across all tests (cosmetic, scripts, hosts).</p></div>
+                    <div class="info-card"><i class="fas fa-shield-hog"></i> <strong>Why high score even with ad blocker off?</strong><p>You may have system‑level ad blocker (DNS filter, VPN, hosts file).</p></div>
+                `;
+            }
+            
+            function renderCosmeticGuide() {
+                const container = document.getElementById('popupContent');
+                container.innerHTML = `
+                    <div class="info-card"><i class="fas fa-magic"></i> <strong>How to block cosmetic ads?</strong><p>Add custom filters to your ad blocker (e.g., uBlock Origin, AdBlock Plus).</p></div>
+                    <div class="info-card"><i class="fas fa-code"></i> <strong>For class "adsbygoogle":</strong><p>Add filter: <code style="background:#000;padding:2px 6px;border-radius:4px;">##.adsbygoogle</code></p><p>This hides any element with that class.</p></div>
+                    <div class="info-card"><i class="fas fa-code"></i> <strong>For class "advertisement":</strong><p>Add filter: <code style="background:#000;padding:2px 6px;border-radius:4px;">##.advertisement</code></p><p>Blocks elements with that class.</p></div>
+                    <div class="info-card"><i class="fas fa-download"></i> <strong>Where to add?</strong><p>In uBlock Origin: Open dashboard → "My filters" → paste the lines → Apply changes.</p><p>In AdBlock Plus: Options → "Advanced" → "My filter list" → add filters.</p></div>
+                    <div class="info-card"><i class="fas fa-lightbulb"></i> <strong>Pro tip:</strong><p>Use element picker to generate filters automatically. Right‑click on ad → "Block element".</p></div>
+                `;
+            }
+            
+            function renderHostCategories() {
+                const container = document.getElementById('popupContent');
+                let html = '';
+                for (let [cat, domains] of Object.entries(categories)) {
+                    html += `<div class="category-group"><h3><i class="fas fa-tag"></i> ${cat}</h3><div class="domain-list">`;
+                    domains.forEach(d => {
+                        html += `<span class="domain-tag">${d}</span>`;
+                    });
+                    html += `</div></div>`;
+                }
+                container.innerHTML = html;
+            }
+            
+            function openUniversalPopup(type) {
+                const popup = document.getElementById('universalPopup');
+                const titleElem = document.getElementById('popupTitle');
+                if (type === 'reports') {
+                    titleElem.innerHTML = '<i class="fas fa-chart-simple"></i> Latest Reports';
+                    renderReportsPopup();
+                } else if (type === 'logs') {
+                    titleElem.innerHTML = '<i class="fas fa-terminal"></i> Test Logs';
+                    renderLogsPopup();
+                } else if (type === 'faq') {
+                    titleElem.innerHTML = '<i class="fas fa-question-circle"></i> FAQ';
+                    renderFaqPopup();
+                } else if (type === 'cosmeticGuide') {
+                    titleElem.innerHTML = '<i class="fas fa-eye-slash"></i> Cosmetic Filters Guide';
+                    renderCosmeticGuide();
+                } else if (type === 'hostCategories') {
+                    titleElem.innerHTML = '<i class="fas fa-list-ul"></i> Host Blocking Categories';
+                    renderHostCategories();
+                }
+                popup.style.display = 'flex';
+            }
+            
+            function closeUniversalPopup() {
+                document.getElementById('universalPopup').style.display = 'none';
+            }
+            
+            function setupHostToggle() {
+                const toggleBtn = document.getElementById('toggleHostsBtn');
+                const hostDetails = document.getElementById('hostDetails');
+                let expanded = false;
+                toggleBtn.addEventListener('click', () => {
+                    if (expanded) {
+                        hostDetails.style.display = 'none';
+                        toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                    } else {
+                        hostDetails.style.display = 'block';
+                        toggleBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+                    }
+                    expanded = !expanded;
+                });
+            }
+            
+            function init() {
+                loadReports();
+                setupHostToggle();
+                document.getElementById('retestBtn').addEventListener('click', () => runFullTest());
+                document.getElementById('showReportsBtn').addEventListener('click', () => openUniversalPopup('reports'));
+                document.getElementById('showFaqBtn').addEventListener('click', () => openUniversalPopup('faq'));
+                document.getElementById('showLogsBtn').addEventListener('click', () => openUniversalPopup('logs'));
+                document.getElementById('cosmeticGuideBtn').addEventListener('click', () => openUniversalPopup('cosmeticGuide'));
+                document.getElementById('hostCategoriesBtn').addEventListener('click', () => openUniversalPopup('hostCategories'));
+                document.getElementById('closePopupBtn').addEventListener('click', closeUniversalPopup);
+                document.getElementById('universalPopup').addEventListener('click', (e) => {
+                    if (e.target === document.getElementById('universalPopup')) closeUniversalPopup();
+                });
+                runFullTest();
+            }
+            
+            init();
+        })();
+    </script>
+</body>
+</html>
