@@ -420,7 +420,14 @@ function showNotificationsPopup() {
     const popup = document.getElementById('notificationPopup');
     const content = document.getElementById('notificationPopupContent');
     const template = document.getElementById('notificationItemsTemplate');
-    if (!popup || !content || !template) return;
+    
+    if (!popup || !content || !template) {
+        if (window.showMessage) {
+            window.showMessage('Missing popup elements');
+        }
+        return;
+    }
+    
     content.innerHTML = template.innerHTML;
     
     Array.from(content.children).forEach(item => {
