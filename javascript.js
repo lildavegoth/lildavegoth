@@ -420,6 +420,7 @@ function showNotificationsPopup() {
     const popup = document.getElementById('notificationPopup');
     const content = document.getElementById('notificationPopupContent');
     const template = document.getElementById('notificationItemsTemplate');
+    if (!popup || !content || !template) return;
     content.innerHTML = template.innerHTML;
     
     Array.from(content.children).forEach(item => {
@@ -664,7 +665,7 @@ function initPinFeatures() {
 function getStorageKey(containerId) {
     if (containerId === 'apps-container') return 'pinnedAppsContainer';
     if (containerId === 'games-container') return 'pinnedGamesContainer';
-    return `pinned${containerId}`; // fallback (not used in current code)
+    return `pinned${containerId}`;
 }
 
 function loadPinnedState() {
@@ -781,9 +782,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     setupSearchDebounce();
     setupProfilePicture();
     restoreState();
+    
+    const notificationBtn = document.getElementById('notificationButton');
+    if (notificationBtn) {
+        notificationBtn.addEventListener('click', showNotificationsPopup);
+    }
 });
-
-document.getElementById('notificationButton').addEventListener('click', showNotificationsPopup);
 
 document.addEventListener('click', function(event) {
     const popup = document.getElementById('universalPopup');
