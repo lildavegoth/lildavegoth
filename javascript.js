@@ -168,6 +168,17 @@ function restoreState() {
     } catch (e) {}
 }
 
+document.body.addEventListener('click', (e) => {
+    const card = e.target.closest('.project-card');
+    if (!card) return;
+    if (card.dataset.url && !e.target.closest('.pin-button')) {
+        saveStateBeforeNavigate();
+        window.location.href = card.dataset.url;
+    } else if (card.dataset.popup) {
+        openPopup(card.dataset.popup);
+    }
+});
+
 function openPopup(type) {
     const popup = document.getElementById('universalPopup');
     const title = document.getElementById('popupTitle');
@@ -374,6 +385,29 @@ function setupProfilePicture() {
         input.click();
     });
 }
+
+document.getElementById('contact-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+    try {
+        const response = await fetch('/api/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (response.ok) {
+            showPopupMessage('Success', 'Message sent successfully!');
+            form.reset();
+        } else {
+            showPopupMessage('Error', result.message || 'Failed to send message.');
+        }
+    } catch (error) {
+        showPopupMessage('Error', 'Network error. Please try again.');
+    }
+});
 
 function showPopupMessage(title, message) {
     const popup = document.getElementById('universalPopup');
@@ -630,7 +664,7 @@ function initPinFeatures() {
 function getStorageKey(containerId) {
     if (containerId === 'apps-container') return 'pinnedAppsContainer';
     if (containerId === 'games-container') return 'pinnedGamesContainer';
-    return `pinned${containerId}`;
+    return `pinned${containerId}`; // fallback (not used in current code)
 }
 
 function loadPinnedState() {
@@ -747,70 +781,36 @@ document.addEventListener('DOMContentLoaded', async function() {
     setupSearchDebounce();
     setupProfilePicture();
     restoreState();
+});
 
-    document.getElementById('contact-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData);
-        try {
-            const response = await fetch('/api/contact', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            const result = await response.json();
-            if (response.ok) {
-                showPopupMessage('Success', 'Message sent successfully!');
-                form.reset();
-            } else {
-                showPopupMessage('Error', result.message || 'Failed to send message.');
-            }
-        } catch (error) {
-            showPopupMessage('Error', 'Network error. Please try again.');
-        }
-    });
+document.getElementById('notificationButton').addEventListener('click', showNotificationsPopup);
 
-    document.body.addEventListener('click', (e) => {
-        const card = e.target.closest('.project-card');
-        if (!card) return;
-        if (card.dataset.url && !e.target.closest('.pin-button')) {
-            saveStateBeforeNavigate();
-            window.location.href = card.dataset.url;
-        } else if (card.dataset.popup) {
-            openPopup(card.dataset.popup);
-        }
-    });
-
-    document.getElementById('notificationButton').addEventListener('click', showNotificationsPopup);
-
-    document.addEventListener('click', function(event) {
-        const popup = document.getElementById('universalPopup');
-        const popupContent = document.querySelector('#universalPopup .popup-content');
+document.addEventListener('click', function(event) {
+    const popup = document.getElementById('universalPopup');
+    const popupContent = document.querySelector('#universalPopup .popup-content');
+    
+    if (popup.style.display === 'flex' && 
+        popupContent && 
+        !popupContent.contains(event.target)) {
         
-        if (popup.style.display === 'flex' && 
-            popupContent && 
-            !popupContent.contains(event.target)) {
-            
-            const isPopupTrigger = event.target.closest('.project-card[data-popup]') || 
-                                   event.target.closest('#creditsBarBtn');
-            
-            if (!isPopupTrigger) {
-                closeUniversalPopup();
-            }
-        }
-    });
-
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape' && 
-            document.getElementById('universalPopup').style.display === 'flex') {
+        const isPopupTrigger = event.target.closest('.project-card[data-popup]') || 
+                               event.target.closest('#creditsBarBtn');
+        
+        if (!isPopupTrigger) {
             closeUniversalPopup();
         }
-    });
-
-    if (typeof authCheck !== 'undefined') {
-        authCheck.createProtectedLink('protectedFeature', 'protected-page.html');
-        
-        const user = authCheck.isUserLoggedIn();
     }
 });
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && 
+        document.getElementById('universalPopup').style.display === 'flex') {
+        closeUniversalPopup();
+    }
+});
+
+if (typeof authCheck !== 'undefined') {
+    authCheck.createProtectedLink('protectedFeature', 'protected-page.html');
+    
+    const user = authCheck.isUserLoggedIn();
+}
