@@ -783,8 +783,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     restoreState();
 });
 
-document.getElementById('notificationButton').addEventListener('click', showNotificationsPopup);
-
 document.addEventListener('click', function(event) {
     const popup = document.getElementById('universalPopup');
     const popupContent = document.querySelector('#universalPopup .popup-content');
