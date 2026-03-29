@@ -739,6 +739,20 @@ function reorderContainer(containerId) {
     allCardsSorted.forEach(card => container.appendChild(card));
 }
 
+document.addEventListener('deviceready', function() {
+    if (window.ForegroundService) {
+        window.ForegroundService.start(
+            {
+                title: "Kakoi Kiraku Home",
+                text: "Kakoi Kiraku is running",
+                icon: "ic_notification"
+            },
+            function() { console.log("Foreground service started"); },
+            function(err) { console.error("Error: " + err); }
+        );
+    }
+});
+
 document.addEventListener('DOMContentLoaded', async function() {
     if (window.cordova || /cordova/i.test(navigator.userAgent)) {
         const submissionSection = document.getElementById('submission-section');

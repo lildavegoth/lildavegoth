@@ -228,12 +228,24 @@ style.textContent = `
         border-radius: 60px;
         cursor: pointer;
         transition: width 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1), border-radius 0.4s ease;
-        width: 120px;
+        width: 44px;
         height: 44px;
         overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
+    }
+    
+    .dynamic-island-notif-text {
+        transform: scaleX(0);
+        transform-origin: center;
+        opacity: 0;
+        transition: transform 0.50s cubic-bezier(0.2, 0.9, 0.4, 1.1), opacity 0.3s;
+    }
+    
+    .dynamic-island.expanded .dynamic-island-notif-text {
+        transform: scaleX(1);
+        opacity: 1;
     }
 
     .dynamic-island-inner {
@@ -251,6 +263,14 @@ style.textContent = `
         gap: 12px;
         opacity: 0;
         transform: translateX(-50%);
+    }
+    
+    .dynamic-island.expanded {
+        width: auto !important;
+        min-width: 280px;
+        max-width: 90vw;
+        padding: 0 20px;
+        border-radius: 60px;
     }
 
     .dynamic-island.expanded .dynamic-island-profile {
@@ -310,7 +330,7 @@ style.textContent = `
     @media (max-width: 768px) {
         .dynamic-island {
             top: 12px;
-            width: 100px;
+            width: 40px;
             height: 40px;
         }
         .dynamic-island.expanded {
@@ -325,6 +345,52 @@ style.textContent = `
             font-size: 0.9rem;
             max-width: 120px;
         }
+    }
+    
+    .full-notif-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #1a1a1a;
+        border-radius: 28px;
+        padding: 24px;
+        width: 280px;
+        max-width: 85vw;
+        z-index: 20000;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        border: 1px solid #333;
+        text-align: center;
+        color: white;
+    }
+    .full-notif-modal .modal-title {
+        font-weight: 700;
+        font-size: 20px;
+        margin-bottom: 12px;
+        color: #bef264;
+    }
+    .full-notif-modal .modal-message {
+        font-size: 16px;
+        word-break: break-word;
+        margin-bottom: 24px;
+    }
+    .full-notif-modal .modal-close {
+        background: #bef264;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 40px;
+        font-weight: bold;
+        cursor: pointer;
+        color: black;
+    }
+    .full-notif-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        z-index: 19999;
     }
 `;
 document.head.appendChild(style);
@@ -449,20 +515,21 @@ document.head.appendChild(style);
         };
     }
     
-    window.showMessage = (title, message, type, appName, extraText, duration) => {
-        type = type || "Notification";
-        extraText = extraText || "";
-        duration = duration || 4000;
-        
-        const notificationData = {
-            title: title || "",
-            type: type,
-            extraText: extraText,
-            duration: duration
-        };
-        
-        createNotification(notificationData);
-    };
+    function showFullNotificationDisplay(title, message) {
+        const overlay = document.createElement('div');
+        overlay.className = 'full-notif-overlay';
+        const modal = document.createElement('div');
+        modal.className = 'full-notif-modal';
+        modal.innerHTML = `
+            <div class="modal-title">${title}</div>
+            <div class="modal-message">${message}</div>
+            <button class="modal-close">OK</button>
+        `;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        modal.querySelector('.modal-close').onclick = () => overlay.remove();
+        overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+    }
     
     function formatTime(seconds) {
         const hours = Math.floor(seconds / 3600);
@@ -530,10 +597,17 @@ document.head.appendChild(style);
             wrapper: notification.wrapper
         };
     };
+    
+    let oldContainer = document.querySelector('.notification-container-notif');
+    if (oldContainer) oldContainer.remove();
 })();
 
 (function() {
     let isAnimating = false;
+    let notifQueue = [];
+    let activeNotifTimer = null;
+    let isNotifExpanding = false;
+    window._activeNotif = { title: '', message: '' };
     
     function updateDynamicIslandContent() {
         const avatarEl = document.querySelector('.dynamic-island-avatar');
@@ -567,10 +641,80 @@ document.head.appendChild(style);
         usernameEl.textContent = username;
     }
     
+    function setNotifText(text) {
+        const island = document.querySelector('.dynamic-island');
+        if (island && island._notifSpan) {
+            island._notifSpan.textContent = text;
+        }
+    }
+    
+    function clearNotifText() {
+        const island = document.querySelector('.dynamic-island');
+        if (island && island._notifSpan) {
+            island._notifSpan.textContent = '';
+        }
+    }
+    
+    function showNotifInIsland(title, message, duration) {
+        const island = document.querySelector('.dynamic-island');
+        if (!island) return;
+        
+        if (activeNotifTimer) {
+            notifQueue.push({ title, message, duration });
+            return;
+        }
+        
+        window._activeNotif = { title, message };
+        const profileContainer = island.querySelector('.dynamic-island-profile');
+        profileContainer.style.display = 'none';
+        
+        setNotifText(`${title}${message ? ': ' + message : ''}`);
+        
+        if (!island.classList.contains('expanded')) {
+            island.style.width = '';
+            island.classList.add('expanded');
+        }
+        
+        activeNotifTimer = setTimeout(() => {
+            collapseIslandAfterNotif();
+        }, duration);
+    }
+    
+    function collapseIslandAfterNotif() {
+        const island = document.querySelector('.dynamic-island');
+        if (!island) return;
+        
+        if (activeNotifTimer) clearTimeout(activeNotifTimer);
+        activeNotifTimer = null;
+        window._activeNotif = { title: '', message: '' };
+        
+        if (island.classList.contains('expanded')) {
+            island.classList.remove('expanded');
+            
+            const profileContainer = island.querySelector('.dynamic-island-profile');
+            profileContainer.style.display = 'none';
+            
+            setTimeout(() => {
+                clearNotifText();
+            }, 350);
+            
+            if (notifQueue.length > 0) {
+                const next = notifQueue.shift();
+                showNotifInIsland(next.title, next.message, next.duration);
+            }
+        } else {
+            clearNotifText();
+            if (notifQueue.length > 0) {
+                const next = notifQueue.shift();
+                showNotifInIsland(next.title, next.message, next.duration);
+            }
+        }
+    }
+    
     function toggleDynamicIsland(event) {
         event.stopPropagation();
         const island = document.querySelector('.dynamic-island');
-        if (!island || isAnimating) return;
+        if (!island || isAnimating || activeNotifTimer) return;
         
         if (!island.classList.contains('expanded')) {
             isAnimating = true;
@@ -593,13 +737,11 @@ document.head.appendChild(style);
                 profileContainer.style.animation = 'slideInFromCenter 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards';
             });
             
-            island.addEventListener('transitionend', function onTransitionEnd(e) {
-                if (e.propertyName === 'width') {
-                    island.style.width = '';
-                    profileContainer.style.animation = '';
-                    profileContainer.style.transform = '';
-                    island.removeEventListener('transitionend', onTransitionEnd);
-                    isAnimating = false;
+            island.addEventListener('click', function(e) {
+                if (window._activeNotif && window._activeNotif.title) {
+                    showFullNotificationDisplay(window._activeNotif.title, window._activeNotif.message);
+                } else {
+                    toggleDynamicIsland(e);
                 }
             });
             
@@ -666,7 +808,15 @@ document.head.appendChild(style);
         
         inner.appendChild(profileDiv);
         
+        const notifSpan = document.createElement('span');
+        notifSpan.className = 'dynamic-island-notif-text';
+        inner.appendChild(notifSpan);
+        
         island.appendChild(inner);
+        
+        island._notifSpan = notifSpan;
+        island._defaultWidth = 120;
+        island._expandedWidth = null;
         
         island.addEventListener('click', toggleDynamicIsland);
         
@@ -674,6 +824,21 @@ document.head.appendChild(style);
         
         updateDynamicIslandContent();
     }
+    
+    function safeShowMessage(title, message, type, appName, extraText, duration) {
+        const checkIsland = setInterval(() => {
+            if (document.querySelector('.dynamic-island')) {
+                clearInterval(checkIsland);
+                duration = duration || 4000;
+                const displayTitle = title || "";
+                const displayMessage = message || extraText || "";
+                showNotifInIsland(displayTitle, displayMessage, duration);
+            }
+        }, 50);
+    }
+    
+    window.showMessage = safeShowMessage;
+    window.createTimerNotification = null;
     
     if (window.cordova) {
         document.addEventListener('deviceready', createDynamicIsland);
