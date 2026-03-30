@@ -172,6 +172,11 @@
             opacity: 0.6;
         }
 
+        textarea,
+        input {
+            resize: none;
+        }
+
         @media (max-width: 640px) {
             .cards-grid {
                 grid-template-columns: 1fr;
@@ -180,7 +185,6 @@
                 font-size: 1rem;
             }
         }
-
     </style>
 </head>
 <body>
@@ -191,7 +195,7 @@
 
         <app-header>
             <h1 class="username">Heartopia Gift Codes</h1>
-            <p class="title">Active Gift Codes from Official Source</p>
+            <p class="title">Active Gift Codes from Official Source + Exclusive Extras</p>
         </app-header>
 
         <button class="refresh-pill" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
@@ -219,6 +223,13 @@
             'https://api.allorigins.win/raw?url=',
             'https://corsproxy.io/?',
             'https://thingproxy.freeboard.io/fetch/'
+        ];
+
+        const MANUAL_CODES = [
+            { code: "l7m5q2r9a8", reward: "Wishing Star ×5, Mermaid Fish Attractor ×3, Fertilizer ×10", expiry: "Mar 31, 2026" },
+            { code: "k9r8m2q7a5", reward: "Wishing Star ×5, Mermaid Fish Attractor ×3, Fertilizer ×10", expiry: "Mar 31, 2026" },
+            { code: "a4k9m7q2r6", reward: "Wishing Star ×5, Mermaid Fish Attractor ×3, Fertilizer ×10", expiry: "Mar 31, 2026" },
+            { code: "m5r9q2a7k8", reward: "Wishing Star ×3, Repair Kit ×5, Growth Booster ×10", expiry: "Mar 31, 2026" }
         ];
 
         async function fetchRawHtml() {
@@ -258,7 +269,20 @@
             return parsed;
         }
 
-        function mergeWithClaimedStatus(freshCodes, storedCodes) {
+        function combineFetchedAndManual(fetchedCodes, manualCodes) {
+            const codeMap = new Map();
+            for (const manual of manualCodes) {
+                codeMap.set(manual.code, { ...manual });
+            }
+            for (const fetched of fetchedCodes) {
+                if (!codeMap.has(fetched.code)) {
+                    codeMap.set(fetched.code, { ...fetched });
+                }
+            }
+            return Array.from(codeMap.values());
+        }
+
+        function mergeClaimedStatus(combinedCodes, storedCodes) {
             const claimedMap = new Map();
             if (storedCodes && Array.isArray(storedCodes)) {
                 for (const item of storedCodes) {
@@ -267,7 +291,7 @@
                     }
                 }
             }
-            return freshCodes.map(codeItem => ({
+            return combinedCodes.map(codeItem => ({
                 ...codeItem,
                 claimed: claimedMap.get(codeItem.code) || false
             }));
@@ -294,6 +318,7 @@
             if (!codes || codes.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
+                        <i class="fas fa-gift"></i>
                         <p>No active gift codes available.</p>
                         <p style="font-size:0.85rem; margin-top:8px;">Click refresh to check for new codes.</p>
                     </div>
@@ -381,15 +406,32 @@
         }
 
         async function fetchAndUpdateStorage() {
-            const currentStored = loadFromLocalStorage();
             const html = await fetchRawHtml();
-            const freshParsed = parseCodesFromHtml(html);
-            if (freshParsed.length === 0) {
-                throw new Error('No active codes found on the official page');
+            const fetchedCodes = parseCodesFromHtml(html);
+            const combinedBase = combineFetchedAndManual(fetchedCodes, MANUAL_CODES);
+            const stored = loadFromLocalStorage();
+            const mergedWithClaimed = mergeClaimedStatus(combinedBase, stored);
+            saveToLocalStorage(mergedWithClaimed);
+            return mergedWithClaimed;
+        }
+
+        function getFallbackCombined() {
+            const stored = loadFromLocalStorage();
+            const combinedBase = combineFetchedAndManual([], MANUAL_CODES);
+            if (stored && stored.length) {
+                const mergedFallback = mergeClaimedStatus(combinedBase, stored);
+                const existingCodesMap = new Map();
+                for (const item of mergedFallback) {
+                    existingCodesMap.set(item.code, item);
+                }
+                for (const storedItem of stored) {
+                    if (!existingCodesMap.has(storedItem.code)) {
+                        existingCodesMap.set(storedItem.code, storedItem);
+                    }
+                }
+                return Array.from(existingCodesMap.values());
             }
-            const mergedCodes = mergeWithClaimedStatus(freshParsed, currentStored);
-            saveToLocalStorage(mergedCodes);
-            return mergedCodes;
+            return mergeClaimedStatus(combinedBase, null);
         }
 
         async function refreshCodes() {
@@ -399,7 +441,7 @@
                 const updatedCodes = await fetchAndUpdateStorage();
                 renderCodes(updatedCodes);
             } catch (err) {
-                const fallbackData = loadFromLocalStorage();
+                const fallbackData = getFallbackCombined();
                 if (fallbackData && fallbackData.length > 0) {
                     renderCodes(fallbackData);
                     container.innerHTML = `<div class="error"><i class="fas fa-exclamation-triangle"></i> Could not refresh, showing last saved codes.</div>` + container.innerHTML;
@@ -412,7 +454,21 @@
         async function initializeApp() {
             const existingData = loadFromLocalStorage();
             if (existingData && existingData.length > 0) {
-                renderCodes(existingData);
+                const refreshedWithManual = combineFetchedAndManual([], MANUAL_CODES);
+                const mergedExisting = mergeClaimedStatus(refreshedWithManual, existingData);
+                const finalMerged = [];
+                const codeMapFinal = new Map();
+                for (const item of mergedExisting) {
+                    codeMapFinal.set(item.code, item);
+                }
+                for (const storedItem of existingData) {
+                    if (!codeMapFinal.has(storedItem.code)) {
+                        codeMapFinal.set(storedItem.code, storedItem);
+                    }
+                }
+                const syncedData = Array.from(codeMapFinal.values());
+                saveToLocalStorage(syncedData);
+                renderCodes(syncedData);
                 attachGlobalCopyHandler();
                 return;
             }
@@ -420,16 +476,17 @@
             container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading gift codes...</div>';
             try {
                 const html = await fetchRawHtml();
-                const freshCodes = parseCodesFromHtml(html);
-                if (freshCodes.length === 0) {
-                    container.innerHTML = '<div class="error">⚠️ No active codes found. Use refresh button to try again.</div>';
-                    return;
-                }
-                const withClaimedFalse = freshCodes.map(c => ({ ...c, claimed: false }));
+                const fetchedCodes = parseCodesFromHtml(html);
+                const combinedBase = combineFetchedAndManual(fetchedCodes, MANUAL_CODES);
+                const withClaimedFalse = combinedBase.map(c => ({ ...c, claimed: false }));
                 saveToLocalStorage(withClaimedFalse);
                 renderCodes(withClaimedFalse);
             } catch (err) {
-                container.innerHTML = `<div class="error"><i class="fas fa-cloud-download-alt"></i> Failed to load codes. Please click refresh to try again.<br><a href="https://www.heartopia.live/en/codes/" target="_blank" style="color: var(--accent-color);">Open original source</a></div>`;
+                const fallbackOnlyManual = combineFetchedAndManual([], MANUAL_CODES);
+                const manualWithClaimed = fallbackOnlyManual.map(c => ({ ...c, claimed: false }));
+                saveToLocalStorage(manualWithClaimed);
+                renderCodes(manualWithClaimed);
+                container.innerHTML = `<div class="error"><i class="fas fa-cloud-download-alt"></i> Can't connect to Heartopia.live, showing the codes from latest discord server. Refresh to sync with Heartopia.live source.<br><a href="https://www.heartopia.live/en/codes/" target="_blank" style="color: var(--accent-color);">Open Heartopia.live source</a></div>` + container.innerHTML;
             }
             attachGlobalCopyHandler();
         }
