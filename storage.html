@@ -1108,11 +1108,6 @@
         const REDIRECT_URI = window.cordova ? 'com.kakoikiraku.home://oauth' : (window.location.origin + window.location.pathname);
         const DROPBOX_TOKEN_KEY = 'dropbox_tokens';
 
-        function showMsg(msg, isError) {
-            if (window.showMessage) window.showMessage(msg, isError ? 'error' : 'success');
-            else alert(msg);
-        }
-
         function getDropboxTokens() {
             const t = localStorage.getItem(DROPBOX_TOKEN_KEY);
             return t ? JSON.parse(t) : null;
@@ -1207,7 +1202,7 @@
                         if (code) {
                             handleOAuthCode(code, verifier);
                         } else {
-                            showMsg('OAuth failed: no code', true);
+                            window.showMessage('OAuth failed: no code', true);
                         }
                     }
                 });
@@ -1219,7 +1214,7 @@
                         if (code) {
                             handleOAuthCode(code, verifier);
                         } else {
-                            showMsg('OAuth failed: no code', true);
+                            window.showMessage('OAuth failed: no code', true);
                         }
                     }
                 });
@@ -1250,10 +1245,10 @@
                     expires_at: Date.now() + data.expires_in * 1000
                 };
                 setDropboxTokens(tokens);
-                showMsg('Dropbox connected!');
+                window.showMessage('Dropbox connected!');
                 updateDropboxStatus();
             } catch (err) {
-                showMsg('OAuth error: ' + err.message, true);
+                window.showMessage('OAuth error: ' + err.message, true);
             }
         }
 
@@ -1310,9 +1305,9 @@
                     const errorBody = await resp.text();
                     throw new Error(`Dropbox API error (${resp.status}): ${errorBody}`);
                 }
-                showMsg(`Backup saved as ${fileName}`);
+                window.showMessage(`Backup saved as ${fileName}`);
             } catch (err) {
-                showMsg('Upload error: ' + err.message, true);
+                window.showMessage('Upload error: ' + err.message, true);
             }
         }
 
@@ -1340,7 +1335,7 @@
                     .filter(e => e.name.startsWith('kakoikiraku_backup_') && e.name.endsWith('.json'))
                     .sort((a, b) => b.server_modified.localeCompare(a.server_modified));
                 if (backups.length === 0) {
-                    showMsg('No backup files found.', true);
+                    window.showMessage('No backup files found.', true);
                     return;
                 }
                 const latest = backups[0].path_lower;
@@ -1359,12 +1354,12 @@
                     for (const [key, value] of Object.entries(backupData)) {
                         localStorage.setItem(key, value);
                     }
-                    showMsg('Restore complete! Refreshing view...');
+                    window.showMessage('Restore complete!');
                     initialize();
                 });
 
             } catch (err) {
-                showMsg('Restore error: ' + err.message, true);
+                window.showMessage('Restore error: ' + err.message, true);
             }
         }
 
