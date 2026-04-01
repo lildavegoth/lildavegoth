@@ -736,17 +736,11 @@
             <p class="tagline">Projects management with unlimited rows</p>
             
             <div class="controls">
-                <button class="btn success" id="exportBtn">
-                    <i class="fas fa-file-export"></i> Export
-                </button>
-                <button class="btn" id="importBtn">
-                    <i class="fas fa-file-import"></i> Import
+                <button class="btn" id="addRowBtnTop">
+                    <i class="fas fa-plus"></i> Add Row
                 </button>
                 <button class="btn danger" id="clearBtn">
                     <i class="fas fa-trash"></i> Clear All
-                </button>
-                <button class="btn" id="addRowBtnTop">
-                    <i class="fas fa-plus"></i> Add Row
                 </button>
             </div>
         </header>
@@ -822,7 +816,6 @@
         let folders = JSON.parse(localStorage.getItem(KEY)) || []
         let currentFolderId = null
         let rowToDeleteIndex = -1
-        let importedDataToConfirm = []
         let filterActive = false
                                 
         const body = document.getElementById("tableBody")
@@ -830,7 +823,6 @@
         const addRowBtnBottom = document.getElementById("addRowBtnBottom")
         const clearBtn = document.getElementById("clearBtn")
         const exportBtn = document.getElementById("exportBtn")
-        const importBtn = document.getElementById("importBtn")
         const foldersContainer = document.getElementById("foldersContainer")
                 
         let searchTimeout
@@ -1360,23 +1352,23 @@
                   fileEntry.createWriter((writer) => {
                     writer.onwriteend = () => {
                       const location = isDownloads ? 'Downloads' : 'app folder';
-                      window.showMessage(`Projects backed up to ${location}!`, 'success');
+                      window.showMessage(`Projects backed up to ${location}!`);
                       if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
                         cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
                       }
                       resolve();
                     };
                     writer.onerror = () => {
-                      window.showMessage('Export failed', 'error');
+                      window.showMessage('Export failed');
                       reject();
                     };
                     writer.write(new Blob([content], { type: mimeType }));
                   }, () => {
-                    window.showMessage('Export failed', 'error');
+                    window.showMessage('Export failed');
                     reject();
                   });
                 }, () => {
-                  window.showMessage('Export failed', 'error');
+                  window.showMessage('Export failed');
                   reject();
                 });
               };
@@ -1394,7 +1386,7 @@
                         writeFile(dir, false);
                       },
                       () => {
-                        window.showMessage('Export failed', 'error');
+                        window.showMessage('Export failed');
                         reject();
                       }
                     );
@@ -1418,7 +1410,7 @@
               a.click();
               document.body.removeChild(a);
               URL.revokeObjectURL(url);
-              window.showMessage('Projects exported!', 'success');
+              window.showMessage('Projects exported!');
               resolve();
             }
           });
@@ -1540,7 +1532,7 @@
         
             const encryptedData = encryptData(exportData);
             if (!encryptedData) {
-              window.showMessage('Export failed', 'error');
+              window.showMessage('Export failed');
               return;
             }
         
@@ -1550,90 +1542,10 @@
         
             await saveFile(encryptedData, filename, mimeType);
           } catch (error) {
-            window.showMessage('Export failed', 'error');
+            window.showMessage('Export failed');
           }
         }
                 
-        function importData() {
-            const fileInput = document.createElement('input')
-            fileInput.type = 'file'
-            fileInput.accept = '.json'
-            
-            fileInput.onchange = (e) => {
-                const file = e.target.files[0]
-                if (!file) return
-                
-                const reader = new FileReader()
-                
-                reader.onload = (e) => {
-                    try {
-                        const encryptedContent = e.target.result
-                        const decryptedData = decryptData(encryptedContent)
-                        
-                        if (decryptedData && decryptedData.folders) {
-                            importedDataToConfirm = decryptedData.folders.map(folder => ({
-                                ...folder,
-                                data: folder.data.map(project => ({
-                                    ...project,
-                                    pinned: project.pinned || false
-                                }))
-                            }))
-                            
-                            showModal("Import Confirmation", "How would you like to import the data?", [
-                                { class: "btn", text: "Cancel", action: () => {
-                                    importedDataToConfirm = []
-                                    closeUniversalPopup()
-                                }},
-                                { class: "btn", text: "Merge", action: mergeImport },
-                                { class: "btn danger", text: "Replace All", action: replaceImport }
-                            ])
-                        } else {
-                            window.showMessage('Invalid backup file')
-                        }
-                    } catch {
-                        window.showMessage('Failed to read file')
-                    }
-                }
-                
-                reader.readAsText(file)
-            }
-            
-            fileInput.click()
-        }
-                
-        function replaceImport() {
-            folders = importedDataToConfirm.map(folder => ({
-                ...folder,
-                data: folder.data.map(project => ({
-                    ...project,
-                    pinned: project.pinned || false
-                }))
-            }))
-            save()
-            renderFolders()
-            render()
-            importedDataToConfirm = []
-            closeUniversalPopup()
-            window.showMessage('Projects replaced successfully')
-        }
-                
-        function mergeImport() {
-            const existingIds = new Set(folders.map(f => f.id))
-            
-            importedDataToConfirm.forEach(folder => {
-                if (!existingIds.has(folder.id)) {
-                    folders.push(folder)
-                }
-            })
-            
-            save()
-            renderFolders()
-            render()
-            importedDataToConfirm = []
-            closeUniversalPopup()
-            window.showMessage('Projects merged successfully')
-        }
-                                
         clearBtn.onclick = () => {
             if (!currentFolderId) {
                 window.showMessage('Please select a folder first')
@@ -1652,8 +1564,6 @@
             ])
         }
                 
-        exportBtn.onclick = exportData
-        importBtn.onclick = importData
         addRowBtnTop.onclick = addNewRow
         addRowBtnBottom.onclick = addNewRow
                 
