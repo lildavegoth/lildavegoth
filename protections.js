@@ -161,6 +161,7 @@
         }
         
         function protectImage(img) {
+            if (isExceptionPage()) return;
             if (!shouldProtect(img)) return;
             
             img.classList.add('protected');
@@ -176,6 +177,7 @@
         }
         
         document.addEventListener('contextmenu', function(e) {
+            if (isExceptionPage()) return;
             const target = e.target;
             
             if (target.tagName === 'IMG' && target.classList.contains('protected')) {
@@ -195,6 +197,7 @@
         }, true);
         
         document.addEventListener('dragstart', function(e) {
+            if (isExceptionPage()) return;
             if (e.target.tagName === 'IMG' && e.target.classList.contains('protected')) {
                 e.preventDefault();
                 return false;
@@ -202,6 +205,7 @@
         }, true);
         
         document.addEventListener('click', function(e) {
+            if (isExceptionPage()) return;
             const target = e.target;
             
             if ((e.button === 1 || e.ctrlKey || e.metaKey) && 
@@ -216,6 +220,7 @@
         }, true);
         
         document.addEventListener('copy', function(e) {
+            if (isExceptionPage()) return;
             const selection = window.getSelection();
             const text = selection.toString();
             
@@ -337,6 +342,11 @@
         });
         
         function initImageProtection() {
+            if (isExceptionPage()) {
+                protectionEnabled = false;
+                return;
+            }
+            
             if (!protectionEnabled) return;
             
             protectAllImages();
@@ -375,6 +385,7 @@
     
     (function() {
         document.addEventListener('keydown', function(e) {
+            if (isExceptionPage()) return;
             if (e.key === 'F12' || 
                 (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
                 (e.ctrlKey && e.key === 'U')) {
@@ -394,6 +405,7 @@
         });
         
         document.addEventListener('selectstart', function(e) {
+            if (isExceptionPage()) return;
             if (e.target.tagName === 'IMG' && e.target.classList.contains('protected')) {
                 e.preventDefault();
                 return false;
@@ -401,6 +413,7 @@
         }, true);
         
         document.addEventListener('beforeunload', function() {
+            if (isExceptionPage()) return;
             document.querySelectorAll('img.protected').forEach(img => {
                 if (img.src.startsWith('blob:') || img.src.startsWith('data:')) {
                     img.src = '';
@@ -933,6 +946,10 @@
                     makeRoundedScrollbar(body);
                 }
             });
+        }
+        
+        function isExceptionPage() {
+            return window.location.pathname === '/pages/userscript-json-format.html';
         }
         
         setTimeout(initAllScrollbars, 100);
