@@ -198,9 +198,12 @@
         }
 
         .quick-card .icon {
-            font-size: 32px;
-            margin-bottom: var(--spacing-sm);
+            font-size: 18px;
+            margin-bottom: 10px;
             cursor: pointer;
+            transition: transform 0.1s ease;
+            display: inline-block;
+            width: fit-content;
         }
 
         .journal-card p, .quick-card p {
@@ -228,6 +231,15 @@
         .journal-content::-webkit-scrollbar-thumb {
             background: var(--accent-color);
             border-radius: 4px;
+        }
+        .journal-content img,
+        .journal-content svg {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 12px;
+            margin: 12px auto;
+            object-fit: contain;
         }
 
         .popup-overlay {
@@ -291,8 +303,6 @@
             margin: 0;
             flex: 1;
             line-height: 1.6;
-        }
-        .popup-textarea:focus {
             outline: none;
         }
         .popup-footer {
@@ -414,9 +424,24 @@
             transform: translateX(26px);
             background-color: var(--bg-black);
         }
+        .guide-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-medium);
+            padding: 16px;
+        }
+        .guide-box p {
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+        .guide-box small {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            display: block;
+            margin-top: 6px;
+        }
 
         .settings-button {
-            position: fixed;
+            position: absolute;
             top: 20px;
             right: 20px;
             width: 40px;
@@ -442,6 +467,23 @@
             box-shadow: 0 0 20px rgba(193, 252, 50, 0.3);
             opacity: 0.8;
         }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        footer {
+            margin-top: 48px;
+            text-align: center;
+            padding: 20px 0;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .social-links a {
+            margin: 0 8px;
+            color: var(--text-secondary);
+        }
     </style>
 </head>
 <body>
@@ -455,7 +497,7 @@
         </a>
 
         <div class="greeting">
-            <h1 id="greetingName">lildavegoth's Journal</h1>
+            <h1 id="greetingName">Guest's Journal</h1>
         </div>
 
         <div class="search-container" style="margin-bottom: var(--spacing-md); position: relative;">
@@ -609,6 +651,16 @@
                 <button class="settings-btn-item" id="exportBtn" onclick="window.location.href='../storage.html'">
                     <i class="fas fa-database"></i> Data Storage
                 </button>
+                <div class="guide-box">
+                    <p><i class="fas fa-image" style="margin-right: 4px;"></i> <strong>Insert Image Guide</strong></p>
+                    <p style="font-size: 0.8rem;">Use Base64 images in your journal entries. Convert any image using Image to Base64 tool, then paste the generated &lt;img&gt; tag into the journal content. Images will automatically resize to fit the card.</p>
+                    <a href="image-to-base64.html" style="color: var(--accent-color); text-decoration: none; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; margin-top: 8px;"><i class="fas fa-external-link-alt" style="margin-right: 4px;"></i> Open Image to Base64 Converter tool</a>
+                    <small>Tip: After conversion, copy the full &lt;img src="data:image/..."&gt; and paste in journal editor.</small>
+                </div>
+                <div class="guide-box">
+                    <p><i class="fas fa-calendar-week" style="margin-right: 4px;"></i> <strong>Date</strong></p>
+                    <p>Swipe to the left or right in Date display to switch weeks date</p>
+                </div>
                 <button class="settings-btn-item reset-btn" id="resetBtn">
                     <i class="fas fa-trash-alt"></i> Reset All
                 </button>
@@ -623,53 +675,25 @@
         const day = today.getDay();
         currentWeekStart.setDate(today.getDate() - day);
 
-        let username = localStorage.getItem('journalUsername') || 'lildavegoth';
-        document.getElementById('greetingName').textContent = username + "'s Journal";
+        function getUsername() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser && currentUser.username) {
+                return currentUser.username;
+            }
+            return 'Guest';
+        }
 
-        const greetingName = document.getElementById('greetingName');
-        greetingName.style.cursor = 'pointer';
-        greetingName.addEventListener('click', () => {
-            const input = document.createElement('input');
-            input.value = username;
-            input.style.fontSize = '28px';
-            input.style.fontWeight = '700';
-            input.style.background = 'transparent';
-            input.style.border = 'none';
-            input.style.color = 'var(--text-primary)';
-            input.style.outline = 'none';
-            input.style.width = '200px';
-            greetingName.textContent = '';
-            greetingName.appendChild(input);
-            input.focus();
-            input.select();
-            const save = () => {
-                let newName = input.value.trim() || 'User';
-                const words = newName.split(' ');
-                if (words.length > 15) {
-                    newName = words.slice(0, 15).join(' ');
-                }
-                username = newName;
-                localStorage.setItem('journalUsername', username);
-                greetingName.textContent = username + "'s Journal";
-                greetingName.style.cursor = 'pointer';
-            };
-            input.addEventListener('blur', save);
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    save();
-                }
-            });
-        });
+        let username = getUsername();
+        document.getElementById('greetingName').textContent = username + "'s Journal";
 
         const weekdaysContainer = document.getElementById('weekdays');
         const dateCircles = document.getElementById('dateCircles');
         const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-        dayNames.forEach((day, i) => {
+        dayNames.forEach((dayName, idx) => {
             const div = document.createElement('div');
             div.className = 'weekday';
-            div.textContent = day;
-            if (i === 0) div.style.color = 'var(--accent-color)';
+            div.textContent = dayName;
+            if (idx === 0) div.style.color = 'var(--accent-color)';
             weekdaysContainer.appendChild(div);
         });
 
@@ -699,7 +723,6 @@
         let currentEditing = null;
         let pendingDelete = null;
         let currentEmojiId = null;
-        let currentTitle = '';
         let showAllEntries = localStorage.getItem('showAllEntries') === 'true';
 
         function renderWeek() {
@@ -752,7 +775,7 @@
         function openPopup(type, content, title) {
             const popup = document.getElementById('universalPopup');
             document.getElementById('popupTitle').textContent = title;
-            document.getElementById('popupContent').innerHTML = '<textarea id="popupTextarea" class="popup-textarea" placeholder="Write your reflection..."></textarea>';
+            document.getElementById('popupContent').innerHTML = '<textarea id="popupTextarea" class="popup-textarea" placeholder="Write your reflection... (you can paste HTML &lt;img&gt; tags)"></textarea>';
             document.getElementById('popupFooter').innerHTML = `
                 <button class="popup-btn popup-btn-primary" onclick="savePopup('${type}')">Save</button>
                 <button class="popup-btn popup-btn-secondary" onclick="closeUniversalPopup()">Cancel</button>
@@ -881,7 +904,7 @@
                 todayContent.additional.forEach(item => {
                     const card = document.createElement('div');
                     card.className = 'journal-card';
-                    card.innerHTML = `<h3>${item.title}</h3>${item.content ? `<div class="journal-content">${item.content.replace(/\n/g, '<br>')}</div>` : `<p>Start writing your reflection...</p>`}`;
+                    card.innerHTML = `<h3>${escapeHtml(item.title)}</h3>${item.content ? `<div class="journal-content">${item.content}</div>` : `<p>Start writing your reflection...</p>`}`;
                     card.addEventListener('click', () => openPopup('additional-' + item.id, item.content, item.title));
                     container.appendChild(card);
                 });
@@ -919,7 +942,7 @@
                     const card = document.createElement('div');
                     card.className = 'journal-card';
                     const dateDisplay = entry.date.split('-').slice(1).join('/');
-                    card.innerHTML = `<h3>${entry.title} <span style="font-size:12px; color:var(--accent-color);">${dateDisplay}</span></h3>${entry.content ? `<div class="journal-content">${entry.content.replace(/\n/g, '<br>')}</div>` : `<p>Empty</p>`}`;
+                    card.innerHTML = `<h3>${escapeHtml(entry.title)} <span style="font-size:12px; color:var(--accent-color);">${dateDisplay}</span></h3>${entry.content ? `<div class="journal-content">${entry.content}</div>` : `<p>Empty</p>`}`;
                     if (entry.type === 'journal') {
                         card.addEventListener('click', () => {
                             loadJournalForDate(entry.date);
@@ -957,7 +980,7 @@
                     const emoji = quickEmojis[q.id] || q.emoji || '🌟';
                     const card = document.createElement('div');
                     card.className = 'quick-card';
-                    card.innerHTML = `<div class="icon" data-id="${q.id}">${emoji}</div><h3>${q.title}</h3>${qcontent ? `<div class="journal-content">${qcontent.replace(/\n/g, '<br>')}</div>` : `<p>${q.prompt}</p>`}`;
+                    card.innerHTML = `<div class="icon" data-id="${q.id}">${emoji}</div><h3>${escapeHtml(q.title)}</h3>${qcontent ? `<div class="journal-content">${qcontent}</div>` : `<p>${escapeHtml(q.prompt)}</p>`}`;
                     card.querySelector('.icon').addEventListener('click', (e) => {
                         e.stopPropagation();
                         currentEmojiId = q.id;
@@ -969,6 +992,8 @@
                 });
             }
         }
+
+        function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
 
         document.getElementById('addMyBtn').addEventListener('click', () => { document.getElementById('journalTitleInput').value = ''; document.getElementById('addJournalPopup').style.display = 'flex'; });
         document.getElementById('addQuickBtn').addEventListener('click', () => { document.getElementById('quickTitleInput').value = ''; document.getElementById('quickPromptInput').value = ''; document.getElementById('quickEmojiInput').value = '🌟'; document.getElementById('addQuickPopup').style.display = 'flex'; });
@@ -1038,7 +1063,7 @@
             } else {
                 suggestionsDiv.innerHTML = results.slice(0,5).map(r => `
                     <div style="padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" data-date="${r.date}" data-type="${r.type}" data-id="${r.id}">
-                        <div><strong>${r.title}</strong> <span style="color:var(--accent-color);">${r.date}</span></div>
+                        <div><strong>${escapeHtml(r.title)}</strong> <span style="color:var(--accent-color);">${r.date}</span></div>
                         <div style="font-size:12px;">${r.type}</div>
                     </div>
                 `).join('');
