@@ -167,6 +167,7 @@
             max-height: 600px;
             scrollbar-width: none;
             -ms-overflow-style: none;
+            scroll-padding-top: 20px;
         }
         
         .spreadsheet-wrapper::-webkit-scrollbar {
@@ -385,12 +386,8 @@
         }
         
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .form-group {
@@ -505,10 +502,8 @@
             outline: none;
             font-family: inherit;
             resize: none;
-            overflow-y: hidden;
-            min-height: 20px;
-            max-height: none;
-            line-height: 1.05;
+            overflow-y: auto;
+            line-height: 1.4;
             text-align: left;
         }
 
@@ -723,6 +718,18 @@
             background: rgba(193, 252, 50, 0.1);
             color: var(--accent-color);
         }
+        
+        .suggestion-category i {
+            font-size: 0.5rem;
+            margin-bottom: 3px;
+            margin-right: 2px;
+        }
+
+        textarea:focus,
+        input:focus,
+        select:focus {
+            scroll-margin-top: 30px;
+        }
     </style>
 </head>
 <body>
@@ -747,7 +754,7 @@
         
         <div class="search-container" style="margin-bottom: var(--spacing-xs); margin-top: -40px; position: relative;">
             <div style="position: relative;">
-                <input type="text" id="projectSearch" placeholder="Search projects in current folder..." 
+                <input type="text" id="projectSearch" placeholder="Search all projects across folders..." 
                        style="width: 100%; padding: 12px 44px 12px 16px; border-radius: var(--radius-medium); 
                               background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); 
                               color: var(--text-primary); font-size: 0.95rem; outline: none;">
@@ -822,10 +829,19 @@
         const addRowBtnTop = document.getElementById("addRowBtnTop")
         const addRowBtnBottom = document.getElementById("addRowBtnBottom")
         const clearBtn = document.getElementById("clearBtn")
-        const exportBtn = document.getElementById("exportBtn")
         const foldersContainer = document.getElementById("foldersContainer")
                 
         let searchTimeout
+        
+        function resizeTaskTextarea(el) {
+            if (!el) return
+            el.style.height = 'auto'
+            el.style.height = el.scrollHeight + 'px'
+        }
+        
+        function setAllTaskTextareaHeights() {
+            document.querySelectorAll('.task-textarea').forEach(resizeTaskTextarea)
+        }
         
         function openUniversalPopup(title, contentHTML) {
             const popup = document.getElementById('universalPopup')
@@ -966,39 +982,41 @@
         function showProjectSuggestions(searchTerm) {
             const suggestionsContainer = document.getElementById('projectSearchSuggestions')
             
-            if (!searchTerm.trim() || !currentFolderId) {
+            if (!searchTerm.trim()) {
                 suggestionsContainer.style.display = 'none'
                 return
             }
             
-            let data = getCurrentData()
-            
-            if (filterActive) {
-                data = data.filter(p => p.status === "Pending" || p.status === "In Progress")
-            }
-            
             const term = searchTerm.toLowerCase()
-            const suggestions = []
+            const allSuggestions = []
             
-            data.forEach((project, index) => {
-                if (project.name.toLowerCase().includes(term) || 
-                    project.notes.toLowerCase().includes(term) ||
-                    project.tasks.some(t => t.text.toLowerCase().includes(term))) {
-                    
-                    let taskCount = project.tasks.length
-                    let doneCount = project.tasks.filter(t => t.done).length
-                    
-                    suggestions.push({
-                        name: project.name || 'Untitled Project',
-                        status: project.status,
-                        tasks: `${doneCount}/${taskCount} tasks`,
-                        index: index,
-                        pinned: project.pinned
-                    })
+            folders.forEach(folder => {
+                let folderData = folder.data || []
+                if (filterActive && folder.id === currentFolderId) {
+                    folderData = folderData.filter(p => p.status === "Pending" || p.status === "In Progress")
                 }
+                folderData.forEach((project, idx) => {
+                    if (project.name.toLowerCase().includes(term) || 
+                        project.notes.toLowerCase().includes(term) ||
+                        project.tasks.some(t => t.text.toLowerCase().includes(term))) {
+                        
+                        let taskCount = project.tasks.length
+                        let doneCount = project.tasks.filter(t => t.done).length
+                        
+                        allSuggestions.push({
+                            folderId: folder.id,
+                            folderName: folder.name,
+                            projectName: project.name || 'Untitled Project',
+                            projectIndex: idx,
+                            status: project.status,
+                            tasks: `${doneCount}/${taskCount} tasks`,
+                            pinned: project.pinned
+                        })
+                    }
+                })
             })
             
-            if (suggestions.length === 0) {
+            if (allSuggestions.length === 0) {
                 suggestionsContainer.innerHTML = `
                     <div class="search-suggestion-item">
                         <div class="suggestion-title">No projects found</div>
@@ -1006,11 +1024,11 @@
                     </div>
                 `
             } else {
-                suggestionsContainer.innerHTML = suggestions.slice(0, 5).map(item => `
-                    <div class="search-suggestion-item" data-project-index="${item.index}">
-                        <div class="suggestion-title">${item.name}</div>
+                suggestionsContainer.innerHTML = allSuggestions.slice(0, 8).map(item => `
+                    <div class="search-suggestion-item" data-folder-id="${item.folderId}" data-project-index="${item.projectIndex}">
+                        <div class="suggestion-title">${item.projectName}</div>
                         <div class="suggestion-description">${item.tasks} • ${item.status}</div>
-                        <div class="suggestion-category">${item.pinned ? '📌 Pinned' : 'Project'}</div>
+                        <div class="suggestion-category"><i class="fas fa-folder"></i> ${item.pinned ? ' <i class="fas fa-thumbtack"></i>' : ''} ${item.folderName}  </div>
                     </div>
                 `).join('')
             }
@@ -1019,10 +1037,21 @@
         }
                 
         function selectProjectSuggestion(suggestionItem) {
+            const folderId = suggestionItem.getAttribute('data-folder-id')
             const projectIndex = suggestionItem.getAttribute('data-project-index')
-            if (projectIndex) {
+            if (folderId && projectIndex !== null) {
                 document.getElementById('projectSearchSuggestions').style.display = 'none'
-                scrollToProject(parseInt(projectIndex))
+                const targetFolder = folders.find(f => f.id === folderId)
+                if (targetFolder) {
+                    if (currentFolderId !== folderId) {
+                        currentFolderId = folderId
+                        renderFolders()
+                    }
+                    render()
+                    setTimeout(() => {
+                        scrollToProjectInCurrentFolder(parseInt(projectIndex))
+                    }, 50)
+                }
             }
         }
                 
@@ -1032,64 +1061,58 @@
             
             document.getElementById('projectSearchSuggestions').style.display = 'none'
             
-            if (!searchTerm || !currentFolderId) return
+            if (!searchTerm) return
             
-            const data = getCurrentData()
-            let searchData = data
-            
-            if (filterActive) {
-                searchData = data.filter(p => p.status === "Pending" || p.status === "In Progress")
-            }
-            
-            for (let i = 0; i < searchData.length; i++) {
-                const project = searchData[i]
-                if (project.name.toLowerCase().includes(searchTerm) || 
-                    project.notes.toLowerCase().includes(searchTerm) ||
-                    project.tasks.some(t => t.text.toLowerCase().includes(searchTerm))) {
-                    scrollToProject(data.indexOf(project))
-                    break
-            }
-            }
-        }
-                
-        function scrollToProject(originalIndex) {
-            render()
-            
-            setTimeout(() => {
-                const rows = document.querySelectorAll('#tableBody tr')
-                let foundRow = null
-                
-                const data = getCurrentData()
-                const projectAtOriginalIndex = data[originalIndex]
-                
-                if (projectAtOriginalIndex) {
-                    const sortedData = [...data].sort((a, b) => {
-                        if (a.pinned && !b.pinned) return -1
-                        if (!a.pinned && b.pinned) return 1
-                        const nameA = a.name.toLowerCase()
-                        const nameB = b.name.toLowerCase()
-                        if (nameA < nameB) return -1
-                        if (nameA > nameB) return 1
-                        return 0
-                    })
-                    
-                    const sortedIndex = sortedData.indexOf(projectAtOriginalIndex)
-                    
-                    if (sortedIndex !== -1 && rows[sortedIndex]) {
-                        foundRow = rows[sortedIndex]
+            for (const folder of folders) {
+                const folderData = folder.data || []
+                for (let i = 0; i < folderData.length; i++) {
+                    const project = folderData[i]
+                    if (project.name.toLowerCase().includes(searchTerm) || 
+                        project.notes.toLowerCase().includes(searchTerm) ||
+                        project.tasks.some(t => t.text.toLowerCase().includes(searchTerm))) {
+                        
+                        if (currentFolderId !== folder.id) {
+                            currentFolderId = folder.id
+                            renderFolders()
+                        }
+                        render()
+                        setTimeout(() => {
+                            scrollToProjectInCurrentFolder(i)
+                        }, 50)
+                        return
                     }
                 }
+            }
+            window.showMessage('No matching project found in any folder')
+        }
                 
-                if (foundRow) {
-                    foundRow.style.transition = 'background 0.3s ease'
-                    foundRow.style.background = 'rgba(193, 252, 50, 0.15)'
-                    foundRow.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                    
+        function scrollToProjectInCurrentFolder(projectIndex) {
+            const rows = document.querySelectorAll('#tableBody tr')
+            const data = getCurrentData()
+            if (projectIndex < data.length) {
+                const targetProject = data[projectIndex]
+                let sortedIndex = -1
+                const sortedData = [...data].sort((a, b) => {
+                    if (a.pinned && !b.pinned) return -1
+                    if (!a.pinned && b.pinned) return 1
+                    const nameA = a.name.toLowerCase()
+                    const nameB = b.name.toLowerCase()
+                    if (nameA < nameB) return -1
+                    if (nameA > nameB) return 1
+                    return 0
+                })
+                sortedIndex = sortedData.findIndex(p => p === targetProject)
+                
+                if (sortedIndex !== -1 && rows[sortedIndex]) {
+                    const row = rows[sortedIndex]
+                    row.style.transition = 'background 0.3s ease'
+                    row.style.background = 'rgba(193, 252, 50, 0.15)'
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' })
                     setTimeout(() => {
-                        foundRow.style.background = ''
+                        row.style.background = ''
                     }, 2000)
                 }
-            }, 100)
+            }
         }
                                 
         function getCurrentFolder() {
@@ -1108,7 +1131,17 @@
                 save()
             }
         }
-                                
+        
+        function updateStatusColor(nameInput, status) {
+            const colors = {
+                "Pending": "#D9C181",
+                "In Progress": "#A9ACFF",
+                "Completed": "#C1FC32",
+                "Deprecated": "#C42833"
+            }
+            nameInput.style.color = colors[status] || "var(--text-primary)"
+        }
+        
         function rowTemplate(project, index) {
             const tr = document.createElement("tr")
             
@@ -1151,12 +1184,12 @@
                 text.value = t.text
                 text.oninput = e => {
                     t.text = e.target.value
-                    autoResizeTextarea(e.target)
                     save()
                 }
                 text.addEventListener('focus', function() { this.dataset.original = this.value })
                 text.addEventListener('blur', function() {
                     if (this.value !== this.dataset.original) window.showMessage('Changes saved')
+                    resizeTaskTextarea(this)
                 })
                 
                 const remove = document.createElement("button")
@@ -1246,23 +1279,9 @@
             actionTd.append(status, controls)
             
             tr.append(nameTd, tasksTd, notesTd, actionTd)
-            setTimeout(() => {
-                tr.querySelectorAll('.task-textarea').forEach(autoResizeTextarea)
-            }, 10)
-            
             return tr
         }
-                
-        function updateStatusColor(nameInput, status) {
-            const colors = {
-                "Pending": "#D9C181",
-                "In Progress": "#A9ACFF",
-                "Completed": "#C1FC32",
-                "Deprecated": "#C42833"
-            }
-            nameInput.style.color = colors[status] || "var(--text-primary)"
-        }
-                                
+        
         function render() {
             body.innerHTML = ""
             
@@ -1293,6 +1312,8 @@
                 const originalIndex = data.indexOf(p)
                 body.appendChild(rowTemplate(p, originalIndex))
             })
+            
+            setAllTaskTextareaHeights()
         }
                 
         function renderFolders() {
@@ -1400,7 +1421,6 @@
                 document.addEventListener('deviceready', saveToDownloads);
               }
             } else {
-              // Browser fallback
               const blob = new Blob([content], { type: mimeType });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
@@ -1545,21 +1565,28 @@
             window.showMessage('Export failed');
           }
         }
-                
-        clearBtn.onclick = () => {
-            if (!currentFolderId) {
-                window.showMessage('Please select a folder first')
-                return
+        
+        function resetAllData() {
+            folders = []
+            const defaultFolder = {
+                id: Date.now().toString(),
+                name: "Default",
+                data: []
             }
-            
-            showModal("Confirm Clear All", "This will permanently delete all projects and tasks in current folder. This actions cannot be undone and recovered unless you have a backup.", [
+            folders.push(defaultFolder)
+            currentFolderId = defaultFolder.id
+            save()
+            renderFolders()
+            render()
+            window.showMessage('All folders and tasks cleared')
+        }
+        
+        clearBtn.onclick = () => {
+            showModal("Confirm Clear All", "This will permanently delete ALL folders and ALL projects/tasks across all folders. This action cannot be undone.", [
                 { class: "btn", text: "Cancel", action: closeUniversalPopup },
-                { class: "btn danger", text: "Clear All", action: () => {
-                    setCurrentData([])
-                    render()
-                    renderFolders()
+                { class: "btn danger", text: "Clear Everything", action: () => {
+                    resetAllData()
                     closeUniversalPopup()
-                    window.showMessage('All Projects has been deleted')
                 }}
             ])
         }
@@ -1568,7 +1595,16 @@
         addRowBtnBottom.onclick = addNewRow
                 
         if (folders.length === 0) {
+            const defaultFolder = {
+                id: Date.now().toString(),
+                name: "Default",
+                data: []
+            }
+            folders.push(defaultFolder)
+            currentFolderId = defaultFolder.id
+            save()
             renderFolders()
+            render()
         } else {
             currentFolderId = folders[0].id
             renderFolders()
@@ -1601,18 +1637,21 @@
                 rows.forEach(row => {
                     const nameInput = row.querySelector('.cell-textarea')
                     if (nameInput && nameInput.value === "") {
-                        nameInput.focus()
+                        nameInput.focus({ preventScroll: true })
                         nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' })
                         return
                     }
                 })
             }, 100)
         }
-                
-        function autoResizeTextarea(textarea) {
-            textarea.style.height = 'auto'
-            textarea.style.height = (textarea.scrollHeight) + 'px'
-        }
+
+        document.addEventListener('focusin', (e) => {
+            if (e.target.matches('textarea, input, select')) {
+                setTimeout(() => {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                }, 20)
+            }
+        })
     </script>
 </body>
 </html>

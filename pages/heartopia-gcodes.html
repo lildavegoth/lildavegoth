@@ -63,26 +63,6 @@
             min-height: calc(100vh - 90px);
         }
 
-        .refresh-pill {
-            background: var(--accent-color);
-            color: #111;
-            border: none;
-            padding: 4px 10px;
-            border-radius: 60px;
-            font-size: 1rem;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            transition: 0.2s;
-            margin-top: 20px;
-            margin-left: -30px;
-        }
-        .refresh-pill i { font-size: 1rem; }
-        .refresh-pill:hover { background: #d0ff5e; }
-        .refresh-pill:active { transform: scale(0.97); }
-
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -195,10 +175,8 @@
 
         <app-header>
             <h1 class="username">Heartopia Gift Codes</h1>
-            <p class="title">Active Gift Codes from Official Source + Exclusive Extras</p>
+            <p class="title">Active Gift Codes — Updated via Official Database</p>
         </app-header>
-
-        <button class="refresh-pill" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
 
         <div id="codes-container">
             <div class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading codes...</div>
@@ -218,82 +196,33 @@
 
     <script>
         const STORAGE_KEY = 'hatoGiftCodes';
-        const TARGET_URL = 'https://www.heartopia.live/en/codes/';
-        const MANUAL_CODES_URL = 'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Heartopia/gift-codes.json';
-        const PROXIES = [
-            'https://api.allorigins.win/raw?url=',
-            'https://corsproxy.io/?',
-            'https://thingproxy.freeboard.io/fetch/'
-        ];
+        const CODES_JSON_URL = 'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Heartopia/gift-codes.json';
 
-        async function fetchRawHtml() {
-            for (let i = 0; i < PROXIES.length; i++) {
-                const fullUrl = PROXIES[i] + encodeURIComponent(TARGET_URL);
-                try {
-                    const response = await fetch(fullUrl);
-                    if (response.ok) {
-                        return await response.text();
-                    }
-                } catch (err) {}
-            }
-            throw new Error('fetch failed');
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
         }
 
-        function parseCodesFromHtml(html) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const activeCards = doc.querySelectorAll('.card.p-6.border-amber-400');
-            const parsed = [];
-            for (const card of activeCards) {
-                const codeElem = card.querySelector('code');
-                const rewardElem = card.querySelector('p.text-text-secondary');
-                const expiryElem = card.querySelector('.flex.items-center.text-amber-600.font-medium');
-                if (codeElem && rewardElem) {
-                    let code = codeElem.textContent.trim();
-                    let rewardText = rewardElem.textContent.trim();
-                    rewardText = rewardText.replace(/^Rewards:\s*/, '');
-                    let expiry = expiryElem ? expiryElem.textContent.trim() : 'Unknown';
-                    expiry = expiry.replace(/^Expires:\s*/, '');
-                    parsed.push({ code, reward: rewardText, expiry });
-                }
-            }
-            return parsed;
-        }
-
-        async function fetchManualCodes() {
+        function loadFromLocalStorage() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return null;
             try {
-                const response = await fetch(MANUAL_CODES_URL);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (Array.isArray(data)) {
-                        return data;
-                    }
-                }
-                return [];
-            } catch (err) {
-                return [];
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : null;
+            } catch (e) {
+                return null;
             }
         }
 
-        async function fetchSiteCodes() {
-            const html = await fetchRawHtml();
-            return parseCodesFromHtml(html);
+        function saveToLocalStorage(codesArray) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(codesArray));
         }
 
-        function combineCodes(siteCodes, manualCodes) {
-            const map = new Map();
-            for (const manual of manualCodes) {
-                map.set(manual.code, { ...manual });
-            }
-            for (const site of siteCodes) {
-                if (!map.has(site.code)) {
-                    map.set(site.code, { ...site });
-                }
-            }
-            return Array.from(map.values());
-        }
-
-        function mergeClaimedStatus(combinedCodes, storedCodes) {
+        function mergeClaimedStatus(freshCodes, storedCodes) {
             const claimedMap = new Map();
             if (storedCodes && Array.isArray(storedCodes)) {
                 for (const item of storedCodes) {
@@ -302,41 +231,32 @@
                     }
                 }
             }
-            return combinedCodes.map(codeItem => ({
-                ...codeItem,
-                claimed: claimedMap.get(codeItem.code) || false
+            return freshCodes.map(item => ({
+                ...item,
+                claimed: claimedMap.get(item.code) || false
             }));
         }
 
-        function saveToLocalStorage(codesArray) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(codesArray));
+        async function fetchCodesFromJson() {
+            const response = await fetch(CODES_JSON_URL);
+            if (!response.ok) throw new Error('Fetch failed');
+            const data = await response.json();
+            return Array.isArray(data) ? data : [];
         }
 
-        function loadFromLocalStorage() {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) {
-                try {
-                    const parsed = JSON.parse(raw);
-                    if (Array.isArray(parsed)) return parsed;
-                } catch (e) {}
-            }
-            return null;
-        }
-
-        function renderCodes(codes, warningMessage = '') {
+        function renderCodes(codes, errorMessage = '') {
             const container = document.getElementById('codes-container');
             if (!codes || codes.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-gift"></i>
                         <p>No active gift codes available.</p>
-                        <p style="font-size:0.85rem; margin-top:8px;">Click refresh to check for new codes.</p>
                     </div>
                 `;
-                if (warningMessage) {
+                if (errorMessage) {
                     const warningDiv = document.createElement('div');
                     warningDiv.className = 'error';
-                    warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${warningMessage}`;
+                    warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${errorMessage}`;
                     container.prepend(warningDiv);
                 }
                 return;
@@ -347,21 +267,21 @@
                 const safeCode = escapeHtml(c.code);
                 const safeReward = escapeHtml(c.reward);
                 const safeExpiry = escapeHtml(c.expiry);
-                const claimedBadgeHtml = c.claimed ? '<span class="claimed-pill">Claimed</span>' : '';
+                const claimedBadge = c.claimed ? '<span class="claimed-pill">Claimed</span>' : '';
                 cardsHtml += `
                     <div class="code-card" data-code-key="${safeCode}">
                         <div class="code-value">${safeCode}</div>
                         <div class="rewards">${safeReward}</div>
                         <div class="expiry">
                             <div style="margin-left: 10px;">Expires: ${safeExpiry}</div>
-                            ${claimedBadgeHtml}
+                            ${claimedBadge}
                         </div>
                     </div>
                 `;
             }
             cardsHtml += '</div>';
-            if (warningMessage) {
-                cardsHtml = `<div class="error"><i class="fas fa-exclamation-triangle"></i> ${warningMessage}</div>` + cardsHtml;
+            if (errorMessage) {
+                cardsHtml = `<div class="error"><i class="fas fa-exclamation-triangle"></i> ${errorMessage}</div>` + cardsHtml;
             }
             container.innerHTML = cardsHtml;
         }
@@ -381,19 +301,13 @@
                 saveToLocalStorage(newCodes);
                 renderCodes(newCodes);
                 return true;
-            } else {
-                const alreadyClaimed = stored.some(item => item.code === codeToClaim && item.claimed);
-                if (!alreadyClaimed) return false;
-                renderCodes(stored);
             }
             return false;
         }
 
         function copyToClipboard(text) {
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).catch(() => {
-                    fallbackCopy(text);
-                });
+                navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
             } else {
                 fallbackCopy(text);
             }
@@ -408,13 +322,6 @@
             document.body.removeChild(textarea);
         }
 
-        function attachGlobalCopyHandler() {
-            const container = document.getElementById('codes-container');
-            if (!container) return;
-            container.removeEventListener('click', copyAndClaimHandler);
-            container.addEventListener('click', copyAndClaimHandler);
-        }
-
         function copyAndClaimHandler(event) {
             const codeDiv = event.target.closest('.code-value');
             if (!codeDiv) return;
@@ -424,100 +331,30 @@
             updateClaimedStatusAndReRender(codeText);
         }
 
-        async function fetchAndCombineAll() {
-            let siteCodes = [];
-            let manualCodes = [];
-            let siteError = false;
-            let manualError = false;
-
-            try {
-                siteCodes = await fetchSiteCodes();
-            } catch (err) {
-                siteError = true;
-            }
-
-            try {
-                manualCodes = await fetchManualCodes();
-                if (manualCodes.length === 0) manualError = true;
-            } catch (err) {
-                manualError = true;
-            }
-
-            const combined = combineCodes(siteCodes, manualCodes);
-            const stored = loadFromLocalStorage();
-            const mergedWithClaimed = mergeClaimedStatus(combined, stored);
-            saveToLocalStorage(mergedWithClaimed);
-
-            let warningMsg = '';
-            if (siteError && manualError) warningMsg = 'Failed to load codes from official site and external database. Showing cached codes if available.';
-            else if (siteError) warningMsg = 'Could not fetch official codes from Heartopia.live, showing external database + cached.';
-            else if (manualError) warningMsg = 'External manual codes database unreachable, showing official codes only.';
-
-            return { codes: mergedWithClaimed, warning: warningMsg, hasSiteError: siteError, hasManualError: manualError };
-        }
-
-        async function refreshCodes() {
+        function attachGlobalCopyHandler() {
             const container = document.getElementById('codes-container');
-            container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Fetching latest codes...</div><p>This app fetches data from <a style="text-decoration: none; color: var(--accent-color);" href="https://www.heartopia.live/en/codes/" target="_blank" rel="noopener noreferrer">Heartopia.live</a> and external JSON database.</p>';
-            try {
-                const { codes, warning } = await fetchAndCombineAll();
-                if (codes && codes.length > 0) {
-                    renderCodes(codes, warning);
-                } else {
-                    const fallbackManualOnly = await fetchManualCodes();
-                    if (fallbackManualOnly.length > 0) {
-                        const fallbackCombined = combineCodes([], fallbackManualOnly);
-                        const storedFallback = loadFromLocalStorage();
-                        const mergedFallback = mergeClaimedStatus(fallbackCombined, storedFallback);
-                        saveToLocalStorage(mergedFallback);
-                        renderCodes(mergedFallback, 'Unable to fetch official codes, showing only external database.');
-                    } else {
-                        const lastResort = loadFromLocalStorage();
-                        if (lastResort && lastResort.length > 0) {
-                            renderCodes(lastResort, 'Could not fetch fresh data, showing last saved codes.');
-                        } else {
-                            renderCodes([], 'No codes available at this time.');
-                        }
-                    }
-                }
-            } catch (err) {
-                const cached = loadFromLocalStorage();
-                if (cached && cached.length > 0) {
-                    renderCodes(cached, 'Refresh failed. Showing cached codes.');
-                } else {
-                    container.innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i> Failed to fetch codes. Please try again later.<br><a href="https://www.heartopia.live/en/codes/" target="_blank" style="color: var(--accent-color);">Visit official page</a></div>`;
-                }
-            }
-            attachGlobalCopyHandler();
+            if (!container) return;
+            container.removeEventListener('click', copyAndClaimHandler);
+            container.addEventListener('click', copyAndClaimHandler);
         }
 
         async function initializeApp() {
-            const existingData = loadFromLocalStorage();
-            if (existingData && existingData.length > 0) {
-                let siteCodes = [];
-                let manualCodes = [];
-                let warningMsg = '';
+            const cached = loadFromLocalStorage();
+            if (cached && cached.length > 0) {
+                renderCodes(cached);
+                attachGlobalCopyHandler();
                 try {
-                    siteCodes = await fetchSiteCodes();
-                } catch (err) {}
-                try {
-                    manualCodes = await fetchManualCodes();
-                } catch (err) {}
-                const combined = combineCodes(siteCodes, manualCodes);
-                const merged = mergeClaimedStatus(combined, existingData);
-                if (merged.length > 0) {
+                    const fresh = await fetchCodesFromJson();
+                    const merged = mergeClaimedStatus(fresh, cached);
                     saveToLocalStorage(merged);
                     renderCodes(merged);
-                } else {
-                    renderCodes(existingData);
-                }
-                if (siteCodes.length === 0 && manualCodes.length === 0) {
-                    const warningDiv = document.getElementById('codes-container');
-                    if (warningDiv && !warningDiv.querySelector('.error')) {
-                        const errDiv = document.createElement('div');
-                        errDiv.className = 'error';
-                        errDiv.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Could not sync with external sources, using cached codes.';
-                        warningDiv.prepend(errDiv);
+                } catch (e) {
+                    const warningDiv = document.createElement('div');
+                    warningDiv.className = 'error';
+                    warningDiv.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Could not sync with server, showing cached codes.';
+                    const container = document.getElementById('codes-container');
+                    if (container && !container.querySelector('.error')) {
+                        container.prepend(warningDiv);
                     }
                 }
                 attachGlobalCopyHandler();
@@ -527,44 +364,20 @@
             const container = document.getElementById('codes-container');
             container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading gift codes...</div>';
             try {
-                const { codes, warning } = await fetchAndCombineAll();
-                if (codes.length > 0) {
-                    renderCodes(codes, warning);
+                const fresh = await fetchCodesFromJson();
+                if (fresh.length > 0) {
+                    const merged = mergeClaimedStatus(fresh, []);
+                    saveToLocalStorage(merged);
+                    renderCodes(merged);
                 } else {
-                    const manualFallback = await fetchManualCodes();
-                    if (manualFallback.length > 0) {
-                        const combinedOnlyManual = combineCodes([], manualFallback);
-                        const withClaimedFalse = combinedOnlyManual.map(c => ({ ...c, claimed: false }));
-                        saveToLocalStorage(withClaimedFalse);
-                        renderCodes(withClaimedFalse, 'Using external database only (official source unavailable).');
-                    } else {
-                        renderCodes([], 'No codes available. Please refresh later.');
-                    }
+                    renderCodes([], 'No codes found in database.');
                 }
             } catch (err) {
-                const manualEmergency = await fetchManualCodes();
-                if (manualEmergency.length > 0) {
-                    const emergencyCombined = combineCodes([], manualEmergency);
-                    const emergencyWithClaimed = emergencyCombined.map(c => ({ ...c, claimed: false }));
-                    saveToLocalStorage(emergencyWithClaimed);
-                    renderCodes(emergencyWithClaimed, 'Limited connectivity: showing external codes only.');
-                } else {
-                    container.innerHTML = `<div class="error"><i class="fas fa-exclamation-triangle"></i> Unable to load any codes. Please check your internet connection.<br><a href="https://www.heartopia.live/en/codes/" target="_blank" style="color: var(--accent-color);">Visit official page</a></div>`;
-                }
+                container.innerHTML = `<div class="error"><i class="fas fa-exclamation-triangle"></i> Unable to load any codes. Please try refreshing or reopen this app.</div>`;
             }
             attachGlobalCopyHandler();
         }
 
-        function escapeHtml(str) {
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
-
-        document.getElementById('refreshBtn').addEventListener('click', refreshCodes);
         initializeApp();
     </script>
 </body>
