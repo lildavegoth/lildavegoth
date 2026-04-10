@@ -353,6 +353,9 @@
             <div class="overlay"></div>
         </div>
         <div class="controls">
+            <button id="resetBtn" title="Reset Scanner">
+                <i class="fas fa-undo-alt"></i>
+            </button>
             <button id="copyBtn" title="Copy URL">
                 <i class="fas fa-copy"></i>
             </button>
@@ -396,6 +399,7 @@
             const ctx = canvas.getContext('2d');
             const previewImage = document.getElementById('previewImage');
             const videoWrapper = document.getElementById('videoWrapper');
+            const resetBtn = document.getElementById('resetBtn');
             const copyBtn = document.getElementById('copyBtn');
             const historyBtn = document.getElementById('historyBtn');
             const uploadBtn = document.getElementById('uploadBtn');
@@ -411,6 +415,9 @@
             let cameraPreviewAvailable = false;
             if (isCordova && typeof CameraPreview !== 'undefined') {
                 cameraPreviewAvailable = true;
+            }
+            if (!cameraPreviewAvailable) {
+                videoWrapper.style.display = 'none';
             }
             function extractDomain(url) {
                 try {
@@ -450,14 +457,16 @@
                 updateResultText(code);
                 saveToHistory(code);
             }
-            function stopScanner() {
+            function resetScannerUI() {
                 scanningActive = false;
                 if (scanTimer) {
                     clearTimeout(scanTimer);
                     scanTimer = null;
                 }
                 if (cameraPreviewAvailable) {
-                    CameraPreview.stopCamera();
+                    try {
+                        CameraPreview.stopCamera();
+                    } catch (e) {}
                 } else {
                     if (stream) {
                         stream.getTracks().forEach(track => track.stop());
@@ -468,6 +477,13 @@
                 video.style.display = 'block';
                 previewImage.style.display = 'none';
                 videoWrapper.classList.remove('active-camera');
+                resultDiv.innerHTML = 'Start scan by click on Camera icon above or import image by click on Picture icon';
+                resultPanel.classList.remove('visible');
+                lastScannedCode = '';
+                lastScannedRawUrl = '';
+            }
+            function stopScanner() {
+                resetScannerUI();
             }
             function captureFrameFromPreview() {
                 if (!scanningActive) return;
@@ -567,16 +583,15 @@
                 });
             }
             async function startScanner() {
+                if (!cameraPreviewAvailable) {
+                    return;
+                }
                 await stopScanner();
-                if (cameraPreviewAvailable) {
-                    try {
-                        await requestCameraPermission();
-                        startCameraPreview();
-                    } catch (e) {
-                        window.showMessage('Camera permission required');
-                    }
-                } else {
-                    startWebScanner();
+                try {
+                    await requestCameraPermission();
+                    startCameraPreview();
+                } catch (e) {
+                    window.showMessage('Camera permission required');
                 }
             }
             function scanImageFromFile(file) {
@@ -602,17 +617,25 @@
                             window.showMessage('No QR code found');
                         }
                         videoWrapper.classList.remove('active-camera');
+                        if (cameraPreviewAvailable) {
+                            videoWrapper.style.display = 'flex';
+                        }
                     };
                     img.src = e.target.result;
                 };
                 reader.readAsDataURL(file);
             }
-            videoWrapper.addEventListener('click', function() {
-                if (scanningActive) {
-                    stopScanner();
-                } else {
-                    startScanner();
-                }
+            if (cameraPreviewAvailable) {
+                videoWrapper.addEventListener('click', function() {
+                    if (scanningActive) {
+                        stopScanner();
+                    } else {
+                        startScanner();
+                    }
+                });
+            }
+            resetBtn.addEventListener('click', function() {
+                stopScanner();
             });
             copyBtn.addEventListener('click', function() {
                 if (lastScannedRawUrl) {
@@ -771,7 +794,9 @@
                     stream.getTracks().forEach(function(track) { track.stop(); });
                 }
                 if (cameraPreviewAvailable && scanningActive) {
-                    CameraPreview.stopCamera();
+                    try {
+                        CameraPreview.stopCamera();
+                    } catch (e) {}
                 }
             });
         })();
