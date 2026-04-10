@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>URL Vaults | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --bg-black: #000000;
+            --bg-card: #161618;
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --spacing-xs: 6px;
+            --spacing-sm: 12px;
+            --spacing-md: 20px;
+            --spacing-lg: 28px;
+            --radius-small: 10px;
+            --radius-medium: 16px;
+            --radius-large: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent-color);
+            text-decoration: none;
+            margin-bottom: 24px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .back-link:hover {
+            gap: 12px;
+        }
+
+        .urls-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .title-section h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .title-section .meta {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: opacity 0.2s;
+            font-size: 0.9rem;
+            flex: 1;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: var(--bg-black);
+        }
+
+        .btn-secondary {
+            background: rgba(193, 252, 50, 0.2);
+            color: var(--accent-color);
+            border: 1px solid rgba(193, 252, 50, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.2);
+            color: #F44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .folder-filter-bar {
+            display: flex;
+            align-items: center;
+            margin: 16px 0 8px;
+        }
+
+        .folder-select-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 10px 18px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .urls-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 20px 0 30px;
+        }
+
+        @media (min-width: 640px) {
+            .urls-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 900px) {
+            .urls-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .url-card {
+            background-color: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 10px;
+            width: 170px;
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.2s;
+        }
+        
+        .urls-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 20px 0 30px;
+        }
+        
+        @media (min-width: 640px) {
+            .urls-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .url-card {
+                width: 200px;
+                height: 200px;
+            }
+        }
+        
+        @media (min-width: 900px) {
+            .urls-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .url-card {
+                width: 220px;
+                height: 220px;
+            }
+        }
+
+        .url-card.pinned {
+            border-color: var(--accent-color);
+        }
+
+        .url-card::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 14px;
+            height: 14px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23C1FC32'%3E%3Cpath d='M14 3h7v7h-2V6.41l-9.83 9.83-1.41-1.41L17.59 5H14V3zM3 21V7h2v12h12v2H3z'/%3E%3C/svg%3E");
+            background-size: contain;
+            opacity: 0.7;
+        }
+
+        .url-image-container {
+            width: 100%;
+            height: 80px;
+            overflow: hidden;
+            margin-bottom: 8px;
+            background-color: rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        .url-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .url-image-placeholder {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+        }
+
+        .url-title {
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+            color: var(--accent-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .url-url {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            word-break: break-all;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .url-folder {
+            display: inline-block;
+            background: rgba(193, 252, 50, 0.15);
+            color: var(--accent-color);
+            padding: 2px 5px;
+            border-radius: 10px;
+            font-size: 0.55rem;
+            margin-bottom: 4px;
+        }
+
+        .url-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            margin-bottom: 6px;
+        }
+
+        .url-tag {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+            padding: 1px 5px;
+            border-radius: 8px;
+            font-size: 0.55rem;
+        }
+
+        .url-description {
+            font-size: 0.65rem;
+            margin-bottom: 8px;
+            flex-grow: 1;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .url-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 5px;
+            margin-top: 4px;
+        }
+
+        .url-action-btn {
+            background: var(--bg-dark);
+            border: 0px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 3px 6px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .url-action-btn:hover {
+            color: var(--accent-color);
+            background: rgba(193, 252, 50, 0.15);
+        }
+
+        .pin-btn {
+            background: var(--bg-dark);
+            border: 0px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 5px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .pin-btn.pinned {
+            color: var(--accent-color);
+            background: rgba(193, 252, 50, 0.2);
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 480px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .popup-body {
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .popup-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .form-textarea {
+            resize: none;
+            min-height: 80px;
+        }
+
+        .folder-select-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .folder-select-row select {
+            flex: 1;
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--accent-color);
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+        }
+
+        .search-wrapper {
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: none;
+        }
+
+        .folder-list-popup {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .folder-item {
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .folder-item:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: var(--accent-color);
+        }
+
+        .folder-item.active {
+            background: rgba(193, 252, 50, 0.15);
+            border-color: var(--accent-color);
+        }
+
+        .folder-counter {
+            background: var(--accent-color);
+            color: #000000;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+
+        <div style="margin-bottom: 10px;" class="urls-header">
+            <div class="title-section">
+                <h1>URL Vaults</h1>
+                <p style="font-size:0.9rem; margin-bottom: 16px;">Organize links with folders, tags, and auto-fetched icons.</p>
+            </div>
+            <div class="action-buttons">
+                <div class="button-row">
+                    <button class="btn btn-secondary" id="importBtn"><i class="fas fa-file-import"></i> Import</button>
+                    <button class="btn btn-secondary" id="exportBtn"><i class="fas fa-file-export"></i> Export</button>
+                </div>
+                <button class="btn btn-danger btn-full" id="clearAllBtn"><i class="fas fa-trash"></i> Clear All</button>
+                <div class="button-row">
+                    <button class="btn btn-primary" id="addNoteBtn"><i class="fas fa-plus"></i> New Url</button>
+                    <button class="btn btn-outline" id="newFolderBtn"><i class="fas fa-folder-plus"></i> New Folder</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-wrapper">
+            <i class="fas fa-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--accent-color);"></i>
+            <input type="text" id="searchInput" class="form-input" placeholder="Search links..." style="padding-left: 42px;">
+            <button class="search-clear" id="clearSearchBtn"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="folder-filter-bar">
+            <button class="folder-select-btn" id="folderFilterBtn">
+                <i class="fas fa-folder-open"></i> <span id="currentFolderLabel">All Folders</span> <i class="fas fa-chevron-down" style="margin-left:6px;"></i>
+            </button>
+            <div style="margin-left: 10px;" class="meta"><i class="fas fa-link"></i> <span id="urlsCount">0 URL</span></div>
+        </div>
+
+        <div id="urlsGrid" class="urls-grid"></div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon"><i class="fas fa-bookmark"></i></div>
+            <h3>No URL Yet</h3>
+            <p>Click "New Url" to start.</p>
+        </div>
+    </div>
+
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" onclick="closeUniversalPopup()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="popup-body" id="popupBody"></div>
+            <div class="popup-actions" id="popupActions"></div>
+        </div>
+    </div>
+
+    <script>
+        (function(){
+            const STORAGE_KEY = 'linksVaultAppData_v5';
+
+            let state = {
+                folders: ['Uncategorized'],
+                urls: []
+            };
+
+            let editingNoteId = null;
+            let currentFilterFolder = '__ALL__';
+            let selectedFile = null;
+
+            const urlsGrid = document.getElementById('urlsGrid');
+            const emptyState = document.getElementById('emptyState');
+            const urlsCount = document.getElementById('urlsCount');
+            const currentFolderLabel = document.getElementById('currentFolderLabel');
+            const searchInput = document.getElementById('searchInput');
+            const clearSearchBtn = document.getElementById('clearSearchBtn');
+            const popup = document.getElementById('universalPopup');
+            const popupTitle = document.getElementById('popupTitle');
+            const popupBody = document.getElementById('popupBody');
+            const popupActions = document.getElementById('popupActions');
+
+            function loadState() {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        state.folders = parsed.folders || ['Uncategorized'];
+                        state.urls = parsed.urls || [];
+                    } catch (e) {
+                        state = { folders: ['Uncategorized'], urls: [] };
+                    }
+                }
+                if (!state.folders.includes('Uncategorized')) state.folders.unshift('Uncategorized');
+                renderAll();
+            }
+
+            function saveState() {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                renderAll();
+            }
+
+            function renderAll() {
+                updateNotesCount();
+                renderNotes();
+            }
+
+            function updateNotesCount() {
+                urlsCount.textContent = `${state.urls.length} Urls${state.urls.length !== 1 ? 's' : ''}`;
+            }
+
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+
+            async function fetchFaviconAsBase64(url) {
+                try {
+                    const domain = new URL(url).hostname;
+                    const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                    const resp = await fetch(faviconUrl);
+                    const blob = await resp.blob();
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = () => resolve(null);
+                        reader.readAsDataURL(blob);
+                    });
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function getFolderCount(folder) {
+                return state.urls.filter(n => (n.folder || 'Uncategorized') === folder).length;
+            }
+
+            function truncateTitle(title) {
+                if (!title) return '';
+                return title.length > 24 ? title.substring(0, 24) + '...' : title;
+            }
+
+            function getFilteredNotes() {
+                let filtered = state.urls;
+                if (currentFilterFolder !== '__ALL__') {
+                    filtered = filtered.filter(n => (n.folder || 'Uncategorized') === currentFilterFolder);
+                }
+                const term = searchInput.value.trim().toLowerCase();
+                if (term) {
+                    filtered = filtered.filter(n => 
+                        (n.title || '').toLowerCase().includes(term) ||
+                        (n.url || '').toLowerCase().includes(term) ||
+                        (n.description || '').toLowerCase().includes(term) ||
+                        (n.tags || []).some(t => t.toLowerCase().includes(term))
+                    );
+                }
+                const pinned = filtered.filter(n => n.pinned);
+                const unpinned = filtered.filter(n => !n.pinned);
+                pinned.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                unpinned.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                return [...pinned, ...unpinned];
+            }
+
+            function renderNotes() {
+                const urlsToRender = getFilteredNotes();
+                urlsGrid.innerHTML = '';
+                if (urlsToRender.length === 0) {
+                    emptyState.style.display = 'block';
+                    urlsGrid.style.display = 'none';
+                    emptyState.innerHTML = searchInput.value.trim() ? 
+                        `<div class="empty-state-icon"><i class="fas fa-search"></i></div><h3>No Results</h3><p>No links match "${searchInput.value}"</p>` :
+                        `<div class="empty-state-icon"><i class="fas fa-bookmark"></i></div><h3>No URL Yet</h3><p>Click "New Url" to start.</p>`;
+                    return;
+                }
+                emptyState.style.display = 'none';
+                urlsGrid.style.display = 'grid';
+                urlsToRender.forEach(url => {
+                    const card = document.createElement('div');
+                    card.className = `url-card ${url.pinned ? 'pinned' : ''}`;
+                    card.setAttribute('data-id', url.id);
+                    card.onclick = (e) => {
+                        if (e.target.closest('button')) return;
+                        window.open(url.url, '_blank', 'noopener,noreferrer');
+                    };
+
+                    const imgSrc = url.imageBase64 || url.imageUrl;
+                    const imgHtml = imgSrc ? `<img src="${escapeHtml(imgSrc)}" class="url-image" onerror="this.parentElement.innerHTML='<div class=\'url-image-placeholder\'><i class=\'fas fa-image\'></i></div>';">` : '<div class="url-image-placeholder"><i class="fas fa-link"></i></div>';
+
+                    const tagsHtml = (url.tags || []).map(t => `<span class="url-tag">${escapeHtml(t)}</span>`).join('');
+                    const displayTitle = truncateTitle(url.title);
+
+                    card.innerHTML = `
+                        <div class="url-image-container">${imgHtml}</div>
+                        <div class="url-title" title="${escapeHtml(url.title)}">${escapeHtml(displayTitle)}</div>
+                        <div class="url-url">${escapeHtml(url.url)}</div>
+                        <span class="url-folder"><i class="fas fa-folder"></i> ${escapeHtml(url.folder || 'Uncategorized')}</span>
+                        <div class="url-tags">${tagsHtml}</div>
+                        <div class="url-description">${escapeHtml(url.description || '')}</div>
+                        <div class="url-actions">
+                            <button class="pin-btn ${url.pinned ? 'pinned' : ''}" data-action="pin" data-id="${url.id}"><i class="fas fa-thumbtack"></i></button>
+                            <button class="url-action-btn" data-action="edit" data-id="${url.id}"><i class="fas fa-edit"></i></button>
+                            <button class="url-action-btn" data-action="delete" data-id="${url.id}"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                    urlsGrid.appendChild(card);
+                });
+
+                document.querySelectorAll('[data-action="pin"]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const id = btn.dataset.id;
+                        const url = state.urls.find(n => n.id === id);
+                        if (url) { url.pinned = !url.pinned; saveState(); }
+                    });
+                });
+                document.querySelectorAll('[data-action="edit"]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openEditPopup(btn.dataset.id);
+                    });
+                });
+                document.querySelectorAll('[data-action="delete"]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (confirm('Delete this link?')) {
+                            state.urls = state.urls.filter(n => n.id !== btn.dataset.id);
+                            saveState();
+                        }
+                    });
+                });
+            }
+
+            function openAddPopup() {
+                editingNoteId = null;
+                popupTitle.textContent = 'Add New Url';
+                let folderOptions = state.folders.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)} (${getFolderCount(f)})</option>`).join('');
+                popupBody.innerHTML = `
+                    <div class="form-group"><label class="form-label">Title</label><input id="popupTitleInput" class="form-input" placeholder="Title" required></div>
+                    <div class="form-group"><label class="form-label">URL</label><input id="popupUrlInput" class="form-input" placeholder="https://..." required></div>
+                    <div class="form-group"><label class="form-label">Image URL (optional)</label><input id="popupImageInput" class="form-input" placeholder="Leave empty for auto icon"></div>
+                    <div class="form-group"><label class="form-label">Folder</label>
+                        <div class="folder-select-row">
+                            <select id="popupFolderSelect" class="form-input" style="padding-right:30px;">${folderOptions}</select>
+                            <button type="button" class="icon-btn" id="popupNewFolderBtn"><i class="fas fa-folder-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Tags (comma separated)</label><input id="popupTagsInput" class="form-input" placeholder="work, design"></div>
+                    <div class="form-group"><label class="form-label">Description</label><textarea id="popupDescInput" class="form-input form-textarea"></textarea></div>
+                `;
+                popupActions.innerHTML = `<button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button><button class="btn btn-primary" id="popupSaveBtn">Save Url</button>`;
+                document.getElementById('popupNewFolderBtn').addEventListener('click', openNewFolderPopup);
+                document.getElementById('popupSaveBtn').addEventListener('click', async () => {
+                    const title = document.getElementById('popupTitleInput').value.trim();
+                    let url = document.getElementById('popupUrlInput').value.trim();
+                    const imageUrl = document.getElementById('popupImageInput').value.trim();
+                    const folder = document.getElementById('popupFolderSelect').value;
+                    const tagsString = document.getElementById('popupTagsInput').value.trim();
+                    const desc = document.getElementById('popupDescInput').value.trim();
+                    if (!title || !url) return window.showMessage('Title and URL required.');
+                    if (!url.startsWith('http')) url = 'https://' + url;
+                    if (!state.folders.includes(folder)) state.folders.push(folder);
+                    let imageBase64 = null;
+                    if (!imageUrl) imageBase64 = await fetchFaviconAsBase64(url);
+                    const tags = tagsString ? tagsString.split(',').map(t => t.trim()).filter(t => t) : [];
+                    const newNote = {
+                        id: generateId(), title, url, imageUrl, imageBase64, folder, tags, description: desc,
+                        pinned: false, createdAt: new Date().toISOString()
+                    };
+                    state.urls.unshift(newNote);
+                    saveState();
+                    closeUniversalPopup();
+                });
+                popup.style.display = 'flex';
+            }
+
+            function openEditPopup(id) {
+                const url = state.urls.find(n => n.id === id);
+                if (!url) return;
+                editingNoteId = id;
+                popupTitle.textContent = 'Edit Url';
+                let folderOptions = state.folders.map(f => `<option value="${escapeHtml(f)}" ${f === url.folder ? 'selected' : ''}>${escapeHtml(f)} (${getFolderCount(f)})</option>`).join('');
+                popupBody.innerHTML = `
+                    <div class="form-group"><label class="form-label">Title</label><input id="popupTitleInput" class="form-input" value="${escapeHtml(url.title)}" required></div>
+                    <div class="form-group"><label class="form-label">URL</label><input id="popupUrlInput" class="form-input" value="${escapeHtml(url.url)}" required></div>
+                    <div class="form-group"><label class="form-label">Image URL</label><input id="popupImageInput" class="form-input" value="${escapeHtml(url.imageUrl || '')}"></div>
+                    <div class="form-group"><label class="form-label">Folder</label>
+                        <div class="folder-select-row">
+                            <select id="popupFolderSelect" class="form-input" style="padding-right:30px;">${folderOptions}</select>
+                            <button type="button" class="icon-btn" id="popupNewFolderBtn"><i class="fas fa-folder-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Tags</label><input id="popupTagsInput" class="form-input" value="${(url.tags || []).join(', ')}"></div>
+                    <div class="form-group"><label class="form-label">Description</label><textarea id="popupDescInput" class="form-input form-textarea">${escapeHtml(url.description || '')}</textarea></div>
+                `;
+                popupActions.innerHTML = `<button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button><button class="btn btn-primary" id="popupSaveBtn">Save Changes</button>`;
+                document.getElementById('popupNewFolderBtn').addEventListener('click', openNewFolderPopup);
+                document.getElementById('popupSaveBtn').addEventListener('click', async () => {
+                    const title = document.getElementById('popupTitleInput').value.trim();
+                    let url = document.getElementById('popupUrlInput').value.trim();
+                    const imageUrl = document.getElementById('popupImageInput').value.trim();
+                    const folder = document.getElementById('popupFolderSelect').value;
+                    const tagsString = document.getElementById('popupTagsInput').value.trim();
+                    const desc = document.getElementById('popupDescInput').value.trim();
+                    if (!title || !url) return window.showMessage('Title and URL required.');
+                    if (!url.startsWith('http')) url = 'https://' + url;
+                    if (!state.folders.includes(folder)) state.folders.push(folder);
+                    let imageBase64 = url.imageBase64;
+                    if (!imageUrl && !imageBase64) imageBase64 = await fetchFaviconAsBase64(url);
+                    const tags = tagsString ? tagsString.split(',').map(t => t.trim()).filter(t => t) : [];
+                    Object.assign(url, { title, url, imageUrl, imageBase64, folder, tags, description: desc });
+                    saveState();
+                    closeUniversalPopup();
+                });
+                popup.style.display = 'flex';
+            }
+
+            function openNewFolderPopup() {
+                popupTitle.textContent = 'New Folder';
+                popupBody.innerHTML = `<div class="form-group"><label class="form-label">Folder Name</label><input id="newFolderName" class="form-input" placeholder="Folder name"></div>`;
+                popupActions.innerHTML = `<button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button><button class="btn btn-primary" id="createFolderBtn">Create</button>`;
+                document.getElementById('createFolderBtn').addEventListener('click', () => {
+                    const name = document.getElementById('newFolderName').value.trim();
+                    if (name && !state.folders.includes(name)) {
+                        state.folders.push(name);
+                        saveState();
+                    }
+                    closeUniversalPopup();
+                });
+                popup.style.display = 'flex';
+            }
+
+            function openFolderListPopup() {
+                popupTitle.textContent = 'Select Folder';
+                let html = `<div class="folder-list-popup">`;
+                const totalAll = state.urls.length;
+                html += `<div class="folder-item ${currentFilterFolder === '__ALL__' ? 'active' : ''}" data-folder="__ALL__"><span><i class="fas fa-globe"></i> All Folders</span><span class="folder-counter">${totalAll}</span></div>`;
+                state.folders.forEach(f => {
+                    const count = getFolderCount(f);
+                    html += `<div class="folder-item ${currentFilterFolder === f ? 'active' : ''}" data-folder="${escapeHtml(f)}"><span><i class="fas fa-folder"></i> ${escapeHtml(f)}</span><span class="folder-counter">${count}</span></div>`;
+                });
+                html += `</div>`;
+                popupBody.innerHTML = html;
+                popupActions.innerHTML = `<button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button>`;
+                document.querySelectorAll('.folder-item').forEach(el => {
+                    el.addEventListener('click', () => {
+                        const folder = el.dataset.folder;
+                        currentFilterFolder = folder;
+                        currentFolderLabel.textContent = folder === '__ALL__' ? 'All Folders' : folder;
+                        closeUniversalPopup();
+                        renderNotes();
+                    });
+                });
+                popup.style.display = 'flex';
+            }
+
+            function openExportPopup() {
+                popupTitle.textContent = 'Export Bookmarks';
+                popupBody.innerHTML = `<p style="margin-bottom:20px;">Export as Netscape Bookmark HTML file with folders.</p>`;
+                popupActions.innerHTML = `<button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button><button class="btn btn-primary" id="exportConfirm">Export</button>`;
+                document.getElementById('exportConfirm').addEventListener('click', async () => {
+                    const date = new Date();
+                    const addDate = Math.floor(date.getTime() / 1000);
+                    const folderMap = {};
+                    state.urls.forEach(n => { const f = n.folder || 'Uncategorized'; if (!folderMap[f]) folderMap[f] = []; folderMap[f].push(n); });
+                    let html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<TITLE>URL Vaults</TITLE>\n<H1>URL Vaults</H1>\n<DL><p>\n`;
+                    for (const f of state.folders) {
+                        if (!folderMap[f] || folderMap[f].length === 0) continue;
+                        html += `    <DT><H3 ADD_DATE="${addDate}">${escapeHtml(f)}</H3>\n    <DL><p>\n`;
+                        folderMap[f].forEach(n => {
+                            const icon = n.imageBase64 ? ` ICON="${n.imageBase64.replace(/"/g, '&quot;')}"` : '';
+                            html += `        <DT><A HREF="${escapeHtml(n.url)}" ADD_DATE="${Math.floor(new Date(n.createdAt).getTime()/1000)}"${icon}>${escapeHtml(n.title)}</A>\n`;
+                            html += `        <DD>${escapeHtml(n.description || '')}${n.tags?.length ? ' [TAGS:'+n.tags.join(',')+']' : ''}\n`;
+                        });
+                        html += `    </DL><p>\n`;
+                    }
+                    html += `</DL><p>`;
+                    const blob = new Blob([html], {type: 'text/html'});
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `urls-vault-${date.toISOString().split('T')[0]}.html`;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    closeUniversalPopup();
+                });
+                popup.style.display = 'flex';
+            }
+
+            function openImportPopup() {
+                popupTitle.textContent = 'Import Bookmarks';
+                popupBody.innerHTML = `
+                    <div style="text-align:center; padding:10px;">
+                        <label for="importFileInput" style="display:block; padding:30px; border:2px dashed var(--accent-color); border-radius:16px; cursor:pointer;">
+                            <i class="fas fa-cloud-upload-alt" style="font-size:2rem;"></i><br>Choose HTML file
+                        </label>
+                        <input type="file" id="importFileInput" accept=".html,.htm" style="display:none;">
+                        <div id="selectedFileLabel" style="margin-top:12px;"></div>
+                    </div>
+                `;
+                popupActions.innerHTML = `<button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button><button class="btn btn-primary" id="importConfirmBtn" disabled>Import</button>`;
+                const fileInput = document.getElementById('importFileInput');
+                const label = document.querySelector('label[for="importFileInput"]');
+                const selectedDiv = document.getElementById('selectedFileLabel');
+                const importBtnConfirm = document.getElementById('importConfirmBtn');
+                
+                label.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    fileInput.click();
+                });
+                
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files[0]) {
+                        selectedFile = e.target.files[0];
+                        selectedDiv.textContent = `Selected: ${selectedFile.name}`;
+                        importBtnConfirm.disabled = false;
+                    } else {
+                        importBtnConfirm.disabled = true;
+                    }
+                });
+                
+                importBtnConfirm.addEventListener('click', () => {
+                    if (!selectedFile) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        importFromHtml(e.target.result);
+                        closeUniversalPopup();
+                    };
+                    reader.readAsText(selectedFile);
+                });
+                popup.style.display = 'flex';
+            }
+
+            function importFromHtml(content) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(content, 'text/html');
+                const h3s = doc.querySelectorAll('H3');
+                let imported = 0;
+                h3s.forEach(h3 => {
+                    const folderName = h3.textContent.trim();
+                    if (!folderName || folderName.includes('Bookmarks bar')) return;
+                    let dl = h3.nextElementSibling;
+                    while (dl && dl.tagName !== 'DL') dl = dl.nextElementSibling;
+                    if (!dl) return;
+                    const links = dl.querySelectorAll(':scope > DT > A');
+                    if (links.length === 0) return;
+                    if (!state.folders.includes(folderName)) state.folders.push(folderName);
+                    links.forEach(link => {
+                        const url = link.getAttribute('HREF');
+                        const title = link.textContent.trim();
+                        if (!url || !title) return;
+                        if (state.urls.some(n => n.url === url)) return;
+                        const icon = link.getAttribute('ICON');
+                        let desc = '';
+                        let dd = link.parentElement.nextElementSibling;
+                        if (dd && dd.tagName === 'DD') desc = dd.textContent.trim();
+                        let tags = [];
+                        const m = desc.match(/\[TAGS:(.*?)\]/);
+                        if (m) { tags = m[1].split(',').map(t => t.trim()); desc = desc.replace(/\[TAGS:.*?\]/, '').trim(); }
+                        state.urls.push({
+                            id: generateId(), title, url, imageUrl: '', imageBase64: icon || null,
+                            folder: folderName, tags, description: desc, pinned: false,
+                            createdAt: new Date().toISOString()
+                        });
+                        imported++;
+                    });
+                });
+                if (imported) window.showMessage(`Imported ${imported} links.`);
+                else window.showMessage('No new links found.');
+                saveState();
+            }
+
+            function clearAllData() {
+                if (state.urls.length === 0 && state.folders.length <= 1) return window.showMessage('Nothing to clear.');
+                if (confirm('Delete ALL links and folders?')) {
+                    state.urls = [];
+                    state.folders = ['Uncategorized'];
+                    currentFilterFolder = '__ALL__';
+                    currentFolderLabel.textContent = 'All Folders';
+                    saveState();
+                }
+            }
+
+            window.closeUniversalPopup = function() {
+                popup.style.display = 'none';
+            };
+
+            function setupListeners() {
+                document.getElementById('addNoteBtn').addEventListener('click', openAddPopup);
+                document.getElementById('newFolderBtn').addEventListener('click', openNewFolderPopup);
+                document.getElementById('exportBtn').addEventListener('click', openExportPopup);
+                document.getElementById('importBtn').addEventListener('click', openImportPopup);
+                document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
+                document.getElementById('folderFilterBtn').addEventListener('click', openFolderListPopup);
+                searchInput.addEventListener('input', () => {
+                    clearSearchBtn.style.display = searchInput.value ? 'flex' : 'none';
+                    renderNotes();
+                });
+                clearSearchBtn.addEventListener('click', () => {
+                    searchInput.value = '';
+                    clearSearchBtn.style.display = 'none';
+                    renderNotes();
+                });
+                popup.addEventListener('click', (e) => { if (e.target === popup) closeUniversalPopup(); });
+            }
+
+            loadState();
+            setupListeners();
+        })();
+    </script>
+</body>
+</html>
