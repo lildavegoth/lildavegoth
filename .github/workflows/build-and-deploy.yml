@@ -73,6 +73,7 @@ jobs:
                               <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
                               <uses-permission android:name="android.permission.WAKE_LOCK" />
                               <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+                              <uses-permission android:name="android.permission.CAMERA" />
                           </config-file>
                           <icon src="icon.png" />
                       </platform>
@@ -112,20 +113,25 @@ jobs:
                   if [ -f "$CAMERA_ACTIVITY_PATH" ]; then
                       sed -i 's/extends Activity/extends androidx.appcompat.app.AppCompatActivity/g' "$CAMERA_ACTIVITY_PATH"
                       sed -i 's/import android.app.Activity;/import androidx.appcompat.app.AppCompatActivity;/g' "$CAMERA_ACTIVITY_PATH"
+                      sed -i 's/\([^a-zA-Z.]\)Activity\([^a-zA-Z.]\)/\1AppCompatActivity\2/g' "$CAMERA_ACTIVITY_PATH"
+                      sed -i 's/^Activity /AppCompatActivity /g' "$CAMERA_ACTIVITY_PATH"
+                      sed -i 's/(Activity)/(AppCompatActivity)/g' "$CAMERA_ACTIVITY_PATH"
+                      sed -i 's/Activity\.class/AppCompatActivity.class/g' "$CAMERA_ACTIVITY_PATH"
+                      sed -i 's/<Activity>/<AppCompatActivity>/g' "$CAMERA_ACTIVITY_PATH"
                   fi
-                  
+
             - name: Inject AppCompat dependency
               run: |
                   GRADLE_FILE="platforms/android/app/build.gradle"
                   if [ -f "$GRADLE_FILE" ]; then
                       if ! grep -q "implementation 'androidx.appcompat:appcompat:1.6.1'" "$GRADLE_FILE"; then
-                          echo "dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }" >> "$GRADLE_FILE"
+                          sed -i "/dependencies {/a \    implementation 'androidx.appcompat:appcompat:1.6.1'" "$GRADLE_FILE"
                       fi
                   fi
-            
+
             - name: Clean previous builds
               run: cordova clean android
-            
+
             - name: Decode Keystore
               run: |
                   echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
