@@ -177,6 +177,25 @@
             <h1 class="username">Heartopia Gift Codes</h1>
             <p class="title">Active Gift Codes — Updated via Official Database</p>
         </app-header>
+        
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+        <button id="refreshCodesBtn" style="
+            background: var(--accent-color);
+            color: black;
+            border: none;
+            border-radius: 999px;
+            padding: 10px 20px;
+            font-weight: 600;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        ">
+            <i class="fas fa-sync-alt"></i> Refresh Codes
+        </button>
+    </div>
 
         <div id="codes-container">
             <div class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading codes...</div>
@@ -238,7 +257,24 @@
         }
 
         async function fetchCodesFromJson() {
-            const response = await fetch(CODES_JSON_URL);
+            const url = CODES_JSON_URL;
+            
+            if (window.cordova && cordova.plugin && cordova.plugin.http) {
+                return new Promise((resolve, reject) => {
+                    cordova.plugin.http.get(url, {}, {}, function(response) {
+                        try {
+                            const data = JSON.parse(response.data);
+                            resolve(Array.isArray(data) ? data : []);
+                        } catch (e) {
+                            reject(e);
+                        }
+                    }, function(error) {
+                        reject(error);
+                    });
+                });
+            }
+            
+            const response = await fetch(url, { cache: 'no-cache' });
             if (!response.ok) throw new Error('Fetch failed');
             const data = await response.json();
             return Array.isArray(data) ? data : [];
@@ -337,6 +373,31 @@
             container.removeEventListener('click', copyAndClaimHandler);
             container.addEventListener('click', copyAndClaimHandler);
         }
+        
+        async function refreshCodes() {
+            const container = document.getElementById('codes-container');
+            const button = document.getElementById('refreshCodesBtn');
+            const originalContent = container.innerHTML;
+            const originalButtonHtml = button.innerHTML;
+        
+            container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Refreshing codes...</div>';
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Refreshing';
+        
+            try {
+                const fresh = await fetchCodesFromJson();
+                const stored = loadFromLocalStorage() || [];
+                const merged = mergeClaimedStatus(fresh, stored);
+                saveToLocalStorage(merged);
+                renderCodes(merged);
+                attachGlobalCopyHandler();
+            } catch (err) {
+                container.innerHTML = `<div class="error"><i class="fas fa-exclamation-triangle"></i> Refresh failed. Check connection.</div>`;
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalButtonHtml;
+            }
+        }
 
         async function initializeApp() {
             const cached = loadFromLocalStorage();
@@ -379,6 +440,8 @@
         }
 
         initializeApp();
+        attachGlobalCopyHandler();
+        document.getElementById('refreshCodesBtn').addEventListener('click', refreshCodes);
     </script>
 </body>
 </html>
