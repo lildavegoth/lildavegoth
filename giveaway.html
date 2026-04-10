@@ -124,12 +124,13 @@
         }
 
         .giveaway-card {
-            background: var(--bg-card);
+            background: transparent;
             border-radius: var(--radius-large);
             padding: var(--spacing-xl);
             margin-bottom: var(--spacing-xl);
-            border: 1px solid rgba(255, 255, 255, 0.05);
             text-align: center;
+            width: 350px;
+            margin-left: -30px;
         }
 
         .giveaway-status {
@@ -273,6 +274,7 @@
             justify-content: center;
             z-index: 99999999;
             animation: fadeIn 0.3s ease;
+            margin-top: -90px;
         }
 
         .popup-content {
@@ -286,7 +288,6 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            margin-bottom: 50px;
         }
 
         .popup-header {
@@ -318,6 +319,26 @@
 
         .close-popup:hover {
             background: rgba(255, 255, 255, 0.1);
+        }
+
+        .tools-grid {
+            padding: var(--spacing-md);
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .popup-footer {
+            padding: var(--spacing-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: var(--spacing-sm);
+            justify-content: flex-end;
+            background: var(--bg-card);
+        }
+
+        .popup-footer .action-button {
+            padding: 10px 20px;
+            font-size: 1rem;
         }
 
         .admin-section {
@@ -380,6 +401,7 @@
             color: var(--text-primary);
             font-size: 1rem;
             margin-bottom: var(--spacing-sm);
+            resize: none;
         }
         
         .admin-input:focus {
@@ -438,11 +460,6 @@
             margin-top: var(--spacing-md);
         }
 
-        .tools-grid {
-            padding: var(--spacing-md);
-            overflow-y: auto;
-        }
-        
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -529,11 +546,15 @@
         <div class="popup-content">
             <div class="popup-header">
                 <h2 id="popupTitle">Admin Controls</h2>
-                <button class="close-popup" id="closePopupBtn">
+                <button class="close-popup" onclick="closeUniversalPopup()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="tools-grid" id="popupContent"></div>
+            <div class="popup-footer">
+                <button class="action-button secondary" id="popupCancelBtn">Cancel</button>
+                <button class="action-button" id="popupConfirmBtn">Confirm</button>
+            </div>
         </div>
     </div>
 
@@ -877,7 +898,7 @@
             fab.innerHTML = '<i class="fas fa-cog"></i>';
             fab.style.cssText = `
                 position: fixed;
-                bottom: 100px;
+                bottom: 127px;
                 right: 30px;
                 width: 60px;
                 height: 60px;
@@ -1013,8 +1034,7 @@
         }
         
         function closeUniversalPopup() {
-            const popup = document.getElementById('universalPopup');
-            popup.style.display = 'none';
+            document.getElementById('universalPopup').style.display = 'none';
         }
         
         function escapeHtml(str) {
@@ -1031,8 +1051,9 @@
             const joinButton = document.getElementById('joinButton');
             const startButton = document.getElementById('startButton');
             const selectAgainButton = document.getElementById('selectAgainButton');
-            const closePopupBtn = document.getElementById('closePopupBtn');
             const popupOverlay = document.getElementById('universalPopup');
+            const cancelBtn = document.getElementById('popupCancelBtn');
+            const confirmBtn = document.getElementById('popupConfirmBtn');
             
             if (joinButton) joinButton.addEventListener('click', joinGiveaway);
             if (startButton) startButton.addEventListener('click', selectWinner);
@@ -1040,7 +1061,26 @@
                 const winnerDisplay = document.getElementById('winnerDisplay');
                 if (winnerDisplay) winnerDisplay.classList.remove('active');
             });
-            if (closePopupBtn) closePopupBtn.addEventListener('click', closeUniversalPopup);
+            
+            if (cancelBtn) cancelBtn.addEventListener('click', closeUniversalPopup);
+            if (confirmBtn) confirmBtn.addEventListener('click', async () => {
+                const prizeInput = document.getElementById('adminPrizeInput');
+                const maxInput = document.getElementById('adminMaxInput');
+                if (prizeInput) {
+                    const newPrize = prizeInput.value.trim();
+                    if (newPrize && newPrize !== giveawaySettings.prize) {
+                        await updateSetting('prize', newPrize);
+                    }
+                }
+                if (maxInput) {
+                    const newMax = parseInt(maxInput.value);
+                    if (newMax > 0 && newMax !== giveawaySettings.maxParticipants) {
+                        await updateSetting('maxParticipants', newMax);
+                    }
+                }
+                closeUniversalPopup();
+            });
+            
             if (popupOverlay) {
                 popupOverlay.addEventListener('click', (e) => {
                     if (e.target === popupOverlay) closeUniversalPopup();
