@@ -69,10 +69,12 @@
             padding: 1.25rem;
             transition: all 0.2s;
         }
+
         .code-card:hover {
             border-color: var(--accent-color);
             transform: translateY(-2px);
         }
+
         .code-value {
             font-size: 1.25rem;
             font-weight: 700;
@@ -86,16 +88,19 @@
             cursor: pointer;
             transition: 0.1s ease;
         }
+
         .code-value:active {
             transform: scale(0.98);
             background: rgba(193, 252, 50, 0.2);
         }
+
         .rewards {
             font-size: 0.95rem;
             color: var(--text-secondary);
             margin-bottom: 0.75rem;
             line-height: 1.4;
         }
+
         .expiry {
             font-size: 0.85rem;
             display: inline-flex;
@@ -106,6 +111,7 @@
             margin-left: -10px;
             margin-bottom: 0;
         }
+
         .claimed-pill {
             background: var(--accent-color);
             color: #000000;
@@ -117,11 +123,13 @@
             letter-spacing: 0.3px;
         }
 
-        .loading, .error {
+        .loading,
+        .error {
             text-align: center;
             padding: 2rem;
             color: var(--text-secondary);
         }
+
         .error {
             color: #ff6b6b;
             background: rgba(255, 107, 107, 0.1);
@@ -133,10 +141,11 @@
             padding: 60px 20px;
             color: var(--text-secondary);
             font-size: 1.1rem;
-            background: rgba(255,255,255,0.02);
+            background: rgba(255, 255, 255, 0.02);
             border-radius: var(--radius-large);
             margin-top: 20px;
         }
+
         .empty-state i {
             font-size: 3rem;
             color: var(--accent-color);
@@ -153,6 +162,7 @@
             .cards-grid {
                 grid-template-columns: 1fr;
             }
+
             .code-value {
                 font-size: 1rem;
             }
@@ -169,25 +179,25 @@
             <h1 class="username">Heartopia Gift Codes</h1>
             <p class="title">Active Gift Codes — Updated via Official Database</p>
         </app-header>
-        
+
         <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
-        <button id="refreshCodesBtn" style="
-            background: var(--accent-color);
-            color: black;
-            border: none;
-            border-radius: 999px;
-            padding: 10px 20px;
-            font-weight: 600;
-            font-size: 1rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        ">
-            <i class="fas fa-sync-alt"></i> Refresh Codes
-        </button>
-    </div>
+            <button id="refreshCodesBtn" style="
+                background: var(--accent-color);
+                color: black;
+                border: none;
+                border-radius: 999px;
+                padding: 10px 20px;
+                font-weight: 600;
+                font-size: 1rem;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                transition: opacity 0.2s;
+            ">
+                <i class="fas fa-sync-alt"></i> Refresh Codes
+            </button>
+        </div>
 
         <div id="codes-container">
             <div class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading codes...</div>
@@ -248,11 +258,13 @@
             }));
         }
 
-        async function fetchCodesFromJson() {
-            const response = await fetch(CODES_JSON_URL);
-            if (!response.ok) throw new Error('Fetch failed');
-            const data = await response.json();
-            return Array.isArray(data) ? data : [];
+        function fetchCodesFromJson() {
+            return fetch(CODES_JSON_URL)
+                .then(response => {
+                    if (!response.ok) throw new Error('Fetch failed');
+                    return response.json();
+                })
+                .then(data => Array.isArray(data) ? data : []);
         }
 
         function renderCodes(codes, errorMessage = '') {
@@ -304,7 +316,10 @@
             const newCodes = stored.map(item => {
                 if (item.code === codeToClaim && !item.claimed) {
                     updated = true;
-                    return { ...item, claimed: true };
+                    return {
+                        ...item,
+                        claimed: true
+                    };
                 }
                 return item;
             });
@@ -348,26 +363,41 @@
             container.removeEventListener('click', copyAndClaimHandler);
             container.addEventListener('click', copyAndClaimHandler);
         }
-        
+
+        function getCodeFingerprint(codes) {
+            if (!Array.isArray(codes)) return '';
+            return codes.map(c => c.code).sort().join('|');
+        }
+
         async function refreshCodes() {
             const container = document.getElementById('codes-container');
             const button = document.getElementById('refreshCodesBtn');
-            const originalContent = container.innerHTML;
             const originalButtonHtml = button.innerHTML;
-        
+
             container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Refreshing codes...</div>';
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Refreshing';
-        
+
             try {
                 const fresh = await fetchCodesFromJson();
                 const stored = loadFromLocalStorage() || [];
-                const merged = mergeClaimedStatus(fresh, stored);
-                saveToLocalStorage(merged);
-                renderCodes(merged);
-                attachGlobalCopyHandler();
+                const oldFingerprint = getCodeFingerprint(stored);
+                const freshFingerprint = getCodeFingerprint(fresh);
+
+                if (oldFingerprint === freshFingerprint) {
+                    window.showMessage('There are no updated codes');
+                    renderCodes(stored);
+                    attachGlobalCopyHandler();
+                } else {
+                    const merged = mergeClaimedStatus(fresh, stored);
+                    saveToLocalStorage(merged);
+                    renderCodes(merged);
+                    attachGlobalCopyHandler();
+                    window.showMessage('The codes has been updated');
+                }
             } catch (err) {
                 container.innerHTML = `<div class="error"><i class="fas fa-exclamation-triangle"></i> Refresh failed. Check connection.</div>`;
+                window.showMessage('Refresh failed. Check connection.');
             } finally {
                 button.disabled = false;
                 button.innerHTML = originalButtonHtml;
