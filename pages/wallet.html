@@ -40,9 +40,6 @@
             background-color: var(--bg-black);
             color: var(--text-primary);
             min-height: 100vh;
-            background-image: 
-                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
-                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
             overflow-x: hidden;
         }
 
@@ -271,6 +268,30 @@
             border-radius: 50%;
         }
 
+        .card-move-btn {
+            position: absolute;
+            right: 23px;
+            top: 60px;
+            width: 32px;
+            height: 78px;
+            background: black;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: white;
+            font-size: 1.2rem;
+            z-index: 10;
+        }
+
+        .card-move-btn:hover {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+        }
+
         .card-settings-menu {
             position: absolute;
             bottom: 50px;
@@ -445,7 +466,6 @@
             justify-content: space-between;
             color: var(--text-primary);
             font-size: 0.8rem;
-            backdrop-filter: blur(4px);
             margin-bottom: -20px;
         }
 
@@ -674,8 +694,6 @@
             overflow-y: auto;
             z-index: 1000;
             display: none;
-            backdrop-filter: saturate(180%) blur(20px);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
@@ -797,7 +815,7 @@
         </section>
                 
         <div class="swipe-indicator" id="swipeIndicator">
-            <span>Swipe on the Cards display to see more Cards</span>
+            <span>Swipe on the Cards display to see more Cards, and click arrow button inside the card to rearrange</span>
             <button class="close-indicator" id="closeSwipeIndicator">×</button>
         </div>
         
@@ -1165,6 +1183,15 @@
                 this.renderTransactions();
             }
             
+            moveCardRight(cardId) {
+                const index = this.cards.findIndex(c => c.id === cardId);
+                if (index !== -1 && index < this.cards.length - 1) {
+                    [this.cards[index], this.cards[index + 1]] = [this.cards[index + 1], this.cards[index]];
+                    this.saveData();
+                    this.renderCards();
+                }
+            }
+            
             formatMoney(amount, currency) {
                 if (currency === 'IDR') {
                     return 'Rp ' + amount.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1348,6 +1375,9 @@
                                         <i class="fas fa-trash"></i> Delete Card
                                     </div>
                                 </div>
+                                <div class="card-move-btn" data-id="${card.id}">
+                                    <i class="fas fa-arrow-right"></i>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -1358,7 +1388,7 @@
                 container.querySelectorAll('.bank-card').forEach(card => {
                     const cardId = parseFloat(card.dataset.id);
                     card.addEventListener('click', (e) => {
-                        if (e.target.closest('.menu-dots') || e.target.closest('.card-settings-menu')) return;
+                        if (e.target.closest('.menu-dots') || e.target.closest('.card-settings-menu') || e.target.closest('.card-move-btn')) return;
                         this.setActiveCard(cardId);
                         this.closeAllSettingsMenus();
                     });
@@ -1389,6 +1419,15 @@
                             this.closeAllSettingsMenus();
                             this.deleteCard(cardId);
                         }
+                    });
+                });
+                
+                container.querySelectorAll('.card-move-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const cardId = parseFloat(btn.dataset.id);
+                        this.moveCardRight(cardId);
+                        this.closeAllSettingsMenus();
                     });
                 });
                 

@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Journal | lildavegoth</title>
     <meta name="color-scheme" content="dark">
     <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
+    <script src="../auth-check.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -127,7 +128,7 @@
             font-size: 24px;
             cursor: pointer;
         }
-        .journal-cards, .quick-cards {
+        .journal-cards {
             display: flex;
             gap: var(--spacing-sm);
             overflow-x: auto;
@@ -135,11 +136,10 @@
             scrollbar-width: none;
             -ms-overflow-style: none;
         }
-        .journal-cards::-webkit-scrollbar,
-        .quick-cards::-webkit-scrollbar {
+        .journal-cards::-webkit-scrollbar {
             display: none;
         }
-        .journal-card, .quick-card, .placeholder-card {
+        .journal-card, .placeholder-card {
             min-width: 95%;
             background: var(--bg-card);
             border-radius: var(--radius-large);
@@ -149,11 +149,6 @@
             flex-direction: column;
             cursor: pointer;
             transition: all 0.2s ease;
-        }
-        .quick-card, .placeholder-card {
-            min-width: 70%;
-            max-width: 450px;
-            height: auto;
         }
         .placeholder-card {
             cursor: default;
@@ -171,23 +166,25 @@
             color: var(--accent-color);
             margin-bottom: var(--spacing-sm);
         }
-        .journal-card:hover, .quick-card:hover {
+        .journal-card:hover {
             border-color: rgba(193, 252, 50, 0.3);
         }
-        .journal-card h3, .quick-card h3 {
+        .journal-card h3 {
             font-size: 20px;
             font-weight: 600;
             margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .quick-card .icon {
-            font-size: 18px;
-            margin-bottom: 10px;
+        .journal-card h3 .pin-indicator {
+            color: var(--accent-color);
+            font-size: 16px;
+        }
+        .journal-card h3 span {
             cursor: pointer;
-            transition: transform 0.1s ease;
-            display: inline-block;
-            width: fit-content;
         }
-        .journal-card p, .quick-card p {
+        .journal-card p {
             font-size: 14px;
             color: var(--text-secondary);
         }
@@ -316,6 +313,12 @@
         }
         .delete-btn:hover {
             background: rgba(255, 59, 48, 0.3);
+        }
+        .pin-btn {
+            flex: 1;
+            background: var(--bg-dark);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
         }
         .tools-grid {
             overflow-y: auto;
@@ -497,13 +500,6 @@
             <div class="date-circles" id="dateCircles"></div>
         </div>
 
-        <div class="section-header">
-            <h2>Quick Journal</h2>
-            <button class="add-btn" id="addQuickBtn"><i class="fas fa-plus"></i></button>
-        </div>
-
-        <div class="quick-cards" id="quickCards"></div>
-
         <div class="section-header" id="myJournalHeader">
             <h2>My Journal</h2>
             <button class="add-btn" id="addMyBtn"><i class="fas fa-plus"></i></button>
@@ -572,39 +568,19 @@
         </div>
     </div>
 
-    <div id="addQuickPopup" class="popup-overlay" style="display: none;">
+    <div id="titleEditPopup" class="popup-overlay" style="display: none;">
         <div class="popup-content" style="max-width: 400px;">
             <div class="popup-header">
-                <h2>Add New Quick Journal</h2>
-                <button class="close-popup" onclick="closeAddQuickPopup()">
+                <h2>Edit Title</h2>
+                <button class="close-popup" onclick="closeTitleEditPopup()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="tools-grid" style="padding: 24px;">
-                <input type="text" id="quickTitleInput" class="popup-textarea" style="min-height: auto; height: 50px; margin-bottom: 16px; resize: none;" placeholder="Enter title">
-                <input type="text" id="quickPromptInput" class="popup-textarea" style="min-height: auto; height: 50px; margin-bottom: 16px; resize: none;" placeholder="Enter journal...">
-                <input type="text" id="quickEmojiInput" class="popup-textarea" style="min-height: auto; height: 50px; margin-bottom: 16px; resize: none;" placeholder="Enter emoji (e.g., 🌟)" value="🌟">
+                <input type="text" id="titleEditInput" class="popup-textarea" style="min-height: auto; height: 50px; margin-bottom: 16px; resize: none;" placeholder="Enter new title">
                 <div style="display: flex; gap: 8px;">
-                    <button class="popup-btn popup-btn-primary" onclick="saveNewQuick()">Add</button>
-                    <button class="popup-btn popup-btn-secondary" onclick="closeAddQuickPopup()">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="emojiPopup" class="popup-overlay" style="display: none;">
-        <div class="popup-content" style="max-width: 350px;">
-            <div class="popup-header">
-                <h2>Change Emoji</h2>
-                <button class="close-popup" onclick="closeEmojiPopup()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="tools-grid" style="padding: 24px; text-align: center;">
-                <input type="text" id="emojiInput" class="popup-textarea" style="min-height: auto; height: 80px; font-size: 32px; text-align: center; margin-bottom: 16px; resize: none;" placeholder="Enter one emoji" maxlength="1">
-                <div style="display: flex; gap: 8px;">
-                    <button class="popup-btn popup-btn-primary" onclick="saveEmoji()">Save</button>
-                    <button class="popup-btn popup-btn-secondary" onclick="closeEmojiPopup()">Cancel</button>
+                    <button class="popup-btn popup-btn-primary" onclick="saveTitleEdit()">Save</button>
+                    <button class="popup-btn popup-btn-secondary" onclick="closeTitleEditPopup()">Cancel</button>
                 </div>
             </div>
         </div>
@@ -639,6 +615,11 @@
                     <p><i class="fas fa-calendar-week" style="margin-right: 4px;"></i> <strong>Date</strong></p>
                     <p>Swipe to the left or right in Date display to switch weeks date</p>
                 </div>
+                <div class="guide-box">
+                    <p><i class="fas fa-pencil-alt" style="margin-right: 4px;"></i> <strong>Edit</strong></p>
+                    <p>Click on any Journal Title to change it's title, you can also 
+                        click on any Journal Descriptions to edit the journal</p>
+                </div>
                 <button class="settings-btn-item reset-btn" id="resetBtn">
                     <i class="fas fa-trash-alt"></i> Reset All
                 </button>
@@ -647,426 +628,398 @@
     </div>
 
     <script>
-        let today = new Date();
-        let todayStr = today.toISOString().split('T')[0];
-        let currentWeekStart = new Date(today);
-        const day = today.getDay();
-        currentWeekStart.setDate(today.getDate() - day);
+        (function(){
+            let today = new Date();
+            let todayStr = today.toISOString().split('T')[0];
+            let currentWeekStart = new Date(today);
+            const day = today.getDay();
+            currentWeekStart.setDate(today.getDate() - day);
 
-        function getUsername() {
-            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-            if (currentUser && currentUser.username) {
-                return currentUser.username;
+            function getUsername() {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                if (currentUser && currentUser.username) return currentUser.username;
+                return 'Guest';
             }
-            return 'Guest';
-        }
 
-        let username = getUsername();
-        document.getElementById('greetingName').textContent = username + "'s Journal";
+            let username = getUsername();
+            document.getElementById('greetingName').textContent = username + "'s Journal";
 
-        const weekdaysContainer = document.getElementById('weekdays');
-        const dateCircles = document.getElementById('dateCircles');
-        const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-        dayNames.forEach((dayName, idx) => {
-            const div = document.createElement('div');
-            div.className = 'weekday';
-            div.textContent = dayName;
-            if (idx === 0) div.style.color = 'var(--accent-color)';
-            weekdaysContainer.appendChild(div);
-        });
-
-        let quickTypes = JSON.parse(localStorage.getItem('quickTypes')) || [];
-        let quickEmojis = JSON.parse(localStorage.getItem('quickEmojis')) || {};
-        let dailyContents = JSON.parse(localStorage.getItem('dailyJournalContents')) || {};
-
-        const sevenDaysAgo = new Date(today);
-        sevenDaysAgo.setDate(today.getDate() - 7);
-        Object.keys(dailyContents).forEach(key => {
-            if (new Date(key) < sevenDaysAgo) delete dailyContents[key];
-        });
-        localStorage.setItem('dailyJournalContents', JSON.stringify(dailyContents));
-
-        if (!dailyContents[todayStr]) dailyContents[todayStr] = { quick: {}, additional: [] };
-        let todayContent = dailyContents[todayStr];
-        if (!todayContent.quick) todayContent.quick = {};
-        if (!todayContent.additional) todayContent.additional = [];
-
-        function saveDaily() {
-            dailyContents[todayStr] = todayContent;
-            localStorage.setItem('dailyJournalContents', JSON.stringify(dailyContents));
-            updateDateIndicators();
-            if (showAllEntries) renderAllEntries(); else renderMyJournal();
-        }
-
-        let currentEditing = null;
-        let pendingDelete = null;
-        let currentEmojiId = null;
-        let showAllEntries = localStorage.getItem('showAllEntries') === 'true';
-
-        function renderWeek() {
-            dateCircles.innerHTML = '';
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(currentWeekStart);
-                date.setDate(currentWeekStart.getDate() + i);
+            const weekdaysContainer = document.getElementById('weekdays');
+            const dateCircles = document.getElementById('dateCircles');
+            const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+            dayNames.forEach((dayName, idx) => {
                 const div = document.createElement('div');
-                div.className = 'date-circle';
-                const dateStr = date.toISOString().split('T')[0];
-                if (dateStr === todayStr) div.classList.add('current');
-                if (dailyContents[dateStr] && (Object.keys(dailyContents[dateStr].quick || {}).length > 0 || (dailyContents[dateStr].additional || []).length > 0)) {
-                    div.classList.add('has-entry');
-                }
-                div.textContent = date.getDate();
-                div.dataset.date = dateStr;
-                div.addEventListener('click', () => loadJournalForDate(dateStr));
-                dateCircles.appendChild(div);
-            }
-            const weekStrip = document.getElementById('weekStrip');
-            weekStrip.classList.add('animate');
-            setTimeout(() => weekStrip.classList.remove('animate'), 300);
-        }
-
-        function updateDateIndicators() {
-            document.querySelectorAll('.date-circle').forEach(circle => {
-                const dateStr = circle.dataset.date;
-                if (dailyContents[dateStr] && (Object.keys(dailyContents[dateStr].quick || {}).length > 0 || (dailyContents[dateStr].additional || []).length > 0)) {
-                    circle.classList.add('has-entry');
-                } else {
-                    circle.classList.remove('has-entry');
-                }
+                div.className = 'weekday';
+                div.textContent = dayName;
+                if (idx === 0) div.style.color = 'var(--accent-color)';
+                weekdaysContainer.appendChild(div);
             });
-        }
 
-        let touchStartX = 0, touchEndX = 0;
-        dateCircles.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, false);
-        dateCircles.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            if (touchEndX < touchStartX - 50) { currentWeekStart.setDate(currentWeekStart.getDate() + 7); renderWeek(); }
-            if (touchEndX > touchStartX + 50) { currentWeekStart.setDate(currentWeekStart.getDate() - 7); renderWeek(); }
-        }, false);
-        dateCircles.addEventListener('mousedown', (e) => { touchStartX = e.screenX; });
-        dateCircles.addEventListener('mouseup', (e) => {
-            touchEndX = e.screenX;
-            if (touchEndX < touchStartX - 50) { currentWeekStart.setDate(currentWeekStart.getDate() + 7); renderWeek(); }
-            if (touchEndX > touchStartX + 50) { currentWeekStart.setDate(currentWeekStart.getDate() - 7); renderWeek(); }
-        });
+            let dailyContents = JSON.parse(localStorage.getItem('dailyJournalContents')) || {};
 
-        function openPopup(type, content, title) {
-            const popup = document.getElementById('universalPopup');
-            document.getElementById('popupTitle').textContent = title;
-            document.getElementById('popupContent').innerHTML = '<textarea id="popupTextarea" class="popup-textarea" placeholder="Write your reflection..." style="resize: none;"></textarea>';
-            document.getElementById('popupFooter').innerHTML = `
-                <button class="popup-btn popup-btn-primary" onclick="savePopup('${type}')">Save</button>
-                <button class="popup-btn popup-btn-secondary" onclick="closeUniversalPopup()">Cancel</button>
-                <button class="popup-btn delete-btn" onclick="deletePopup('${type}')"><i class="fas fa-trash"></i></button>
-            `;
-            const textarea = document.getElementById('popupTextarea');
-            textarea.value = content || '';
-            popup.style.display = 'flex';
-            currentEditing = type;
-        }
+            const sevenDaysAgo = new Date(today);
+            sevenDaysAgo.setDate(today.getDate() - 7);
+            Object.keys(dailyContents).forEach(key => {
+                if (new Date(key) < sevenDaysAgo) delete dailyContents[key];
+            });
+            localStorage.setItem('dailyJournalContents', JSON.stringify(dailyContents));
 
-        window.saveNewJournal = function() {
-            const title = document.getElementById('journalTitleInput').value.trim();
-            if (!title) return;
-            const id = Date.now().toString();
-            todayContent.additional.push({ id, title, content: '' });
-            saveDaily();
-            if (showAllEntries) renderAllEntries(); else renderMyJournal();
-            closeAddJournalPopup();
-        }
-
-        window.closeAddJournalPopup = function() { document.getElementById('addJournalPopup').style.display = 'none'; }
-
-        window.saveNewQuick = function() {
-            const title = document.getElementById('quickTitleInput').value.trim();
-            const promptText = document.getElementById('quickPromptInput').value.trim();
-            const emoji = document.getElementById('quickEmojiInput').value.trim() || '🌟';
-            if (!title || !promptText) return;
-            const id = Date.now().toString();
-            quickTypes.push({ id, emoji, title, prompt: promptText });
-            quickEmojis[id] = emoji;
-            localStorage.setItem('quickTypes', JSON.stringify(quickTypes));
-            localStorage.setItem('quickEmojis', JSON.stringify(quickEmojis));
-            renderQuick();
-            closeAddQuickPopup();
-        }
-
-        window.closeAddQuickPopup = function() { document.getElementById('addQuickPopup').style.display = 'none'; }
-
-        window.savePopup = function(type) {
-            const value = document.getElementById('popupTextarea').value;
-            if (type.startsWith('quick-')) {
-                const id = type.split('-')[1];
-                todayContent.quick[id] = value;
-            } else if (type.startsWith('additional-')) {
-                const id = type.split('-')[1];
-                const item = todayContent.additional.find(a => a.id === id);
-                if (item) item.content = value;
-            }
-            saveDaily();
-            if (showAllEntries) renderAllEntries(); else renderMyJournal();
-            renderQuick();
-            closeUniversalPopup();
-        }
-
-        window.deletePopup = function(type) {
-            pendingDelete = type;
-            let message = "Are you sure you want to delete this entry?";
-            if (type.startsWith('quick-')) message = "This will remove it from all days. Continue?";
-            document.getElementById('confirmMessage').textContent = message;
-            document.getElementById('confirmPopup').style.display = 'flex';
-        }
-
-        window.confirmDelete = function() {
-            if (pendingDelete.startsWith('quick-')) {
-                const id = pendingDelete.split('-')[1];
-                quickTypes = quickTypes.filter(q => q.id !== id);
-                delete quickEmojis[id];
-                localStorage.setItem('quickTypes', JSON.stringify(quickTypes));
-                localStorage.setItem('quickEmojis', JSON.stringify(quickEmojis));
-                Object.keys(dailyContents).forEach(date => {
-                    if (dailyContents[date]?.quick?.hasOwnProperty(id)) delete dailyContents[date].quick[id];
-                });
-                localStorage.setItem('dailyJournalContents', JSON.stringify(dailyContents));
-            } else if (pendingDelete.startsWith('additional-')) {
-                const id = pendingDelete.split('-')[1];
-                const index = todayContent.additional.findIndex(a => a.id === id);
-                if (index !== -1) todayContent.additional.splice(index, 1);
-                saveDaily();
-            }
-            renderQuick();
-            if (showAllEntries) renderAllEntries(); else renderMyJournal();
-            updateDateIndicators();
-            closeConfirmPopup();
-            closeUniversalPopup();
-            pendingDelete = null;
-        }
-
-        window.saveEmoji = function() {
-            const newEmoji = document.getElementById('emojiInput').value.trim();
-            if (newEmoji && currentEmojiId) {
-                quickEmojis[currentEmojiId] = newEmoji;
-                localStorage.setItem('quickEmojis', JSON.stringify(quickEmojis));
-                const idx = quickTypes.findIndex(q => q.id === currentEmojiId);
-                if (idx !== -1) quickTypes[idx].emoji = newEmoji;
-                localStorage.setItem('quickTypes', JSON.stringify(quickTypes));
-                renderQuick();
-            }
-            closeEmojiPopup();
-        }
-
-        window.closeEmojiPopup = function() { document.getElementById('emojiPopup').style.display = 'none'; currentEmojiId = null; }
-        window.closeConfirmPopup = function() { document.getElementById('confirmPopup').style.display = 'none'; pendingDelete = null; }
-        window.closeUniversalPopup = function() { document.getElementById('universalPopup').style.display = 'none'; }
-
-        function loadJournalForDate(dateStr) {
-            todayStr = dateStr;
-            today = new Date(dateStr);
-            document.querySelectorAll('.date-circle').forEach(c => { c.classList.remove('current'); if (c.dataset.date === dateStr) c.classList.add('current'); });
-            if (!dailyContents[dateStr]) dailyContents[dateStr] = { quick: {}, additional: [] };
-            todayContent = dailyContents[dateStr];
-            if (!todayContent.quick) todayContent.quick = {};
+            if (!dailyContents[todayStr]) dailyContents[todayStr] = { additional: [] };
+            let todayContent = dailyContents[todayStr];
             if (!todayContent.additional) todayContent.additional = [];
-            if (showAllEntries) renderAllEntries(); else renderMyJournal();
-            renderQuick();
-        }
 
-        function renderMyJournal() {
-            const container = document.getElementById('journalCards');
-            container.innerHTML = '';
-            if (todayContent.additional.length === 0) {
-                const placeholder = document.createElement('div');
-                placeholder.className = 'placeholder-card';
-                placeholder.innerHTML = '<i class="fas fa-plus-circle"></i><p>Add your new Journal by click + button</p>';
-                container.appendChild(placeholder);
-            } else {
-                todayContent.additional.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'journal-card';
-                    card.innerHTML = `<h3>${escapeHtml(item.title)}</h3>${item.content ? `<div class="journal-content">${item.content}</div>` : `<p>Start writing your reflection...</p>`}`;
-                    card.addEventListener('click', () => openPopup('additional-' + item.id, item.content, item.title));
-                    container.appendChild(card);
+            todayContent.additional.forEach(entry => {
+                if (entry.pinned === undefined) entry.pinned = false;
+            });
+
+            function saveDaily() {
+                dailyContents[todayStr] = todayContent;
+                localStorage.setItem('dailyJournalContents', JSON.stringify(dailyContents));
+                updateDateIndicators();
+                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+            }
+
+            let currentEditingId = null;
+            let currentEditingType = null;
+            let pendingDelete = null;
+            let currentTitleEditId = null;
+            let showAllEntries = localStorage.getItem('showAllEntries') === 'true';
+
+            function renderWeek() {
+                dateCircles.innerHTML = '';
+                for (let i = 0; i < 7; i++) {
+                    const date = new Date(currentWeekStart);
+                    date.setDate(currentWeekStart.getDate() + i);
+                    const div = document.createElement('div');
+                    div.className = 'date-circle';
+                    const dateStr = date.toISOString().split('T')[0];
+                    if (dateStr === todayStr) div.classList.add('current');
+                    if (dailyContents[dateStr] && (dailyContents[dateStr].additional || []).length > 0) {
+                        div.classList.add('has-entry');
+                    }
+                    div.textContent = date.getDate();
+                    div.dataset.date = dateStr;
+                    div.addEventListener('click', () => loadJournalForDate(dateStr));
+                    dateCircles.appendChild(div);
+                }
+                const weekStrip = document.getElementById('weekStrip');
+                weekStrip.classList.add('animate');
+                setTimeout(() => weekStrip.classList.remove('animate'), 300);
+            }
+
+            function updateDateIndicators() {
+                document.querySelectorAll('.date-circle').forEach(circle => {
+                    const dateStr = circle.dataset.date;
+                    if (dailyContents[dateStr] && (dailyContents[dateStr].additional || []).length > 0) {
+                        circle.classList.add('has-entry');
+                    } else {
+                        circle.classList.remove('has-entry');
+                    }
                 });
             }
-        }
 
-        function renderAllEntries() {
-            const container = document.getElementById('journalCards');
-            container.innerHTML = '';
-            const allEntries = [];
-            Object.keys(dailyContents).forEach(date => {
-                const day = dailyContents[date];
-                if (day.additional) {
-                    day.additional.forEach(entry => {
-                        allEntries.push({ type: 'journal', date, id: entry.id, title: entry.title, content: entry.content });
-                    });
-                }
-                if (day.quick) {
-                    Object.keys(day.quick).forEach(qid => {
-                        const quickDef = quickTypes.find(q => q.id === qid);
-                        if (quickDef) {
-                            allEntries.push({ type: 'quick', date, id: qid, title: quickDef.title, content: day.quick[qid] });
-                        }
-                    });
-                }
+            let touchStartX = 0, touchEndX = 0;
+            dateCircles.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, false);
+            dateCircles.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                if (touchEndX < touchStartX - 50) { currentWeekStart.setDate(currentWeekStart.getDate() + 7); renderWeek(); }
+                if (touchEndX > touchStartX + 50) { currentWeekStart.setDate(currentWeekStart.getDate() - 7); renderWeek(); }
+            }, false);
+            dateCircles.addEventListener('mousedown', (e) => { touchStartX = e.screenX; });
+            dateCircles.addEventListener('mouseup', (e) => {
+                touchEndX = e.screenX;
+                if (touchEndX < touchStartX - 50) { currentWeekStart.setDate(currentWeekStart.getDate() + 7); renderWeek(); }
+                if (touchEndX > touchStartX + 50) { currentWeekStart.setDate(currentWeekStart.getDate() - 7); renderWeek(); }
             });
-            allEntries.sort((a,b) => new Date(b.date) - new Date(a.date));
-            if (allEntries.length === 0) {
-                const placeholder = document.createElement('div');
-                placeholder.className = 'placeholder-card';
-                placeholder.innerHTML = '<i class="fas fa-plus-circle"></i><p>Add your new Journal by click + button</p>';
-                container.appendChild(placeholder);
-            } else {
-                allEntries.forEach(entry => {
-                    const card = document.createElement('div');
-                    card.className = 'journal-card';
-                    const dateDisplay = entry.date.split('-').slice(1).join('/');
-                    card.innerHTML = `<h3>${escapeHtml(entry.title)} <span style="font-size:12px; color:var(--accent-color);">${dateDisplay}</span></h3>${entry.content ? `<div class="journal-content">${entry.content}</div>` : `<p>Empty</p>`}`;
-                    if (entry.type === 'journal') {
-                        card.addEventListener('click', () => {
+
+            function openPopup(type, content, title) {
+                const popup = document.getElementById('universalPopup');
+                document.getElementById('popupTitle').textContent = title;
+                document.getElementById('popupContent').innerHTML = '<textarea id="popupTextarea" class="popup-textarea" placeholder="Write your reflection..." style="resize: none;"></textarea>';
+                const footer = document.getElementById('popupFooter');
+                const entryId = type.split('-')[1];
+                const entry = todayContent.additional.find(a => a.id === entryId);
+                const isPinned = entry ? entry.pinned : false;
+                footer.innerHTML = `
+                    <button class="popup-btn popup-btn-primary" onclick="savePopup('${type}')">Save</button>
+                    <button class="popup-btn pin-btn" onclick="togglePin('${type}')">${isPinned ? 'Unpin' : 'Pin'}</button>
+                    <button class="popup-btn delete-btn" onclick="deletePopup('${type}')"><i class="fas fa-trash"></i></button>
+                `;
+                const textarea = document.getElementById('popupTextarea');
+                textarea.value = content || '';
+                popup.style.display = 'flex';
+                currentEditingId = entryId;
+                currentEditingType = type;
+            }
+
+            window.saveNewJournal = function() {
+                const title = document.getElementById('journalTitleInput').value.trim();
+                if (!title) return;
+                const id = Date.now().toString();
+                todayContent.additional.push({ id, title, content: '', pinned: false });
+                saveDaily();
+                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                closeAddJournalPopup();
+            };
+
+            window.closeAddJournalPopup = function() { document.getElementById('addJournalPopup').style.display = 'none'; };
+
+            window.savePopup = function(type) {
+                const value = document.getElementById('popupTextarea').value;
+                if (type.startsWith('additional-')) {
+                    const id = type.split('-')[1];
+                    const item = todayContent.additional.find(a => a.id === id);
+                    if (item) item.content = value;
+                }
+                saveDaily();
+                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                closeUniversalPopup();
+            };
+
+            window.togglePin = function(type) {
+                if (type.startsWith('additional-')) {
+                    const id = type.split('-')[1];
+                    const item = todayContent.additional.find(a => a.id === id);
+                    if (item) {
+                        item.pinned = !item.pinned;
+                        saveDaily();
+                        if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                        const isPinned = item.pinned;
+                        const pinBtn = document.querySelector('.pin-btn');
+                        if (pinBtn) pinBtn.textContent = isPinned ? 'Unpin' : 'Pin';
+                    }
+                }
+            };
+
+            window.deletePopup = function(type) {
+                pendingDelete = type;
+                document.getElementById('confirmMessage').textContent = "Are you sure you want to delete this entry?";
+                document.getElementById('confirmPopup').style.display = 'flex';
+            };
+
+            window.confirmDelete = function() {
+                if (pendingDelete && pendingDelete.startsWith('additional-')) {
+                    const id = pendingDelete.split('-')[1];
+                    const index = todayContent.additional.findIndex(a => a.id === id);
+                    if (index !== -1) todayContent.additional.splice(index, 1);
+                    saveDaily();
+                }
+                renderMyJournal();
+                if (showAllEntries) renderAllEntries();
+                updateDateIndicators();
+                closeConfirmPopup();
+                closeUniversalPopup();
+                pendingDelete = null;
+            };
+
+            window.closeConfirmPopup = function() { document.getElementById('confirmPopup').style.display = 'none'; pendingDelete = null; };
+            window.closeUniversalPopup = function() { document.getElementById('universalPopup').style.display = 'none'; };
+
+            function loadJournalForDate(dateStr) {
+                todayStr = dateStr;
+                today = new Date(dateStr);
+                document.querySelectorAll('.date-circle').forEach(c => { 
+                    c.classList.remove('current'); 
+                    if (c.dataset.date === dateStr) c.classList.add('current'); 
+                });
+                if (!dailyContents[dateStr]) dailyContents[dateStr] = { additional: [] };
+                todayContent = dailyContents[dateStr];
+                if (!todayContent.additional) todayContent.additional = [];
+                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+            }
+
+            function sortEntries(entries) {
+                return entries.sort((a, b) => {
+                    if (a.pinned && !b.pinned) return -1;
+                    if (!a.pinned && b.pinned) return 1;
+                    return a.id.localeCompare(b.id);
+                });
+            }
+
+            function renderMyJournal() {
+                const container = document.getElementById('journalCards');
+                container.innerHTML = '';
+                const entries = todayContent.additional.slice();
+                sortEntries(entries);
+                if (entries.length === 0) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'placeholder-card';
+                    placeholder.innerHTML = '<i class="fas fa-plus-circle"></i><p>Add your new Journal by click + button</p>';
+                    container.appendChild(placeholder);
+                } else {
+                    entries.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'journal-card';
+                        const pinnedIcon = item.pinned ? '<i class="fas fa-thumbtack pin-indicator"></i>' : '';
+                        card.innerHTML = `<h3><span class="title-click" data-id="${item.id}">${escapeHtml(item.title)}</span> ${pinnedIcon}</h3>${item.content ? `<div class="journal-content">${item.content}</div>` : `<p>Start writing your reflection...</p>`}`;
+                        card.querySelector('.title-click').addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            openTitleEdit(item.id, item.title);
+                        });
+                        card.addEventListener('click', (e) => {
+                            if (e.target.classList.contains('title-click')) return;
+                            openPopup('additional-' + item.id, item.content, item.title);
+                        });
+                        container.appendChild(card);
+                    });
+                }
+            }
+
+            function renderAllEntries() {
+                const container = document.getElementById('journalCards');
+                container.innerHTML = '';
+                const allEntries = [];
+                Object.keys(dailyContents).forEach(date => {
+                    const day = dailyContents[date];
+                    if (day.additional) {
+                        day.additional.forEach(entry => {
+                            allEntries.push({ date, id: entry.id, title: entry.title, content: entry.content, pinned: entry.pinned });
+                        });
+                    }
+                });
+                allEntries.sort((a, b) => {
+                    if (a.pinned && !b.pinned) return -1;
+                    if (!a.pinned && b.pinned) return 1;
+                    return new Date(b.date) - new Date(a.date);
+                });
+                if (allEntries.length === 0) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'placeholder-card';
+                    placeholder.innerHTML = '<i class="fas fa-plus-circle"></i><p>Add your new Journal by click + button</p>';
+                    container.appendChild(placeholder);
+                } else {
+                    allEntries.forEach(entry => {
+                        const card = document.createElement('div');
+                        card.className = 'journal-card';
+                        const dateDisplay = entry.date.split('-').slice(1).join('/');
+                        const pinnedIcon = entry.pinned ? '<i class="fas fa-thumbtack pin-indicator"></i>' : '';
+                        card.innerHTML = `<h3><span class="title-click" data-id="${entry.id}">${escapeHtml(entry.title)}</span> ${pinnedIcon} <span style="font-size:12px; color:var(--accent-color);">${dateDisplay}</span></h3>${entry.content ? `<div class="journal-content">${entry.content}</div>` : `<p>Empty</p>`}`;
+                        card.querySelector('.title-click').addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            openTitleEdit(entry.id, entry.title);
+                        });
+                        card.addEventListener('click', (e) => {
+                            if (e.target.classList.contains('title-click')) return;
                             loadJournalForDate(entry.date);
                             setTimeout(() => {
                                 const targetCard = document.querySelector(`.journal-card[data-id="${entry.id}"]`);
                                 if (targetCard) targetCard.scrollIntoView({behavior:'smooth'});
                             }, 100);
                         });
-                    } else {
-                        card.addEventListener('click', () => {
-                            loadJournalForDate(entry.date);
-                            setTimeout(() => {
-                                const quickCards = document.querySelectorAll('.quick-card');
-                                quickCards.forEach(c => { if (c.querySelector('h3')?.textContent === entry.title) c.scrollIntoView({behavior:'smooth'}); });
-                            }, 100);
-                        });
-                    }
-                    card.dataset.id = entry.id;
-                    container.appendChild(card);
-                });
-            }
-        }
-
-        function renderQuick() {
-            const container = document.getElementById('quickCards');
-            container.innerHTML = '';
-            if (quickTypes.length === 0) {
-                const placeholder = document.createElement('div');
-                placeholder.className = 'placeholder-card';
-                placeholder.innerHTML = '<i class="fas fa-plus-circle"></i><p>Add your new Journal by click + button</p>';
-                container.appendChild(placeholder);
-            } else {
-                quickTypes.forEach(q => {
-                    const qcontent = todayContent.quick[q.id] || '';
-                    const emoji = quickEmojis[q.id] || q.emoji || '🌟';
-                    const card = document.createElement('div');
-                    card.className = 'quick-card';
-                    card.innerHTML = `<div class="icon" data-id="${q.id}">${emoji}</div><h3>${escapeHtml(q.title)}</h3>${qcontent ? `<div class="journal-content">${qcontent}</div>` : `<p>${escapeHtml(q.prompt)}</p>`}`;
-                    card.querySelector('.icon').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        currentEmojiId = q.id;
-                        document.getElementById('emojiInput').value = emoji;
-                        document.getElementById('emojiPopup').style.display = 'flex';
-                    });
-                    card.addEventListener('click', () => openPopup('quick-' + q.id, qcontent, q.title));
-                    container.appendChild(card);
-                });
-            }
-        }
-
-        function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
-
-        document.getElementById('addMyBtn').addEventListener('click', () => { document.getElementById('journalTitleInput').value = ''; document.getElementById('addJournalPopup').style.display = 'flex'; });
-        document.getElementById('addQuickBtn').addEventListener('click', () => { document.getElementById('quickTitleInput').value = ''; document.getElementById('quickPromptInput').value = ''; document.getElementById('quickEmojiInput').value = '🌟'; document.getElementById('addQuickPopup').style.display = 'flex'; });
-
-        const settingsButton = document.getElementById('settingsButton');
-        const settingsPopup = document.getElementById('settingsPopup');
-        settingsButton.addEventListener('click', () => { settingsPopup.style.display = 'flex'; });
-        window.closeSettingsPopup = () => { settingsPopup.style.display = 'none'; };
-
-        document.getElementById('resetBtn').addEventListener('click', () => {
-            if (confirm('Are you sure? All journals and quick entries will be lost.')) {
-                localStorage.removeItem('quickTypes');
-                localStorage.removeItem('quickEmojis');
-                localStorage.removeItem('dailyJournalContents');
-                quickTypes = []; quickEmojis = {}; dailyContents = {};
-                dailyContents[todayStr] = { quick: {}, additional: [] };
-                todayContent = dailyContents[todayStr];
-                renderWeek();
-                if (showAllEntries) renderAllEntries(); else renderMyJournal();
-                renderQuick();
-            }
-        });
-
-        const toggleAll = document.getElementById('toggleAllEntries');
-        toggleAll.checked = showAllEntries;
-        toggleAll.addEventListener('change', () => {
-            showAllEntries = toggleAll.checked;
-            localStorage.setItem('showAllEntries', showAllEntries);
-            if (showAllEntries) renderAllEntries(); else renderMyJournal();
-        });
-
-        function globalSearch(term) {
-            const suggestions = [];
-            const termLower = term.toLowerCase();
-            Object.keys(dailyContents).forEach(date => {
-                const day = dailyContents[date];
-                if (day.additional) {
-                    day.additional.forEach(e => {
-                        if (e.title.toLowerCase().includes(termLower) || (e.content && e.content.toLowerCase().includes(termLower))) {
-                            suggestions.push({ date, type: 'journal', title: e.title, id: e.id });
-                        }
+                        card.dataset.id = entry.id;
+                        container.appendChild(card);
                     });
                 }
-                if (day.quick) {
-                    Object.keys(day.quick).forEach(qid => {
-                        const q = quickTypes.find(qq => qq.id === qid);
-                        if (q) {
-                            const content = day.quick[qid];
-                            if (q.title.toLowerCase().includes(termLower) || (content && content.toLowerCase().includes(termLower))) {
-                                suggestions.push({ date, type: 'quick', title: q.title, id: qid });
-                            }
-                        }
-                    });
+            }
+
+            function escapeHtml(str) { 
+                if(!str) return ''; 
+                return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); 
+            }
+
+            function openTitleEdit(id, currentTitle) {
+                currentTitleEditId = id;
+                document.getElementById('titleEditInput').value = currentTitle;
+                document.getElementById('titleEditPopup').style.display = 'flex';
+            }
+
+            window.saveTitleEdit = function() {
+                const newTitle = document.getElementById('titleEditInput').value.trim();
+                if (!newTitle || !currentTitleEditId) return;
+                const entry = todayContent.additional.find(a => a.id === currentTitleEditId);
+                if (entry) {
+                    entry.title = newTitle;
+                    saveDaily();
+                    if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                }
+                closeTitleEditPopup();
+            };
+
+            window.closeTitleEditPopup = function() {
+                document.getElementById('titleEditPopup').style.display = 'none';
+                currentTitleEditId = null;
+            };
+
+            document.getElementById('addMyBtn').addEventListener('click', () => { 
+                document.getElementById('journalTitleInput').value = ''; 
+                document.getElementById('addJournalPopup').style.display = 'flex'; 
+            });
+
+            const settingsButton = document.getElementById('settingsButton');
+            const settingsPopup = document.getElementById('settingsPopup');
+            settingsButton.addEventListener('click', () => { settingsPopup.style.display = 'flex'; });
+            window.closeSettingsPopup = () => { settingsPopup.style.display = 'none'; };
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                if (confirm('Are you sure? All journals will be lost.')) {
+                    localStorage.removeItem('dailyJournalContents');
+                    dailyContents = {};
+                    dailyContents[todayStr] = { additional: [] };
+                    todayContent = dailyContents[todayStr];
+                    renderWeek();
+                    if (showAllEntries) renderAllEntries(); else renderMyJournal();
                 }
             });
-            return suggestions;
-        }
 
-        const searchInput = document.getElementById('globalSearch');
-        const suggestionsDiv = document.getElementById('searchSuggestions');
-        searchInput.addEventListener('input', () => {
-            const val = searchInput.value.trim();
-            if (val.length < 2) { suggestionsDiv.style.display = 'none'; return; }
-            const results = globalSearch(val);
-            if (results.length === 0) {
-                suggestionsDiv.innerHTML = '<div style="padding:12px 16px;">No results</div>';
-            } else {
-                suggestionsDiv.innerHTML = results.slice(0,5).map(r => `
-                    <div style="padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" data-date="${r.date}" data-type="${r.type}" data-id="${r.id}">
-                        <div><strong>${escapeHtml(r.title)}</strong> <span style="color:var(--accent-color);">${r.date}</span></div>
-                        <div style="font-size:12px;">${r.type}</div>
-                    </div>
-                `).join('');
-                suggestionsDiv.querySelectorAll('div[data-date]').forEach(el => {
-                    el.addEventListener('click', () => {
-                        const date = el.dataset.date;
-                        loadJournalForDate(date);
-                        suggestionsDiv.style.display = 'none';
-                        searchInput.value = '';
-                    });
+            const toggleAll = document.getElementById('toggleAllEntries');
+            toggleAll.checked = showAllEntries;
+            toggleAll.addEventListener('change', () => {
+                showAllEntries = toggleAll.checked;
+                localStorage.setItem('showAllEntries', showAllEntries);
+                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+            });
+
+            function globalSearch(term) {
+                const suggestions = [];
+                const termLower = term.toLowerCase();
+                Object.keys(dailyContents).forEach(date => {
+                    const day = dailyContents[date];
+                    if (day.additional) {
+                        day.additional.forEach(e => {
+                            if (e.title.toLowerCase().includes(termLower) || (e.content && e.content.toLowerCase().includes(termLower))) {
+                                suggestions.push({ date, type: 'journal', title: e.title, id: e.id });
+                            }
+                        });
+                    }
                 });
+                return suggestions;
             }
-            suggestionsDiv.style.display = 'block';
-        });
 
-        document.addEventListener('click', (e) => {
-            if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
-                suggestionsDiv.style.display = 'none';
-            }
-        });
+            const searchInput = document.getElementById('globalSearch');
+            const suggestionsDiv = document.getElementById('searchSuggestions');
+            searchInput.addEventListener('input', () => {
+                const val = searchInput.value.trim();
+                if (val.length < 2) { suggestionsDiv.style.display = 'none'; return; }
+                const results = globalSearch(val);
+                if (results.length === 0) {
+                    suggestionsDiv.innerHTML = '<div style="padding:12px 16px;">No results</div>';
+                } else {
+                    suggestionsDiv.innerHTML = results.slice(0,5).map(r => `
+                        <div style="padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" data-date="${r.date}" data-id="${r.id}">
+                            <div><strong>${escapeHtml(r.title)}</strong> <span style="color:var(--accent-color);">${r.date}</span></div>
+                        </div>
+                    `).join('');
+                    suggestionsDiv.querySelectorAll('div[data-date]').forEach(el => {
+                        el.addEventListener('click', () => {
+                            const date = el.dataset.date;
+                            loadJournalForDate(date);
+                            suggestionsDiv.style.display = 'none';
+                            searchInput.value = '';
+                        });
+                    });
+                }
+                suggestionsDiv.style.display = 'block';
+            });
 
-        renderWeek();
-        if (showAllEntries) renderAllEntries(); else renderMyJournal();
-        renderQuick();
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.style.display = 'none';
+                }
+            });
+
+            renderWeek();
+            if (showAllEntries) renderAllEntries(); else renderMyJournal();
+        })();
     </script>
 </body>
 </html>

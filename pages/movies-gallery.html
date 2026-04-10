@@ -432,6 +432,48 @@
             color: var(--text-primary);
             font-weight: 500;
         }
+        .popup-content {
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .popup-form {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-md);
+        }
+        .popup-footer {
+            padding: var(--spacing-md);
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-card);
+            border-radius: 0 0 var(--radius-large) var(--radius-large);
+            display: flex;
+            gap: 10px;
+        }
+        .popup-footer button {
+            flex: 1;
+            padding: 12px;
+            border-radius: var(--radius-medium);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        .popup-footer .btn-primary {
+            background: rgba(193, 252, 50, 0.15);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+        }
+        .popup-footer .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        .popup-footer .btn-danger {
+            background: rgba(196, 40, 51, 0.2);
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+        }
         .required {
             color: #ff6464;
         }
@@ -661,6 +703,7 @@
                 </button>
             </div>
             <div id="popupContent" class="popup-form"></div>
+            <div id="popupFooter" class="popup-footer"></div>
         </div>
     </div>
 
@@ -775,32 +818,60 @@
                 btn.innerHTML = '<i class="fas fa-chevron-up"></i> Read Less';
             }
         }
-        function openUniversalPopup(title, contentHTML) {
+        function openUniversalPopup(title, contentHTML, footerHTML = '') {
             document.getElementById('popupTitle').textContent = title;
             document.getElementById('popupContent').innerHTML = contentHTML;
+            document.getElementById('popupFooter').innerHTML = footerHTML;
             document.getElementById('universalPopup').style.display = 'flex';
         }
         function closeUniversalPopup() {
             document.getElementById('universalPopup').style.display = 'none';
+            document.getElementById('popupFooter').style.display = 'flex';
         }
         function openAddPopup() {
-            openUniversalPopup('Add New Media', getAddEditFormHTML());
+            const content = getAddEditFormHTML();
+            const footer = `
+                <button class="btn-secondary" onclick="closeUniversalPopup()">Cancel</button>
+                <button class="btn-primary" onclick="saveMedia()">Save</button>
+            `;
+            openUniversalPopup('Add New Media', content, footer);
             editingMediaId = null;
+        }
+        
+        function editMedia(id) {
+            const m = mediaData.find(x => x.id === id);
+            if (!m) return;
+            const content = getAddEditFormHTML();
+            const footer = `
+                <button class="btn-secondary" onclick="closeUniversalPopup()">Cancel</button>
+                <button class="btn-primary" onclick="saveMedia()">Save Changes</button>
+            `;
+            openUniversalPopup('Edit Media', content, footer);
+            
+            document.getElementById('mediaName').value = m.name || '';
+            document.getElementById('mediaRating').value = m.rating !== 'N/A' ? m.rating : '';
+            document.getElementById('mediaGenre').value = m.genre || '';
+            document.getElementById('mediaCountry').value = m.country || '';
+            document.getElementById('mediaLink').value = m.link || '';
+            document.getElementById('mediaCategory').value = m.category || 'movies';
+            document.getElementById('mediaSynopsis').value = m.synopsis || '';
+            document.getElementById('mediaReleaseYear').value = m.year || '';
+            editingMediaId = id;
         }
         function openDeleteConfirm(id) {
             const item = mediaData.find(m => m.id === id);
             if (!item) return;
-            const html = `
-                <div style="padding: 20px; text-align: center;">
+            const content = `
+                <div style="text-align: center;">
                     <p style="margin-bottom: 20px;">Delete "${escapeHtml(item.name)}"?</p>
-                    <p style="margin-bottom: 20px; color: var(--text-secondary);">This action cannot be undone.</p>
-                    <div class="form-buttons">
-                        <button class="cancel-btn" onclick="closeUniversalPopup()">Cancel</button>
-                        <button class="submit-btn" onclick="confirmDelete(${id})">Delete</button>
-                    </div>
+                    <p style="color: var(--text-secondary);">This action cannot be undone.</p>
                 </div>
             `;
-            openUniversalPopup('Confirm Delete', html);
+            const footer = `
+                <button class="btn-secondary" onclick="closeUniversalPopup()">Cancel</button>
+                <button class="btn-danger" onclick="confirmDelete(${id})">Delete</button>
+            `;
+            openUniversalPopup('Confirm Delete', content, footer);
         }
         function confirmDelete(id) {
             mediaData = mediaData.filter(item => item.id !== id);
@@ -820,7 +891,8 @@
                     </div>
                 </div>
             `;
-            openUniversalPopup('Settings', html);
+            openUniversalPopup('Settings', html, '');
+            document.getElementById('popupFooter').style.display = 'none';
         }
         function resetAllData() {
             if (confirm('Reset to empty? This cannot be undone.')) {
@@ -833,7 +905,7 @@
         }
         function getAddEditFormHTML() {
             return `
-                <form id="mediaForm" onsubmit="addNewMedia(event)">
+                <div>
                     <div class="form-row">
                         <label class="form-label">Name <span class="required">*</span></label>
                         <input type="text" class="form-input" id="mediaName" placeholder="Enter media name" required>
@@ -874,72 +946,46 @@
                         <label class="form-label">Descriptions</label>
                         <textarea class="form-textarea" id="mediaSynopsis" placeholder="Brief description..."></textarea>
                     </div>
-                    <div class="form-buttons">
-                        <button type="button" class="cancel-btn" onclick="closeUniversalPopup()">Cancel</button>
-                        <button type="submit" class="submit-btn">Save</button>
-                    </div>
-                </form>
+                </div>
             `;
         }
-        function addNewMedia(event) {
-            event.preventDefault();
+        function saveMedia() {
             const name = document.getElementById('mediaName').value.trim();
-            if (!name) return;
-            const ratingValue = document.getElementById('mediaRating').value.trim();
-            if (ratingValue !== '') {
-                if (!validateRating(ratingValue)) {
-                    window.showMessage('Rating must be one of: 1,2,3,4,5,6,7,8,9,10,100');
-                    return;
-                }
+            if (!name) {
+                window.showMessage('Name is required');
+                return;
             }
+            const ratingValue = document.getElementById('mediaRating').value.trim();
+            if (ratingValue !== '' && !validateRating(ratingValue)) {
+                window.showMessage('Rating must be one of: 1,2,3,4,5,6,7,8,9,10,100');
+                return;
+            }
+            
+            const mediaItem = {
+                name: name,
+                rating: ratingValue || 'N/A',
+                genre: document.getElementById('mediaGenre').value.trim() || 'No genre',
+                country: document.getElementById('mediaCountry').value.trim() || 'Unknown',
+                year: document.getElementById('mediaReleaseYear').value.trim(),
+                category: document.getElementById('mediaCategory').value || 'movies',
+                link: document.getElementById('mediaLink').value.trim() || '',
+                synopsis: document.getElementById('mediaSynopsis').value.trim(),
+            };
+            
             if (editingMediaId) {
                 const idx = mediaData.findIndex(m => m.id === editingMediaId);
                 if (idx !== -1) {
-                    mediaData[idx] = {
-                        ...mediaData[idx],
-                        name,
-                        rating: ratingValue || 'N/A',
-                        genre: document.getElementById('mediaGenre').value.trim() || 'No genre',
-                        country: document.getElementById('mediaCountry').value.trim() || 'Unknown',
-                        year: document.getElementById('mediaReleaseYear').value.trim(),
-                        category: document.getElementById('mediaCategory').value || 'movies',
-                        link: document.getElementById('mediaLink').value.trim() || '',
-                        synopsis: document.getElementById('mediaSynopsis').value.trim(),
-                    };
+                    mediaData[idx] = { ...mediaData[idx], ...mediaItem };
+                    window.showMessage('Media updated');
                 }
                 editingMediaId = null;
-                window.showMessage('Movie updated');
             } else {
-                mediaData.unshift({
-                    id: Date.now(),
-                    name,
-                    rating: ratingValue || 'N/A',
-                    genre: document.getElementById('mediaGenre').value.trim() || 'No genre',
-                    country: document.getElementById('mediaCountry').value.trim() || 'Unknown',
-                    year: document.getElementById('mediaReleaseYear').value.trim(),
-                    category: document.getElementById('mediaCategory').value || 'movies',
-                    link: document.getElementById('mediaLink').value.trim() || '',
-                    synopsis: document.getElementById('mediaSynopsis').value.trim(),
-                });
-                window.showMessage('Movie added');
+                mediaData.unshift({ id: Date.now(), ...mediaItem });
+                window.showMessage('Media added');
             }
             saveData();
             renderGallery();
             closeUniversalPopup();
-        }
-        function editMedia(id) {
-            const m = mediaData.find(x => x.id === id);
-            if (!m) return;
-            openUniversalPopup('Edit Media', getAddEditFormHTML());
-            document.getElementById('mediaName').value = m.name || '';
-            document.getElementById('mediaRating').value = m.rating !== 'N/A' ? m.rating : '';
-            document.getElementById('mediaGenre').value = m.genre || '';
-            document.getElementById('mediaCountry').value = m.country || '';
-            document.getElementById('mediaLink').value = m.link || '';
-            document.getElementById('mediaCategory').value = m.category || 'movies';
-            document.getElementById('mediaSynopsis').value = m.synopsis || '';
-            document.getElementById('mediaReleaseYear').value = m.year || '';
-            editingMediaId = id;
         }
         function setActiveTab(category) {
             const tabs = document.querySelectorAll('.filter-tab');
