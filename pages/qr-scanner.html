@@ -406,12 +406,8 @@
             let scanningActive = false;
             let lastScannedCode = '';
             let lastScannedRawUrl = '';
-            let scanTimer = null;
             const isCordova = typeof cordova !== 'undefined';
-            let cameraPreviewAvailable = false;
-            if (isCordova && typeof CameraPreview !== 'undefined') {
-                cameraPreviewAvailable = true;
-            }
+
             function extractDomain(url) {
                 try {
                     const hostname = new URL(url).hostname;
@@ -420,6 +416,7 @@
                     return url.length > 50 ? url.substring(0, 47) + '...' : url;
                 }
             }
+
             function saveToHistory(code) {
                 if (!code) return;
                 let history = JSON.parse(localStorage.getItem('scannedResults') || '[]');
@@ -434,6 +431,7 @@
                 if (history.length > 50) history = history.slice(0, 50);
                 localStorage.setItem('scannedResults', JSON.stringify(history));
             }
+
             function updateResultText(code) {
                 if (!code) return;
                 lastScannedRawUrl = code;
@@ -444,89 +442,26 @@
                 `;
                 resultPanel.classList.add('visible');
             }
+
             function handleScannedCode(code) {
                 if (code === lastScannedCode) return;
                 lastScannedCode = code;
                 updateResultText(code);
                 saveToHistory(code);
             }
+
             function stopScanner() {
                 scanningActive = false;
-                if (scanTimer) {
-                    clearTimeout(scanTimer);
-                    scanTimer = null;
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
                 }
-                if (cameraPreviewAvailable) {
-                    CameraPreview.stopCamera();
-                } else {
-                    if (stream) {
-                        stream.getTracks().forEach(track => track.stop());
-                        stream = null;
-                    }
-                    video.srcObject = null;
-                }
+                video.srcObject = null;
                 video.style.display = 'block';
                 previewImage.style.display = 'none';
                 videoWrapper.classList.remove('active-camera');
             }
-            function captureFrameFromPreview() {
-                if (!scanningActive) return;
-                CameraPreview.takePicture({ quality: 50, width: 640, height: 640 }, function(base64Data) {
-                    const img = new Image();
-                    img.onload = function() {
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        ctx.drawImage(img, 0, 0);
-                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const code = jsQR(imageData.data, canvas.width, canvas.height);
-                        if (code) {
-                            handleScannedCode(code.data);
-                        }
-                        if (scanningActive) {
-                            scanTimer = setTimeout(captureFrameFromPreview, 300);
-                        }
-                    };
-                    img.src = 'data:image/jpeg;base64,' + base64Data;
-                }, function(err) {
-                    window.showMessage('Camera capture failed');
-                    stopScanner();
-                });
-            }
-            function startCameraPreview() {
-                const options = {
-                    x: 0,
-                    y: 0,
-                    width: videoWrapper.clientWidth,
-                    height: videoWrapper.clientHeight,
-                    camera: CameraPreview.CAMERA_DIRECTION.BACK,
-                    toBack: false,
-                    tapPhoto: false,
-                    previewDrag: false
-                };
-                CameraPreview.startCamera(options, function() {
-                    videoWrapper.classList.add('active-camera');
-                    scanningActive = true;
-                    captureFrameFromPreview();
-                }, function(err) {
-                    window.showMessage('Camera error');
-                });
-            }
-            function requestCameraPermission() {
-                return new Promise(function(resolve, reject) {
-                    if (!isCordova || !cordova.plugins || !cordova.plugins.permissions) {
-                        resolve();
-                        return;
-                    }
-                    const permissions = cordova.plugins.permissions;
-                    permissions.checkPermission(permissions.CAMERA, function(status) {
-                        if (status.hasPermission) {
-                            resolve();
-                        } else {
-                            permissions.requestPermission(permissions.CAMERA, resolve, reject);
-                        }
-                    }, reject);
-                });
-            }
+
             function startWebScanner() {
                 stopScanner();
                 previewImage.style.display = 'none';
@@ -540,8 +475,8 @@
                     video.srcObject = stream;
                     return video.play();
                 }).then(function() {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    canvas.width = video.videoWidth || 640;
+                    canvas.height = video.videoHeight || 640;
                     scanningActive = true;
                     videoWrapper.classList.add('active-camera');
                     function scanFrame() {
@@ -566,24 +501,40 @@
                     videoWrapper.classList.remove('active-camera');
                 });
             }
+
+            function requestCameraPermission() {
+                return new Promise(function(resolve, reject) {
+                    if (!isCordova || !cordova.plugins || !cordova.plugins.permissions) {
+                        resolve();
+                        return;
+                    }
+                    const permissions = cordova.plugins.permissions;
+                    permissions.checkPermission(permissions.CAMERA, function(status) {
+                        if (status.hasPermission) {
+                            resolve();
+                        } else {
+                            permissions.requestPermission(permissions.CAMERA, resolve, reject);
+                        }
+                    }, reject);
+                });
+            }
+
             async function startScanner() {
-                await stopScanner();
-                if (cameraPreviewAvailable) {
+                stopScanner();
+                if (isCordova) {
                     try {
                         await requestCameraPermission();
-                        startCameraPreview();
                     } catch (e) {
                         window.showMessage('Camera permission required');
+                        return;
                     }
-                } else {
-                    startWebScanner();
                 }
+                startWebScanner();
             }
+
             function scanImageFromFile(file) {
                 if (!file) return;
-                if (scanningActive) {
-                    stopScanner();
-                }
+                stopScanner();
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const img = new Image();
@@ -607,6 +558,7 @@
                 };
                 reader.readAsDataURL(file);
             }
+
             videoWrapper.addEventListener('click', function() {
                 if (scanningActive) {
                     stopScanner();
@@ -614,6 +566,7 @@
                     startScanner();
                 }
             });
+
             copyBtn.addEventListener('click', function() {
                 if (lastScannedRawUrl) {
                     const textarea = document.createElement("textarea");
@@ -631,6 +584,7 @@
                     window.showMessage('Nothing to copy');
                 }
             });
+
             resultPanel.addEventListener('click', function() {
                 if (lastScannedRawUrl && (lastScannedRawUrl.startsWith('http://') || lastScannedRawUrl.startsWith('https://'))) {
                     window.open(lastScannedRawUrl, '_blank');
@@ -638,9 +592,11 @@
                     window.showMessage('Not a valid URL');
                 }
             });
+
             uploadBtn.addEventListener('click', function() {
                 imageUpload.click();
             });
+
             imageUpload.addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (file) {
@@ -648,6 +604,7 @@
                 }
                 imageUpload.value = '';
             });
+
             function escapeHtml(str) {
                 return str.replace(/[&<>]/g, function(m) {
                     if (m === '&') return '&amp;';
@@ -656,6 +613,7 @@
                     return m;
                 });
             }
+
             function renderHistoryContent(filterTerm) {
                 filterTerm = filterTerm || '';
                 const contentDiv = document.getElementById('popupContent');
@@ -757,21 +715,22 @@
                     });
                 }
             }
+
             function showHistoryPopup() {
                 document.getElementById('popupTitle').textContent = 'Scan History';
                 renderHistoryContent('');
                 document.getElementById('universalPopup').style.display = 'flex';
             }
+
             window.closeUniversalPopup = function() {
                 document.getElementById('universalPopup').style.display = 'none';
             };
+
             historyBtn.addEventListener('click', showHistoryPopup);
+
             window.addEventListener('beforeunload', function() {
                 if (stream) {
                     stream.getTracks().forEach(function(track) { track.stop(); });
-                }
-                if (cameraPreviewAvailable && scanningActive) {
-                    CameraPreview.stopCamera();
                 }
             });
         })();
