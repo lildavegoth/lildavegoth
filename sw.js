@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.6.1';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.6.2';
 const urlsToCache = [
     // Root
     '/',
@@ -19,6 +19,7 @@ const urlsToCache = [
     'pages/2048.html',
     'pages/appflowy-json-converter.html',
     'pages/adblock-checker.html',
+    'pages/ai-chat.html',
     'pages/calculator.html',
     'pages/calendar.html',
     'pages/card-maker.html',
