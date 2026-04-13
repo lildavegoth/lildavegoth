@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Journal | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../cordova.js"></script>
+    <script src="../protections.js"></script>
+    <script src="../auth-check.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 90px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+        .greeting {
+            margin-bottom: 32px;
+        }
+        .greeting h1 {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .week-strip {
+            margin-bottom: var(--spacing-lg);
+            transition: opacity 0.3s ease;
+        }
+        .week-strip.animate {
+            animation: weekFade 0.3s ease;
+        }
+        @keyframes weekFade {
+            0% { opacity: 0.3; transform: translateX(5px); }
+            100% { opacity: 1; transform: translateX(0); }
+        }
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        .weekday {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 8px 0;
+        }
+        .date-circles {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        .date-circle {
+            aspect-ratio: 1;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+        .date-circle.has-entry {
+            border: 2px solid var(--accent-color);
+            background: var(--bg-card);
+        }
+        .date-circle.current {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: 700;
+            border: 1px solid var(--accent-color);
+        }
+        .date-circle.current.has-entry {
+            background: var(--accent-color);
+            border: 2px solid var(--accent-color);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+        }
+        .section-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .add-btn {
+            background: transparent;
+            border: none;
+            color: var(--accent-color);
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .journal-cards {
+            display: flex;
+            gap: var(--spacing-sm);
+            overflow-x: auto;
+            padding-bottom: var(--spacing-sm);
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .journal-cards::-webkit-scrollbar {
+            display: none;
+        }
+        .journal-card, .placeholder-card {
+            min-width: 95%;
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .placeholder-card {
+            cursor: default;
+            background: rgba(255, 255, 255, 0.08);
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--text-primary);
+            pointer-events: none;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+        }
+        .placeholder-card i {
+            font-size: 40px;
+            color: var(--accent-color);
+            margin-bottom: var(--spacing-sm);
+        }
+        .journal-card:hover {
+            border-color: rgba(193, 252, 50, 0.3);
+        }
+        .journal-card h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .journal-card h3 .pin-indicator {
+            color: var(--accent-color);
+            font-size: 16px;
+        }
+        .journal-card h3 span {
+            cursor: pointer;
+        }
+        .journal-card p {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .journal-content {
+            font-size: 15px;
+            line-height: 1.6;
+            white-space: pre-line;
+            word-break: break-word;
+            margin-top: var(--spacing-sm);
+            overflow-y: auto;
+            flex: 1;
+            max-height: 250px;
+            padding-right: 4px;
+        }
+        .journal-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        .journal-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .journal-content::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 4px;
+        }
+        .journal-content img,
+        .journal-content svg {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 12px;
+            margin: 12px auto;
+            object-fit: contain;
+        }
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+        .popup-content {
+    background: var(--bg-card);
+    border-radius: var(--radius-large);
+    width: 90%;
+    max-width: 500px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .popup-textarea {
+            width: 100%;
+            padding: 16px;
+            background: var(--bg-dark);
+            border: none;
+            color: var(--text-primary);
+            font-size: 16px;
+            min-height: 300px;
+            resize: none;
+            margin: 0;
+            flex: 1;
+            line-height: 1.6;
+            outline: none;
+            overflow-x: auto;
+            word-break: normal;
+            overflow-wrap: normal;
+        }
+        .popup-footer {
+            display: flex;
+            gap: 8px;
+            padding: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--bg-card);
+        }
+        .popup-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .popup-btn-primary {
+            background: var(--accent-color);
+            color: #000;
+        }
+        .popup-btn-secondary {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .delete-btn {
+            flex: 0.5;
+            background: rgba(255, 59, 48, 0.2);
+            color: #ff3b30;
+            border: 1px solid rgba(255, 59, 48, 0.3);
+        }
+        .delete-btn:hover {
+            background: rgba(255, 59, 48, 0.3);
+        }
+        .pin-btn {
+            flex: 1;
+            background: var(--bg-dark);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+        }
+        .tools-grid {
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+        }
+        .settings-group {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .settings-btn-item {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: var(--radius-medium);
+            padding: 10px 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .settings-btn-item.reset-btn {
+            background: rgba(255, 59, 48, 0.9);
+            color: white;
+        }
+        .settings-btn-item i {
+            font-size: 1.1rem;
+        }
+        .settings-btn-item:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+        .toggle-setting {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .3s;
+            border-radius: 34px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: var(--text-secondary);
+            transition: .3s;
+            border-radius: 50%;
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--accent-color);
+        }
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+            background-color: var(--bg-black);
+        }
+        .guide-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-medium);
+            padding: 16px;
+        }
+        .guide-box p {
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+        .guide-box small {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            display: block;
+            margin-top: 6px;
+        }
+        .settings-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--accent-color);
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease;
+            backdrop-filter: blur(10px);
+            pointer-events: auto;
+        }
+        .settings-button:hover {
+            background: rgba(193, 252, 50, 0.15);
+            transform: rotate(120deg);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 20px rgba(193, 252, 50, 0.3);
+            opacity: 0.8;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        footer {
+            margin-top: 48px;
+            text-align: center;
+            padding: 20px 0;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .social-links a {
+            margin: 0 8px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <button class="settings-button" id="settingsButton">
+        <i class="fas fa-cog"></i>
+    </button>
+
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+
+        <div class="greeting">
+            <h1 id="greetingName">Guest's Journal</h1>
+        </div>
+
+        <div class="search-container" style="margin-bottom: var(--spacing-md); position: relative;">
+            <div style="position: relative;">
+                <input type="text" id="globalSearch" placeholder="Search your journal entries..." 
+                       style="width: 100%; padding: 12px 44px 12px 16px; border-radius: var(--radius-medium); 
+                              background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); 
+                              color: var(--text-primary); font-size: 0.95rem; outline: none;">
+                <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); 
+                            color: var(--text-secondary); pointer-events: none;">
+                    <i class="fas fa-search" style="color: var(--accent-color); margin-right: 5px;"></i>
+                </div>
+            </div>
+            <div class="search-suggestions" id="searchSuggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border-radius: var(--radius-medium); margin-top: 4px; padding: 8px 0; z-index: 1000; max-height: 300px; overflow-y: auto; border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);"></div>
+        </div>
+
+        <div style="margin-top: 10px;" class="week-strip" id="weekStrip">
+            <div class="weekdays" id="weekdays"></div>
+            <div class="date-circles" id="dateCircles"></div>
+        </div>
+
+        <div class="section-header" id="myJournalHeader">
+            <h2>My Journal</h2>
+            <button class="add-btn" id="addMyBtn"><i class="fas fa-plus"></i></button>
+        </div>
+
+        <div class="journal-cards" id="journalCards"></div>
+
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Journal</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <div id="universalPopup" class="popup-overlay">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" onclick="closeUniversalPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tools-grid" id="popupContent"></div>
+            <div class="popup-footer" id="popupFooter"></div>
+        </div>
+    </div>
+
+    <div id="confirmPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content" style="max-width: 350px;">
+            <div class="popup-header">
+                <h2>Confirm Delete</h2>
+                <button class="close-popup" onclick="closeConfirmPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tools-grid" style="padding: 24px; text-align: center;">
+                <p id="confirmMessage" style="margin-bottom: 24px; font-size: 16px;"></p>
+                <div style="display: flex; gap: 8px;">
+                    <button class="popup-btn popup-btn-primary" onclick="confirmDelete()">Delete</button>
+                    <button class="popup-btn popup-btn-secondary" onclick="closeConfirmPopup()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="addJournalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content" style="max-width: 400px;">
+            <div class="popup-header">
+                <h2>Add New Journal</h2>
+                <button class="close-popup" onclick="closeAddJournalPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tools-grid" style="padding: 24px;">
+                <input type="text" id="journalTitleInput" class="popup-textarea" style="min-height: auto; height: 50px; margin-bottom: 16px; resize: none;" placeholder="Enter title">
+                <div style="display: flex; gap: 8px;">
+                    <button class="popup-btn popup-btn-primary" onclick="saveNewJournal()">Add</button>
+                    <button class="popup-btn popup-btn-secondary" onclick="closeAddJournalPopup()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="titleEditPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content" style="max-width: 400px;">
+            <div class="popup-header">
+                <h2>Edit Title</h2>
+                <button class="close-popup" onclick="closeTitleEditPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tools-grid" style="padding: 24px;">
+                <input type="text" id="titleEditInput" class="popup-textarea" style="min-height: auto; height: 50px; margin-bottom: 16px; resize: none;" placeholder="Enter new title">
+                <div style="display: flex; gap: 8px;">
+                    <button class="popup-btn popup-btn-primary" onclick="saveTitleEdit()">Save</button>
+                    <button class="popup-btn popup-btn-secondary" onclick="closeTitleEditPopup()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content" style="max-width: 400px;">
+            <div class="popup-header">
+                <h2>Settings</h2>
+                <button class="close-popup" onclick="closeSettingsPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tools-grid settings-group">
+                <div class="toggle-setting">
+                    <span>Show All Journals</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggleAllEntries">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <button class="settings-btn-item" id="exportBtn" onclick="window.location.href='../storage.html'">
+                    <i class="fas fa-database"></i> Data Storage
+                </button>
+                <button class="settings-btn-item reset-btn" id="resetBtn">
+                    <i class="fas fa-trash-alt"></i> Reset All
+                </button>
+                <h3>Guides</h3>
+                <div class="guide-box">
+                    <p><i class="fas fa-image" style="margin-right: 4px;"></i> <strong>Insert Image</strong></p>
+                    <p style="font-size: 0.8rem;">Use Base64 images in your journal entries. Convert any image using Image to Base64 tool, then paste the generated &lt;img&gt; tag into the journal content. Images will automatically resize to fit the card.</p>
+                    <button class="settings-btn-item" style="border-radius: 12px; margin-top: 8px; text-align: left;" onclick="window.location.href='image-to-base64.html'">
+                       Open Image to Base64 Converter <i class="fas fa-external-link-alt"></i>
+                    </button>
+                    <p style="margin-top: 8px;">If you delete "Image Here" text from any Journals, it will also delete the inserted image.</p>
+                </div>
+                <div class="guide-box">
+                    <p><i class="fas fa-calendar-week" style="margin-right: 4px;"></i> <strong>Date</strong></p>
+                    <p>Swipe to the left or right in Date display to switch weeks date</p>
+                </div>
+                <div class="guide-box">
+                    <p><i class="fas fa-pencil-alt" style="margin-right: 4px;"></i> <strong>Edit</strong></p>
+                    <p>Click on any Journal Title to change it's title, you can also 
+                        click on any Journal Descriptions to edit the journal</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function(){
+            let today = new Date();
+            let todayStr = today.toISOString().split('T')[0];
+            let currentWeekStart = new Date(today);
+            const day = today.getDay();
+            currentWeekStart.setDate(today.getDate() - day);
+
+            function getUsername() {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                if (currentUser && currentUser.username) return currentUser.username;
+                return 'Guest';
+            }
+
+            let username = getUsername();
+            document.getElementById('greetingName').textContent = username + "'s Journal";
+
+            const weekdaysContainer = document.getElementById('weekdays');
+            const dateCircles = document.getElementById('dateCircles');
+            const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+            dayNames.forEach((dayName, idx) => {
+                const div = document.createElement('div');
+                div.className = 'weekday';
+                div.textContent = dayName;
+                if (idx === 0) div.style.color = 'var(--accent-color)';
+                weekdaysContainer.appendChild(div);
+            });
+
+            let dailyContents = JSON.parse(localStorage.getItem('dailyJournalContents')) || {};
+
+            const sevenDaysAgo = new Date(today);
+            sevenDaysAgo.setDate(today.getDate() - 7);
+            Object.keys(dailyContents).forEach(key => {
+                if (new Date(key) < sevenDaysAgo) delete dailyContents[key];
+            });
+            localStorage.setItem('dailyJournalContents', JSON.stringify(dailyContents));
+
+            if (!dailyContents[todayStr]) dailyContents[todayStr] = { additional: [] };
+            let todayContent = dailyContents[todayStr];
+            if (!todayContent.additional) todayContent.additional = [];
+
+            todayContent.additional.forEach(entry => {
+                if (entry.pinned === undefined) entry.pinned = false;
+            });
+
+            function saveDaily() {
+                dailyContents[todayStr] = todayContent;
+                localStorage.setItem('dailyJournalContents', JSON.stringify(dailyContents));
+                updateDateIndicators();
+                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+            }
+
+            let currentEditingId = null;
+            let currentEditingType = null;
+            let pendingDelete = null;
+            let currentTitleEditId = null;
+            let showAllEntries = localStorage.getItem('showAllEntries') === 'true';
+
+            function renderWeek() {
+                dateCircles.innerHTML = '';
+                for (let i = 0; i < 7; i++) {
+                    const date = new Date(currentWeekStart);
+                    date.setDate(currentWeekStart.getDate() + i);
+                    const div = document.createElement('div');
+                    div.className = 'date-circle';
+                    const dateStr = date.toISOString().split('T')[0];
+                    if (dateStr === todayStr) div.classList.add('current');
+                    if (dailyContents[dateStr] && (dailyContents[dateStr].additional || []).length > 0) {
+                        div.classList.add('has-entry');
+                    }
+                    div.textContent = date.getDate();
+                    div.dataset.date = dateStr;
+                    div.addEventListener('click', () => loadJournalForDate(dateStr));
+                    dateCircles.appendChild(div);
+                }
+                const weekStrip = document.getElementById('weekStrip');
+                weekStrip.classList.add('animate');
+                setTimeout(() => weekStrip.classList.remove('animate'), 300);
+            }
+
+            function updateDateIndicators() {
+                document.querySelectorAll('.date-circle').forEach(circle => {
+                    const dateStr = circle.dataset.date;
+                    if (dailyContents[dateStr] && (dailyContents[dateStr].additional || []).length > 0) {
+                        circle.classList.add('has-entry');
+                    } else {
+                        circle.classList.remove('has-entry');
+                    }
+                });
+            }
+
+            let touchStartX = 0, touchEndX = 0;
+            dateCircles.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, false);
+            dateCircles.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                if (touchEndX < touchStartX - 50) { currentWeekStart.setDate(currentWeekStart.getDate() + 7); renderWeek(); }
+                if (touchEndX > touchStartX + 50) { currentWeekStart.setDate(currentWeekStart.getDate() - 7); renderWeek(); }
+            }, false);
+            dateCircles.addEventListener('mousedown', (e) => { touchStartX = e.screenX; });
+            dateCircles.addEventListener('mouseup', (e) => {
+                touchEndX = e.screenX;
+                if (touchEndX < touchStartX - 50) { currentWeekStart.setDate(currentWeekStart.getDate() + 7); renderWeek(); }
+                if (touchEndX > touchStartX + 50) { currentWeekStart.setDate(currentWeekStart.getDate() - 7); renderWeek(); }
+            });
+
+            function openPopup(type, content, title) {
+                const popup = document.getElementById('universalPopup');
+                document.getElementById('popupTitle').textContent = title;
+                document.getElementById('popupContent').innerHTML = '<textarea id="popupTextarea" class="popup-textarea" placeholder="Write your reflection..." style="resize: none;"></textarea>';
+                const footer = document.getElementById('popupFooter');
+                const entryId = type.split('-')[1];
+                const entry = todayContent.additional.find(a => a.id === entryId);
+                const isPinned = entry ? entry.pinned : false;
+                footer.innerHTML = `
+                    <button class="popup-btn popup-btn-primary" onclick="savePopup('${type}')">Save</button>
+                    <button class="popup-btn pin-btn" onclick="togglePin('${type}')">${isPinned ? 'Unpin' : 'Pin'}</button>
+                    <button class="popup-btn delete-btn" onclick="deletePopup('${type}')"><i class="fas fa-trash"></i></button>
+                `;
+                const textarea = document.getElementById('popupTextarea');
+                const convertedContent = imagesToPlaceholder(content || '');
+                textarea.value = convertedContent;
+                textarea.dataset.originalHtml = content || '';
+                popup.style.display = 'flex';
+                currentEditingId = entryId;
+                currentEditingType = type;
+            }
+
+            window.saveNewJournal = function() {
+                const title = document.getElementById('journalTitleInput').value.trim();
+                if (!title) return;
+                const id = Date.now().toString();
+                todayContent.additional.push({ id, title, content: '', pinned: false });
+                saveDaily();
+                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                closeAddJournalPopup();
+            };
+
+            window.closeAddJournalPopup = function() { document.getElementById('addJournalPopup').style.display = 'none'; };
+
+            window.savePopup = function(type) {
+                const textarea = document.getElementById('popupTextarea');
+                const newValue = textarea.value;
+                const originalHtml = textarea.dataset.originalHtml || '';
+                const value = placeholderToImages(newValue, originalHtml);
+                if (type.startsWith('additional-')) {
+                    const id = type.split('-')[1];
+                    const item = todayContent.additional.find(a => a.id === id);
+                    if (item) item.content = value;
+                }
+                saveDaily();
+                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                closeUniversalPopup();
+            };
+
+            window.togglePin = function(type) {
+                if (type.startsWith('additional-')) {
+                    const id = type.split('-')[1];
+                    const item = todayContent.additional.find(a => a.id === id);
+                    if (item) {
+                        item.pinned = !item.pinned;
+                        saveDaily();
+                        if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                        const isPinned = item.pinned;
+                        const pinBtn = document.querySelector('.pin-btn');
+                        if (pinBtn) pinBtn.textContent = isPinned ? 'Unpin' : 'Pin';
+                    }
+                }
+            };
+
+            window.deletePopup = function(type) {
+                pendingDelete = type;
+                document.getElementById('confirmMessage').textContent = "Are you sure you want to delete this entry?";
+                document.getElementById('confirmPopup').style.display = 'flex';
+            };
+
+            window.confirmDelete = function() {
+                if (pendingDelete && pendingDelete.startsWith('additional-')) {
+                    const id = pendingDelete.split('-')[1];
+                    const index = todayContent.additional.findIndex(a => a.id === id);
+                    if (index !== -1) todayContent.additional.splice(index, 1);
+                    saveDaily();
+                }
+                renderMyJournal();
+                if (showAllEntries) renderAllEntries();
+                updateDateIndicators();
+                closeConfirmPopup();
+                closeUniversalPopup();
+                pendingDelete = null;
+            };
+
+            window.closeConfirmPopup = function() { document.getElementById('confirmPopup').style.display = 'none'; pendingDelete = null; };
+            window.closeUniversalPopup = function() { document.getElementById('universalPopup').style.display = 'none'; };
+
+            function loadJournalForDate(dateStr) {
+                todayStr = dateStr;
+                today = new Date(dateStr);
+                document.querySelectorAll('.date-circle').forEach(c => { 
+                    c.classList.remove('current'); 
+                    if (c.dataset.date === dateStr) c.classList.add('current'); 
+                });
+                if (!dailyContents[dateStr]) dailyContents[dateStr] = { additional: [] };
+                todayContent = dailyContents[dateStr];
+                if (!todayContent.additional) todayContent.additional = [];
+                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+            }
+
+            function sortEntries(entries) {
+                return entries.sort((a, b) => {
+                    if (a.pinned && !b.pinned) return -1;
+                    if (!a.pinned && b.pinned) return 1;
+                    return a.id.localeCompare(b.id);
+                });
+            }
+            
+            function imagesToPlaceholder(html) {
+                return html.replace(/<img[^>]*src="data:image\/[^"]*"[^>]*>/gi, 'Image Here');
+            }
+            function placeholderToImages(text, originalHtml) {
+                const imgTags = originalHtml.match(/<img[^>]*src="data:image\/[^"]*"[^>]*>/gi) || [];
+                let index = 0;
+                return text.replace(/Image Here/g, () => imgTags[index++] || 'Image Here');
+            }
+
+            function renderMyJournal() {
+                const container = document.getElementById('journalCards');
+                container.innerHTML = '';
+                const entries = todayContent.additional.slice();
+                sortEntries(entries);
+                if (entries.length === 0) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'placeholder-card';
+                    placeholder.innerHTML = '<i class="fas fa-plus-circle"></i><p>Add your new Journal by click + button</p>';
+                    container.appendChild(placeholder);
+                } else {
+                    entries.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'journal-card';
+                        const pinnedIcon = item.pinned ? '<i class="fas fa-thumbtack pin-indicator"></i>' : '';
+                        card.innerHTML = `<h3><span class="title-click" data-id="${item.id}">${escapeHtml(item.title)}</span> ${pinnedIcon}</h3>${item.content ? `<div class="journal-content">${item.content}</div>` : `<p>Start writing your reflection...</p>`}`;
+                        card.querySelector('.title-click').addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            openTitleEdit(item.id, item.title);
+                        });
+                        card.addEventListener('click', (e) => {
+                            if (e.target.classList.contains('title-click')) return;
+                            openPopup('additional-' + item.id, item.content, item.title);
+                        });
+                        container.appendChild(card);
+                    });
+                }
+            }
+
+            function renderAllEntries() {
+                const container = document.getElementById('journalCards');
+                container.innerHTML = '';
+                const allEntries = [];
+                Object.keys(dailyContents).forEach(date => {
+                    const day = dailyContents[date];
+                    if (day.additional) {
+                        day.additional.forEach(entry => {
+                            allEntries.push({ date, id: entry.id, title: entry.title, content: entry.content, pinned: entry.pinned });
+                        });
+                    }
+                });
+                allEntries.sort((a, b) => {
+                    if (a.pinned && !b.pinned) return -1;
+                    if (!a.pinned && b.pinned) return 1;
+                    return new Date(b.date) - new Date(a.date);
+                });
+                if (allEntries.length === 0) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'placeholder-card';
+                    placeholder.innerHTML = '<i class="fas fa-plus-circle"></i><p>Add your new Journal by click + button</p>';
+                    container.appendChild(placeholder);
+                } else {
+                    allEntries.forEach(entry => {
+                        const card = document.createElement('div');
+                        card.className = 'journal-card';
+                        const dateDisplay = entry.date.split('-').slice(1).join('/');
+                        const pinnedIcon = entry.pinned ? '<i class="fas fa-thumbtack pin-indicator"></i>' : '';
+                        card.innerHTML = `<h3><span class="title-click" data-id="${entry.id}">${escapeHtml(entry.title)}</span> ${pinnedIcon} <span style="font-size:12px; color:var(--accent-color);">${dateDisplay}</span></h3>${entry.content ? `<div class="journal-content">${entry.content}</div>` : `<p>Empty</p>`}`;
+                        card.querySelector('.title-click').addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            openTitleEdit(entry.id, entry.title);
+                        });
+                        card.addEventListener('click', (e) => {
+                            if (e.target.classList.contains('title-click')) return;
+                            loadJournalForDate(entry.date);
+                            setTimeout(() => {
+                                const targetCard = document.querySelector(`.journal-card[data-id="${entry.id}"]`);
+                                if (targetCard) targetCard.scrollIntoView({behavior:'smooth'});
+                            }, 100);
+                        });
+                        card.dataset.id = entry.id;
+                        container.appendChild(card);
+                    });
+                }
+            }
+
+            function escapeHtml(str) { 
+                if(!str) return ''; 
+                return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); 
+            }
+
+            function openTitleEdit(id, currentTitle) {
+                currentTitleEditId = id;
+                document.getElementById('titleEditInput').value = currentTitle;
+                document.getElementById('titleEditPopup').style.display = 'flex';
+            }
+
+            window.saveTitleEdit = function() {
+                const newTitle = document.getElementById('titleEditInput').value.trim();
+                if (!newTitle || !currentTitleEditId) return;
+                const entry = todayContent.additional.find(a => a.id === currentTitleEditId);
+                if (entry) {
+                    entry.title = newTitle;
+                    saveDaily();
+                    if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                }
+                closeTitleEditPopup();
+            };
+
+            window.closeTitleEditPopup = function() {
+                document.getElementById('titleEditPopup').style.display = 'none';
+                currentTitleEditId = null;
+            };
+
+            document.getElementById('addMyBtn').addEventListener('click', () => { 
+                document.getElementById('journalTitleInput').value = ''; 
+                document.getElementById('addJournalPopup').style.display = 'flex'; 
+            });
+
+            const settingsButton = document.getElementById('settingsButton');
+            const settingsPopup = document.getElementById('settingsPopup');
+            settingsButton.addEventListener('click', () => { settingsPopup.style.display = 'flex'; });
+            window.closeSettingsPopup = () => { settingsPopup.style.display = 'none'; };
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                if (confirm('Are you sure? All journals will be lost.')) {
+                    localStorage.removeItem('dailyJournalContents');
+                    dailyContents = {};
+                    dailyContents[todayStr] = { additional: [] };
+                    todayContent = dailyContents[todayStr];
+                    renderWeek();
+                    if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                }
+            });
+
+            const toggleAll = document.getElementById('toggleAllEntries');
+            toggleAll.checked = showAllEntries;
+            toggleAll.addEventListener('change', () => {
+                showAllEntries = toggleAll.checked;
+                localStorage.setItem('showAllEntries', showAllEntries);
+                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+            });
+
+            function globalSearch(term) {
+                const suggestions = [];
+                const termLower = term.toLowerCase();
+                Object.keys(dailyContents).forEach(date => {
+                    const day = dailyContents[date];
+                    if (day.additional) {
+                        day.additional.forEach(e => {
+                            if (e.title.toLowerCase().includes(termLower) || (e.content && e.content.toLowerCase().includes(termLower))) {
+                                suggestions.push({ date, type: 'journal', title: e.title, id: e.id });
+                            }
+                        });
+                    }
+                });
+                return suggestions;
+            }
+
+            const searchInput = document.getElementById('globalSearch');
+            const suggestionsDiv = document.getElementById('searchSuggestions');
+            searchInput.addEventListener('input', () => {
+                const val = searchInput.value.trim();
+                if (val.length < 2) { suggestionsDiv.style.display = 'none'; return; }
+                const results = globalSearch(val);
+                if (results.length === 0) {
+                    suggestionsDiv.innerHTML = '<div style="padding:12px 16px;">No results</div>';
+                } else {
+                    suggestionsDiv.innerHTML = results.slice(0,5).map(r => `
+                        <div style="padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" data-date="${r.date}" data-id="${r.id}">
+                            <div><strong>${escapeHtml(r.title)}</strong> <span style="color:var(--accent-color);">${r.date}</span></div>
+                        </div>
+                    `).join('');
+                    suggestionsDiv.querySelectorAll('div[data-date]').forEach(el => {
+                        el.addEventListener('click', () => {
+                            const date = el.dataset.date;
+                            loadJournalForDate(date);
+                            suggestionsDiv.style.display = 'none';
+                            searchInput.value = '';
+                        });
+                    });
+                }
+                suggestionsDiv.style.display = 'block';
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.style.display = 'none';
+                }
+            });
+
+            renderWeek();
+            if (showAllEntries) renderAllEntries(); else renderMyJournal();
+        })();
+    </script>
+</body>
+</html>
