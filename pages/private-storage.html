@@ -568,11 +568,12 @@
             background: rgba(255, 255, 255, 0.05);
             border: 2px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
-            padding: 16px 20px;
+            padding: 0 20px;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
             transition: all 0.3s ease;
+            position: relative;
         }
 
         .password-field:focus-within {
@@ -594,6 +595,7 @@
             font-size: 1.1rem;
             outline: none;
             letter-spacing: 0.1rem;
+            padding: 16px 0;
         }
 
         #masterPasswordInput::placeholder {
@@ -606,12 +608,19 @@
             border: none;
             color: var(--text-secondary);
             cursor: pointer;
-            padding: 4px;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.3s ease;
+            margin-left: 8px;
         }
 
         .password-visibility-toggle:hover {
             color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .password-error {
@@ -1072,7 +1081,7 @@
             </div>
 
             <div class="files-list">
-                <div class="file-item" onclick="changeMasterPassword()">
+                <div class="file-item" onclick="requestChangeMasterPassword()">
                     <div class="file-icon" style="background: rgba(193, 252, 50, 0.1); color: var(--accent-color);">
                         <i class="fas fa-key"></i>
                     </div>
@@ -1102,9 +1111,9 @@
                     <div class="file-info">
                         <div class="file-meta">Private, Privacy & Protected. Your files are yours, no one can access them and only you can see them. Remember always your Master Password, cause it cannot be recovered in any way. All files are encrypted with PBKDF2 and stored in your browser.</div>
                         <div class="guide-notes">
-                            <i class="fas fa-info-circle"></i> <strong>Guides:</strong><br>
-                            • Swipe left or right to go to previous or next media<br>
-                            • Click upload button to import any media or documents
+                            <i class="fas fa-info-circle"></i> <strong>Guides</strong><br>
+                            <p class="file-meta">Swipe left or right to go to previous or next media<br>
+                            Click upload button to import any media or documents</p>
                         </div>
                     </div>
                 </div>
@@ -1550,29 +1559,27 @@
             loadData();
         }
 
-        async function changeMasterPassword() {
-            const currentPassword = promptForCurrentPassword();
-            if (!currentPassword) return;
-
-            const salt = localStorage.getItem(SALT_KEY);
-            const storedHash = localStorage.getItem(HASH_KEY);
-            const inputHash = await hashPassword(currentPassword, salt);
-
-            if (inputHash === storedHash) {
-                isChangingPassword = true;
-                tempNewPassword = null;
-                document.getElementById('passwordTitle').textContent = 'Enter New Password';
-                document.getElementById('passwordSubtitle').textContent = 'Create your new master password';
-                document.getElementById('passwordClearBtn').style.display = 'none';
-                document.getElementById('masterPasswordInput').value = '';
-                showPasswordOverlay();
-            } else {
-                window.showMessage('Incorrect current password', 'error');
-            }
+        function requestChangeMasterPassword() {
+            openPasswordPopup('Verify Current Password', 'Enter your current master password:', async (password) => {
+                const salt = localStorage.getItem(SALT_KEY);
+                const storedHash = localStorage.getItem(HASH_KEY);
+                const inputHash = await hashPassword(password, salt);
+                if (inputHash === storedHash) {
+                    startChangePasswordProcess();
+                } else {
+                    window.showMessage('Incorrect master password', 'error');
+                }
+            });
         }
 
-        function promptForCurrentPassword() {
-            return prompt('Enter your current master password:');
+        function startChangePasswordProcess() {
+            isChangingPassword = true;
+            tempNewPassword = null;
+            document.getElementById('passwordTitle').textContent = 'Enter New Password';
+            document.getElementById('passwordSubtitle').textContent = 'Create your new master password';
+            document.getElementById('passwordClearBtn').style.display = 'none';
+            document.getElementById('masterPasswordInput').value = '';
+            showPasswordOverlay();
         }
 
         function requestPurgeData() {
@@ -2404,7 +2411,7 @@
         window.closeMediaViewer = closeMediaViewer;
         window.downloadCurrentMedia = downloadCurrentMedia;
         window.shareCurrentMedia = shareCurrentMedia;
-        window.changeMasterPassword = changeMasterPassword;
+        window.requestChangeMasterPassword = requestChangeMasterPassword;
         window.requestPurgeData = requestPurgeData;
         window.toggleMediaContextMenu = toggleMediaContextMenu;
         window.openRenamePopup = openRenamePopup;
