@@ -232,17 +232,18 @@
             animation: fadeIn 0.3s ease;
         }
         .popup-content {
-            background: var(--bg-card);
-            border-radius: var(--radius-large);
-            width: 90%;
-            max-width: 500px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            max-height: 70vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
+    background: var(--bg-card);
+    border-radius: var(--radius-large);
+    width: 90%;
+    max-width: 500px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
         .popup-header {
             display: flex;
             justify-content: space-between;
@@ -280,6 +281,10 @@
             flex: 1;
             line-height: 1.6;
             outline: none;
+            white-space: pre;
+            overflow-x: auto;
+            word-break: normal;
+            overflow-wrap: normal;
         }
         .popup-footer {
             display: flex;
@@ -608,8 +613,9 @@
                 <div class="guide-box">
                     <p><i class="fas fa-image" style="margin-right: 4px;"></i> <strong>Insert Image Guide</strong></p>
                     <p style="font-size: 0.8rem;">Use Base64 images in your journal entries. Convert any image using Image to Base64 tool, then paste the generated &lt;img&gt; tag into the journal content. Images will automatically resize to fit the card.</p>
-                    <a href="image-to-base64.html" style="color: var(--accent-color); text-decoration: none; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; margin-top: 8px;"><i class="fas fa-external-link-alt" style="margin-right: 4px;"></i> Open Image to Base64 Converter tool</a>
-                    <small>Tip: After conversion, copy the full &lt;img src="data:image/..."&gt; and paste in journal editor.</small>
+                    <button class="settings-btn-item" style="border-radius: 12px; margin-top: 8px; text-align: left;" onclick="window.location.href='image-to-base64.html'">
+                       Open Image to Base64 Converter <i class="fas fa-external-link-alt"></i>
+                    </button>
                 </div>
                 <div class="guide-box">
                     <p><i class="fas fa-calendar-week" style="margin-right: 4px;"></i> <strong>Date</strong></p>
@@ -746,7 +752,9 @@
                     <button class="popup-btn delete-btn" onclick="deletePopup('${type}')"><i class="fas fa-trash"></i></button>
                 `;
                 const textarea = document.getElementById('popupTextarea');
-                textarea.value = content || '';
+                const convertedContent = imagesToPlaceholder(content || '');
+                textarea.value = convertedContent;
+                textarea.dataset.originalHtml = content || '';
                 popup.style.display = 'flex';
                 currentEditingId = entryId;
                 currentEditingType = type;
@@ -765,7 +773,10 @@
             window.closeAddJournalPopup = function() { document.getElementById('addJournalPopup').style.display = 'none'; };
 
             window.savePopup = function(type) {
-                const value = document.getElementById('popupTextarea').value;
+                const textarea = document.getElementById('popupTextarea');
+                const newValue = textarea.value;
+                const originalHtml = textarea.dataset.originalHtml || '';
+                const value = placeholderToImages(newValue, originalHtml);
                 if (type.startsWith('additional-')) {
                     const id = type.split('-')[1];
                     const item = todayContent.additional.find(a => a.id === id);
@@ -834,6 +845,15 @@
                     if (!a.pinned && b.pinned) return 1;
                     return a.id.localeCompare(b.id);
                 });
+            }
+            
+            function imagesToPlaceholder(html) {
+                return html.replace(/<img[^>]*src="data:image\/[^"]*"[^>]*>/gi, '[ Image Here ]');
+            }
+            function placeholderToImages(text, originalHtml) {
+                const imgTags = originalHtml.match(/<img[^>]*src="data:image\/[^"]*"[^>]*>/gi) || [];
+                let index = 0;
+                return text.replace(/Image Here/g, () => imgTags[index++] || 'Image Here');
             }
 
             function renderMyJournal() {
