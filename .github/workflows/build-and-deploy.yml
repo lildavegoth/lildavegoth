@@ -11,6 +11,30 @@ permissions:
     id-token: write
 
 jobs:
+    download-youtube:
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.youtube_url != ''
+        runs-on: ubuntu-latest
+        steps:
+            -   name: Setup Python
+                uses: actions/setup-python@v5
+                with:
+                    python-version: '3.11'
+            -   name: Install yt-dlp and ffmpeg
+                run: |
+                    pip install yt-dlp
+                    sudo apt-get update && sudo apt-get install -y ffmpeg
+            -   name: Download video
+                run: |
+                    yt-dlp -f "${{ github.event.inputs.youtube_format }}" \
+                      -o "video.%(ext)s" \
+                      "${{ github.event.inputs.youtube_url }}"
+            -   name: Upload video artifact
+                uses: actions/upload-artifact@v4
+                with:
+                    name: youtube-video
+                    path: video.*
+                    if-no-files-found: error
+
     build-cordova:
         runs-on: ubuntu-latest
         steps:
