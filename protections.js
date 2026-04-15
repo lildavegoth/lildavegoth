@@ -108,6 +108,8 @@
                 -webkit-user-select: none !important;
                 user-select: none !important;
                 pointer-events: none !important;
+                -webkit-touch-callout: none !important;
+                touch-action: pan-y pinch-zoom !important;
             }
             
             img.clickable,
@@ -136,6 +138,10 @@
             }
         `;
         document.head.appendChild(protectionStyle);
+        
+        function isExceptionPage() {
+            return window.location.pathname === '/pages/userscript-json-format.html';
+        }
         
         function shouldProtect(img) {
             if (img.hasAttribute('data-protected')) return false;
@@ -166,10 +172,10 @@
             
             img.classList.add('protected');
             img.setAttribute('data-protected', 'true');
+            img.setAttribute('draggable', 'false');
             
             img.setAttribute('oncontextmenu', 'return false');
             img.setAttribute('ondragstart', 'return false');
-            img.setAttribute('onmousedown', 'return false');
         }
         
         function protectAllImages() {
@@ -233,13 +239,33 @@
             }
         });
         
+        document.addEventListener('touchstart', function(e) {
+            if (isExceptionPage()) return;
+            const target = e.target;
+            if (target.tagName === 'IMG' && target.classList.contains('protected')) {
+                const touch = e.touches[0];
+                let touchTimer = setTimeout(function() {
+                    e.preventDefault();
+                    showRightClickWarning(e);
+                }, 500);
+                
+                target.addEventListener('touchend', function() {
+                    clearTimeout(touchTimer);
+                }, { once: true });
+                
+                target.addEventListener('touchmove', function() {
+                    clearTimeout(touchTimer);
+                }, { once: true });
+            }
+        }, { passive: false });
+        
         function showRightClickWarning(event) {
             const img = event.target;
             img.classList.add('protection-flash');
             setTimeout(() => img.classList.remove('protection-flash'), 500);
             
             const tooltip = document.createElement('div');
-            tooltip.textContent = 'Right-click disabled';
+            tooltip.textContent = 'Image saving disabled';
             tooltip.style.cssText = `
                 position: fixed;
                 top: ${event.clientY + 15}px;
@@ -384,6 +410,10 @@
     })();
     
     (function() {
+        function isExceptionPage() {
+            return window.location.pathname === '/pages/userscript-json-format.html';
+        }
+        
         document.addEventListener('keydown', function(e) {
             if (isExceptionPage()) return;
             if (e.key === 'F12' || 
