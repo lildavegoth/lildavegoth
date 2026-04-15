@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.6.3';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.6.4';
 const urlsToCache = [
     // Root
     '/',
@@ -119,40 +119,42 @@ const urlsToCache = [
     'images/posters/its-too-late.webp',
     'images/posters/no-longer-priority.webp',
     'images/posters/sickens-me.webp',
-    // Blob Storage
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Articles/articles.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/pages.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/popup-pages.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/javascript.js',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Obsidian%20CSS%20Snippets%20Gallery/css-snippets.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/UserScripts%20Gallery/userscripts.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Calendar/world-events.json',
+    // Fetches
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/articles.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/pages.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/popup-pages.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/gift-codes.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/javascript.js',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/o-css-snippets.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/userscripts.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/world-events.json',
     // Stories
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_1.txt',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_2.txt',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_3.txt',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/easy_story_4.txt',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/med_story_1.txt',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/med_story_2.txt',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/med_story_3.txt',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/med_story_4.txt',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_1.txt',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_2.txt',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_3.txt',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Typing%20Game/hard_story_4.txt',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/easy_story_1.txt',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/easy_story_2.txt',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/easy_story_3.txt',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/easy_story_4.txt',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/med_story_1.txt',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/med_story_2.txt',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/med_story_3.txt',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/med_story_4.txt',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/hard_story_1.txt',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/hard_story_2.txt',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/hard_story_3.txt',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/hard_story_4.txt',
     // Bundles
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/webfonts/fa-solid-900.woff2'
 ];
 
 const STALE_WHILE_REVALIDATE_URLS = [
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Articles/articles.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/pages.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/popup-pages.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Index/javascript.js',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Obsidian%20CSS%20Snippets%20Gallery/css-snippets.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/UserScripts%20Gallery/userscripts.json',
-    'https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Calendar/world-events.json'
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/articles.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/pages.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/popup-pages.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/gift-codes.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/javascript.js',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/o-css-snippets.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/userscripts.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/world-events.json'
 ];
 
 self.addEventListener('install', event => {
