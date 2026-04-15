@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.6.2';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.6.3';
 const urlsToCache = [
     // Root
     '/',
@@ -7,7 +7,6 @@ const urlsToCache = [
     'browser-homepage.html',
     'giveaway.html',
     'index.html',
-    'javascript',
     'manifest.json',
     'media.css',
     'navigation.css',
