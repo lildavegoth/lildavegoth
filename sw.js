@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.6.4';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.6.5';
 const urlsToCache = [
     // Root
     '/',
@@ -110,8 +110,11 @@ const urlsToCache = [
     'images/left-side.webp',
     'images/right-side.webp',
     'images/screenshots.webp',
-    'images/icons/browser-homepage.webp',
     'images/icons/kiraku-home.png',
+    'images/cards/browser-homepage.webp',
+    'images/cards/icon-pack.webp',
+    'images/cards/kiraku-store.webp',
+    'images/cards/posters-gallery.webp',
     // Posters
     'images/posters/again-n-again.webp',
     'images/posters/dear-god.webp',
