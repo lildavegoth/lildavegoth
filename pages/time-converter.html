@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Time Converter | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="../navigation.css">
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
+            overflow-x: hidden;
+            padding-bottom: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xs);
+            position: relative;
+            min-height: calc(100vh - 90px);
+        }
+        
+        .header {
+            background: var(--accent-color);
+            color: #000000;
+            padding: 20px 20px;
+            max-width: 440px;
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: var(--radius-large);
+            cursor: pointer;
+        }
+        
+        .header-left {
+            line-height: 1.25;
+        }
+        
+        .header-title {
+            font-size: 15px;
+            font-weight: 600;
+        }
+        
+        .header-currency {
+            font-size: 17px;
+            font-weight: 600;
+        }
+        
+        .header-icon {
+            background: #000000;
+            width: 45px;
+            height: 45px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .display {
+            height: 190px;
+            background: #000000;
+            width: 100%;
+            max-width: 440px;
+            margin: 0 auto;
+            border-radius: var(--radius-large);
+            padding: 0 30px 20px 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            overflow: hidden;
+        }
+        
+        .main-amount {
+            font-size: 48px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: auto;
+            text-align: right;
+            width: 100%;
+        }
+        
+        .secondary-amount {
+            font-size: 21px;
+            color: #aaaaaa;
+            white-space: nowrap;
+            overflow: auto;
+            text-align: right;
+            width: 100%;
+        }
+        
+        .keypad {
+            max-width: 440px;
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            gap: 13px;
+            align-items: stretch;
+            margin-top: 18px;
+        }
+        
+        .numbers-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 13px;
+            flex: 3;
+        }
+        
+        .operations {
+            display: flex;
+            flex-direction: column;
+            gap: 13px;
+            flex: 1;
+        }
+        
+        .key {
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        
+        .key:active {
+            transform: scale(0.92);
+        }
+        
+        .key.number {
+            background: #1f1f1f;
+            color: #ffffff;
+            aspect-ratio: 1 / 1;
+        }
+        
+        .key.number:active {
+            background: #2d2d2d;
+        }
+        
+        .key.op {
+            background: #1f1f1f;
+            color: var(--accent-color);
+            aspect-ratio: 1 / 1;
+        }
+        
+        .key.op:active {
+            background: #2d2d2d;
+        }
+        
+        .key.special {
+            background: var(--accent-color);
+            color: #000000;
+        }
+        
+        .key.special:active {
+            background: #9bc726;
+        }
+        
+        .operations .key {
+            background: #1f1f1f;
+            color: var(--accent-color);
+            border-radius: 30px;
+            flex: 1;
+            font-size: 26px;
+            aspect-ratio: auto;
+            padding: 0 5px;
+        }
+        
+        .operations .key:active {
+            background: #2d2d2d;
+        }
+        
+        .operations .key.accent {
+            background: var(--accent-color);
+            color: #000000;
+        }
+        
+        .operations .key.accent:active {
+            background: #9bc726;
+        }
+        
+        .circle-dot {
+            font-size: 38px;
+            line-height: 1;
+        }
+        
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 101%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .unit-section {
+            padding: var(--spacing-md) var(--spacing-md) var(--spacing-sm);
+        }
+        
+        .unit-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .unit-label {
+            width: 55px;
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .unit-buttons {
+            display: flex;
+            flex: 1;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .unit-btn {
+            background: #1f1f1f;
+            color: #ffffff;
+            border-radius: 30px;
+            padding: 10px 0;
+            flex: 1 0 calc(20% - 8px);
+            text-align: center;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.1s;
+            border: 1px solid transparent;
+            min-width: 55px;
+        }
+        
+        .unit-btn.active {
+            background: var(--accent-color);
+            color: #000000;
+        }
+        
+        .unit-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .divider {
+            height: 1px;
+            background: rgba(255,255,255,0.08);
+            margin: 8px 0 4px;
+        }
+        
+        .clear-btn {
+            background: var(--accent-color);
+            color: #000000;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 16px;
+            width: calc(100% - 32px);
+        }
+        
+        .clear-btn:active {
+            background: #9bc726;
+        }
+        
+        #calculate {
+            font-size: 22px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a style="margin-top: 20px;" href="../index.html" class="back-link fade-in">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        <app-header>
+            <h1 class="username">Time Converter</h1>
+            <p style="margin-bottom: 20px;" class="tagline">Seconds · Minutes · Hours · Days · Months · Years</p>
+        </app-header>
+        <div class="header" id="converterHeader">
+            <div class="header-left">
+                <div class="header-title">Converter</div>
+                <div class="header-currency" id="unitDisplay">sec → min</div>
+            </div>
+            <div class="header-icon">
+                <i class="fa-solid fa-arrows-rotate" style="color: white; font-size: 24px;"></i>
+            </div>
+        </div>
+        <div class="display">
+            <div class="main-amount" id="main">0</div>
+            <div class="secondary-amount" id="secondary"></div>
+        </div>
+        
+        <div class="keypad">
+            <div class="numbers-grid">
+                <div class="key number" data-val="7">7</div>
+                <div class="key number" data-val="8">8</div>
+                <div class="key number" data-val="9">9</div>
+                <div class="key number" data-val="4">4</div>
+                <div class="key number" data-val="5">5</div>
+                <div class="key number" data-val="6">6</div>
+                <div class="key number" data-val="1">1</div>
+                <div class="key number" data-val="2">2</div>
+                <div class="key number" data-val="3">3</div>
+                <div class="key number circle-dot" data-val=".">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="8"/>
+                    </svg>
+                </div>
+                <div class="key number" data-val="0">0</div>
+                <div class="key number" id="back">
+                    <svg width="32" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="operations">
+                <div class="key accent" id="clearAll">AC</div>
+                <div class="key" id="swapUnitsBtn">⇄</div>
+                <div class="key accent" id="calculate">=</div>
+            </div>
+        </div>
+        <footer class="fade-in">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Time Converter</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+    
+    <div id="converterPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle">Converter</h2>
+                <button class="close-popup" id="closePopupBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="unit-section">
+                <div class="unit-row">
+                    <span class="unit-label">From</span>
+                    <div class="unit-buttons" id="fromUnitContainer">
+                        <div class="unit-btn active" data-from="sec">Sec</div>
+                        <div class="unit-btn" data-from="min">Min</div>
+                        <div class="unit-btn" data-from="hr">Hr</div>
+                        <div class="unit-btn" data-from="day">Day</div>
+                        <div class="unit-btn" data-from="mon">Mon</div>
+                        <div class="unit-btn" data-from="yr">Yr</div>
+                    </div>
+                </div>
+                <div class="unit-row">
+                    <span class="unit-label">To</span>
+                    <div class="unit-buttons" id="toUnitContainer">
+                        <div class="unit-btn" data-to="sec">Sec</div>
+                        <div class="unit-btn active" data-to="min">Min</div>
+                        <div class="unit-btn" data-to="hr">Hr</div>
+                        <div class="unit-btn" data-to="day">Day</div>
+                        <div class="unit-btn" data-to="mon">Mon</div>
+                        <div class="unit-btn" data-to="yr">Yr</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        (function(){
+            let currentInput = '0';
+            let fromUnit = 'sec';
+            let toUnit = 'min';
+            let resultDisplayed = false;
+            
+            const mainDisplay = document.getElementById('main');
+            const secondaryDisplay = document.getElementById('secondary');
+            const unitDisplay = document.getElementById('unitDisplay');
+            const fromContainer = document.getElementById('fromUnitContainer');
+            const toContainer = document.getElementById('toUnitContainer');
+            const swapBtn = document.getElementById('swapUnitsBtn');
+            const convertBtn = document.getElementById('calculate');
+            const clearAllBtn = document.getElementById('clearAll');
+            const backBtn = document.getElementById('back');
+            const numberBtns = document.querySelectorAll('.key[data-val]');
+            const converterHeader = document.getElementById('converterHeader');
+            const popupOverlay = document.getElementById('converterPopup');
+            const closePopupBtn = document.getElementById('closePopupBtn');
+            
+            const unitFactors = {
+                sec: 1,
+                min: 60,
+                hr: 3600,
+                day: 86400,
+                mon: 2592000,
+                yr: 31536000
+            };
+            
+            const unitSymbols = {
+                sec: 'sec',
+                min: 'min',
+                hr: 'hr',
+                day: 'day',
+                mon: 'mon',
+                yr: 'yr'
+            };
+            
+            function formatNumber(value) {
+                if (value === '') return '0';
+                let num = parseFloat(value);
+                if (isNaN(num)) return '0';
+                if (Number.isInteger(num)) return num.toString();
+                return parseFloat(num.toFixed(8)).toString();
+            }
+            
+            function convertValue(value, from, to) {
+                const num = parseFloat(value);
+                if (isNaN(num)) return 0;
+                const baseSeconds = num * unitFactors[from];
+                return baseSeconds / unitFactors[to];
+            }
+            
+            function getUnitSymbol(unit) {
+                return unitSymbols[unit] || unit;
+            }
+            
+            function updateDisplay() {
+                let displayValue = currentInput;
+                if (displayValue === '') displayValue = '0';
+                mainDisplay.textContent = formatNumber(displayValue);
+                
+                const fromSym = getUnitSymbol(fromUnit);
+                const toSym = getUnitSymbol(toUnit);
+                const inputNum = parseFloat(currentInput);
+                if (!isNaN(inputNum) && currentInput !== '') {
+                    const converted = convertValue(currentInput, fromUnit, toUnit);
+                    const convertedStr = parseFloat(converted.toFixed(8)).toString();
+                    secondaryDisplay.textContent = `${formatNumber(currentInput)} ${fromSym} = ${convertedStr} ${toSym}`;
+                } else {
+                    secondaryDisplay.textContent = `0 ${fromSym} = 0 ${toSym}`;
+                }
+                
+                unitDisplay.textContent = `${fromSym} → ${toSym}`;
+                
+                mainDisplay.scrollLeft = mainDisplay.scrollWidth;
+                secondaryDisplay.scrollLeft = secondaryDisplay.scrollWidth;
+            }
+            
+            function updateUnitActiveStates() {
+                document.querySelectorAll('[data-from]').forEach(btn => {
+                    const unit = btn.getAttribute('data-from');
+                    btn.classList.toggle('active', unit === fromUnit);
+                });
+                document.querySelectorAll('[data-to]').forEach(btn => {
+                    const unit = btn.getAttribute('data-to');
+                    btn.classList.toggle('active', unit === toUnit);
+                });
+            }
+            
+            function performConversionAndRecord() {
+                const inputNum = parseFloat(currentInput);
+                if (isNaN(inputNum)) return;
+                
+                const converted = convertValue(currentInput, fromUnit, toUnit);
+                const resultStr = parseFloat(converted.toFixed(8)).toString();
+                const fromSym = getUnitSymbol(fromUnit);
+                const toSym = getUnitSymbol(toUnit);
+                const expression = `${formatNumber(currentInput)} ${fromSym} = ${resultStr} ${toSym}`;
+                
+                currentInput = resultStr;
+                resultDisplayed = true;
+                updateDisplay();
+            }
+            
+            function appendNumber(val) {
+                if (resultDisplayed) {
+                    currentInput = val;
+                    resultDisplayed = false;
+                } else {
+                    if (currentInput === '0' && val !== '.') {
+                        currentInput = val;
+                    } else {
+                        if (val === '.' && currentInput.includes('.')) return;
+                        currentInput += val;
+                    }
+                }
+                updateDisplay();
+            }
+            
+            function handleBackspace() {
+                if (resultDisplayed) {
+                    currentInput = '0';
+                    resultDisplayed = false;
+                } else {
+                    if (currentInput.length > 1) {
+                        currentInput = currentInput.slice(0, -1);
+                    } else {
+                        currentInput = '0';
+                    }
+                }
+                updateDisplay();
+            }
+            
+            function handleClearAll() {
+                currentInput = '0';
+                resultDisplayed = false;
+                updateDisplay();
+            }
+            
+            function handleSwapUnits() {
+                const temp = fromUnit;
+                fromUnit = toUnit;
+                toUnit = temp;
+                updateUnitActiveStates();
+                updateDisplay();
+            }
+            
+            function setFromUnit(unit) {
+                if (unit === toUnit) {
+                    toUnit = fromUnit;
+                }
+                fromUnit = unit;
+                updateUnitActiveStates();
+                updateDisplay();
+            }
+            
+            function setToUnit(unit) {
+                if (unit === fromUnit) {
+                    fromUnit = toUnit;
+                }
+                toUnit = unit;
+                updateUnitActiveStates();
+                updateDisplay();
+            }
+            
+            fromContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-from]');
+                if (!btn) return;
+                const unit = btn.getAttribute('data-from');
+                setFromUnit(unit);
+            });
+            
+            toContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-to]');
+                if (!btn) return;
+                const unit = btn.getAttribute('data-to');
+                setToUnit(unit);
+            });
+            
+            numberBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    appendNumber(btn.getAttribute('data-val'));
+                });
+            });
+            
+            backBtn.addEventListener('click', handleBackspace);
+            clearAllBtn.addEventListener('click', handleClearAll);
+            swapBtn.addEventListener('click', handleSwapUnits);
+            convertBtn.addEventListener('click', performConversionAndRecord);
+            
+            converterHeader.addEventListener('click', () => {
+                updateUnitActiveStates();
+                popupOverlay.style.display = 'flex';
+            });
+            
+            closePopupBtn.addEventListener('click', () => {
+                popupOverlay.style.display = 'none';
+            });
+            
+            window.addEventListener('click', (e) => {
+                if (e.target.classList.contains('popup-overlay')) {
+                    popupOverlay.style.display = 'none';
+                }
+            });
+            
+            updateUnitActiveStates();
+            updateDisplay();
+        })();
+    </script>
+</body>
+</html>
