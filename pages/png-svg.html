@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PNG to SVG · lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <meta name="robots" content="index, follow">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 40px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+        }
+
+        .blur-background {
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            background-color: rgba(22, 22, 24, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        header {
+            padding: var(--spacing-md) 0;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .banner-image {
+            width: 100%;
+            height: 140px;
+            background-size: cover;
+            background-position: center;
+            border-radius: var(--radius-medium);
+            margin-bottom: var(--spacing-md);
+            background-color: #1e1e1e;
+        }
+
+        .mobile-banner {
+            display: block;
+        }
+
+        .desktop-banner {
+            display: none;
+        }
+
+        @media (min-width: 769px) {
+            .mobile-banner {
+                display: none;
+            }
+            .desktop-banner {
+                display: block;
+            }
+        }
+
+        .converter-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent-color), #e8f8b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+        }
+
+        .upload-zone {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            border: 2px dashed rgba(193, 252, 50, 0.3);
+            transition: border-color 0.2s;
+        }
+
+        .upload-zone.drag-over {
+            border-color: var(--accent-color);
+            background: rgba(193, 252, 50, 0.05);
+        }
+
+        .file-list-container {
+            position: relative;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .files-scroll {
+            display: flex;
+            overflow-x: auto;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) 4px;
+            scroll-behavior: smooth;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .files-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .file-card {
+            flex: 0 0 180px;
+            background: rgba(20, 20, 22, 0.9);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            position: relative;
+        }
+
+        .file-preview {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: #0a0a0a;
+            border-radius: var(--radius-small);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .file-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .file-name {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 6px;
+        }
+
+        .file-status {
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--accent-color);
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent-color);
+            transition: width 0.2s;
+        }
+
+        .remove-file {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            font-size: 14px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .btn {
+            background: transparent;
+            border: 1px solid rgba(193, 252, 50, 0.5);
+            color: var(--accent-color);
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            background-color: rgba(193, 252, 50, 0.05);
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .btn:hover {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .scroll-btn {
+            background: rgba(30,30,30,0.9);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 5;
+        }
+
+        .scroll-btn.left {
+            left: -10px;
+        }
+
+        .scroll-btn.right {
+            right: -10px;
+        }
+
+        .scroll-btn:disabled {
+            opacity: 0.3;
+        }
+
+        .footer {
+            margin-top: var(--spacing-xl);
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: var(--spacing-lg);
+        }
+
+        .drop-message {
+            text-align: center;
+            padding: var(--spacing-md);
+            color: var(--text-secondary);
+        }
+
+        .error-hint {
+            color: #ff5e5e;
+            margin-left: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .file-card {
+                flex: 0 0 140px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="banner-image mobile-banner" style="background-image: linear-gradient(145deg, #0f0f0f, #1a1a1a);"></div>
+            <div class="banner-image desktop-banner" style="background-image: linear-gradient(145deg, #0f0f0f, #1a1a1a); height:180px;"></div>
+            <h1 class="converter-title">PNG → SVG</h1>
+            <div class="tagline">Vectorize PNG images · fast · free · local</div>
+        </header>
+
+        <div class="upload-zone" id="dropZone">
+            <div class="action-buttons">
+                <label class="btn btn-primary" id="uploadBtnLabel">
+                    <i class="fas fa-cloud-upload-alt"></i> UPLOAD FILES
+                    <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.bmp,.gif,.tiff,.tif,.webp" style="display:none;">
+                </label>
+                <button class="btn" id="clearBtn" disabled>
+                    <i class="fas fa-trash-alt"></i> CLEAR
+                </button>
+                <button class="btn" id="downloadAllBtn" disabled>
+                    <i class="fas fa-download"></i> DOWNLOAD ALL
+                    <span id="downloadCounter" style="display:none;">0</span>
+                </button>
+                <span id="errorHint" class="error-hint"></span>
+            </div>
+
+            <div class="file-list-container">
+                <button class="scroll-btn left" id="scrollLeftBtn" disabled><i class="fas fa-chevron-left"></i></button>
+                <div class="files-scroll" id="filesScroll"></div>
+                <button class="scroll-btn right" id="scrollRightBtn" disabled><i class="fas fa-chevron-right"></i></button>
+                <div id="dropMessage" class="drop-message">
+                    <i class="fas fa-arrow-down" style="font-size: 28px; opacity:0.5; margin-bottom:8px;"></i>
+                    <p>Drop PNG / JPG files here</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Files processed locally · auto‑deleted after refresh · vector tracing via imagetracer</p>
+            <p style="margin-top:12px;">© lildavegoth · Jakarta</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/imagetracerjs@1.2.6/imagetracer.js"></script>
+<script>
+    (function(){
+        "use strict";
+
+        const MAX_FILES = 20;
+        const MAX_SIZE = 50 * 1024 * 1024;
+        const MAX_IMAGE_DIM = 2048;
+
+        const state = {
+            files: new Map(),
+            nextId: 0,
+            convertedCount: 0
+        };
+
+        const elements = {
+            fileInput: document.getElementById('fileInput'),
+            uploadLabel: document.getElementById('uploadBtnLabel'),
+            clearBtn: document.getElementById('clearBtn'),
+            downloadAllBtn: document.getElementById('downloadAllBtn'),
+            downloadCounter: document.getElementById('downloadCounter'),
+            filesScroll: document.getElementById('filesScroll'),
+            dropZone: document.getElementById('dropZone'),
+            dropMessage: document.getElementById('dropMessage'),
+            scrollLeft: document.getElementById('scrollLeftBtn'),
+            scrollRight: document.getElementById('scrollRightBtn'),
+            errorHint: document.getElementById('errorHint')
+        };
+
+        function generateId() {
+            return (++state.nextId).toString();
+        }
+
+        function updateUI() {
+            const fileCount = state.files.size;
+            const hasFiles = fileCount > 0;
+            elements.clearBtn.disabled = !hasFiles;
+
+            const converted = Array.from(state.files.values()).filter(f => f.status === 'done').length;
+            const allConverted = (converted === fileCount) && fileCount > 0;
+            elements.downloadAllBtn.disabled = !allConverted;
+
+            if (allConverted && fileCount) {
+                elements.downloadCounter.style.display = 'inline';
+                elements.downloadCounter.textContent = converted;
+            } else {
+                elements.downloadCounter.style.display = 'none';
+            }
+
+            elements.dropMessage.style.display = fileCount === 0 ? 'block' : 'none';
+            updateScrollButtons();
+        }
+
+        function updateScrollButtons() {
+            const scroll = elements.filesScroll;
+            if (!scroll) return;
+            const canScrollLeft = scroll.scrollLeft > 0;
+            const canScrollRight = scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 2;
+            elements.scrollLeft.disabled = !canScrollLeft;
+            elements.scrollRight.disabled = !canScrollRight;
+        }
+
+        function scrollList(direction) {
+            const scroll = elements.filesScroll;
+            const scrollAmount = 220;
+            if (direction === 'left') {
+                scroll.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+            } else {
+                scroll.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+            }
+            setTimeout(updateScrollButtons, 150);
+        }
+
+        function setErrorHint(text) {
+            elements.errorHint.textContent = text || '';
+            elements.errorHint.style.display = text ? 'inline' : 'none';
+        }
+
+        function createFileCard(fileId, file) {
+            const card = document.createElement('div');
+            card.className = 'file-card';
+            card.dataset.fileId = fileId;
+
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'file-preview';
+            const img = document.createElement('img');
+            img.alt = file.name;
+            previewDiv.appendChild(img);
+
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'file-name';
+            nameDiv.textContent = file.name;
+
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'file-status';
+            const iconSpan = document.createElement('i');
+            const textSpan = document.createElement('span');
+            statusDiv.appendChild(iconSpan);
+            statusDiv.appendChild(textSpan);
+            textSpan.textContent = ' waiting';
+
+            const progressBar = document.createElement('div');
+            progressBar.className = 'progress-bar';
+            const progressFill = document.createElement('div');
+            progressFill.className = 'progress-fill';
+            progressBar.appendChild(progressFill);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-file';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeFile(fileId);
+            });
+
+            card.appendChild(previewDiv);
+            card.appendChild(nameDiv);
+            card.appendChild(statusDiv);
+            card.appendChild(progressBar);
+            card.appendChild(removeBtn);
+
+            if (file.preview) {
+                img.src = file.preview;
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    img.src = e.target.result;
+                    file.preview = e.target.result;
+                };
+                reader.readAsDataURL(file.file);
+            }
+
+            return { 
+                card, 
+                iconSpan, 
+                textSpan, 
+                progressFill 
+            };
+        }
+
+        function renderFileList() {
+            const scroll = elements.filesScroll;
+            const existingCards = new Map();
+            Array.from(scroll.children).forEach(child => {
+                if (child.dataset.fileId) existingCards.set(child.dataset.fileId, child);
+            });
+
+            const fragment = document.createDocumentFragment();
+            for (let [fileId, file] of state.files) {
+                let card = existingCards.get(fileId);
+                if (!card) {
+                    const created = createFileCard(fileId, file);
+                    card = created.card;
+                    file.ui = { 
+                        iconSpan: created.iconSpan, 
+                        textSpan: created.textSpan, 
+                        progressFill: created.progressFill 
+                    };
+                } else {
+                    existingCards.delete(fileId);
+                }
+                updateCardUI(fileId, file);
+                fragment.appendChild(card);
+            }
+
+            existingCards.forEach(card => card.remove());
+            scroll.appendChild(fragment);
+            updateUI();
+        }
+
+        function updateCardUI(fileId, file) {
+            const ui = file.ui;
+            if (!ui) return;
+            const { iconSpan, textSpan, progressFill } = ui;
+
+            iconSpan.className = '';
+            switch (file.status) {
+                case 'pending':
+                    iconSpan.className = 'fas fa-hourglass-half';
+                    textSpan.textContent = ' waiting';
+                    progressFill.style.width = '0%';
+                    break;
+                case 'converting':
+                    iconSpan.className = 'fas fa-sync-alt fa-spin';
+                    textSpan.textContent = ' vectorizing';
+                    progressFill.style.width = file.progress ? `${file.progress}%` : '10%';
+                    break;
+                case 'done':
+                    iconSpan.className = 'fas fa-check-circle';
+                    iconSpan.style.color = '#C1FC32';
+                    textSpan.textContent = ' done · SVG';
+                    progressFill.style.width = '100%';
+                    break;
+                case 'error':
+                    iconSpan.className = 'fas fa-exclamation-triangle';
+                    iconSpan.style.color = '#ff5e5e';
+                    textSpan.textContent = file.errorMessage ? ` ${file.errorMessage}` : ' failed';
+                    progressFill.style.width = '0%';
+                    break;
+            }
+        }
+
+        function removeFile(fileId) {
+            const file = state.files.get(fileId);
+            if (file && file.conversionActive) {
+                file.cancel = true;
+            }
+            state.files.delete(fileId);
+            renderFileList();
+            setErrorHint('');
+        }
+
+        function clearAllFiles() {
+            for (let [id, file] of state.files) {
+                if (file.conversionActive) file.cancel = true;
+            }
+            state.files.clear();
+            renderFileList();
+            setErrorHint('');
+        }
+
+        function validateFile(file) {
+            if (!file.type.match(/image\/(png|jpeg|jpg|bmp|gif|tiff|webp)/)) {
+                return 'Unsupported format.';
+            }
+            if (file.size > MAX_SIZE) {
+                return 'File exceeds 50MB.';
+            }
+            return null;
+        }
+
+        function addFiles(files) {
+            if (state.files.size + files.length > MAX_FILES) {
+                setErrorHint(`Max ${MAX_FILES} files allowed.`);
+                return;
+            }
+            let error = null;
+            const newFiles = [];
+            for (let f of files) {
+                const err = validateFile(f);
+                if (err) { error = err; continue; }
+                const id = generateId();
+                const fileObj = {
+                    id, file: f, name: f.name,
+                    status: 'pending',
+                    progress: 0,
+                    conversionActive: false,
+                    cancel: false,
+                    errorMessage: ''
+                };
+                state.files.set(id, fileObj);
+                newFiles.push(fileObj);
+            }
+            renderFileList();
+            if (error) setErrorHint(error);
+            if (newFiles.length) startConversionQueue();
+        }
+
+        async function startConversionQueue() {
+            const pending = Array.from(state.files.values()).filter(f => f.status === 'pending');
+            for (let file of pending) {
+                if (file.cancel) continue;
+                await convertFile(file);
+            }
+        }
+
+        function checkLibrary() {
+            if (typeof ImageTracer === 'undefined') {
+                throw new Error('ImageTracer library not loaded');
+            }
+        }
+
+        async function convertFile(fileObj) {
+            fileObj.status = 'converting';
+            fileObj.conversionActive = true;
+            fileObj.errorMessage = '';
+            renderFileList();
+
+            try {
+                checkLibrary();
+                const svgString = await pngToSvg(fileObj.file, (progress) => {
+                    if (fileObj.cancel) throw new Error('cancelled');
+                    fileObj.progress = progress;
+                    renderFileList();
+                });
+
+                if (fileObj.cancel) throw new Error('cancelled');
+
+                fileObj.svgData = svgString;
+                fileObj.status = 'done';
+                fileObj.progress = 100;
+                state.convertedCount++;
+            } catch (e) {
+                if (!fileObj.cancel) {
+                    fileObj.status = 'error';
+                    fileObj.errorMessage = e.message || 'conversion failed';
+                    setErrorHint(fileObj.name + ': ' + fileObj.errorMessage);
+                }
+            } finally {
+                fileObj.conversionActive = false;
+                renderFileList();
+                startConversionQueue();
+            }
+        }
+
+        function resizeImageIfNeeded(img) {
+            let width = img.width;
+            let height = img.height;
+            if (width <= MAX_IMAGE_DIM && height <= MAX_IMAGE_DIM) {
+                return { img, width, height, resized: false };
+            }
+            const ratio = Math.min(MAX_IMAGE_DIM / width, MAX_IMAGE_DIM / height);
+            const newWidth = Math.floor(width * ratio);
+            const newHeight = Math.floor(height * ratio);
+            const canvas = document.createElement('canvas');
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, newWidth, newHeight);
+            const resizedImg = new Image();
+            return new Promise((resolve) => {
+                resizedImg.onload = () => resolve({ img: resizedImg, width: newWidth, height: newHeight, resized: true });
+                resizedImg.src = canvas.toDataURL('image/png');
+            });
+        }
+
+        function pngToSvg(file, progressCb) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const img = new Image();
+                    img.onload = async () => {
+                        try {
+                            progressCb(20);
+                            const { img: processedImg, width, height, resized } = await resizeImageIfNeeded(img);
+                            
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(processedImg, 0, 0, width, height);
+                            const imgData = ctx.getImageData(0, 0, width, height);
+                            progressCb(50);
+
+                            setTimeout(() => {
+                                try {
+                                    const options = {
+                                        ltres: 1,
+                                        qtres: 1,
+                                        pathomit: 8,
+                                        rightangleenhance: true,
+                                        colorsampling: 2,
+                                        numberofcolors: 16,
+                                        mincolorratio: 0.02,
+                                        colorquantcycles: 3,
+                                        layering: 0,
+                                        strokewidth: 0.5,
+                                        linefilter: true,
+                                        scale: 1,
+                                        roundcoords: 2,
+                                        desc: false,
+                                        viewbox: true
+                                    };
+                                    const svg = ImageTracer.imagedataToSVG(imgData, options);
+                                    progressCb(100);
+                                    resolve(svg);
+                                } catch (err) {
+                                    reject(new Error('Tracing failed: ' + err.message));
+                                }
+                            }, 20);
+                        } catch (err) {
+                            reject(err);
+                        }
+                    };
+                    img.onerror = () => reject(new Error('Image could not be loaded'));
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => reject(new Error('File read error'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function downloadAllAsZip() {
+            const doneFiles = Array.from(state.files.values()).filter(f => f.status === 'done' && f.svgData);
+            if (!doneFiles.length) return;
+
+            const zip = new JSZip();
+            for (let file of doneFiles) {
+                const baseName = file.name.replace(/\.[^/.]+$/, "");
+                zip.file(baseName + '.svg', file.svgData);
+            }
+            const content = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'png2svg_batch.zip';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadSingle(fileId) {
+            const file = state.files.get(fileId);
+            if (!file || !file.svgData) return;
+            const blob = new Blob([file.svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name.replace(/\.[^/.]+$/, "") + '.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        elements.filesScroll.addEventListener('click', (e) => {
+            const card = e.target.closest('.file-card');
+            if (!card) return;
+            const fileId = card.dataset.fileId;
+            const file = state.files.get(fileId);
+            if (file && file.status === 'done') {
+                downloadSingle(fileId);
+            }
+        });
+
+        elements.fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                addFiles(Array.from(e.target.files));
+                elements.fileInput.value = '';
+            }
+        });
+
+        elements.clearBtn.addEventListener('click', clearAllFiles);
+        elements.downloadAllBtn.addEventListener('click', downloadAllAsZip);
+
+        elements.scrollLeft.addEventListener('click', () => scrollList('left'));
+        elements.scrollRight.addEventListener('click', () => scrollList('right'));
+
+        elements.filesScroll.addEventListener('scroll', updateScrollButtons);
+        window.addEventListener('resize', updateScrollButtons);
+
+        elements.dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            elements.dropZone.classList.add('drag-over');
+        });
+        elements.dropZone.addEventListener('dragleave', () => {
+            elements.dropZone.classList.remove('drag-over');
+        });
+        elements.dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            elements.dropZone.classList.remove('drag-over');
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (files.length) addFiles(files);
+        });
+
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            const imageFiles = [];
+            for (let item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) imageFiles.push(file);
+                }
+            }
+            if (imageFiles.length) {
+                e.preventDefault();
+                addFiles(imageFiles);
+            }
+        });
+
+        renderFileList();
+    })();
+</script>
+</body>
+</html>
