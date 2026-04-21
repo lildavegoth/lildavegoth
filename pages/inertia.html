@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inertia | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 100px;
+        }
+
+        .page-section {
+            display: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .page-section.active {
+            display: block;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+            min-height: calc(100vh - 90px);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-dark);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .mon-pill {
+            background-color: var(--accent-color);
+            color: #000000;
+            padding: 10px 15px;
+            border-radius: var(--radius-small);
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-right: var(--spacing-md);
+        }
+
+        .header-text {
+            flex: 1;
+        }
+
+        .username {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .start-date {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .merged-card {
+            background-color: var(--bg-dark);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .merged-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .year-month {
+            font-size: 2.2rem;
+            font-weight: 700;
+        }
+
+        .motivation {
+            margin-top: var(--spacing-sm);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+        }
+
+        .score-section {
+            display: flex;
+            align-items: center;
+            margin-top: auto;
+            padding-top: var(--spacing-lg);
+        }
+
+        .small-score {
+            background-color: var(--accent-color);
+            color: #000000;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-medium);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-right: var(--spacing-md);
+            flex-shrink: 0;
+        }
+
+        .great-work-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .keep-progress {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-top: 4px;
+        }
+
+        .workouts-header {
+            font-size: 1.85rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+            margin-top: -25px;
+        }
+
+        .workouts-grid {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .workout-card {
+            background-color: var(--bg-dark);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            flex: 1;
+            min-width: 320px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .workout-card:active {
+            transform: scale(0.99);
+        }
+
+        .placeholder-card {
+            background-color: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-xl);
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            width: 100%;
+        }
+
+        .workout-date {
+            font-size: 2.2rem;
+            font-weight: 500;
+        }
+
+        .exercise-list {
+            margin-top: var(--spacing-md);
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: rgba(245, 245, 247, 0.65);
+        }
+
+        .workout-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: var(--spacing-lg);
+        }
+
+        .workout-icon {
+            font-size: 3rem;
+            color: var(--accent-color);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .fab-add {
+            position: fixed;
+            bottom: 110px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 18px;
+            background-color: var(--accent-color);
+            color: #000000;
+            border: none;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            z-index: 9999;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .fab-add:active {
+            transform: scale(0.92);
+        }
+
+        .fab-add.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .popup-body {
+            padding: var(--spacing-md);
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .suggestion-box {
+            background: #222;
+            border: 1px solid #444;
+            border-radius: var(--radius-small);
+            max-height: 180px;
+            overflow-y: auto;
+            position: absolute;
+            width: 100%;
+            z-index: 10;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid #333;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .popup-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: var(--radius-small);
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .btn-danger {
+            background: rgba(255, 70, 70, 0.2);
+            color: #ff6b6b;
+            border: 1px solid rgba(255, 70, 70, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-primary);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        textarea.form-input {
+            resize: none;
+            min-height: 70px;
+        }
+
+        .delete-confirm-text {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.1rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+        }
+
+        .pagination-btn {
+            background: var(--accent-color);
+            border: none;
+            color: #000000;
+            width: 50px;
+            height: 50px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: opacity 0.2s;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .page-indicator {
+            background: var(--bg-dark);
+            color: #ffffff;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(22, 22, 24, 1.0);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            z-index: 99999;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            width: auto;
+            min-width: 250px;
+        }
+
+        .nav-button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 12px 24px;
+            border-radius: 30px;
+            min-width: 70px;
+            font-size: 0.9rem;
+            font-weight:500;
+            white-space: nowrap;
+        }
+
+        .nav-button.active {
+            color: var(--accent-color);
+        }
+
+        .nav-button.active:not(#moreButton) {
+            background: rgba(193, 252, 50, 0.1);
+        }
+
+        .nav-button:active {
+            transform: scale(0.95);
+            transition: transform 0.1s ease;
+        }
+
+        .nav-button:hover {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+
+        .settings-btn-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-medium);
+            padding: 16px 20px;
+            width: 100%;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .guide-box {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-medium);
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .guide-box p {
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .exercise-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .delete-exercise-btn {
+            background: var(--accent-color);
+            border: none;
+            color: #000000;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .extra-workouts-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px dashed rgba(255,255,255,0.2);
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: var(--radius-small);
+            width: 100%;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-medium);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .toggle-icon {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+        }
+
+        .toggle-icon.active {
+            color: var(--accent-color);
+        }
+
+        .role-switcher {
+            display: flex;
+            gap: 8px;
+            margin: 20px 0;
+        }
+
+        .role-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 30px;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .role-btn.active {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .checkin-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin: 20px 0;
+        }
+
+        .day-cell {
+            background: var(--bg-dark);
+            border-radius: 12px;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .day-cell.checked {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .checkin-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: 30px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="home-page" class="page-section active">
+        <div class="container">
+            <a href="../index.html" class="back-link fade-in" onclick="window.location.hash='';">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+            
+            <app-header class="fade-in">
+                <div>
+                    <h1 class="username">Inertia</h1>
+                    <p class="tagline">Workouts, Fitness, Health Care, all in one app for your better future</p>
+                </div>
+            </app-header>
+            
+            <div class="header" id="mainHeader">
+                <div class="mon-pill" id="dayPill">
+                    Mon
+                </div>
+                <div class="header-text">
+                    <div class="username" id="displayUsername">
+                        User
+                    </div>
+                    <div class="start-date" id="startDateDisplay">
+                        Starts at ...
+                    </div>
+                </div>
+            </div>
+
+            <div class="merged-card">
+                <div class="merged-header">
+                    <div>
+                        <div class="year-month">
+                            2026 Apr
+                        </div>
+                        <div class="motivation" id="motivationText">
+                            You've been doing great this month
+                        </div>
+                    </div>
+                    <span style="margin-right: -10px; margin-top: -10px;" class="workout icon-award"></span>
+                </div>
+                <div class="score-section">
+                    <div class="small-score" id="scoreDisplay">
+                        89
+                    </div>
+                    <div>
+                        <div class="great-work-text" id="messageTitle">
+                            Great Work!
+                        </div>
+                        <div class="keep-progress" id="messageSubtitle">
+                            Keep your current progress.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="workouts-header">
+                Workouts
+            </div>
+
+            <div class="workouts-grid" id="workoutsContainer">
+            </div>
+
+            <div class="pagination-controls" id="paginationControls">
+                <button class="pagination-btn" id="prevPageBtn" disabled>
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <span class="page-indicator" id="pageIndicator">1</span>
+                <button class="pagination-btn" id="nextPageBtn" disabled>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-page" class="page-section">
+        <div class="container">
+            <a href="../index.html" class="back-link fade-in" onclick="window.location.hash='';">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+            
+            <h2 style="margin-bottom: 24px;">Profile</h2>
+            <div>
+                <h3>Roles (Difficulties)</h3>
+                <div class="role-switcher">
+                    <button class="role-btn" id="newbieRoleBtn">Newbie (500 pts)</button>
+                    <button class="role-btn" id="proRoleBtn">Pro (5000 pts)</button>
+                </div>
+            </div>
+            <div style="margin-top: 32px;">
+                <h3>Check-in</h3>
+                <div class="checkin-grid" id="checkinGrid"></div>
+                <button class="checkin-btn" id="checkinTodayBtn">Check-in Today</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-page" class="page-section">
+        <div class="container">
+            <a href="../index.html" class="back-link fade-in" onclick="window.location.hash='';">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+            
+            <h2 style="margin-bottom: 24px;">Guides</h2>
+            <div class="guide-box">
+                <p><i class="fas fa-dumbbell" style="margin-right: 4px;"></i> <strong>Names</strong></p>
+                <p>Enter “ / ” (Slash) symbol to see all exercises and sports name</p>
+            </div>
+            <div class="guide-box">
+                <p><i class="fas fa-circle-info" style="margin-right: 4px;"></i> <strong>Notes</strong></p>
+                <p>The exercises must be added with numbers like how much did you do it today, or how much steps did you run or walk today. The number must be added cause it will be counted for the points of your score</p>
+            </div>
+            <h2 style="margin-bottom: 24px;">Settings</h2>
+            <div class="toggle-switch">
+                <span>Show Username & Date</span>
+                <div id="headerToggle" class="toggle-icon active">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+            <div class="toggle-switch">
+                <span>Hide Workout Icons</span>
+                <div id="hideIconsToggle" class="toggle-icon">
+                    <i class="fas fa-circle-dot"></i>
+                </div>
+            </div>
+            <h2 style="margin-bottom: 24px;">Storage</h2>
+            <button class="settings-btn-item" id="exportBtn" onclick="window.location.href='../storage.html'">
+                <i class="fas fa-database"></i> Data Storage
+            </button>
+
+        </div>
+        
+         <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Inertia</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle">Add Workout</h2>
+                <button class="close-popup" onclick="closeUniversalPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="popup-body" id="popupBody">
+            </div>
+            <div class="popup-actions" id="popupActions">
+            </div>
+        </div>
+    </div>
+
+    <button class="fab-add" id="addWorkoutFab">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <div class="bottom-nav">
+        <button class="nav-button active" data-page="home" onclick="switchPage('home', event)">
+            <span class="icon icon-android"></span>
+        </button>
+        <button class="nav-button" data-page="profile" onclick="switchPage('profile', event)">
+            <span class="icon icon-user"></span>
+        </button>
+        <button class="nav-button" data-page="settings" onclick="switchPage('settings', event)">
+            <span class="icon icon-gear"></span>
+        </button>
+    </div>
+
+    <script>
+        (function() {
+            const SCORE_STORAGE_KEY = 'scoreCounts';
+            const WORKOUTS_STORAGE_KEY = 'workoutsCards';
+            const MAX_SCORE = 100;
+            const CARDS_PER_PAGE = 5;
+
+            const ICON_PRESETS = [
+                'icon-hiking',
+                'icon-run',
+                'icon-fitness',
+                'icon-stairs',
+                'icon-riding',
+                'icon-exercise'
+            ];
+
+            const EXERCISE_OPTIONS = [
+                "Running", "Walking", "Jogging", "Push-up", "Sit-up", "Pull-up", "Squat", "Lunge", "Burble",
+                "Dumbbell", "Bench Press", "Deadlift", "Cycling", "Swimming", "Yoga", "Pilates", "Stair Climbing",
+                "Running upstairs", "Running downstairs", "Running Up & Down on stairs", "Stair Stepper", "Jump Rope", "Plank", "Mountain Climbers",
+                "High Knees", "Burpees", "Box Jump", "Kettlebell Swing", "Rowing", "Elliptical", "Hiking"
+            ];
+
+            let currentPage = 0;
+            let allCards = [];
+            let currentEditingCardId = null;
+            let extraFieldCount = 0;
+
+            function extractNumbersFromText(text) {
+                const matches = text.match(/\d+/g);
+                if (!matches) return [];
+                return matches.map(Number);
+            }
+
+            function getRoleThreshold() {
+                const role = localStorage.getItem('userRole') || 'newbie';
+                return role === 'pro' ? 5000 : 500;
+            }
+
+            function calculateScoreFromWorkouts() {
+                let total = 0;
+                allCards.forEach(card => {
+                    const text = (card.exercises || []).join(' ');
+                    const numbers = extractNumbersFromText(text);
+                    numbers.forEach(num => {
+                        if (num >= 1000) {
+                            total += Math.floor(num / 100);
+                        } else {
+                            total += num;
+                        }
+                    });
+                });
+                const threshold = getRoleThreshold();
+                return Math.min(MAX_SCORE, Math.floor(total / (threshold / MAX_SCORE)));
+            }
+
+            function updateMotivationText() {
+                let totalExercises = 0;
+                let totalPoints = 0;
+                allCards.forEach(card => {
+                    totalExercises += (card.exercises || []).length;
+                    const text = (card.exercises || []).join(' ');
+                    const numbers = extractNumbersFromText(text);
+                    numbers.forEach(num => {
+                        if (num >= 1000) totalPoints += Math.floor(num / 100);
+                        else totalPoints += num;
+                    });
+                });
+                const el = document.getElementById('motivationText');
+                if (el) {
+                    el.textContent = `You've logged ${totalExercises} exercises with ${totalPoints} total points. Keep pushing!`;
+                }
+            }
+
+            function updateScoreDisplay(score) {
+                const scoreEl = document.getElementById('scoreDisplay');
+                if (scoreEl) scoreEl.textContent = score;
+            }
+
+            function updateMotivationMessages(score) {
+                const titleEl = document.getElementById('messageTitle');
+                const subtitleEl = document.getElementById('messageSubtitle');
+                if (!titleEl || !subtitleEl) return;
+                if (score === 0) {
+                    titleEl.textContent = 'Oh no..';
+                    subtitleEl.textContent = 'At least you need to try once.';
+                } else if (score < 20) {
+                    titleEl.textContent = 'You Can!';
+                    subtitleEl.textContent = 'Yes you can be more than this.';
+                } else if (score >= 20 && score < 50) {
+                    titleEl.textContent = 'Good Enough!';
+                    subtitleEl.textContent = 'Keep up and you got better results.';
+                } else if (score >= 50 && score < 80) {
+                    titleEl.textContent = 'Good Enough!';
+                    subtitleEl.textContent = 'Keep up and you got better results.';
+                } else {
+                    titleEl.textContent = 'Great Work!';
+                    subtitleEl.textContent = 'Keep your current progress.';
+                }
+            }
+
+            function saveScoreToStorage(score) {
+                localStorage.setItem(SCORE_STORAGE_KEY, score);
+            }
+
+            function getWorkoutCardsFromStorage() {
+                const stored = localStorage.getItem(WORKOUTS_STORAGE_KEY);
+                if (stored) {
+                    try { return JSON.parse(stored); } catch (e) { return []; }
+                }
+                return [];
+            }
+
+            function saveWorkoutCardsToStorage(cards) {
+                localStorage.setItem(WORKOUTS_STORAGE_KEY, JSON.stringify(cards));
+            }
+
+            function loadAllCards() {
+                allCards = getWorkoutCardsFromStorage();
+            }
+
+            function saveAllCards() {
+                saveWorkoutCardsToStorage(allCards);
+            }
+
+            function getPageCards() {
+                const start = currentPage * CARDS_PER_PAGE;
+                return allCards.slice(start, start + CARDS_PER_PAGE);
+            }
+
+            function updatePageIndicator() {
+                document.getElementById('pageIndicator').textContent = currentPage + 1;
+            }
+
+            function renderWorkoutCards() {
+                const container = document.getElementById('workoutsContainer');
+                const pageCards = getPageCards();
+                const hideIcons = localStorage.getItem('hideIcons') === 'true';
+                if (allCards.length === 0) {
+                    container.innerHTML = `<div class="placeholder-card">No workouts yet.<br>Tap the <i class="fas fa-plus" style="color: var(--accent-color);"></i> button to add your first workout.</div>`;
+                } else {
+                    let html = '';
+                    pageCards.forEach(card => {
+                        const exerciseHtml = (card.exercises || []).map(ex => `${ex}`).join('<br>');
+                        const iconHtml = hideIcons ? '' : `<span class="workout ${card.icon || 'icon-user'}"></span>`;
+                        html += `
+                            <div class="workout-card" data-card-id="${card.id}" onclick="openEditPopup('${card.id}')">
+                                <div class="workout-date">${card.title || 'Workout'}</div>
+                                <div class="exercise-list">${exerciseHtml}</div>
+                                <div class="workout-footer">
+                                    <div class="workout-icon">
+                                        ${iconHtml}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                }
+                if (!hideIcons) attachIconListeners();
+                updatePaginationButtons();
+                updatePageIndicator();
+                refreshScoreAndUI();
+            }
+
+            function updatePaginationButtons() {
+                const prevBtn = document.getElementById('prevPageBtn');
+                const nextBtn = document.getElementById('nextPageBtn');
+                const totalPages = Math.ceil(allCards.length / CARDS_PER_PAGE);
+                prevBtn.disabled = currentPage === 0;
+                nextBtn.disabled = currentPage >= totalPages - 1 || totalPages === 0;
+            }
+
+            function attachIconListeners() {
+                document.querySelectorAll('.workout-icon span').forEach(span => {
+                    span.removeEventListener('click', iconClickHandler);
+                    span.addEventListener('click', iconClickHandler);
+                });
+            }
+
+            function iconClickHandler(e) {
+                e.stopPropagation();
+                const span = e.currentTarget;
+                const currentClass = span.className.replace('workout ', '');
+                let idx = ICON_PRESETS.indexOf(currentClass);
+                if (idx === -1) idx = 0;
+                const nextIdx = (idx + 1) % ICON_PRESETS.length;
+                span.className = 'workout ' + ICON_PRESETS[nextIdx];
+                const card = span.closest('.workout-card');
+                if (card) {
+                    const cardId = card.dataset.cardId;
+                    const cardIdx = allCards.findIndex(c => c.id === cardId);
+                    if (cardIdx !== -1) {
+                        allCards[cardIdx].icon = ICON_PRESETS[nextIdx];
+                        saveAllCards();
+                    }
+                }
+            }
+
+            function refreshScoreAndUI() {
+                const totalScore = calculateScoreFromWorkouts();
+                updateScoreDisplay(totalScore);
+                updateMotivationMessages(totalScore);
+                updateMotivationText();
+                saveScoreToStorage(totalScore);
+            }
+
+            function setUsernameFromAccount() {
+                const el = document.getElementById('displayUsername');
+                if (!el) return;
+                try {
+                    const stored = localStorage.getItem('currentUser');
+                    if (stored) {
+                        const user = JSON.parse(stored);
+                        if (user && user.username) {
+                            el.textContent = user.username;
+                            return;
+                        }
+                    }
+                } catch (e) {}
+                el.textContent = 'User';
+            }
+
+            function updateStartDateDisplay() {
+                let start = localStorage.getItem('startDate');
+                if (!start) {
+                    if (allCards.length > 0) {
+                        start = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                        localStorage.setItem('startDate', start);
+                    } else {
+                        start = '...';
+                    }
+                }
+                document.getElementById('startDateDisplay').textContent = `Starts at ${start}`;
+            }
+
+            function updateDayPill() {
+                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                document.getElementById('dayPill').textContent = days[new Date().getDay()];
+            }
+            
+            function switchPage(page, event) {
+                const currentActivePage = document.querySelector('.page-section.active');
+                const targetPage = document.getElementById(page + '-page');
+    
+                if (currentActivePage === targetPage) return;
+    
+                document.querySelectorAll('.nav-button').forEach(button => {
+                    button.classList.remove('active');
+                    button.style.transform = 'scaleX(1)';
+                    button.style.padding = '10px 20px';
+                });
+    
+                const clickedButton = event.currentTarget;
+    
+                if (currentActivePage) {
+                    currentActivePage.style.opacity = '0';
+                    currentActivePage.style.visibility = 'hidden';
+    
+                    setTimeout(() => {
+                        currentActivePage.classList.remove('active');
+                        currentActivePage.style.height = '0';
+                        currentActivePage.style.overflow = 'hidden';
+    
+                        targetPage.style.height = 'auto';
+                        targetPage.style.overflow = 'visible';
+                        targetPage.classList.add('active');
+    
+                        setTimeout(() => {
+                            targetPage.style.opacity = '1';
+                            targetPage.style.visibility = 'visible';
+    
+                            clickedButton.classList.add('active');
+                            clickedButton.style.transform = 'scaleX(1.1)';
+                            clickedButton.style.padding = '10px 25px';
+    
+                            window.scrollTo(0, 0);
+                        }, 50);
+                    }, 300);
+                } else {
+                    targetPage.style.height = 'auto';
+                    targetPage.style.overflow = 'visible';
+                    targetPage.classList.add('active');
+                    targetPage.style.opacity = '1';
+                    targetPage.style.visibility = 'visible';
+    
+                    clickedButton.classList.add('active');
+                    clickedButton.style.transform = 'scaleX(1.1)';
+                    clickedButton.style.padding = '10px 25px';
+    
+                    window.scrollTo(0, 0);
+                }
+            }
+
+            window.closeUniversalPopup = function() {
+                document.getElementById('universalPopup').style.display = 'none';
+                currentEditingCardId = null;
+                extraFieldCount = 0;
+            };
+
+            function showPopup(title, bodyHtml, actionsHtml) {
+                const popup = document.getElementById('universalPopup');
+                document.getElementById('popupTitle').textContent = title;
+                document.getElementById('popupBody').innerHTML = bodyHtml;
+                document.getElementById('popupActions').innerHTML = actionsHtml || '';
+                popup.style.display = 'flex';
+                setupSuggestionListeners();
+            }
+
+            function generateExerciseFields(exercises = []) {
+                let fieldsHtml = '';
+                for (let i = 0; i < 3; i++) {
+                    fieldsHtml += `
+                        <div class="form-group">
+                            <label class="form-label">Exercise ${i+1} ${i===0?'*':'(optional)'}</label>
+                            <div class="exercise-input-wrapper">
+                                <div style="position: relative; flex:1;">
+                                    <input type="text" id="ex${i}" class="form-input exercise-input" placeholder="e.g., Running 5000 steps" autocomplete="off" value="${exercises[i] || ''}">
+                                    <div class="suggestion-box" id="suggest${i}"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                fieldsHtml += `<div id="extraFieldsContainer"></div>`;
+                fieldsHtml += `<button class="extra-workouts-btn" id="addExtraFieldBtn" type="button"><i class="fas fa-plus-circle"></i> Extra Workouts</button>`;
+                return fieldsHtml;
+            }
+
+            function openAddPopup() {
+                currentEditingCardId = null;
+                extraFieldCount = 0;
+                const body = `
+                    <div class="form-group">
+                        <label class="form-label">Title *</label>
+                        <input type="text" id="workoutTitleInput" class="form-input" placeholder="e.g., Morning Cardio" value="">
+                    </div>
+                    ${generateExerciseFields()}
+                `;
+                const actions = `
+                    <button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveNewWorkout()">Add Workout</button>
+                `;
+                showPopup('Add Workout', body, actions);
+                document.getElementById('addExtraFieldBtn').addEventListener('click', addExtraFieldHandler);
+            }
+
+            window.openEditPopup = function(cardId) {
+                const card = allCards.find(c => c.id === cardId);
+                if (!card) return;
+                currentEditingCardId = cardId;
+                extraFieldCount = Math.max(0, (card.exercises.length - 3));
+                const body = `
+                    <div class="form-group">
+                        <label class="form-label">Title</label>
+                        <input type="text" id="editTitle" class="form-input" value="${card.title || ''}">
+                    </div>
+                    ${generateExerciseFields(card.exercises)}
+                `;
+                const actions = `
+                    <button class="btn btn-danger" onclick="requestDeleteConfirmation('${cardId}')">Delete</button>
+                    <button class="btn btn-primary" onclick="saveEditedWorkout()">Save</button>
+                `;
+                showPopup('Edit Workout', body, actions);
+                document.getElementById('addExtraFieldBtn').addEventListener('click', addExtraFieldHandler);
+                renderExtraFields(card.exercises.slice(3));
+            };
+
+            function addExtraFieldHandler() {
+                if (extraFieldCount >= 7) { window.showMessage('Maximum 10 exercises total.'); return; }
+                extraFieldCount++;
+                const container = document.getElementById('extraFieldsContainer');
+                const idx = 3 + extraFieldCount - 1;
+                const div = document.createElement('div');
+                div.className = 'form-group';
+                div.id = `extraGroup${idx}`;
+                div.innerHTML = `
+                    <label class="form-label">Exercise ${idx+1} (optional)</label>
+                    <div class="exercise-input-wrapper">
+                        <div style="position: relative; flex:1;">
+                            <input type="text" id="ex${idx}" class="form-input exercise-input" placeholder="e.g., Running 5000 steps" autocomplete="off">
+                            <div class="suggestion-box" id="suggest${idx}"></div>
+                        </div>
+                        <button class="delete-exercise-btn" onclick="removeExtraField(${idx})"><i class="fas fa-times"></i></button>
+                    </div>
+                `;
+                container.appendChild(div);
+                setupSuggestionListeners();
+            }
+
+            window.removeExtraField = function(idx) {
+                const el = document.getElementById(`extraGroup${idx}`);
+                if (el) el.remove();
+                extraFieldCount--;
+            };
+
+            function renderExtraFields(extraExercises) {
+                const container = document.getElementById('extraFieldsContainer');
+                container.innerHTML = '';
+                extraExercises.forEach((val, i) => {
+                    const idx = 3 + i;
+                    extraFieldCount = i+1;
+                    const div = document.createElement('div');
+                    div.className = 'form-group';
+                    div.id = `extraGroup${idx}`;
+                    div.innerHTML = `
+                        <label class="form-label">Exercise ${idx+1} (optional)</label>
+                        <div class="exercise-input-wrapper">
+                            <div style="position: relative; flex:1;">
+                                <input type="text" id="ex${idx}" class="form-input exercise-input" value="${val}" placeholder="e.g., Running 5000 steps" autocomplete="off">
+                                <div class="suggestion-box" id="suggest${idx}"></div>
+                            </div>
+                            <button class="delete-exercise-btn" onclick="removeExtraField(${idx})"><i class="fas fa-times"></i></button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+                setupSuggestionListeners();
+            }
+
+            function collectExercisesFromPopup() {
+                const exs = [];
+                for (let i = 0; i <= 2 + extraFieldCount; i++) {
+                    const input = document.getElementById(`ex${i}`);
+                    if (input) {
+                        const val = input.value.trim();
+                        if (val) exs.push(val);
+                    }
+                }
+                return exs;
+            }
+
+            window.saveNewWorkout = function() {
+                const title = document.getElementById('workoutTitleInput').value.trim();
+                if (!title) { window.showMessage('Title required'); return; }
+                const exercises = collectExercisesFromPopup();
+                if (exercises.length === 0) { window.showMessage('At least one exercise required'); return; }
+                const newCard = {
+                    id: Date.now() + '-' + Math.random().toString(36),
+                    title, exercises, icon: 'icon-user'
+                };
+                allCards.unshift(newCard);
+                saveAllCards();
+                closeUniversalPopup();
+                currentPage = 0;
+                updateStartDateDisplay();
+                renderWorkoutCards();
+            };
+
+            window.saveEditedWorkout = function() {
+                if (!currentEditingCardId) return;
+                const title = document.getElementById('editTitle').value.trim();
+                const exercises = collectExercisesFromPopup();
+                if (!title || exercises.length === 0) { window.showMessage('Title and at least one exercise required'); return; }
+                const idx = allCards.findIndex(c => c.id === currentEditingCardId);
+                if (idx !== -1) {
+                    allCards[idx].title = title;
+                    allCards[idx].exercises = exercises;
+                    saveAllCards();
+                }
+                closeUniversalPopup();
+                renderWorkoutCards();
+            };
+
+            window.requestDeleteConfirmation = function(cardId) {
+                currentEditingCardId = cardId;
+                const body = `<div class="delete-confirm-text">Are you sure you want to delete this? It cannot be undone.</div>`;
+                const actions = `
+                    <button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button>
+                    <button class="btn btn-danger" onclick="confirmDeleteCard()">Delete</button>
+                `;
+                showPopup('Confirm Delete', body, actions);
+            };
+
+            window.confirmDeleteCard = function() {
+                if (!currentEditingCardId) return;
+                allCards = allCards.filter(c => c.id !== currentEditingCardId);
+                saveAllCards();
+                const totalPages = Math.ceil(allCards.length / CARDS_PER_PAGE);
+                if (currentPage >= totalPages && totalPages > 0) currentPage = totalPages - 1;
+                closeUniversalPopup();
+                renderWorkoutCards();
+            };
+
+            function setupSuggestionListeners() {
+                document.querySelectorAll('.exercise-input').forEach(input => {
+                    const suggestionBox = input.parentElement.querySelector('.suggestion-box');
+                    if (!suggestionBox) return;
+                    input.addEventListener('input', function() {
+                        const val = this.value;
+                        if (val.includes('/')) {
+                            const query = val.split('/').pop().toLowerCase();
+                            const matches = EXERCISE_OPTIONS.filter(opt => opt.toLowerCase().includes(query));
+                            suggestionBox.innerHTML = matches.map(m => `<div class="suggestion-item">${m}</div>`).join('');
+                            suggestionBox.style.display = matches.length ? 'block' : 'none';
+                            suggestionBox.querySelectorAll('.suggestion-item').forEach(item => {
+                                item.addEventListener('click', () => {
+                                    const base = val.substring(0, val.lastIndexOf('/'));
+                                    this.value = base + item.textContent;
+                                    suggestionBox.style.display = 'none';
+                                });
+                            });
+                        } else {
+                            suggestionBox.style.display = 'none';
+                        }
+                    });
+                    input.addEventListener('blur', () => setTimeout(() => suggestionBox.style.display = 'none', 200));
+                });
+            }
+
+            function renderCheckinGrid() {
+                const grid = document.getElementById('checkinGrid');
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month+1, 0).getDate();
+                const checked = JSON.parse(localStorage.getItem('checkins') || '[]');
+                let html = '';
+                for (let i = 0; i < firstDay; i++) html += `<div></div>`;
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${year}-${month+1}-${d}`;
+                    const isChecked = checked.includes(dateStr);
+                    html += `<div class="day-cell ${isChecked ? 'checked' : ''}" data-date="${dateStr}">${d}</div>`;
+                }
+                grid.innerHTML = html;
+                updateCheckinButtonVisibility();
+            }
+
+            function updateCheckinButtonVisibility() {
+                const now = new Date();
+                const dateStr = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+                const checked = JSON.parse(localStorage.getItem('checkins') || '[]');
+                const btn = document.getElementById('checkinTodayBtn');
+                if (checked.includes(dateStr)) {
+                    btn.style.display = 'none';
+                } else {
+                    btn.style.display = 'block';
+                }
+            }
+
+            function updateRoleButtons() {
+                const role = localStorage.getItem('userRole') || 'newbie';
+                document.getElementById('newbieRoleBtn').classList.toggle('active', role === 'newbie');
+                document.getElementById('proRoleBtn').classList.toggle('active', role === 'pro');
+            }
+
+            function setupToggle(id, storageKey, defaultValue, callback) {
+                const el = document.getElementById(id);
+                let isActive = localStorage.getItem(storageKey);
+                if (isActive === null) {
+                    isActive = defaultValue;
+                    localStorage.setItem(storageKey, defaultValue);
+                } else {
+                    isActive = isActive === 'true';
+                }
+                el.classList.toggle('active', isActive);
+                el.innerHTML = isActive ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-circle-dot"></i>';
+                el.addEventListener('click', () => {
+                    const newState = !el.classList.contains('active');
+                    el.classList.toggle('active', newState);
+                    el.innerHTML = newState ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-circle-dot"></i>';
+                    localStorage.setItem(storageKey, newState);
+                    if (callback) callback(newState);
+                });
+                if (callback) callback(isActive);
+            }
+
+            function setFabVisibility(page) {
+                const fab = document.getElementById('addWorkoutFab');
+                if (page === 'home') {
+                    fab.classList.remove('hidden');
+                } else {
+                    fab.classList.add('hidden');
+                }
+            }
+
+            window.switchPage = function(page, event) {
+                const currentActivePage = document.querySelector('.page-section.active');
+                const targetPage = document.getElementById(page + '-page');
+                if (currentActivePage === targetPage) return;
+                document.querySelectorAll('.nav-button').forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.style.transform = 'scaleX(1)';
+                    btn.style.padding = '10px 20px';
+                });
+                const clickedButton = event.currentTarget;
+                if (currentActivePage) {
+                    currentActivePage.style.opacity = '0';
+                    currentActivePage.style.visibility = 'hidden';
+                    setTimeout(() => {
+                        currentActivePage.classList.remove('active');
+                        currentActivePage.style.height = '0';
+                        currentActivePage.style.overflow = 'hidden';
+                        targetPage.style.height = 'auto';
+                        targetPage.style.overflow = 'visible';
+                        targetPage.classList.add('active');
+                        setTimeout(() => {
+                            targetPage.style.opacity = '1';
+                            targetPage.style.visibility = 'visible';
+                            clickedButton.classList.add('active');
+                            clickedButton.style.transform = 'scaleX(1.1)';
+                            clickedButton.style.padding = '10px 25px';
+                            window.scrollTo(0, 0);
+                            if (page === 'profile') renderCheckinGrid();
+                            setFabVisibility(page);
+                        }, 50);
+                    }, 300);
+                } else {
+                    targetPage.style.height = 'auto';
+                    targetPage.style.overflow = 'visible';
+                    targetPage.classList.add('active');
+                    targetPage.style.opacity = '1';
+                    targetPage.style.visibility = 'visible';
+                    clickedButton.classList.add('active');
+                    clickedButton.style.transform = 'scaleX(1.1)';
+                    clickedButton.style.padding = '10px 25px';
+                    window.scrollTo(0, 0);
+                    if (page === 'profile') renderCheckinGrid();
+                    setFabVisibility(page);
+                }
+            };
+
+            document.getElementById('addWorkoutFab').addEventListener('click', openAddPopup);
+            document.getElementById('prevPageBtn').addEventListener('click', () => {
+                if (currentPage > 0) { currentPage--; renderWorkoutCards(); }
+            });
+            document.getElementById('nextPageBtn').addEventListener('click', () => {
+                const totalPages = Math.ceil(allCards.length / CARDS_PER_PAGE);
+                if (currentPage < totalPages - 1) { currentPage++; renderWorkoutCards(); }
+            });
+
+            document.getElementById('checkinTodayBtn').addEventListener('click', () => {
+                const now = new Date();
+                const dateStr = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+                let checked = JSON.parse(localStorage.getItem('checkins') || '[]');
+                if (!checked.includes(dateStr)) {
+                    checked.push(dateStr);
+                    localStorage.setItem('checkins', JSON.stringify(checked));
+                    renderCheckinGrid();
+                }
+            });
+
+            document.getElementById('newbieRoleBtn').addEventListener('click', () => {
+                localStorage.setItem('userRole', 'newbie');
+                updateRoleButtons();
+                refreshScoreAndUI();
+            });
+            document.getElementById('proRoleBtn').addEventListener('click', () => {
+                localStorage.setItem('userRole', 'pro');
+                updateRoleButtons();
+                refreshScoreAndUI();
+            });
+
+            setupToggle('headerToggle', 'showHeader', true, (visible) => {
+                document.getElementById('mainHeader').style.display = visible ? 'flex' : 'none';
+            });
+
+            setupToggle('hideIconsToggle', 'hideIcons', false, () => {
+                renderWorkoutCards();
+            });
+
+            setUsernameFromAccount();
+            loadAllCards();
+            currentPage = 0;
+            renderWorkoutCards();
+            updateStartDateDisplay();
+            updateDayPill();
+            updateRoleButtons();
+            setFabVisibility('home');
+        })();
+    </script>
+</body>
+</html>
