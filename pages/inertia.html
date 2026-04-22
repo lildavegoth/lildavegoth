@@ -90,6 +90,13 @@
         .username {
             font-size: 1.25rem;
             font-weight: 600;
+            cursor: pointer;
+            display: inline-block;
+            transition: transform 0.1s;
+        }
+
+        .username:active {
+            transform: scale(0.95);
         }
 
         .start-date {
@@ -468,7 +475,7 @@
             z-index: 99999;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
             width: auto;
-            min-width: 250px;
+            min-width: 200px;
         }
 
         .nav-button {
@@ -498,12 +505,6 @@
 
         .nav-button:active {
             transform: scale(0.95);
-            transition: transform 0.1s ease;
-        }
-
-        .nav-button:hover {
-            background: rgba(193, 252, 50, 0.1);
-            color: var(--accent-color);
         }
 
         .settings-btn-item {
@@ -519,6 +520,11 @@
             gap: 12px;
             cursor: pointer;
             margin-bottom: 20px;
+            transition: transform 0.1s;
+        }
+
+        .settings-btn-item:active {
+            transform: scale(0.97);
         }
 
         .guide-box {
@@ -644,6 +650,13 @@
             cursor: pointer;
             margin-top: 16px;
         }
+
+        .history-item {
+            background: var(--bg-dark);
+            border-radius: var(--radius-medium);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
     </style>
 </head>
 <body>
@@ -665,7 +678,7 @@
                     Mon
                 </div>
                 <div class="header-text">
-                    <div class="username" id="displayUsername">
+                    <div class="username" id="displayUsername" onclick="switchPage('profile', event, true)">
                         User
                     </div>
                     <div class="start-date" id="startDateDisplay">
@@ -727,6 +740,9 @@
             </a>
             
             <h2 style="margin-bottom: 24px;">Profile</h2>
+            <button class="settings-btn-item" onclick="switchPage('settings', event, true)">
+                <i class="fas fa-cog"></i> Settings
+            </button>
             <div>
                 <h3>Roles (Difficulties)</h3>
                 <div class="role-switcher">
@@ -738,6 +754,10 @@
                 <h3>Check-in</h3>
                 <div class="checkin-grid" id="checkinGrid"></div>
                 <button class="checkin-btn" id="checkinTodayBtn">Check-in Today</button>
+            </div>
+            <div style="margin-top: 32px;">
+                <h3>History</h3>
+                <div id="historyContainer"></div>
             </div>
         </div>
     </div>
@@ -755,7 +775,7 @@
             </div>
             <div class="guide-box">
                 <p><i class="fas fa-circle-info" style="margin-right: 4px;"></i> <strong>Notes</strong></p>
-                <p>The exercises must be added with numbers like how much did you do it today, or how much steps did you run or walk today. The number must be added cause it will be counted for the points of your score</p>
+                <p>The exercises must be added with numbers. Use "m" or "minute(s)" for minutes (60 pts), "h" or "hour(s)" for hours (90 pts). Numbers without unit count as is.</p>
             </div>
             <h2 style="margin-bottom: 24px;">Settings</h2>
             <div class="toggle-switch">
@@ -774,10 +794,9 @@
             <button class="settings-btn-item" id="exportBtn" onclick="window.location.href='../storage.html'">
                 <i class="fas fa-database"></i> Data Storage
             </button>
-
         </div>
         
-         <footer>
+        <footer>
             <div class="social-links">
                 <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
                 <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
@@ -787,6 +806,17 @@
                 Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
             </p>
         </footer>
+    </div>
+
+    <div id="reminder-page" class="page-section">
+        <div class="container">
+            <a href="../index.html" class="back-link fade-in" onclick="window.location.hash='';">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+            <h2 style="margin-bottom: 24px;">Reminders</h2>
+            <div id="remindersListContainer"></div>
+            <div class="placeholder-card" id="noRemindersPlaceholder" style="display: none;">No reminders yet. Tap + to add.</div>
+        </div>
     </div>
 
     <div id="universalPopup" class="popup-overlay" style="display: none;">
@@ -807,16 +837,16 @@
     <button class="fab-add" id="addWorkoutFab">
         <i class="fas fa-plus"></i>
     </button>
+    <button class="fab-add" id="addReminderFab" style="display: none; bottom: 180px;">
+        <i class="fas fa-plus"></i>
+    </button>
 
     <div class="bottom-nav">
         <button class="nav-button active" data-page="home" onclick="switchPage('home', event)">
-            <span class="icon icon-android"></span>
+            <span class="icon icon-home"></span>
         </button>
-        <button class="nav-button" data-page="profile" onclick="switchPage('profile', event)">
-            <span class="icon icon-user"></span>
-        </button>
-        <button class="nav-button" data-page="settings" onclick="switchPage('settings', event)">
-            <span class="icon icon-gear"></span>
+        <button class="nav-button" data-page="reminder" onclick="switchPage('reminder', event)">
+            <span class="icon icon-bell"></span>
         </button>
     </div>
 
@@ -824,6 +854,8 @@
         (function() {
             const SCORE_STORAGE_KEY = 'scoreCounts';
             const WORKOUTS_STORAGE_KEY = 'workoutsCards';
+            const REMINDERS_STORAGE_KEY = 'reminders';
+            const HISTORY_STORAGE_KEY = 'workoutsHistory';
             const MAX_SCORE = 100;
             const CARDS_PER_PAGE = 5;
 
@@ -840,18 +872,33 @@
                 "Running", "Walking", "Jogging", "Push-up", "Sit-up", "Pull-up", "Squat", "Lunge", "Burble",
                 "Dumbbell", "Bench Press", "Deadlift", "Cycling", "Swimming", "Yoga", "Pilates", "Stair Climbing",
                 "Running upstairs", "Running downstairs", "Running Up & Down on stairs", "Stair Stepper", "Jump Rope", "Plank", "Mountain Climbers",
-                "High Knees", "Burpees", "Box Jump", "Kettlebell Swing", "Rowing", "Elliptical", "Hiking"
+                "High Knees", "Burpees", "Box Jump", "Kettlebell Swing", "Rowing", "Elliptical", "Hiking",
+                "Skateboarding", "Swimming", "Baseball", "Basketball", "Tennis", "Soccer", "Football", "Volleyball"
             ];
 
             let currentPage = 0;
             let allCards = [];
             let currentEditingCardId = null;
             let extraFieldCount = 0;
+            let currentReminderId = null;
+            let reminders = [];
 
-            function extractNumbersFromText(text) {
-                const matches = text.match(/\d+/g);
-                if (!matches) return [];
-                return matches.map(Number);
+            function parseExercisePoints(text) {
+                let total = 0;
+                const numbers = text.match(/\d+/g);
+                if (numbers) {
+                    numbers.forEach(num => total += parseInt(num, 10));
+                }
+                const minuteRegex = /(\d+)\s*(m|minute|minutes)/gi;
+                const hourRegex = /(\d+)\s*(h|hour|hours)/gi;
+                let match;
+                while ((match = minuteRegex.exec(text)) !== null) {
+                    total += 60;
+                }
+                while ((match = hourRegex.exec(text)) !== null) {
+                    total += 90;
+                }
+                return total;
             }
 
             function getRoleThreshold() {
@@ -863,14 +910,7 @@
                 let total = 0;
                 allCards.forEach(card => {
                     const text = (card.exercises || []).join(' ');
-                    const numbers = extractNumbersFromText(text);
-                    numbers.forEach(num => {
-                        if (num >= 1000) {
-                            total += Math.floor(num / 100);
-                        } else {
-                            total += num;
-                        }
-                    });
+                    total += parseExercisePoints(text);
                 });
                 const threshold = getRoleThreshold();
                 return Math.min(MAX_SCORE, Math.floor(total / (threshold / MAX_SCORE)));
@@ -882,11 +922,7 @@
                 allCards.forEach(card => {
                     totalExercises += (card.exercises || []).length;
                     const text = (card.exercises || []).join(' ');
-                    const numbers = extractNumbersFromText(text);
-                    numbers.forEach(num => {
-                        if (num >= 1000) totalPoints += Math.floor(num / 100);
-                        else totalPoints += num;
-                    });
+                    totalPoints += parseExercisePoints(text);
                 });
                 const el = document.getElementById('motivationText');
                 if (el) {
@@ -1025,6 +1061,7 @@
                 updateMotivationMessages(totalScore);
                 updateMotivationText();
                 saveScoreToStorage(totalScore);
+                checkMonthlyReset();
             }
 
             function setUsernameFromAccount() {
@@ -1060,63 +1097,11 @@
                 const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 document.getElementById('dayPill').textContent = days[new Date().getDay()];
             }
-            
-            function switchPage(page, event) {
-                const currentActivePage = document.querySelector('.page-section.active');
-                const targetPage = document.getElementById(page + '-page');
-    
-                if (currentActivePage === targetPage) return;
-    
-                document.querySelectorAll('.nav-button').forEach(button => {
-                    button.classList.remove('active');
-                    button.style.transform = 'scaleX(1)';
-                    button.style.padding = '10px 20px';
-                });
-    
-                const clickedButton = event.currentTarget;
-    
-                if (currentActivePage) {
-                    currentActivePage.style.opacity = '0';
-                    currentActivePage.style.visibility = 'hidden';
-    
-                    setTimeout(() => {
-                        currentActivePage.classList.remove('active');
-                        currentActivePage.style.height = '0';
-                        currentActivePage.style.overflow = 'hidden';
-    
-                        targetPage.style.height = 'auto';
-                        targetPage.style.overflow = 'visible';
-                        targetPage.classList.add('active');
-    
-                        setTimeout(() => {
-                            targetPage.style.opacity = '1';
-                            targetPage.style.visibility = 'visible';
-    
-                            clickedButton.classList.add('active');
-                            clickedButton.style.transform = 'scaleX(1.1)';
-                            clickedButton.style.padding = '10px 25px';
-    
-                            window.scrollTo(0, 0);
-                        }, 50);
-                    }, 300);
-                } else {
-                    targetPage.style.height = 'auto';
-                    targetPage.style.overflow = 'visible';
-                    targetPage.classList.add('active');
-                    targetPage.style.opacity = '1';
-                    targetPage.style.visibility = 'visible';
-    
-                    clickedButton.classList.add('active');
-                    clickedButton.style.transform = 'scaleX(1.1)';
-                    clickedButton.style.padding = '10px 25px';
-    
-                    window.scrollTo(0, 0);
-                }
-            }
 
             window.closeUniversalPopup = function() {
                 document.getElementById('universalPopup').style.display = 'none';
                 currentEditingCardId = null;
+                currentReminderId = null;
                 extraFieldCount = 0;
             };
 
@@ -1126,7 +1111,7 @@
                 document.getElementById('popupBody').innerHTML = bodyHtml;
                 document.getElementById('popupActions').innerHTML = actionsHtml || '';
                 popup.style.display = 'flex';
-                setupSuggestionListeners();
+                if (title.includes('Workout')) setupSuggestionListeners();
             }
 
             function generateExerciseFields(exercises = []) {
@@ -1390,106 +1375,185 @@
 
             function setFabVisibility(page) {
                 const fab = document.getElementById('addWorkoutFab');
+                const remFab = document.getElementById('addReminderFab');
                 if (page === 'home') {
                     fab.classList.remove('hidden');
+                    remFab.style.display = 'none';
+                } else if (page === 'reminder') {
+                    fab.classList.add('hidden');
+                    remFab.style.display = 'flex';
                 } else {
                     fab.classList.add('hidden');
+                    remFab.style.display = 'none';
                 }
             }
 
-            window.switchPage = function(page, event) {
+            window.switchPage = function(page, event, skipEvent) {
                 const currentActivePage = document.querySelector('.page-section.active');
                 const targetPage = document.getElementById(page + '-page');
                 if (currentActivePage === targetPage) return;
                 document.querySelectorAll('.nav-button').forEach(btn => {
                     btn.classList.remove('active');
-                    btn.style.transform = 'scaleX(1)';
-                    btn.style.padding = '10px 20px';
                 });
-                const clickedButton = event.currentTarget;
+                let clickedButton;
+                if (event && event.currentTarget) clickedButton = event.currentTarget;
+                else clickedButton = document.querySelector(`.nav-button[data-page="${page}"]`);
                 if (currentActivePage) {
                     currentActivePage.style.opacity = '0';
                     currentActivePage.style.visibility = 'hidden';
                     setTimeout(() => {
                         currentActivePage.classList.remove('active');
-                        currentActivePage.style.height = '0';
-                        currentActivePage.style.overflow = 'hidden';
-                        targetPage.style.height = 'auto';
-                        targetPage.style.overflow = 'visible';
                         targetPage.classList.add('active');
                         setTimeout(() => {
                             targetPage.style.opacity = '1';
                             targetPage.style.visibility = 'visible';
-                            clickedButton.classList.add('active');
-                            clickedButton.style.transform = 'scaleX(1.1)';
-                            clickedButton.style.padding = '10px 25px';
+                            if (clickedButton) clickedButton.classList.add('active');
                             window.scrollTo(0, 0);
-                            if (page === 'profile') renderCheckinGrid();
+                            if (page === 'profile') { renderCheckinGrid(); renderHistory(); }
+                            if (page === 'reminder') renderReminders();
                             setFabVisibility(page);
                         }, 50);
-                    }, 300);
+                    }, 200);
                 } else {
-                    targetPage.style.height = 'auto';
-                    targetPage.style.overflow = 'visible';
                     targetPage.classList.add('active');
                     targetPage.style.opacity = '1';
                     targetPage.style.visibility = 'visible';
-                    clickedButton.classList.add('active');
-                    clickedButton.style.transform = 'scaleX(1.1)';
-                    clickedButton.style.padding = '10px 25px';
+                    if (clickedButton) clickedButton.classList.add('active');
                     window.scrollTo(0, 0);
-                    if (page === 'profile') renderCheckinGrid();
+                    if (page === 'profile') { renderCheckinGrid(); renderHistory(); }
+                    if (page === 'reminder') renderReminders();
                     setFabVisibility(page);
                 }
             };
 
-            document.getElementById('addWorkoutFab').addEventListener('click', openAddPopup);
-            document.getElementById('prevPageBtn').addEventListener('click', () => {
-                if (currentPage > 0) { currentPage--; renderWorkoutCards(); }
-            });
-            document.getElementById('nextPageBtn').addEventListener('click', () => {
-                const totalPages = Math.ceil(allCards.length / CARDS_PER_PAGE);
-                if (currentPage < totalPages - 1) { currentPage++; renderWorkoutCards(); }
-            });
+            function checkMonthlyReset() {
+                const now = new Date();
+                const currentMonth = `${now.getFullYear()}-${now.getMonth()+1}`;
+                const storedMonth = localStorage.getItem('lastResetMonth');
+                if (storedMonth && storedMonth !== currentMonth) {
+                    const oldScore = parseInt(localStorage.getItem(SCORE_STORAGE_KEY) || '0');
+                    let totalPoints = 0;
+                    allCards.forEach(card => { totalPoints += parseExercisePoints((card.exercises||[]).join(' ')); });
+                    const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]');
+                    history.push({ month: storedMonth, score: oldScore, points: totalPoints });
+                    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+                    localStorage.setItem(SCORE_STORAGE_KEY, '0');
+                }
+                localStorage.setItem('lastResetMonth', currentMonth);
+            }
 
+            function renderHistory() {
+                const container = document.getElementById('historyContainer');
+                const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]');
+                if (history.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-secondary);">No history yet.</p>';
+                    return;
+                }
+                let html = '';
+                history.slice(-5).reverse().forEach(item => {
+                    html += `<div class="history-item"><strong>${item.month}</strong> — Score: ${item.score}, Points: ${item.points}</div>`;
+                });
+                container.innerHTML = html;
+            }
+
+            function loadReminders() {
+                const stored = localStorage.getItem(REMINDERS_STORAGE_KEY);
+                reminders = stored ? JSON.parse(stored) : [];
+            }
+            function saveReminders() { localStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(reminders)); }
+            function renderReminders() {
+                const container = document.getElementById('remindersListContainer');
+                const placeholder = document.getElementById('noRemindersPlaceholder');
+                if (reminders.length === 0) {
+                    container.innerHTML = '';
+                    placeholder.style.display = 'block';
+                } else {
+                    placeholder.style.display = 'none';
+                    let html = '';
+                    reminders.forEach(r => {
+                        html += `<div class="workout-card" style="margin-bottom:12px;" onclick="openEditReminder('${r.id}')"><strong>${r.text}</strong><br>${r.time} (daily)</div>`;
+                    });
+                    container.innerHTML = html;
+                }
+            }
+            window.openAddReminder = function() {
+                currentReminderId = null;
+                const body = `
+                    <div class="form-group"><label class="form-label">Reminder</label><input type="text" id="reminderText" class="form-input" placeholder="e.g., Drink water"></div>
+                    <div class="form-group"><label class="form-label">Time</label><input type="time" id="reminderTime" class="form-input" value="09:00"></div>
+                `;
+                const actions = `<button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button><button class="btn btn-primary" onclick="saveReminder()">Save</button>`;
+                showPopup('Add Reminder', body, actions);
+            };
+            window.openEditReminder = function(id) {
+                const r = reminders.find(x => x.id === id);
+                if (!r) return;
+                currentReminderId = id;
+                const body = `
+                    <div class="form-group"><label class="form-label">Reminder</label><input type="text" id="reminderText" class="form-input" value="${r.text}"></div>
+                    <div class="form-group"><label class="form-label">Time</label><input type="time" id="reminderTime" class="form-input" value="${r.time}"></div>
+                `;
+                const actions = `<button class="btn btn-danger" onclick="deleteReminder('${id}')">Delete</button><button class="btn btn-primary" onclick="saveReminder()">Save</button>`;
+                showPopup('Edit Reminder', body, actions);
+            };
+            window.saveReminder = function() {
+                const text = document.getElementById('reminderText').value.trim();
+                const time = document.getElementById('reminderTime').value;
+                if (!text || !time) { window.showMessage('Fill all fields'); return; }
+                if (currentReminderId) {
+                    const idx = reminders.findIndex(r => r.id === currentReminderId);
+                    if (idx !== -1) { reminders[idx].text = text; reminders[idx].time = time; }
+                } else {
+                    reminders.push({ id: Date.now()+'-'+Math.random(), text, time });
+                }
+                saveReminders();
+                closeUniversalPopup();
+                renderReminders();
+            };
+            window.deleteReminder = function(id) {
+                reminders = reminders.filter(r => r.id !== id);
+                saveReminders();
+                closeUniversalPopup();
+                renderReminders();
+            };
+            function checkReminders() {
+                const now = new Date();
+                const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                reminders.forEach(r => {
+                    if (r.time === currentTime) {
+                        const late = now.getHours() > parseInt(r.time.split(':')[0]) || (now.getHours() === parseInt(r.time.split(':')[0]) && now.getMinutes() > parseInt(r.time.split(':')[1]));
+                        const msg = late ? `You're late for: ${r.text}` : `Reminder: ${r.text}`;
+                        window.showMessage(msg);
+                    }
+                });
+            }
+
+            document.getElementById('addWorkoutFab').addEventListener('click', openAddPopup);
+            document.getElementById('addReminderFab').addEventListener('click', openAddReminder);
+            document.getElementById('prevPageBtn').addEventListener('click', () => { if (currentPage > 0) { currentPage--; renderWorkoutCards(); } });
+            document.getElementById('nextPageBtn').addEventListener('click', () => { const totalPages = Math.ceil(allCards.length / CARDS_PER_PAGE); if (currentPage < totalPages - 1) { currentPage++; renderWorkoutCards(); } });
             document.getElementById('checkinTodayBtn').addEventListener('click', () => {
                 const now = new Date();
                 const dateStr = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
                 let checked = JSON.parse(localStorage.getItem('checkins') || '[]');
-                if (!checked.includes(dateStr)) {
-                    checked.push(dateStr);
-                    localStorage.setItem('checkins', JSON.stringify(checked));
-                    renderCheckinGrid();
-                }
+                if (!checked.includes(dateStr)) { checked.push(dateStr); localStorage.setItem('checkins', JSON.stringify(checked)); renderCheckinGrid(); }
             });
+            document.getElementById('newbieRoleBtn').addEventListener('click', () => { localStorage.setItem('userRole', 'newbie'); updateRoleButtons(); refreshScoreAndUI(); });
+            document.getElementById('proRoleBtn').addEventListener('click', () => { localStorage.setItem('userRole', 'pro'); updateRoleButtons(); refreshScoreAndUI(); });
 
-            document.getElementById('newbieRoleBtn').addEventListener('click', () => {
-                localStorage.setItem('userRole', 'newbie');
-                updateRoleButtons();
-                refreshScoreAndUI();
-            });
-            document.getElementById('proRoleBtn').addEventListener('click', () => {
-                localStorage.setItem('userRole', 'pro');
-                updateRoleButtons();
-                refreshScoreAndUI();
-            });
-
-            setupToggle('headerToggle', 'showHeader', true, (visible) => {
-                document.getElementById('mainHeader').style.display = visible ? 'flex' : 'none';
-            });
-
-            setupToggle('hideIconsToggle', 'hideIcons', false, () => {
-                renderWorkoutCards();
-            });
+            setupToggle('headerToggle', 'showHeader', true, (visible) => { document.getElementById('mainHeader').style.display = visible ? 'flex' : 'none'; });
+            setupToggle('hideIconsToggle', 'hideIcons', false, () => { renderWorkoutCards(); });
 
             setUsernameFromAccount();
             loadAllCards();
+            loadReminders();
             currentPage = 0;
             renderWorkoutCards();
             updateStartDateDisplay();
             updateDayPill();
             updateRoleButtons();
             setFabVisibility('home');
+            setTimeout(() => { checkReminders(); }, 5000);
         })();
     </script>
 </body>
