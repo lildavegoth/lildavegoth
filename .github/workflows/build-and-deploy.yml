@@ -1,174 +1,176 @@
 name: Build and Deploy
 
 on:
-    push:
-        branches: [homepage]
-    workflow_dispatch:
+  push:
+    branches: [homepage]
+  workflow_dispatch:
 
 permissions:
-    contents: read
-    pages: write
-    id-token: write
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
-    build-cordova:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+  build-cordova:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Setup Node.js 20
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 20
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-            - name: Setup Java JDK 17
-              uses: actions/setup-java@v4
-              with:
-                  distribution: temurin
-                  java-version: 17
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
-            - name: Setup Android SDK
-              uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-            - name: Install Android SDK 35
-              run: yes | sdkmanager "platforms;android-35"
+      - name: Install Android SDK 35
+        run: yes | sdkmanager "platforms;android-35"
 
-            - name: Install Cordova
-              run: npm install -g cordova
+      - name: Install Cordova
+        run: npm install -g cordova
 
-            - name: Prepare project
-              run: |
-                  mkdir -p www
-                  mv *.html *.css *.js *.cssjs *.json sw.js robots.txt sitemap.xml www/ 2>/dev/null || true
-                  mv images pages www/ 2>/dev/null || true
+      - name: Prepare project
+        run: |
+          mkdir -p www
+          mv *.html *.css *.js *.cssjs *.json sw.js robots.txt sitemap.xml www/ 2>/dev/null || true
+          mv images pages www/ 2>/dev/null || true
+          curl -L -o icon.png "https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/images/icons/kiraku-home.png"
+          cat > config.xml << 'EOF'
+          <?xml version='1.0' encoding='utf-8'?>
+          <widget id="com.kakoikiraku.home" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+            <name>Kakoi Kiraku Home</name>
+            <description>Conveys the Idea of a Protected and Inspiring Space for Creative Expression</description>
+            <content src="index.html" />
+            <access origin="*" />
+            <allow-intent href="http://*/*" />
+            <allow-intent href="https://*/*" />
+            <allow-intent href="tel:*" />
+            <allow-intent href="mailto:*" />
+            <platform name="android">
+              <preference name="android-minSdkVersion" value="24" />
+              <preference name="android-targetSdkVersion" value="35" />
+              <preference name="android-compileSdkVersion" value="35" />
+              <preference name="AndroidXEnabled" value="true" />
+              <config-file target="AndroidManifest.xml" parent="/manifest" xmlns:android="http://schemas.android.com/apk/res/android">
+                <uses-permission android:name="android.permission.INTERNET" />
+                <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+                <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+                <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+                <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+                <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+                <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+                <uses-permission android:name="android.permission.VIBRATE" />
+                <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+                <uses-permission android:name="android.permission.WAKE_LOCK" />
+                <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+              </config-file>
+              <icon src="icon.png" />
+            </platform>
+          </widget>
+          EOF
+          sed -i '/WRITE_EXTERNAL_STORAGE/d' config.xml
+          sed -i 's/^          //' config.xml
 
-                  curl -L -o icon.png "https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/images/icons/kiraku-home.png"
+      - name: Add Android platform
+        run: |
+          cordova platform rm android --no-fetch || true
+          cordova platform add android@13 --no-fetch
 
-                  cat > config.xml << 'EOF'
-                  <?xml version='1.0' encoding='utf-8'?>
-                  <widget id="com.kakoikiraku.home" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
-                      <name>Kakoi Kiraku Home</name>
-                      <description>Conveys the Idea of a Protected and Inspiring Space for Creative Expression</description>
-                      <content src="index.html" />
-                      <access origin="*" />
-                      <allow-intent href="http://*/*" />
-                      <allow-intent href="https://*/*" />
-                      <allow-intent href="tel:*" />
-                      <allow-intent href="mailto:*" />
-                      <platform name="android">
-                          <preference name="android-minSdkVersion" value="24" />
-                          <preference name="android-targetSdkVersion" value="35" />
-                          <preference name="android-compileSdkVersion" value="35" />
-                          <preference name="AndroidXEnabled" value="true" />
-                          <config-file target="AndroidManifest.xml" parent="/manifest" xmlns:android="http://schemas.android.com/apk/res/android">
-                              <uses-permission android:name="android.permission.INTERNET" />
-                              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-                              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-                              <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-                              <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-                              <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-                              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-                              <uses-permission android:name="android.permission.VIBRATE" />
-                              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-                              <uses-permission android:name="android.permission.WAKE_LOCK" />
-                              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-                          </config-file>
-                          <icon src="icon.png" />
-                      </platform>
-                  </widget>
-                  EOF
+      - name: Add plugins
+        run: |
+          cordova plugin add cordova-plugin-file
+          cordova plugin add cordova-plugin-file-opener2
+          cordova plugin add cordova-plugin-intent
+          cordova plugin add cordova-plugin-badge
+          cordova plugin add cordova-plugin-local-notification
+          cordova plugin add cordova-plugin-device
+          cordova plugin add cordova-plugin-inappbrowser
+          cordova plugin add cordova-plugin-android-permissions
+          cordova plugin add cordova-plugin-media-capture
+          cordova plugin add cordova-plugin-x-socialsharing
+          cordova plugin add cordova-plugin-foreground-service
+          cordova plugin add cordova-plugin-deeplinks \
+            --variable URL_SCHEME=kiraku \
+            --variable HOST_NAME=kakoi-kiraku-home.vercel.app
 
-                  sed -i '/WRITE_EXTERNAL_STORAGE/d' config.xml
-                  sed -i 's/^          //' config.xml
+      - name: Add cache-busting timestamp to MainActivity
+        run: |
+          MAIN_ACTIVITY_PATH="platforms/android/app/src/main/java/com/kakoikiraku/home/MainActivity.java"
+          TIMESTAMP=$(date +%s)
+          sed -i "s|super.loadUrl(.*);|super.loadUrl(\"file:///android_asset/www/index.html?ts=${TIMESTAMP}\");|g" $MAIN_ACTIVITY_PATH
+          echo "Patched MainActivity.java with timestamp ${TIMESTAMP}"
 
-            - name: Add Android platform
-              run: |
-                  cordova platform rm android --no-fetch || true
-                  cordova platform add android@13 --no-fetch
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
 
-            - name: Add plugins
-              run: |
-                  cordova plugin add cordova-plugin-file
-                  cordova plugin add cordova-plugin-file-opener2
-                  cordova plugin add cordova-plugin-intent
-                  cordova plugin add cordova-plugin-badge
-                  cordova plugin add cordova-plugin-local-notification
-                  cordova plugin add cordova-plugin-device
-                  cordova plugin add cordova-plugin-inappbrowser
-                  cordova plugin add cordova-plugin-android-permissions
-                  cordova plugin add cordova-plugin-media-capture
-                  cordova plugin add cordova-plugin-x-socialsharing
-                  cordova plugin add cordova-plugin-foreground-service
-                  cordova plugin add cordova-plugin-deeplinks \
-                      --variable URL_SCHEME=kiraku \
-                      --variable HOST_NAME=kakoi-kiraku-home.vercel.app
+      - name: Verify keystore
+        run: keytool -list -v -keystore keystore.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -alias "${{ secrets.KEY_ALIAS }}"
 
-            - name: Decode Keystore
-              run: |
-                  echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
+      - name: Create build.json
+        run: |
+          cat > build.json << EOF
+          {
+            "android": {
+              "release": {
+                "keystore": "keystore.jks",
+                "alias": "${{ secrets.KEY_ALIAS }}",
+                "storePassword": "${{ secrets.KEYSTORE_PASSWORD }}",
+                "password": "${{ secrets.KEY_PASSWORD }}"
+              }
+            }
+          }
+          EOF
 
-            - name: Verify keystore
-              run: |
-                  keytool -list -v -keystore keystore.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -alias "${{ secrets.KEY_ALIAS }}"
+      - name: Build release APK
+        run: cordova build android --release -- --packageType=apk
 
-            - name: Create build.json
-              run: |
-                  cat > build.json << EOF
-                  {
-                    "android": {
-                      "release": {
-                        "keystore": "keystore.jks",
-                        "alias": "${{ secrets.KEY_ALIAS }}",
-                        "storePassword": "${{ secrets.KEYSTORE_PASSWORD }}",
-                        "password": "${{ secrets.KEY_PASSWORD }}"
-                      }
-                    }
-                  }
-                  EOF
+      - name: List generated files
+        run: |
+          echo "=== APK output directory ==="
+          ls -la release/ || true
+          echo "=== Search for any APK ==="
+          find platforms/android -name "*.apk" | sort
 
-            - name: Build release APK
-              run: cordova build android --release -- --packageType=apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kakoi-kiraku-home-release-apk
+          path: platforms/android/**/*.apk
+          if-no-files-found: error
 
-            - name: List generated files
-              run: |
-                  echo "=== APK output directory ==="
-                  ls -la release/ || true
-                  echo "=== Search for any APK ==="
-                  find platforms/android -name "*.apk" | sort
+  build-jekyll:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
 
-            - name: Upload APK
-              uses: actions/upload-artifact@v4
-              with:
-                  name: kakoi-kiraku-home-release-apk
-                  path: platforms/android/**/*.apk
-                  if-no-files-found: error
-
-    build-jekyll:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-            - name: Setup Pages
-              uses: actions/configure-pages@v5
-            - name: Build with Jekyll
-              uses: actions/jekyll-build-pages@v1
-              with:
-                  source: ./
-                  destination: ./_site
-            - name: Upload artifact
-              uses: actions/upload-pages-artifact@v3
-
-    deploy-jekyll:
-        needs: build-jekyll
-        runs-on: ubuntu-latest
-        environment:
-            name: github-pages
-            url: ${{ steps.deployment.outputs.page_url }}
-        concurrency:
-            group: pages
-            cancel-in-progress: false
-        steps:
-            - name: Deploy to GitHub Pages
-              id: deployment
-              uses: actions/deploy-pages@v4
+  deploy-jekyll:
+    needs: build-jekyll
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
