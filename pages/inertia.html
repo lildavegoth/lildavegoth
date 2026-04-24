@@ -190,7 +190,7 @@
             flex: 1;
             min-width: 320px;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s;
         }
 
         .workout-card:active {
@@ -344,6 +344,32 @@
         .form-input:focus {
             outline: none;
             border-color: var(--accent-color);
+        }
+
+        .custom-select-wrapper {
+            position: relative;
+        }
+
+        .custom-select-wrapper select {
+            width: 100%;
+            padding: 12px 40px 12px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 1rem;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .custom-select-wrapper i {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+            font-size: 1.2rem;
         }
 
         .time-input-wrapper {
@@ -697,6 +723,49 @@
         h3 {
             margin-bottom: 12px;
         }
+
+        .medic-priority-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            margin-bottom: 12px;
+            cursor: pointer;
+            color: #000;
+        }
+        
+        .medic-priority-card > div:first-child {
+            margin-top: -6px;
+        }
+
+        .medic-priority-card.strong {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .medic-priority-card.medium {
+            background: #7E50B5;
+            color: #fff;
+        }
+
+        .medic-priority-card.low {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+        }
+
+        .medic-checkboxes {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-left: 12px;
+        }
+
+        .medic-checkboxes i {
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: inherit;
+        }
     </style>
 </head>
 <body>
@@ -705,14 +774,12 @@
             <a href="../index.html" class="back-link fade-in" onclick="window.location.hash='';">
                 <i class="fas fa-arrow-left"></i> Back to Home
             </a>
-            
             <app-header class="fade-in">
                 <div>
                     <h1 class="username">Inertia</h1>
                     <p class="tagline">Workouts, Fitness, Health Care, all in one app for your better future</p>
                 </div>
             </app-header>
-            
             <div class="header" id="mainHeader">
                 <div class="mon-pill" id="dayPill">
                     Mon
@@ -729,7 +796,6 @@
                     <i style="margin-right: 5px; color: var(--accent-color); font-size: 1.5rem;" class="fas fa-arrow-right header-arrow"></i>
                 </div>
             </div>
-
             <div class="merged-card">
                 <div class="merged-header">
                     <div>
@@ -756,14 +822,11 @@
                     </div>
                 </div>
             </div>
-
             <div class="workouts-header">
                 Workouts
             </div>
-
             <div class="workouts-grid" id="workoutsContainer">
             </div>
-
             <div class="pagination-controls" id="paginationControls">
                 <button class="pagination-btn" id="prevPageBtn" disabled>
                     <i class="fas fa-arrow-left"></i>
@@ -781,7 +844,6 @@
             <a href="#" class="back-link fade-in" onclick="switchPage('home', event, true); return false;">
                 <i class="fas fa-arrow-left"></i> Back to Home
             </a>
-            
             <h2 style="margin-bottom: 24px;">Profile</h2>
             <button class="settings-btn-item" onclick="switchPage('settings', event, true)">
                 <i class="fas fa-cog"></i> Settings
@@ -810,7 +872,6 @@
             <a href="#" class="back-link fade-in" onclick="switchPage('home', event, true); return false;">
                 <i class="fas fa-arrow-left"></i> Back to Home
             </a>
-            
             <h2 style="margin-bottom: 24px;">App Guides</h2>
             <div class="guide-box">
                 <p><i class="fas fa-dumbbell" style="margin-right: 4px;"></i> <strong>Names</strong></p>
@@ -838,7 +899,6 @@
                 <i class="fas fa-database"></i> Data Storage
             </button>
         </div>
-        
         <footer>
             <div class="social-links">
                 <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
@@ -859,6 +919,14 @@
             <h2 style="margin-bottom: 24px;">Reminders</h2>
             <div id="remindersListContainer"></div>
             <div class="placeholder-card" id="noRemindersPlaceholder" style="display: none;">No reminders yet. Tap + to add.</div>
+        </div>
+    </div>
+
+    <div id="medic-page" class="page-section">
+        <div class="container">
+            <h2 style="margin-bottom: 24px;">Medic</h2>
+            <div id="medicListContainer"></div>
+            <div class="placeholder-card" id="noMedicPlaceholder" style="display: none;">No medic records yet. Tap + to add.</div>
         </div>
     </div>
 
@@ -883,6 +951,9 @@
     <button class="fab-add" id="addReminderFab" style="display: none;">
         <i class="fas fa-plus"></i>
     </button>
+    <button class="fab-add" id="addMedicFab" style="display: none;">
+        <i class="fas fa-plus"></i>
+    </button>
 
     <div class="bottom-nav" id="bottomNav">
         <button class="nav-button active" data-page="home" onclick="switchPage('home', event)">
@@ -891,6 +962,9 @@
         <button class="nav-button" data-page="reminder" onclick="switchPage('reminder', event)">
             <span class="icon icon-bell"></span>
         </button>
+        <button class="nav-button" data-page="medic" onclick="switchPage('medic', event)">
+            <span class="icon icon-heart"></span>
+        </button>
     </div>
 
     <script>
@@ -898,6 +972,7 @@
             const SCORE_STORAGE_KEY = 'scoreCounts';
             const WORKOUTS_STORAGE_KEY = 'workoutsCards';
             const REMINDERS_STORAGE_KEY = 'reminders';
+            const MEDIC_STORAGE_KEY = 'medicCards';
             const HISTORY_STORAGE_KEY = 'workoutsHistory';
             const CHECKIN_BONUS_KEY = 'checkinBonus';
             const MAX_SCORE = 100;
@@ -925,28 +1000,21 @@
             let currentEditingCardId = null;
             let extraFieldCount = 0;
             let currentReminderId = null;
+            let currentMedicId = null;
             let reminders = [];
+            let medicRecords = [];
 
             function parseExercisePoints(text) {
                 let total = 0;
                 const numbers = text.match(/\d+/g);
-                if (numbers) {
-                    numbers.forEach(num => total += parseInt(num, 10));
-                }
+                if (numbers) numbers.forEach(num => total += parseInt(num, 10));
                 const minuteRegex = /(\d+)\s*(m|minute|minutes)/gi;
                 const hourRegex = /(\d+)\s*(h|hour|hours)/gi;
                 const kmRegex = /(\d+)\s*(km|kilometer|kilometers)/gi;
                 let match;
-                while ((match = minuteRegex.exec(text)) !== null) {
-                    total += 60;
-                }
-                while ((match = hourRegex.exec(text)) !== null) {
-                    total += 90;
-                }
-                while ((match = kmRegex.exec(text)) !== null) {
-                    const km = parseInt(match[1], 10);
-                    total += 100 + (km - 1) * 50;
-                }
+                while ((match = minuteRegex.exec(text)) !== null) total += 60;
+                while ((match = hourRegex.exec(text)) !== null) total += 90;
+                while ((match = kmRegex.exec(text)) !== null) total += 100 + (parseInt(match[1],10)-1)*50;
                 return total;
             }
 
@@ -957,90 +1025,37 @@
 
             function calculateScoreFromWorkouts() {
                 let total = 0;
-                allCards.forEach(card => {
-                    const text = (card.exercises || []).join(' ');
-                    total += parseExercisePoints(text);
-                });
-                const checkinBonus = parseInt(localStorage.getItem(CHECKIN_BONUS_KEY) || '0');
-                total += checkinBonus;
-                const threshold = getRoleThreshold();
-                return Math.min(MAX_SCORE, Math.floor(total / (threshold / MAX_SCORE)));
+                allCards.forEach(card => total += parseExercisePoints((card.exercises||[]).join(' ')));
+                total += parseInt(localStorage.getItem(CHECKIN_BONUS_KEY) || '0');
+                return Math.min(MAX_SCORE, Math.floor(total / (getRoleThreshold() / MAX_SCORE)));
             }
 
             function updateMotivationText() {
-                let totalExercises = 0;
-                let totalPoints = 0;
-                allCards.forEach(card => {
-                    totalExercises += (card.exercises || []).length;
-                    const text = (card.exercises || []).join(' ');
-                    totalPoints += parseExercisePoints(text);
-                });
+                let totalExercises = 0, totalPoints = 0;
+                allCards.forEach(card => { totalExercises += (card.exercises||[]).length; totalPoints += parseExercisePoints((card.exercises||[]).join(' ')); });
                 totalPoints += parseInt(localStorage.getItem(CHECKIN_BONUS_KEY) || '0');
                 const el = document.getElementById('motivationText');
-                if (el) {
-                    el.textContent = `You've logged ${totalExercises} exercises with ${totalPoints} total points. Keep pushing!`;
-                }
+                if (el) el.textContent = `You've logged ${totalExercises} exercises with ${totalPoints} total points. Keep pushing!`;
             }
 
-            function updateScoreDisplay(score) {
-                const scoreEl = document.getElementById('scoreDisplay');
-                if (scoreEl) scoreEl.textContent = score;
-            }
-
+            function updateScoreDisplay(score) { const el = document.getElementById('scoreDisplay'); if (el) el.textContent = score; }
             function updateMotivationMessages(score) {
-                const titleEl = document.getElementById('messageTitle');
-                const subtitleEl = document.getElementById('messageSubtitle');
+                const titleEl = document.getElementById('messageTitle'), subtitleEl = document.getElementById('messageSubtitle');
                 if (!titleEl || !subtitleEl) return;
-                if (score === 0) {
-                    titleEl.textContent = 'Oh no..';
-                    subtitleEl.textContent = 'At least you need to try once.';
-                } else if (score < 20) {
-                    titleEl.textContent = 'You Can!';
-                    subtitleEl.textContent = 'Yes you can be more than this.';
-                } else if (score >= 20 && score < 50) {
-                    titleEl.textContent = 'Good Enough!';
-                    subtitleEl.textContent = 'Keep up and you got better results.';
-                } else if (score >= 50 && score < 80) {
-                    titleEl.textContent = 'Good Enough!';
-                    subtitleEl.textContent = 'Keep up and you got better results.';
-                } else {
-                    titleEl.textContent = 'Great Work!';
-                    subtitleEl.textContent = 'Keep your current progress.';
-                }
+                if (score === 0) { titleEl.textContent = 'Oh no..'; subtitleEl.textContent = 'At least you need to try once.'; }
+                else if (score < 20) { titleEl.textContent = 'You Can!'; subtitleEl.textContent = 'Yes you can be more than this.'; }
+                else if (score < 50) { titleEl.textContent = 'Good Enough!'; subtitleEl.textContent = 'Keep up and you got better results.'; }
+                else if (score < 80) { titleEl.textContent = 'Good Enough!'; subtitleEl.textContent = 'Keep up and you got better results.'; }
+                else { titleEl.textContent = 'Great Work!'; subtitleEl.textContent = 'Keep your current progress.'; }
             }
 
-            function saveScoreToStorage(score) {
-                localStorage.setItem(SCORE_STORAGE_KEY, score);
-            }
-
-            function getWorkoutCardsFromStorage() {
-                const stored = localStorage.getItem(WORKOUTS_STORAGE_KEY);
-                if (stored) {
-                    try { return JSON.parse(stored); } catch (e) { return []; }
-                }
-                return [];
-            }
-
-            function saveWorkoutCardsToStorage(cards) {
-                localStorage.setItem(WORKOUTS_STORAGE_KEY, JSON.stringify(cards));
-            }
-
-            function loadAllCards() {
-                allCards = getWorkoutCardsFromStorage();
-            }
-
-            function saveAllCards() {
-                saveWorkoutCardsToStorage(allCards);
-            }
-
-            function getPageCards() {
-                const start = currentPage * CARDS_PER_PAGE;
-                return allCards.slice(start, start + CARDS_PER_PAGE);
-            }
-
-            function updatePageIndicator() {
-                document.getElementById('pageIndicator').textContent = currentPage + 1;
-            }
+            function saveScoreToStorage(score) { localStorage.setItem(SCORE_STORAGE_KEY, score); }
+            function getWorkoutCardsFromStorage() { try { return JSON.parse(localStorage.getItem(WORKOUTS_STORAGE_KEY) || '[]'); } catch(e) { return []; } }
+            function saveWorkoutCardsToStorage(cards) { localStorage.setItem(WORKOUTS_STORAGE_KEY, JSON.stringify(cards)); }
+            function loadAllCards() { allCards = getWorkoutCardsFromStorage(); }
+            function saveAllCards() { saveWorkoutCardsToStorage(allCards); }
+            function getPageCards() { return allCards.slice(currentPage * CARDS_PER_PAGE, (currentPage+1)*CARDS_PER_PAGE); }
+            function updatePageIndicator() { document.getElementById('pageIndicator').textContent = currentPage + 1; }
 
             function renderWorkoutCards() {
                 const container = document.getElementById('workoutsContainer');
@@ -1053,17 +1068,7 @@
                     pageCards.forEach(card => {
                         const exerciseHtml = (card.exercises || []).map(ex => `${ex}`).join('<br>');
                         const iconHtml = hideIcons ? '' : `<span class="workout ${card.icon || 'icon-user'}"></span>`;
-                        html += `
-                            <div class="workout-card" data-card-id="${card.id}" onclick="openEditPopup('${card.id}')">
-                                <div class="workout-date">${card.title || 'Workout'}</div>
-                                <div class="exercise-list">${exerciseHtml}</div>
-                                <div class="workout-footer">
-                                    <div class="workout-icon">
-                                        ${iconHtml}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                        html += `<div class="workout-card" data-card-id="${card.id}" onclick="openEditPopup('${card.id}')"><div class="workout-date">${card.title || 'Workout'}</div><div class="exercise-list">${exerciseHtml}</div><div class="workout-footer"><div class="workout-icon">${iconHtml}</div></div></div>`;
                     });
                     container.innerHTML = html;
                 }
@@ -1074,11 +1079,10 @@
             }
 
             function updatePaginationButtons() {
-                const prevBtn = document.getElementById('prevPageBtn');
-                const nextBtn = document.getElementById('nextPageBtn');
+                const prev = document.getElementById('prevPageBtn'), next = document.getElementById('nextPageBtn');
                 const totalPages = Math.ceil(allCards.length / CARDS_PER_PAGE);
-                prevBtn.disabled = currentPage === 0;
-                nextBtn.disabled = currentPage >= totalPages - 1 || totalPages === 0;
+                prev.disabled = currentPage === 0;
+                next.disabled = currentPage >= totalPages - 1 || totalPages === 0;
             }
 
             function attachIconListeners() {
@@ -1091,19 +1095,16 @@
             function iconClickHandler(e) {
                 e.stopPropagation();
                 const span = e.currentTarget;
-                const currentClass = span.className.replace('workout ', '');
-                let idx = ICON_PRESETS.indexOf(currentClass);
+                const cur = span.className.replace('workout ', '');
+                let idx = ICON_PRESETS.indexOf(cur);
                 if (idx === -1) idx = 0;
-                const nextIdx = (idx + 1) % ICON_PRESETS.length;
+                const nextIdx = (idx+1) % ICON_PRESETS.length;
                 span.className = 'workout ' + ICON_PRESETS[nextIdx];
                 const card = span.closest('.workout-card');
                 if (card) {
-                    const cardId = card.dataset.cardId;
-                    const cardIdx = allCards.findIndex(c => c.id === cardId);
-                    if (cardIdx !== -1) {
-                        allCards[cardIdx].icon = ICON_PRESETS[nextIdx];
-                        saveAllCards();
-                    }
+                    const id = card.dataset.cardId;
+                    const cardIdx = allCards.findIndex(c => c.id === id);
+                    if (cardIdx !== -1) { allCards[cardIdx].icon = ICON_PRESETS[nextIdx]; saveAllCards(); }
                 }
             }
 
@@ -1120,41 +1121,22 @@
                 const el = document.getElementById('displayUsername');
                 if (!el) return;
                 try {
-                    const stored = localStorage.getItem('currentUser');
-                    if (stored) {
-                        const user = JSON.parse(stored);
-                        if (user && user.username) {
-                            el.textContent = user.username;
-                            return;
-                        }
-                    }
-                } catch (e) {}
-                el.textContent = 'User';
+                    const user = JSON.parse(localStorage.getItem('currentUser'));
+                    if (user && user.username) el.textContent = user.username;
+                } catch(e) { el.textContent = 'User'; }
             }
 
             function updateStartDateDisplay() {
                 let start = localStorage.getItem('startDate');
-                if (!start) {
-                    if (allCards.length > 0) {
-                        start = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-                        localStorage.setItem('startDate', start);
-                    } else {
-                        start = '...';
-                    }
-                }
+                if (!start) { if (allCards.length) { start = new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}); localStorage.setItem('startDate', start); } else start = '...'; }
                 document.getElementById('startDateDisplay').textContent = `Starts at ${start}`;
             }
 
-            function updateDayPill() {
-                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                document.getElementById('dayPill').textContent = days[new Date().getDay()];
-            }
+            function updateDayPill() { document.getElementById('dayPill').textContent = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()]; }
 
             window.closeUniversalPopup = function() {
                 document.getElementById('universalPopup').style.display = 'none';
-                currentEditingCardId = null;
-                currentReminderId = null;
-                extraFieldCount = 0;
+                currentEditingCardId = null; currentReminderId = null; currentMedicId = null; extraFieldCount = 0;
             };
 
             function showPopup(title, bodyHtml, actionsHtml) {
@@ -1166,253 +1148,62 @@
                 if (title.includes('Workout')) setupSuggestionListeners();
             }
 
-            function generateExerciseFields(exercises = []) {
-                let fieldsHtml = '';
-                for (let i = 0; i < 3; i++) {
-                    fieldsHtml += `
-                        <div class="form-group">
-                            <label class="form-label">Exercise ${i+1} ${i===0?'*':'(optional)'}</label>
-                            <div class="exercise-input-wrapper">
-                                <div style="position: relative; flex:1;">
-                                    <input type="text" id="ex${i}" class="form-input exercise-input" placeholder="e.g., Running 5000 steps" autocomplete="off" value="${exercises[i] || ''}">
-                                    <div class="suggestion-box" id="suggest${i}"></div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+            function generateExerciseFields(exercises=[]) {
+                let html = '';
+                for (let i=0; i<3; i++) {
+                    html += `<div class="form-group"><label class="form-label">Exercise ${i+1} ${i===0?'*':'(optional)'}</label><div class="exercise-input-wrapper"><div style="position:relative;flex:1;"><input type="text" id="ex${i}" class="form-input exercise-input" placeholder="e.g., Running 5000 steps" autocomplete="off" value="${exercises[i]||''}"><div class="suggestion-box" id="suggest${i}"></div></div></div></div>`;
                 }
-                fieldsHtml += `<div id="extraFieldsContainer"></div>`;
-                fieldsHtml += `<button class="extra-workouts-btn" id="addExtraFieldBtn" type="button"><i class="fas fa-plus-circle"></i> Extra Workouts</button>`;
-                return fieldsHtml;
+                html += `<div id="extraFieldsContainer"></div><button class="extra-workouts-btn" id="addExtraFieldBtn" type="button"><i class="fas fa-plus-circle"></i> Extra Workouts</button>`;
+                return html;
             }
 
-            function openAddPopup() {
-                currentEditingCardId = null;
-                extraFieldCount = 0;
-                const body = `
-                    <div class="form-group">
-                        <label class="form-label">Title *</label>
-                        <input type="text" id="workoutTitleInput" class="form-input" placeholder="e.g., Morning Cardio" value="">
-                    </div>
-                    ${generateExerciseFields()}
-                `;
-                const actions = `
-                    <button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button>
-                    <button class="btn btn-primary" onclick="saveNewWorkout()">Add Workout</button>
-                `;
-                showPopup('Add Workout', body, actions);
-                document.getElementById('addExtraFieldBtn').addEventListener('click', addExtraFieldHandler);
-            }
+            function openAddPopup() { currentEditingCardId = null; extraFieldCount = 0; const body = `<div class="form-group"><label class="form-label">Title *</label><input type="text" id="workoutTitleInput" class="form-input" placeholder="e.g., Morning Cardio" value=""></div>${generateExerciseFields()}`; const actions = `<button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button><button class="btn btn-primary" onclick="saveNewWorkout()">Add Workout</button>`; showPopup('Add Workout', body, actions); document.getElementById('addExtraFieldBtn').addEventListener('click', addExtraFieldHandler); }
+            window.openEditPopup = function(cardId) { const card = allCards.find(c=>c.id===cardId); if (!card) return; currentEditingCardId = cardId; extraFieldCount = Math.max(0, (card.exercises.length-3)); const body = `<div class="form-group"><label class="form-label">Title</label><input type="text" id="editTitle" class="form-input" value="${card.title||''}"></div>${generateExerciseFields(card.exercises)}`; const actions = `<button class="btn btn-danger" onclick="requestDeleteConfirmation('${cardId}')">Delete</button><button class="btn btn-primary" onclick="saveEditedWorkout()">Save</button>`; showPopup('Edit Workout', body, actions); document.getElementById('addExtraFieldBtn').addEventListener('click', addExtraFieldHandler); renderExtraFields(card.exercises.slice(3)); };
 
-            window.openEditPopup = function(cardId) {
-                const card = allCards.find(c => c.id === cardId);
-                if (!card) return;
-                currentEditingCardId = cardId;
-                extraFieldCount = Math.max(0, (card.exercises.length - 3));
-                const body = `
-                    <div class="form-group">
-                        <label class="form-label">Title</label>
-                        <input type="text" id="editTitle" class="form-input" value="${card.title || ''}">
-                    </div>
-                    ${generateExerciseFields(card.exercises)}
-                `;
-                const actions = `
-                    <button class="btn btn-danger" onclick="requestDeleteConfirmation('${cardId}')">Delete</button>
-                    <button class="btn btn-primary" onclick="saveEditedWorkout()">Save</button>
-                `;
-                showPopup('Edit Workout', body, actions);
-                document.getElementById('addExtraFieldBtn').addEventListener('click', addExtraFieldHandler);
-                renderExtraFields(card.exercises.slice(3));
-            };
-
-            function addExtraFieldHandler() {
-                if (extraFieldCount >= 7) { window.showMessage('Maximum 10 exercises total.'); return; }
-                extraFieldCount++;
-                const container = document.getElementById('extraFieldsContainer');
-                const idx = 3 + extraFieldCount - 1;
-                const div = document.createElement('div');
-                div.className = 'form-group';
-                div.id = `extraGroup${idx}`;
-                div.innerHTML = `
-                    <label class="form-label">Exercise ${idx+1} (optional)</label>
-                    <div class="exercise-input-wrapper">
-                        <div style="position: relative; flex:1;">
-                            <input type="text" id="ex${idx}" class="form-input exercise-input" placeholder="e.g., Running 5000 steps" autocomplete="off">
-                            <div class="suggestion-box" id="suggest${idx}"></div>
-                        </div>
-                        <button class="delete-exercise-btn" onclick="removeExtraField(${idx})"><i class="fas fa-times"></i></button>
-                    </div>
-                `;
-                container.appendChild(div);
-                setupSuggestionListeners();
-            }
-
-            window.removeExtraField = function(idx) {
-                const el = document.getElementById(`extraGroup${idx}`);
-                if (el) el.remove();
-                extraFieldCount--;
-            };
-
-            function renderExtraFields(extraExercises) {
-                const container = document.getElementById('extraFieldsContainer');
-                container.innerHTML = '';
-                extraExercises.forEach((val, i) => {
-                    const idx = 3 + i;
-                    extraFieldCount = i+1;
-                    const div = document.createElement('div');
-                    div.className = 'form-group';
-                    div.id = `extraGroup${idx}`;
-                    div.innerHTML = `
-                        <label class="form-label">Exercise ${idx+1} (optional)</label>
-                        <div class="exercise-input-wrapper">
-                            <div style="position: relative; flex:1;">
-                                <input type="text" id="ex${idx}" class="form-input exercise-input" value="${val}" placeholder="e.g., Running 5000 steps" autocomplete="off">
-                                <div class="suggestion-box" id="suggest${idx}"></div>
-                            </div>
-                            <button class="delete-exercise-btn" onclick="removeExtraField(${idx})"><i class="fas fa-times"></i></button>
-                        </div>
-                    `;
-                    container.appendChild(div);
-                });
-                setupSuggestionListeners();
-            }
-
-            function collectExercisesFromPopup() {
-                const exs = [];
-                for (let i = 0; i <= 2 + extraFieldCount; i++) {
-                    const input = document.getElementById(`ex${i}`);
-                    if (input) {
-                        const val = input.value.trim();
-                        if (val) exs.push(val);
-                    }
-                }
-                return exs;
-            }
-
-            window.saveNewWorkout = function() {
-                const title = document.getElementById('workoutTitleInput').value.trim();
-                if (!title) { window.showMessage('Title required'); return; }
-                const exercises = collectExercisesFromPopup();
-                if (exercises.length === 0) { window.showMessage('At least one exercise required'); return; }
-                const newCard = {
-                    id: Date.now() + '-' + Math.random().toString(36),
-                    title, exercises, icon: 'icon-user'
-                };
-                allCards.unshift(newCard);
-                saveAllCards();
-                closeUniversalPopup();
-                currentPage = 0;
-                updateStartDateDisplay();
-                renderWorkoutCards();
-            };
-
-            window.saveEditedWorkout = function() {
-                if (!currentEditingCardId) return;
-                const title = document.getElementById('editTitle').value.trim();
-                const exercises = collectExercisesFromPopup();
-                if (!title || exercises.length === 0) { window.showMessage('Title and at least one exercise required'); return; }
-                const idx = allCards.findIndex(c => c.id === currentEditingCardId);
-                if (idx !== -1) {
-                    allCards[idx].title = title;
-                    allCards[idx].exercises = exercises;
-                    saveAllCards();
-                }
-                closeUniversalPopup();
-                renderWorkoutCards();
-            };
-
-            window.requestDeleteConfirmation = function(cardId) {
-                currentEditingCardId = cardId;
-                const body = `<div class="delete-confirm-text">Are you sure you want to delete this? It cannot be undone.</div>`;
-                const actions = `
-                    <button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button>
-                    <button class="btn btn-danger" onclick="confirmDeleteCard()">Delete</button>
-                `;
-                showPopup('Confirm Delete', body, actions);
-            };
-
-            window.confirmDeleteCard = function() {
-                if (!currentEditingCardId) return;
-                allCards = allCards.filter(c => c.id !== currentEditingCardId);
-                saveAllCards();
-                const totalPages = Math.ceil(allCards.length / CARDS_PER_PAGE);
-                if (currentPage >= totalPages && totalPages > 0) currentPage = totalPages - 1;
-                closeUniversalPopup();
-                renderWorkoutCards();
-            };
+            function addExtraFieldHandler() { if (extraFieldCount>=7) { window.showMessage('Maximum 10 exercises total.'); return; } extraFieldCount++; const container=document.getElementById('extraFieldsContainer'); const idx=3+extraFieldCount-1; const div=document.createElement('div'); div.className='form-group'; div.id=`extraGroup${idx}`; div.innerHTML=`<label class="form-label">Exercise ${idx+1} (optional)</label><div class="exercise-input-wrapper"><div style="position:relative;flex:1;"><input type="text" id="ex${idx}" class="form-input exercise-input" placeholder="e.g., Running 5000 steps" autocomplete="off"><div class="suggestion-box" id="suggest${idx}"></div></div><button class="delete-exercise-btn" onclick="removeExtraField(${idx})"><i class="fas fa-times"></i></button></div>`; container.appendChild(div); setupSuggestionListeners(); }
+            window.removeExtraField = function(idx) { const el = document.getElementById(`extraGroup${idx}`); if (el) el.remove(); extraFieldCount--; };
+            function renderExtraFields(extra) { const container=document.getElementById('extraFieldsContainer'); container.innerHTML=''; extra.forEach((val,i)=>{ const idx=3+i; extraFieldCount=i+1; const div=document.createElement('div'); div.className='form-group'; div.id=`extraGroup${idx}`; div.innerHTML=`<label class="form-label">Exercise ${idx+1} (optional)</label><div class="exercise-input-wrapper"><div style="position:relative;flex:1;"><input type="text" id="ex${idx}" class="form-input exercise-input" value="${val}" placeholder="e.g., Running 5000 steps" autocomplete="off"><div class="suggestion-box" id="suggest${idx}"></div></div><button class="delete-exercise-btn" onclick="removeExtraField(${idx})"><i class="fas fa-times"></i></button></div>`; container.appendChild(div); }); setupSuggestionListeners(); }
+            function collectExercisesFromPopup() { const exs=[]; for (let i=0; i<=2+extraFieldCount; i++) { const input=document.getElementById(`ex${i}`); if (input) { const val=input.value.trim(); if (val) exs.push(val); } } return exs; }
+            window.saveNewWorkout = function() { const title=document.getElementById('workoutTitleInput').value.trim(); if (!title) { window.showMessage('Title required'); return; } const exercises=collectExercisesFromPopup(); if (!exercises.length) { window.showMessage('At least one exercise required'); return; } allCards.unshift({ id:Date.now()+'-'+Math.random().toString(36), title, exercises, icon:'icon-user' }); saveAllCards(); closeUniversalPopup(); currentPage=0; updateStartDateDisplay(); renderWorkoutCards(); };
+            window.saveEditedWorkout = function() { if (!currentEditingCardId) return; const title=document.getElementById('editTitle').value.trim(); const exercises=collectExercisesFromPopup(); if (!title||!exercises.length) { window.showMessage('Title and at least one exercise required'); return; } const idx=allCards.findIndex(c=>c.id===currentEditingCardId); if (idx!==-1) { allCards[idx].title=title; allCards[idx].exercises=exercises; saveAllCards(); } closeUniversalPopup(); renderWorkoutCards(); };
+            window.requestDeleteConfirmation = function(cardId) { currentEditingCardId=cardId; showPopup('Confirm Delete', `<div class="delete-confirm-text">Are you sure you want to delete this? It cannot be undone.</div>`, `<button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button><button class="btn btn-danger" onclick="confirmDeleteCard()">Delete</button>`); };
+            window.confirmDeleteCard = function() { if (!currentEditingCardId) return; allCards=allCards.filter(c=>c.id!==currentEditingCardId); saveAllCards(); const totalPages=Math.ceil(allCards.length/CARDS_PER_PAGE); if (currentPage>=totalPages&&totalPages>0) currentPage=totalPages-1; closeUniversalPopup(); renderWorkoutCards(); };
 
             function setupSuggestionListeners() {
                 document.querySelectorAll('.exercise-input').forEach(input => {
-                    const suggestionBox = input.parentElement.querySelector('.suggestion-box');
-                    if (!suggestionBox) return;
+                    const box = input.parentElement.querySelector('.suggestion-box');
+                    if (!box) return;
                     input.addEventListener('input', function() {
                         const val = this.value;
                         if (val.includes('/')) {
                             const query = val.split('/').pop().toLowerCase();
                             const matches = EXERCISE_OPTIONS.filter(opt => opt.toLowerCase().includes(query));
-                            suggestionBox.innerHTML = matches.map(m => `<div class="suggestion-item">${m}</div>`).join('');
-                            suggestionBox.style.display = matches.length ? 'block' : 'none';
-                            suggestionBox.querySelectorAll('.suggestion-item').forEach(item => {
-                                item.addEventListener('click', () => {
-                                    const base = val.substring(0, val.lastIndexOf('/'));
-                                    this.value = base + item.textContent;
-                                    suggestionBox.style.display = 'none';
-                                });
-                            });
-                        } else {
-                            suggestionBox.style.display = 'none';
-                        }
+                            box.innerHTML = matches.map(m => `<div class="suggestion-item">${m}</div>`).join('');
+                            box.style.display = matches.length ? 'block' : 'none';
+                            box.querySelectorAll('.suggestion-item').forEach(item => item.addEventListener('click', () => { this.value = val.substring(0, val.lastIndexOf('/')) + item.textContent; box.style.display = 'none'; }));
+                        } else box.style.display = 'none';
                     });
-                    input.addEventListener('blur', () => setTimeout(() => suggestionBox.style.display = 'none', 200));
+                    input.addEventListener('blur', () => setTimeout(() => box.style.display = 'none', 200));
                 });
             }
 
             function renderCheckinGrid() {
                 const grid = document.getElementById('checkinGrid');
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = now.getMonth();
-                const firstDay = new Date(year, month, 1).getDay();
-                const daysInMonth = new Date(year, month+1, 0).getDate();
+                const now = new Date(), year=now.getFullYear(), month=now.getMonth();
+                const firstDay = new Date(year, month, 1).getDay(), daysInMonth = new Date(year, month+1, 0).getDate();
                 const checked = JSON.parse(localStorage.getItem('checkins') || '[]');
-                let html = '';
-                for (let i = 0; i < firstDay; i++) html += `<div></div>`;
-                for (let d = 1; d <= daysInMonth; d++) {
-                    const dateStr = `${year}-${month+1}-${d}`;
-                    const isChecked = checked.includes(dateStr);
-                    html += `<div class="day-cell ${isChecked ? 'checked' : ''}" data-date="${dateStr}">${d}</div>`;
-                }
+                let html = ''; for (let i=0; i<firstDay; i++) html += '<div></div>';
+                for (let d=1; d<=daysInMonth; d++) { const dateStr = `${year}-${month+1}-${d}`; html += `<div class="day-cell ${checked.includes(dateStr)?'checked':''}" data-date="${dateStr}">${d}</div>`; }
                 grid.innerHTML = html;
                 updateCheckinButtonVisibility();
             }
-
-            function updateCheckinButtonVisibility() {
-                const now = new Date();
-                const dateStr = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
-                const checked = JSON.parse(localStorage.getItem('checkins') || '[]');
-                const btn = document.getElementById('checkinTodayBtn');
-                if (checked.includes(dateStr)) {
-                    btn.style.display = 'none';
-                } else {
-                    btn.style.display = 'block';
-                }
-            }
-
-            function updateRoleButtons() {
-                const role = localStorage.getItem('userRole') || 'newbie';
-                document.getElementById('newbieRoleBtn').classList.toggle('active', role === 'newbie');
-                document.getElementById('proRoleBtn').classList.toggle('active', role === 'pro');
-            }
+            function updateCheckinButtonVisibility() { const now = new Date(); const dateStr = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`; const checked = JSON.parse(localStorage.getItem('checkins')||'[]'); document.getElementById('checkinTodayBtn').style.display = checked.includes(dateStr) ? 'none' : 'block'; }
+            function updateRoleButtons() { const role = localStorage.getItem('userRole')||'newbie'; document.getElementById('newbieRoleBtn').classList.toggle('active', role==='newbie'); document.getElementById('proRoleBtn').classList.toggle('active', role==='pro'); }
 
             function setupToggle(id, storageKey, defaultValue, callback) {
                 const el = document.getElementById(id);
                 let isActive = localStorage.getItem(storageKey);
-                if (isActive === null) {
-                    isActive = defaultValue;
-                    localStorage.setItem(storageKey, defaultValue);
-                } else {
-                    isActive = isActive === 'true';
-                }
+                isActive = (isActive===null) ? defaultValue : (isActive==='true');
                 el.classList.toggle('active', isActive);
                 el.innerHTML = isActive ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-circle-dot"></i>';
                 el.addEventListener('click', () => {
@@ -1426,215 +1217,183 @@
             }
 
             function setFabVisibility(page) {
-                const fab = document.getElementById('addWorkoutFab');
-                const remFab = document.getElementById('addReminderFab');
-                if (page === 'home') {
-                    fab.classList.remove('hidden');
-                    remFab.style.display = 'none';
-                } else if (page === 'reminder') {
-                    fab.classList.add('hidden');
-                    remFab.style.display = 'flex';
-                } else {
-                    fab.classList.add('hidden');
-                    remFab.style.display = 'none';
-                }
+                const fabWorkout = document.getElementById('addWorkoutFab');
+                const fabReminder = document.getElementById('addReminderFab');
+                const fabMedic = document.getElementById('addMedicFab');
+                fabWorkout.classList.toggle('hidden', page!=='home');
+                fabReminder.style.display = page==='reminder' ? 'flex' : 'none';
+                fabMedic.style.display = page==='medic' ? 'flex' : 'none';
             }
 
             window.switchPage = function(page, event, skipEvent) {
-                const currentActivePage = document.querySelector('.page-section.active');
-                const targetPage = document.getElementById(page + '-page');
-                if (currentActivePage === targetPage) return;
-                
+                const currentActive = document.querySelector('.page-section.active');
+                const target = document.getElementById(page+'-page');
+                if (currentActive === target) return;
                 const bottomNav = document.getElementById('bottomNav');
-                if (page === 'profile' || page === 'settings') {
-                    bottomNav.style.display = 'none';
-                } else {
-                    bottomNav.style.display = 'flex';
-                }
-
-                document.querySelectorAll('.nav-button').forEach(button => {
-                    button.classList.remove('active');
-                    button.style.transform = 'scaleX(1)';
-                    button.style.padding = '10px 20px';
-                });
-                
-                const clickedButton = (event && event.currentTarget && event.currentTarget.classList.contains('nav-button')) 
-                    ? event.currentTarget 
-                    : document.querySelector(`.nav-button[data-page="${page}"]`);
-                
-                if (currentActivePage) {
-                    currentActivePage.style.opacity = '0';
-                    currentActivePage.style.visibility = 'hidden';
+                bottomNav.style.display = (page==='profile'||page==='settings') ? 'none' : 'flex';
+                document.querySelectorAll('.nav-button').forEach(btn => { btn.classList.remove('active'); btn.style.transform='scaleX(1)'; btn.style.padding='10px 20px'; });
+                const clickedButton = (event?.currentTarget?.classList?.contains('nav-button')) ? event.currentTarget : document.querySelector(`.nav-button[data-page="${page}"]`);
+                if (currentActive) {
+                    currentActive.style.opacity='0'; currentActive.style.visibility='hidden';
                     setTimeout(() => {
-                        currentActivePage.classList.remove('active');
-                        currentActivePage.style.height = '0';
-                        currentActivePage.style.overflow = 'hidden';
-                        targetPage.style.height = 'auto';
-                        targetPage.style.overflow = 'visible';
-                        targetPage.classList.add('active');
+                        currentActive.classList.remove('active'); currentActive.style.height='0'; currentActive.style.overflow='hidden';
+                        target.style.height='auto'; target.style.overflow='visible'; target.classList.add('active');
                         setTimeout(() => {
-                            targetPage.style.opacity = '1';
-                            targetPage.style.visibility = 'visible';
-                            if (clickedButton) {
-                                clickedButton.classList.add('active');
-                                clickedButton.style.transform = 'scaleX(1.1)';
-                                clickedButton.style.padding = '10px 25px';
-                            }
-                            window.scrollTo(0, 0);
-                            if (page === 'profile') { renderCheckinGrid(); renderHistory(); }
-                            if (page === 'reminder') renderReminders();
+                            target.style.opacity='1'; target.style.visibility='visible';
+                            if (clickedButton) { clickedButton.classList.add('active'); clickedButton.style.transform='scaleX(1.1)'; clickedButton.style.padding='10px 25px'; }
+                            window.scrollTo(0,0);
+                            if (page==='profile') { renderCheckinGrid(); renderHistory(); }
+                            if (page==='reminder') renderReminders();
+                            if (page==='medic') renderMedic();
                             setFabVisibility(page);
                         }, 50);
                     }, 300);
                 } else {
-                    targetPage.style.height = 'auto';
-                    targetPage.style.overflow = 'visible';
-                    targetPage.classList.add('active');
-                    targetPage.style.opacity = '1';
-                    targetPage.style.visibility = 'visible';
-                    if (clickedButton) {
-                        clickedButton.classList.add('active');
-                        clickedButton.style.transform = 'scaleX(1.1)';
-                        clickedButton.style.padding = '10px 25px';
-                    }
-                    window.scrollTo(0, 0);
-                    if (page === 'profile') { renderCheckinGrid(); renderHistory(); }
-                    if (page === 'reminder') renderReminders();
+                    target.style.height='auto'; target.style.overflow='visible'; target.classList.add('active'); target.style.opacity='1'; target.style.visibility='visible';
+                    if (clickedButton) { clickedButton.classList.add('active'); clickedButton.style.transform='scaleX(1.1)'; clickedButton.style.padding='10px 25px'; }
+                    window.scrollTo(0,0);
+                    if (page==='profile') { renderCheckinGrid(); renderHistory(); }
+                    if (page==='reminder') renderReminders();
+                    if (page==='medic') renderMedic();
                     setFabVisibility(page);
                 }
             };
 
             function checkMonthlyReset() {
-                const now = new Date();
-                const currentMonth = `${now.getFullYear()}-${now.getMonth()+1}`;
-                const storedMonth = localStorage.getItem('lastResetMonth');
-                if (storedMonth && storedMonth !== currentMonth) {
-                    const oldScore = parseInt(localStorage.getItem(SCORE_STORAGE_KEY) || '0');
-                    let totalPoints = 0;
-                    allCards.forEach(card => { totalPoints += parseExercisePoints((card.exercises||[]).join(' ')); });
-                    totalPoints += parseInt(localStorage.getItem(CHECKIN_BONUS_KEY) || '0');
-                    const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]');
-                    history.push({ month: storedMonth, score: oldScore, points: totalPoints });
+                const now = new Date(), currentMonth = `${now.getFullYear()}-${now.getMonth()+1}`;
+                const stored = localStorage.getItem('lastResetMonth');
+                if (stored && stored!==currentMonth) {
+                    const oldScore = parseInt(localStorage.getItem(SCORE_STORAGE_KEY)||'0');
+                    let totalPoints = 0; allCards.forEach(card => totalPoints += parseExercisePoints((card.exercises||[]).join(' ')));
+                    totalPoints += parseInt(localStorage.getItem(CHECKIN_BONUS_KEY)||'0');
+                    const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)||'[]');
+                    history.push({ month: stored, score: oldScore, points: totalPoints });
                     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
-                    localStorage.setItem(SCORE_STORAGE_KEY, '0');
-                    localStorage.setItem(CHECKIN_BONUS_KEY, '0');
+                    localStorage.setItem(SCORE_STORAGE_KEY, '0'); localStorage.setItem(CHECKIN_BONUS_KEY, '0');
                 }
                 localStorage.setItem('lastResetMonth', currentMonth);
             }
 
             function renderHistory() {
                 const container = document.getElementById('historyContainer');
-                const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]');
-                if (history.length === 0) {
-                    container.innerHTML = '<p style="color: var(--text-secondary);">No history yet.</p>';
-                    return;
-                }
-                let html = '';
-                history.slice(-5).reverse().forEach(item => {
-                    html += `<div class="history-item"><strong>${item.month}</strong> — Score: ${item.score}, Points: ${item.points}</div>`;
-                });
-                container.innerHTML = html;
+                const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)||'[]');
+                if (!history.length) { container.innerHTML = '<p style="color:var(--text-secondary);">No history yet.</p>'; return; }
+                container.innerHTML = history.slice(-5).reverse().map(item => `<div class="history-item"><strong>${item.month}</strong> — Score: ${item.score}, Points: ${item.points}</div>`).join('');
             }
 
-            function loadReminders() {
-                const stored = localStorage.getItem(REMINDERS_STORAGE_KEY);
-                reminders = stored ? JSON.parse(stored) : [];
-            }
+            function loadReminders() { reminders = JSON.parse(localStorage.getItem(REMINDERS_STORAGE_KEY)||'[]'); }
             function saveReminders() { localStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(reminders)); }
             function renderReminders() {
-                const container = document.getElementById('remindersListContainer');
-                const placeholder = document.getElementById('noRemindersPlaceholder');
-                if (reminders.length === 0) {
-                    container.innerHTML = '';
-                    placeholder.style.display = 'block';
-                } else {
+                const container = document.getElementById('remindersListContainer'), placeholder = document.getElementById('noRemindersPlaceholder');
+                if (!reminders.length) { container.innerHTML = ''; placeholder.style.display = 'block'; }
+                else { placeholder.style.display = 'none'; container.innerHTML = reminders.map(r => `<div class="workout-card" style="margin-bottom:12px;" onclick="openEditReminder('${r.id}')"><strong>${r.text}</strong><br>${r.time} (daily)</div>`).join(''); }
+            }
+            window.openAddReminder = function() { currentReminderId=null; showPopup('Add Reminder', `<div class="form-group"><label class="form-label">Reminder</label><input type="text" id="reminderText" class="form-input" placeholder="e.g., Drink water"></div><div class="form-group"><label class="form-label">Time</label><div class="time-input-wrapper"><input type="time" id="reminderTime" class="form-input" value="09:00"><i class="fas fa-caret-down"></i></div></div>`, `<button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button><button class="btn btn-primary" onclick="saveReminder()">Save</button>`); };
+            window.openEditReminder = function(id) { const r = reminders.find(x=>x.id===id); if (!r) return; currentReminderId=id; showPopup('Edit Reminder', `<div class="form-group"><label class="form-label">Reminder</label><input type="text" id="reminderText" class="form-input" value="${r.text}"></div><div class="form-group"><label class="form-label">Time</label><div class="time-input-wrapper"><input type="time" id="reminderTime" class="form-input" value="${r.time}"><i class="fas fa-caret-down"></i></div></div>`, `<button class="btn btn-danger" onclick="deleteReminder('${id}')">Delete</button><button class="btn btn-primary" onclick="saveReminder()">Save</button>`); };
+            window.saveReminder = function() { const text = document.getElementById('reminderText').value.trim(), time = document.getElementById('reminderTime').value; if (!text||!time) { window.showMessage('Fill all fields'); return; } if (currentReminderId) { const idx = reminders.findIndex(r=>r.id===currentReminderId); if (idx!==-1) { reminders[idx].text=text; reminders[idx].time=time; } } else reminders.push({ id: Date.now()+'-'+Math.random(), text, time }); saveReminders(); closeUniversalPopup(); renderReminders(); };
+            window.deleteReminder = function(id) { reminders = reminders.filter(r=>r.id!==id); saveReminders(); closeUniversalPopup(); renderReminders(); };
+
+            function loadMedic() { medicRecords = JSON.parse(localStorage.getItem(MEDIC_STORAGE_KEY)||'[]'); }
+            function saveMedic() { localStorage.setItem(MEDIC_STORAGE_KEY, JSON.stringify(medicRecords)); }
+            window.toggleMedicCheckbox = function(medicId, index) {
+                const record = medicRecords.find(m => m.id === medicId);
+                if (record && record.checked && index < record.checked.length) {
+                    record.checked[index] = !record.checked[index];
+                    saveMedic();
+                    renderMedic();
+                }
+            }
+            function renderMedic() {
+                const container = document.getElementById('medicListContainer'), placeholder = document.getElementById('noMedicPlaceholder');
+                if (!medicRecords.length) { container.innerHTML = ''; placeholder.style.display = 'block'; }
+                else {
                     placeholder.style.display = 'none';
-                    let html = '';
-                    reminders.forEach(r => {
-                        html += `<div class="workout-card" style="margin-bottom:12px;" onclick="openEditReminder('${r.id}')"><strong>${r.text}</strong><br>${r.time} (daily)</div>`;
-                    });
-                    container.innerHTML = html;
+                    container.innerHTML = medicRecords.map(m => {
+                        const times = m.times.filter(t=>t).join(', ');
+                        let checkboxHtml = '';
+                        for (let i = 0; i < m.checkboxCount; i++) {
+                            const checked = m.checked && m.checked[i];
+                            const icon = checked ? 'fa-check-circle' : 'fa-circle-dot';
+                            checkboxHtml += `<i class="fas ${icon}" onclick="event.stopPropagation(); toggleMedicCheckbox('${m.id}', ${i})"></i>`;
+                        }
+                        return `<div class="medic-priority-card ${m.priority.toLowerCase()}" onclick="openEditMedic('${m.id}')">
+                            <div><strong>${m.title}</strong><br>${times}<br>${m.repeat} | ${m.priority}</div>
+                            <div class="medic-checkboxes">${checkboxHtml}</div>
+                        </div>`;
+                    }).join('');
                 }
             }
-            window.openAddReminder = function() {
-                currentReminderId = null;
+            window.openAddMedic = function() {
+                currentMedicId = null;
                 const body = `
-                    <div class="form-group"><label class="form-label">Reminder</label><input type="text" id="reminderText" class="form-input" placeholder="e.g., Drink water"></div>
-                    <div class="form-group"><label class="form-label">Time</label><div class="time-input-wrapper"><input type="time" id="reminderTime" class="form-input" value="09:00"><i class="fas fa-caret-down"></i></div></div>
+                    <div class="form-group"><label class="form-label">Title *</label><input type="text" id="medicTitle" class="form-input" placeholder="e.g., Take Your Medicine"></div>
+                    <div class="form-group"><label class="form-label">Time 1 *</label><div class="time-input-wrapper"><input type="time" id="medicTime1" class="form-input" value="08:00"><i class="fas fa-caret-down"></i></div></div>
+                    <div class="form-group"><label class="form-label">Time 2 (optional)</label><div class="time-input-wrapper"><input type="time" id="medicTime2" class="form-input" value=""><i class="fas fa-caret-down"></i></div></div>
+                    <div class="form-group"><label class="form-label">Time 3 (optional)</label><div class="time-input-wrapper"><input type="time" id="medicTime3" class="form-input" value=""><i class="fas fa-caret-down"></i></div></div>
+                    <div class="form-group"><label class="form-label">Priority</label><div class="custom-select-wrapper"><select id="medicPriority" class="form-input"><option value="Strong">Strong</option><option value="Medium" selected>Medium</option><option value="Low">Low</option></select><i class="fas fa-caret-down"></i></div></div>
+                    <div class="form-group"><label class="form-label">Repeat</label><div class="custom-select-wrapper"><select id="medicRepeat" class="form-input"><option value="Daily">Daily</option><option value="Weekly">Weekly</option><option value="Monthly">Monthly</option></select><i class="fas fa-caret-down"></i></div></div>
+                    <div class="form-group"><label class="form-label">Checkboxes</label><div class="custom-select-wrapper"><select id="medicCheckboxCount" class="form-input"><option value="1">1 Checkbox</option><option value="2">2 Checkboxes</option><option value="3">3 Checkboxes</option></select><i class="fas fa-caret-down"></i></div></div>
                 `;
-                const actions = `<button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button><button class="btn btn-primary" onclick="saveReminder()">Save</button>`;
-                showPopup('Add Reminder', body, actions);
+                showPopup('Add Medic', body, `<button class="btn btn-secondary" onclick="closeUniversalPopup()">Cancel</button><button class="btn btn-primary" onclick="saveMedicRecord()">Save</button>`);
             };
-            window.openEditReminder = function(id) {
-                const r = reminders.find(x => x.id === id);
-                if (!r) return;
-                currentReminderId = id;
+            window.openEditMedic = function(id) {
+                const m = medicRecords.find(x=>x.id===id); if (!m) return; currentMedicId = id;
                 const body = `
-                    <div class="form-group"><label class="form-label">Reminder</label><input type="text" id="reminderText" class="form-input" value="${r.text}"></div>
-                    <div class="form-group"><label class="form-label">Time</label><div class="time-input-wrapper"><input type="time" id="reminderTime" class="form-input" value="${r.time}"><i class="fas fa-caret-down"></i></div></div>
+                    <div class="form-group"><label class="form-label">Title</label><input type="text" id="medicTitle" class="form-input" value="${m.title}"></div>
+                    <div class="form-group"><label class="form-label">Time 1</label><div class="time-input-wrapper"><input type="time" id="medicTime1" class="form-input" value="${m.times[0]||''}"><i class="fas fa-caret-down"></i></div></div>
+                    <div class="form-group"><label class="form-label">Time 2</label><div class="time-input-wrapper"><input type="time" id="medicTime2" class="form-input" value="${m.times[1]||''}"><i class="fas fa-caret-down"></i></div></div>
+                    <div class="form-group"><label class="form-label">Time 3</label><div class="time-input-wrapper"><input type="time" id="medicTime3" class="form-input" value="${m.times[2]||''}"><i class="fas fa-caret-down"></i></div></div>
+                    <div class="form-group"><label class="form-label">Priority</label><div class="custom-select-wrapper"><select id="medicPriority" class="form-input"><option value="Strong" ${m.priority==='Strong'?'selected':''}>Strong</option><option value="Medium" ${m.priority==='Medium'?'selected':''}>Medium</option><option value="Low" ${m.priority==='Low'?'selected':''}>Low</option></select><i class="fas fa-caret-down"></i></div></div>
+                    <div class="form-group"><label class="form-label">Repeat</label><div class="custom-select-wrapper"><select id="medicRepeat" class="form-input"><option value="Daily" ${m.repeat==='Daily'?'selected':''}>Daily</option><option value="Weekly" ${m.repeat==='Weekly'?'selected':''}>Weekly</option><option value="Monthly" ${m.repeat==='Monthly'?'selected':''}>Monthly</option></select><i class="fas fa-caret-down"></i></div></div>
+                    <div class="form-group"><label class="form-label">Checkboxes</label><div class="custom-select-wrapper"><select id="medicCheckboxCount" class="form-input"><option value="1" ${m.checkboxCount==1?'selected':''}>1 Checkbox</option><option value="2" ${m.checkboxCount==2?'selected':''}>2 Checkboxes</option><option value="3" ${m.checkboxCount==3?'selected':''}>3 Checkboxes</option></select><i class="fas fa-caret-down"></i></div></div>
                 `;
-                const actions = `<button class="btn btn-danger" onclick="deleteReminder('${id}')">Delete</button><button class="btn btn-primary" onclick="saveReminder()">Save</button>`;
-                showPopup('Edit Reminder', body, actions);
+                showPopup('Edit Medic', body, `<button class="btn btn-danger" onclick="deleteMedic('${id}')">Delete</button><button class="btn btn-primary" onclick="saveMedicRecord()">Save</button>`);
             };
-            window.saveReminder = function() {
-                const text = document.getElementById('reminderText').value.trim();
-                const time = document.getElementById('reminderTime').value;
-                if (!text || !time) { window.showMessage('Fill all fields'); return; }
-                if (currentReminderId) {
-                    const idx = reminders.findIndex(r => r.id === currentReminderId);
-                    if (idx !== -1) { reminders[idx].text = text; reminders[idx].time = time; }
-                } else {
-                    reminders.push({ id: Date.now()+'-'+Math.random(), text, time });
-                }
-                saveReminders();
-                closeUniversalPopup();
-                renderReminders();
+            window.saveMedicRecord = function() {
+                const title = document.getElementById('medicTitle').value.trim();
+                if (!title) { window.showMessage('Title required'); return; }
+                const time1 = document.getElementById('medicTime1').value;
+                if (!time1) { window.showMessage('At least one time required'); return; }
+                const time2 = document.getElementById('medicTime2').value;
+                const time3 = document.getElementById('medicTime3').value;
+                const priority = document.getElementById('medicPriority').value;
+                const repeat = document.getElementById('medicRepeat').value;
+                const checkboxCount = parseInt(document.getElementById('medicCheckboxCount').value);
+                const checked = new Array(checkboxCount).fill(false);
+                const record = { id: currentMedicId || Date.now()+'-'+Math.random(), title, times: [time1, time2, time3], priority, repeat, checkboxCount, checked };
+                if (currentMedicId) {
+                    const idx = medicRecords.findIndex(m=>m.id===currentMedicId);
+                    if (idx!==-1) medicRecords[idx] = record;
+                } else medicRecords.push(record);
+                saveMedic(); closeUniversalPopup(); renderMedic();
             };
-            window.deleteReminder = function(id) {
-                reminders = reminders.filter(r => r.id !== id);
-                saveReminders();
-                closeUniversalPopup();
-                renderReminders();
-            };
-            function checkReminders() {
-                const now = new Date();
-                const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-                reminders.forEach(r => {
-                    if (r.time === currentTime) {
-                        const late = now.getHours() > parseInt(r.time.split(':')[0]) || (now.getHours() === parseInt(r.time.split(':')[0]) && now.getMinutes() > parseInt(r.time.split(':')[1]));
-                        const msg = late ? `You're late for: ${r.text}` : `Reminder: ${r.text}`;
-                        window.showMessage(msg);
-                    }
-                });
-            }
+            window.deleteMedic = function(id) { medicRecords = medicRecords.filter(m=>m.id!==id); saveMedic(); closeUniversalPopup(); renderMedic(); };
 
             document.getElementById('addWorkoutFab').addEventListener('click', openAddPopup);
             document.getElementById('addReminderFab').addEventListener('click', openAddReminder);
-            document.getElementById('prevPageBtn').addEventListener('click', () => { if (currentPage > 0) { currentPage--; renderWorkoutCards(); } });
-            document.getElementById('nextPageBtn').addEventListener('click', () => { const totalPages = Math.ceil(allCards.length / CARDS_PER_PAGE); if (currentPage < totalPages - 1) { currentPage++; renderWorkoutCards(); } });
-            document.getElementById('checkinTodayBtn').addEventListener('click', () => {
-                const now = new Date();
-                const dateStr = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
-                let checked = JSON.parse(localStorage.getItem('checkins') || '[]');
+            document.getElementById('addMedicFab').addEventListener('click', openAddMedic);
+            document.getElementById('prevPageBtn').addEventListener('click', ()=>{ if (currentPage>0) { currentPage--; renderWorkoutCards(); }});
+            document.getElementById('nextPageBtn').addEventListener('click', ()=>{ const tp=Math.ceil(allCards.length/CARDS_PER_PAGE); if (currentPage<tp-1) { currentPage++; renderWorkoutCards(); }});
+            document.getElementById('checkinTodayBtn').addEventListener('click', ()=>{
+                const now = new Date(), dateStr = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+                let checked = JSON.parse(localStorage.getItem('checkins')||'[]');
                 if (!checked.includes(dateStr)) {
-                    checked.push(dateStr);
-                    localStorage.setItem('checkins', JSON.stringify(checked));
-                    const currentBonus = parseInt(localStorage.getItem(CHECKIN_BONUS_KEY) || '0');
-                    localStorage.setItem(CHECKIN_BONUS_KEY, currentBonus + 10);
+                    checked.push(dateStr); localStorage.setItem('checkins', JSON.stringify(checked));
+                    localStorage.setItem(CHECKIN_BONUS_KEY, (parseInt(localStorage.getItem(CHECKIN_BONUS_KEY)||'0'))+10);
                     window.showMessage('You earned 10 bonus points for checking in!');
-                    renderCheckinGrid();
-                    refreshScoreAndUI();
+                    renderCheckinGrid(); refreshScoreAndUI();
                 }
             });
-            document.getElementById('newbieRoleBtn').addEventListener('click', () => { localStorage.setItem('userRole', 'newbie'); updateRoleButtons(); refreshScoreAndUI(); });
-            document.getElementById('proRoleBtn').addEventListener('click', () => { localStorage.setItem('userRole', 'pro'); updateRoleButtons(); refreshScoreAndUI(); });
+            document.getElementById('newbieRoleBtn').addEventListener('click', ()=>{ localStorage.setItem('userRole','newbie'); updateRoleButtons(); refreshScoreAndUI(); });
+            document.getElementById('proRoleBtn').addEventListener('click', ()=>{ localStorage.setItem('userRole','pro'); updateRoleButtons(); refreshScoreAndUI(); });
 
-            setupToggle('headerToggle', 'showHeader', true, (visible) => { document.getElementById('mainHeader').style.display = visible ? 'flex' : 'none'; });
-            setupToggle('hideIconsToggle', 'hideIcons', false, () => { renderWorkoutCards(); });
+            setupToggle('headerToggle', 'showHeader', true, visible => document.getElementById('mainHeader').style.display = visible?'flex':'none');
+            setupToggle('hideIconsToggle', 'hideIcons', false, () => renderWorkoutCards());
 
             setUsernameFromAccount();
             loadAllCards();
             loadReminders();
+            loadMedic();
             currentPage = 0;
             renderWorkoutCards();
             updateStartDateDisplay();
@@ -1643,6 +1402,10 @@
             setFabVisibility('home');
             setTimeout(() => { checkReminders(); }, 5000);
             setInterval(checkReminders, 60000);
+            function checkReminders() {
+                const now = new Date(), currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                reminders.forEach(r => { if (r.time === currentTime) { const late = now.getHours() > parseInt(r.time.split(':')[0]) || (now.getHours()===parseInt(r.time.split(':')[0]) && now.getMinutes()>parseInt(r.time.split(':')[1])); window.showMessage(late?`You're late for: ${r.text}`:`Reminder: ${r.text}`); } });
+            }
         })();
     </script>
 </body>
