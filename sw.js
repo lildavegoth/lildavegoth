@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.6.8';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.6.9';
 const urlsToCache = [
     // Root
     '/',
@@ -64,7 +64,9 @@ const urlsToCache = [
     'pages/svg-optimizer.html',
     'pages/svg-rasterizer.html',
     'pages/svg-to-datauri.html',
+    'pages/text-based-life.html',
     'pages/timer-converter.html',
+    'pages/tic-tac-toe.html',
     'pages/typing-game.html',
     'pages/userscripts-gallery.html',
     'pages/userscript-json-format',
@@ -127,7 +129,7 @@ const urlsToCache = [
     'images/posters/no-longer-priority.webp',
     'images/posters/sickens-me.webp',
     // Fetches
-    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/articles.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/articles/articles.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/pages.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/popup-pages.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/gift-codes.json',
