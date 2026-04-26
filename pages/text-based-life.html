@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Farmstead · Realm</title>
+    <meta name="color-scheme" content="dark">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-large: 28px;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 20px;
+        }
+        #gameView {
+            display: flex;
+            flex-direction: column;
+            max-width: 720px;
+            margin: 0 auto;
+            height: 100vh;
+        }
+        .chat-header {
+            background-color: #111111;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            position: sticky;
+            top: 0;
+            z-index: 12;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .resource-row {
+            display: flex;
+            gap: 8px;
+            font-size: 14px;
+            background: #1f1f21;
+            padding: 6px 12px;
+            border-radius: 40px;
+        }
+        .resource-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .chat-area {
+            flex: 1;
+            background: #0c0c0c;
+            padding: 16px 12px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .chat-message {
+            background: #1f1f21;
+            padding: 14px 18px;
+            border-radius: 22px;
+            max-width: 85%;
+            align-self: flex-start;
+            color: #e6e6e6;
+            font-size: 15px;
+            line-height: 1.45;
+            border-bottom-left-radius: 6px;
+            word-break: break-word;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        .chat-message.system {
+            align-self: center;
+            background: #2a2a2d;
+            color: #b0b0b0;
+            border-radius: 30px;
+            font-style: italic;
+            max-width: 90%;
+            text-align: center;
+        }
+        .button-grid {
+            background: #0c0c0c;
+            padding: 16px 16px 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px 16px;
+        }
+        .action-btn {
+            background: #1f1f21;
+            border: 1px solid #3a3a3c;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 16px;
+            padding: 16px 8px;
+            border-radius: 60px;
+            box-shadow: 0 4px 0 #0a0a0a;
+            cursor: pointer;
+            transition: all 0.05s;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .action-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #0a0a0a;
+        }
+        .action-btn.disabled {
+            opacity: 0.4;
+            transform: none;
+            box-shadow: 0 4px 0 #0a0a0a;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .chat-message.shake {
+            animation: shake 0.3s ease-in-out;
+        }
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .popup-body {
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .crop-option {
+            background: #2c2c2e;
+            padding: 16px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            border: 1px solid #3a3a3c;
+        }
+        .crop-option h3 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+        .crop-option p {
+            color: var(--text-secondary);
+        }
+        .inn-offer-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 6px 0 2px;
+        }
+        .market-buttons-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0 4px;
+        }
+        .market-btn {
+            background: #2c2c2e;
+            border: none;
+            color: white;
+            padding: 8px 14px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .chat-area::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-area::-webkit-scrollbar-thumb {
+            background: #3a3a3c;
+            border-radius: 10px;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameView">
+        <div class="chat-header">
+            <div class="resource-row">
+                <span class="resource-badge"><i class="fas fa-bread-slice"></i> <span id="foodDisplay">0</span></span>
+                <span class="resource-badge"><i class="fas fa-coins"></i> <span id="goldDisplay">0</span></span>
+                <span class="resource-badge"><i class="fas fa-wheat-awn"></i> <span id="wheatDisplay">0</span></span>
+                <span class="resource-badge"><i class="fas fa-home"></i> <span id="housePopDisplay">1-3/10</span></span>
+                <span class="resource-badge"><i class="fas fa-tractor"></i> <span id="farmLevelBadge">Lv.1</span></span>
+            </div>
+        </div>
+        <div class="chat-area" id="chatMessages">
+            <div class="chat-message system"><i class="fas fa-crown"></i> Welcome, chieftain. Build your realm.</div>
+        </div>
+        <div class="button-grid" id="buttonGrid">
+            <button class="action-btn" id="btn1"><i class="fas fa-seedling"></i> Plant</button>
+            <button class="action-btn" id="btn2"><i class="fas fa-leaf"></i> Crop</button>
+            <button class="action-btn" id="btn3"><i class="fas fa-bread-slice"></i> Bakery</button>
+            <button class="action-btn" id="btn4"><i class="fas fa-arrow-right"></i> Next</button>
+        </div>
+    </div>
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle">Menu</h2>
+                <button class="close-popup" onclick="closeUniversalPopup()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="popup-body" id="popupContent"></div>
+        </div>
+    </div>
+    <script>
+        (function() {
+            "use strict";
+
+            const STORAGE_KEY = 'textFarm';
+            let food = 300;
+            let gold = 400;
+            let wheat = 60;
+            let carrot = 0;
+            let houses = 1;
+            let population = 3;
+            const HOUSE_CAPACITY = 10;
+            let farmLevel = 1;
+            const BASE_FOOD_PER_HOUR = 20;
+
+            let plantedCrop = null;
+            let plantedCropName = '';
+            let plantTime = 0;
+            let selectedCropKey = 'wheat';
+
+            let medals = 0;
+            let jewelry = 0;
+            let swords = 0;
+            let clothes = 0;
+
+            let dailyFoodCollected = 0;
+            let competitionJoined = false;
+            let botTargetScore = 0;
+            let botName = "Aldric";
+            let lastCompetitionDate = '';
+
+            let fishInventory = [];
+            let baits = 5;
+            let rodLevel = 1;
+
+            let restEndTime = 0;
+            let restNextTick = 0;
+            let innNearby = false;
+            let innOfferActive = false;
+            let autoExploreCount = 0;
+            let autoExploring = false;
+            let autoInterval = null;
+
+            let plantCountdownInterval = null;
+
+            let currentPage = 0;
+            let subMenu = null;
+
+            const botNames = ["Aldric", "Bryn", "Cedric", "Doran", "Eldon", "Finn", "Garrett", "Harlan", "Ivor",
+                "Jasper", "Kellan", "Lorcan", "Merrick", "Niall", "Orson"
+            ];
+            const cropData = {
+                wheat: { minYield: 50, maxYield: 75, name: 'Wheat', type: 'wheat', icon: 'fa-wheat-awn' },
+                carrot: { minYield: 75, maxYield: 100, name: 'Carrot', type: 'carrot', icon: 'fa-carrot' }
+            };
+            const fishSpecies = [{ name: 'Salmon', basePrice: 15 }, { name: 'Trout', basePrice: 12 }, { name: 'Bass',
+                    basePrice: 10 }, { name: 'Catfish', basePrice: 8 }, { name: 'Carp', basePrice: 6 },
+            { name: 'Legendary', basePrice: 2000, legendary: true, weight: 200 }];
+
+            const foodDisplay = document.getElementById('foodDisplay');
+            const goldDisplay = document.getElementById('goldDisplay');
+            const wheatDisplay = document.getElementById('wheatDisplay');
+            const housePopDisplay = document.getElementById('housePopDisplay');
+            const farmLevelBadge = document.getElementById('farmLevelBadge');
+            const chatMessages = document.getElementById('chatMessages');
+            const btn1 = document.getElementById('btn1');
+            const btn2 = document.getElementById('btn2');
+            const btn3 = document.getElementById('btn3');
+            const btn4 = document.getElementById('btn4');
+
+            let maxPopulation = houses * HOUSE_CAPACITY;
+
+            function loadGame() {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        food = data.food ?? food;
+                        gold = data.gold ?? gold;
+                        wheat = data.wheat ?? wheat;
+                        carrot = data.carrot ?? carrot;
+                        houses = data.houses ?? houses;
+                        population = data.population ?? population;
+                        farmLevel = data.farmLevel ?? farmLevel;
+                        plantedCrop = data.plantedCropType ? cropData[data.plantedCropType] : null;
+                        plantedCropName = data.plantedCropName || '';
+                        plantTime = data.plantTime || 0;
+                        selectedCropKey = data.selectedCropKey || 'wheat';
+                        medals = data.medals || 0;
+                        jewelry = data.jewelry || 0;
+                        swords = data.swords || 0;
+                        clothes = data.clothes || 0;
+                        dailyFoodCollected = data.dailyFoodCollected || 0;
+                        competitionJoined = data.competitionJoined || false;
+                        botTargetScore = data.botTargetScore || generateBotScore();
+                        botName = data.botName || pickRandomBot();
+                        lastCompetitionDate = data.lastCompetitionDate || '';
+                        fishInventory = data.fishInventory || [];
+                        baits = data.baits ?? 5;
+                        rodLevel = data.rodLevel || 1;
+                        restEndTime = data.restEndTime || 0;
+                    } catch (e) {}
+                }
+            }
+
+            function saveGame() {
+                const data = {
+                    food,
+                    gold,
+                    wheat,
+                    carrot,
+                    houses,
+                    population,
+                    farmLevel,
+                    plantedCropType: plantedCrop ? plantedCrop.type : null,
+                    plantedCropName,
+                    plantTime,
+                    selectedCropKey,
+                    medals,
+                    jewelry,
+                    swords,
+                    clothes,
+                    dailyFoodCollected,
+                    competitionJoined,
+                    botTargetScore,
+                    botName,
+                    lastCompetitionDate,
+                    fishInventory,
+                    baits,
+                    rodLevel,
+                    restEndTime
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            }
+
+            function removeMessagesOfType(type) {
+                const messages = chatMessages.querySelectorAll(`.chat-message[data-type="${type}"]`);
+                messages.forEach(el => el.remove());
+            }
+
+            function getMessageElement(type) {
+                return chatMessages.querySelector(`.chat-message[data-type="${type}"]`);
+            }
+
+            function updateOrAddMessage(type, content, isSystem = false) {
+                const existing = getMessageElement(type);
+                if (existing) {
+                    existing.innerHTML = content;
+                    existing.className = isSystem ? 'chat-message system' : 'chat-message';
+                    existing.setAttribute('data-type', type);
+                } else {
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = isSystem ? 'chat-message system' : 'chat-message';
+                    msgDiv.setAttribute('data-type', type);
+                    msgDiv.innerHTML = content;
+                    chatMessages.appendChild(msgDiv);
+                }
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                while (chatMessages.children.length > 30) {
+                    chatMessages.removeChild(chatMessages.children[0]);
+                }
+            }
+
+            function shakeMessage(type) {
+                const el = getMessageElement(type);
+                if (!el) return;
+                el.classList.add('shake');
+                setTimeout(() => el.classList.remove('shake'), 300);
+            }
+
+            function startPlantCountdown() {
+                if (plantCountdownInterval) clearInterval(plantCountdownInterval);
+                const endTime = plantTime + 5000;
+                const updateCountdown = () => {
+                    const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+                    updateOrAddMessage('plant',
+                        `<i class="fas fa-seedling"></i> Planted ${plantedCropName}. Ready in ${remaining}s.`);
+                    if (remaining <= 0) {
+                        clearInterval(plantCountdownInterval);
+                        plantCountdownInterval = null;
+                        updateOrAddMessage('plant',
+                            `<i class="fas fa-seedling"></i> Planted ${plantedCropName}. Ready to harvest!`);
+                    }
+                };
+                updateCountdown();
+                plantCountdownInterval = setInterval(updateCountdown, 200);
+            }
+
+            function getHarvestMultiplier() { return 1 + (farmLevel - 1) * 0.25; }
+
+            function updateUI() {
+                maxPopulation = houses * HOUSE_CAPACITY;
+                foodDisplay.textContent = Math.floor(food);
+                goldDisplay.textContent = gold;
+                wheatDisplay.textContent = Math.floor(wheat);
+                housePopDisplay.textContent = `${houses}-${population}/${maxPopulation}`;
+                farmLevelBadge.textContent = `Lv.${farmLevel}`;
+                updateButtonPage();
+                saveGame();
+            }
+
+            function updateButtonPage() {
+                btn1.classList.remove('disabled');
+                btn2.classList.remove('disabled');
+                btn3.classList.remove('disabled');
+                btn4.classList.remove('disabled');
+                btn1.style.display = 'block';
+                btn2.style.display = 'block';
+                btn3.style.display = 'block';
+                btn4.style.display = 'block';
+                const resting = restEndTime > Date.now();
+
+                if (subMenu === 'upgrades') {
+                    btn1.innerHTML = '<i class="fas fa-tractor"></i> Farm';
+                    btn2.innerHTML = '<i class="fas fa-home"></i> House';
+                    btn3.style.display = 'none';
+                    btn4.innerHTML = '<i class="fas fa-arrow-left"></i> Back';
+                    if (gold < getFarmUpgradeGoldCost() || food < getFarmUpgradeFoodCost()) btn1.classList.add('disabled');
+                    if (gold < getHouseUpgradeGoldCost() || food < getHouseUpgradeFoodCost()) btn2.classList.add('disabled');
+                    return;
+                }
+                if (subMenu === 'adventure') {
+                    btn1.innerHTML = '<i class="fas fa-dragon"></i> Explore';
+                    btn2.innerHTML = '<i class="fas fa-running"></i> Auto';
+                    btn3.innerHTML = '<i class="fas fa-inn"></i> Inn';
+                    btn4.innerHTML = '<i class="fas fa-arrow-left"></i> Back';
+                
+                    if (innOfferActive || resting || food < 10 || population < 2) btn1.classList.add('disabled');
+                
+                    if (innOfferActive || resting || autoExploring || food < 10 || population < 2) btn2.classList.add('disabled');
+                
+                    if (!innNearby || autoExploring || innOfferActive) btn3.classList.add('disabled');
+                
+                    return;
+                }
+                if (subMenu === 'fishing') {
+                    btn1.innerHTML = '<i class="fas fa-fish"></i> Fish';
+                    btn2.innerHTML = '<i class="fas fa-store"></i> Shop';
+                    btn3.style.display = 'none';
+                    btn4.innerHTML = '<i class="fas fa-arrow-left"></i> Back';
+                    if (baits <= 0) btn1.classList.add('disabled');
+                    return;
+                }
+                if (subMenu === 'fishing_shop') {
+                    btn1.innerHTML = '<i class="fas fa-worm"></i> Baits (5g)';
+                    btn2.innerHTML = `<i class="fas fa-fishing-rod"></i> Rod (${getRodUpgradeCost()}g)`;
+                    btn3.innerHTML = '<i class="fas fa-coins"></i> Sell fish';
+                    btn4.innerHTML = '<i class="fas fa-arrow-left"></i> Back';
+                    if (gold < 5) btn1.classList.add('disabled');
+                    if (gold < getRodUpgradeCost()) btn2.classList.add('disabled');
+                    return;
+                }
+
+                if (currentPage === 0) {
+                    btn1.innerHTML = plantedCrop ? (Date.now() - plantTime >= 5000 ?
+                        '<i class="fas fa-tractor"></i> Harvest' :
+                        '<i class="fas fa-hourglass-half"></i> Growing') :
+                        '<i class="fas fa-seedling"></i> Plant';
+                    btn2.innerHTML = '<i class="fas fa-leaf"></i> Crop';
+                    btn3.innerHTML = '<i class="fas fa-bread-slice"></i> Bakery';
+                    btn4.innerHTML = '<i class="fas fa-arrow-right"></i> Next';
+                    if (plantedCrop && Date.now() - plantTime < 5000) btn1.classList.add('disabled');
+                    if (wheat < 5) btn3.classList.add('disabled');
+                } else if (currentPage === 1) {
+                    btn1.innerHTML = '<i class="fas fa-arrow-up"></i> Upgrades';
+                    btn2.innerHTML = '<i class="fas fa-dragon"></i> Adventure';
+                    btn3.innerHTML = '<i class="fas fa-fish"></i> Fishing';
+                    btn4.innerHTML = '<i class="fas fa-arrow-right"></i> Next';
+                } else if (currentPage === 2) {
+                    btn1.innerHTML = '<i class="fas fa-box"></i> Storage';
+                    btn2.innerHTML = '<i class="fas fa-store"></i> Market';
+                    btn3.innerHTML = competitionJoined ? '<i class="fas fa-trophy"></i> Joined' :
+                        '<i class="fas fa-medal"></i> Join Comp';
+                    btn4.innerHTML = '<i class="fas fa-arrow-right"></i> Next';
+                    if (competitionJoined || gold < 100) btn3.classList.add('disabled');
+                } else if (currentPage === 3) {
+                    btn1.innerHTML = '<i class="fas fa-skull"></i> War';
+                    btn2.style.display = 'none';
+                    btn3.style.display = 'none';
+                    btn4.innerHTML = '<i class="fas fa-arrow-left"></i> Prev';
+                    if (population < 10 || gold < 500 || food < 200) btn1.classList.add('disabled');
+                }
+            }
+
+            function getHouseUpgradeGoldCost() { return 55 * houses; }
+            function getHouseUpgradeFoodCost() { return 30 * houses; }
+            function getFarmUpgradeGoldCost() { return 90 * farmLevel; }
+            function getFarmUpgradeFoodCost() { return 40 * farmLevel; }
+            function getRodUpgradeCost() { return 100 + (rodLevel - 1) * 50; }
+
+            function handleAction(actionId) {
+                const button = [btn1, btn2, btn3, btn4][actionId - 1];
+                if (button.classList.contains('disabled')) {
+                    let shakeType = null;
+                    if (subMenu === 'upgrades') {
+                        shakeType = 'upgrade';
+                    } else if (subMenu === 'adventure') {
+                        shakeType = 'adventure';
+                    } else if (subMenu === 'fishing') {
+                        shakeType = 'fishing';
+                    } else if (subMenu === 'fishing_shop') {
+                        shakeType = 'fishing_shop';
+                    } else if (currentPage === 0 && actionId === 1) {
+                        shakeType = plantedCrop ? 'plant' : 'harvest';
+                    } else if (currentPage === 0 && actionId === 3) {
+                        shakeType = 'bakery';
+                    } else if (currentPage === 2 && actionId === 3) {
+                        shakeType = 'competition';
+                    } else if (currentPage === 3 && actionId === 1) {
+                        shakeType = 'war';
+                    }
+                    if (shakeType) shakeMessage(shakeType);
+                    return;
+                }
+
+                if (subMenu === 'upgrades') {
+                    if (actionId === 1) upgradeFarm();
+                    else if (actionId === 2) upgradeHouse();
+                    else if (actionId === 4) subMenu = null;
+                    updateUI();
+                    return;
+                }
+                if (subMenu === 'adventure') {
+                    if (actionId === 1) exploreAdventure();
+                    else if (actionId === 2) startAutoExplore();
+                    else if (actionId === 3) openInnPopup();
+                    else if (actionId === 4) { subMenu = null; innOfferActive = false; innNearby = false; removeMessagesOfType('inn_offer'); }
+                    updateUI();
+                    return;
+                }
+                if (subMenu === 'fishing') {
+                    if (actionId === 1) goFish();
+                    else if (actionId === 2) openFishingShop();
+                    else if (actionId === 4) subMenu = null;
+                    updateUI();
+                    return;
+                }
+                if (subMenu === 'fishing_shop') {
+                    if (actionId === 1) buyBait();
+                    else if (actionId === 2) upgradeRod();
+                    else if (actionId === 3) sellAllFish();
+                    else if (actionId === 4) subMenu = 'fishing';
+                    updateUI();
+                    return;
+                }
+
+                if (currentPage === 0) {
+                    if (actionId === 1) togglePlantHarvest();
+                    else if (actionId === 2) openCropSelectionPopup();
+                    else if (actionId === 3) bakeBread();
+                    else if (actionId === 4) { currentPage = 1; updateUI(); }
+                } else if (currentPage === 1) {
+                    if (actionId === 1) subMenu = 'upgrades';
+                    else if (actionId === 2) { innNearby = Math.random() < 0.5; innOfferActive = false; subMenu = 'adventure'; removeMessagesOfType('inn_offer'); }
+                    else if (actionId === 3) subMenu = 'fishing';
+                    else if (actionId === 4) { currentPage = 2; updateUI(); }
+                } else if (currentPage === 2) {
+                    if (actionId === 1) showStorage();
+                    else if (actionId === 2) openMarket();
+                    else if (actionId === 3) joinCompetition();
+                    else if (actionId === 4) { currentPage = 3; updateUI(); }
+                } else if (currentPage === 3) {
+                    if (actionId === 1) startWar();
+                    else if (actionId === 4) { currentPage = 0; updateUI(); }
+                }
+                updateUI();
+            }
+
+            function togglePlantHarvest() {
+                if (plantedCrop) {
+                    if (Date.now() - plantTime >= 5000) harvestCrop();
+                } else {
+                    plantCrop();
+                }
+            }
+
+            function plantCrop() {
+                const crop = cropData[selectedCropKey];
+                plantedCrop = crop;
+                plantedCropName = crop.name;
+                plantTime = Date.now();
+                removeMessagesOfType('harvest');
+                startPlantCountdown();
+                updateUI();
+            }
+
+            function harvestCrop() {
+                if (!plantedCrop) return;
+                if (plantCountdownInterval) { clearInterval(plantCountdownInterval); plantCountdownInterval = null; }
+                const mult = getHarvestMultiplier();
+                const baseYield = Math.floor(Math.random() * (plantedCrop.maxYield - plantedCrop.minYield + 1) + plantedCrop.minYield);
+                const gain = Math.floor(baseYield * mult);
+                if (plantedCrop.type === 'wheat') wheat += gain;
+                else if (plantedCrop.type === 'carrot') carrot += gain;
+                removeMessagesOfType('plant');
+                updateOrAddMessage('harvest', `<i class="fas fa-tractor"></i> Harvested ${plantedCropName}! +${gain} ${plantedCrop.type}.`);
+                plantedCrop = null;
+                plantedCropName = '';
+                plantTime = 0;
+                updateUI();
+            }
+
+            function upgradeHouse() {
+                const g = getHouseUpgradeGoldCost();
+                const f = getHouseUpgradeFoodCost();
+                if (gold < g || food < f) return;
+                gold -= g; food -= f;
+                houses++;
+                updateOrAddMessage('upgrade', `<i class="fas fa-home"></i> House built! Now ${houses}.`);
+            }
+
+            function upgradeFarm() {
+                const g = getFarmUpgradeGoldCost();
+                const f = getFarmUpgradeFoodCost();
+                if (gold < g || food < f) return;
+                gold -= g; food -= f;
+                farmLevel++;
+                updateOrAddMessage('upgrade', `<i class="fas fa-tractor"></i> Farm upgraded to Lv.${farmLevel}!`);
+            }
+
+            function exploreAdventure() {
+                if (population < 2 || food < 10) return;
+            
+                innNearby = false;
+                food -= 10;
+                const dice = Math.random();
+                let msg = "";
+                if (dice < 0.18) { jewelry++; msg = "You got Jewelry!"; }
+                else if (dice < 0.36) { swords++; msg = "You got Sword!"; }
+                else if (dice < 0.52) { clothes++; msg = "Clothes!"; }
+                else if (dice < 0.68) { let f = 15 + Math.floor(Math.random()*40); food += f; dailyFoodCollected += f; msg = `+${f} food.`; }
+                else if (dice < 0.83) { let g = 20 + Math.floor(Math.random()*50); gold += g; msg = `+${g} gold.`; }
+                else if (dice < 0.92) { if (population > 1) { population--; msg = `Lost one.`; } else msg = `Safe escape.`; }
+                else { population++; msg = `Found wanderer! +1 pop.`; }
+                if (Math.random() < 0.1 && !innOfferActive) {
+                    if (autoExploring) pauseAutoForInn();
+                    innOfferActive = true;
+                    showInnOffer();
+                }
+                updateOrAddMessage('adventure', `<i class="fas fa-dragon"></i> Explore: ${msg}`);
+                if (autoExploring && !innOfferActive) {
+                    autoExploreCount--;
+                    if (autoExploreCount <= 0) stopAutoExplore();
+                }
+            }
+
+            function showInnOffer() {
+                const container = document.createElement('div');
+                container.className = 'inn-offer-container';
+                const yesBtn = document.createElement('button');
+                yesBtn.innerHTML = '<i class="fas fa-check"></i> Yes';
+                yesBtn.className = 'market-btn';
+                yesBtn.addEventListener('click', () => {
+                    innNearby = true;
+                    innOfferActive = false;
+                    autoExploreCount = 0;
+                    stopAutoExplore();
+                    removeMessagesOfType('inn_offer');
+                    container.remove();
+                    updateUI();
+                });
+                const noBtn = document.createElement('button');
+                noBtn.innerHTML = '<i class="fas fa-times"></i> No';
+                noBtn.className = 'market-btn';
+                noBtn.addEventListener('click', () => {
+                    innOfferActive = false;
+                    container.remove();
+                    removeMessagesOfType('inn_offer');
+                    if (autoExploreCount > 0 && !autoExploring) resumeAutoExplore();
+                    updateUI();
+                });
+                container.appendChild(yesBtn);
+                container.appendChild(noBtn);
+                updateOrAddMessage('inn_offer', '<i class="fas fa-inn"></i> Found an Inn! Want to stop?');
+                const msgEl = getMessageElement('inn_offer');
+                if (msgEl) msgEl.appendChild(container);
+            }
+
+            function pauseAutoForInn() {
+                if (autoInterval) clearInterval(autoInterval);
+                autoInterval = null;
+                autoExploring = false;
+            }
+
+            function resumeAutoExplore() {
+                if (autoExploreCount <= 0) return;
+                autoExploring = true;
+                autoInterval = setInterval(() => {
+                    if (!autoExploring || innOfferActive) return;
+                    exploreAdventure();
+                }, 1000);
+                updateOrAddMessage('adventure', `<i class="fas fa-running"></i> Auto Explore resumed (${autoExploreCount} left).`);
+            }
+
+            function startAutoExplore() {
+                if (autoExploring || innOfferActive || restEndTime > Date.now()) return;
+            
+                innNearby = false;
+                autoExploreCount = 10;
+                autoExploring = true;
+                autoInterval = setInterval(() => {
+                    if (!autoExploring || innOfferActive) return;
+                    exploreAdventure();
+                }, 1000);
+                updateOrAddMessage('adventure', `<i class="fas fa-running"></i> Auto Explore started (10 times).`);
+                updateUI();
+            }
+
+            function stopAutoExplore() {
+                if (autoInterval) clearInterval(autoInterval);
+                autoExploring = false;
+                autoExploreCount = 0;
+                autoInterval = null;
+                updateUI();
+            }
+
+            function openInnPopup() {
+                const popup = document.getElementById('universalPopup');
+                document.getElementById('popupTitle').innerHTML = '<i class="fas fa-inn"></i> Inn';
+                let html = '<div style="display:flex; flex-direction:column; gap:12px;">';
+                html += `<button class="action-btn" onclick="window.innRecruit()"><i class="fas fa-user-plus"></i> Recruit (100g)</button>`;
+                html += `<button class="action-btn" onclick="window.innRest()" ${restEndTime > Date.now() ? 'disabled' : ''}><i class="fas fa-bed"></i> Rest (200g/20s, +4pop/5s)</button>`;
+                html += '</div>';
+                document.getElementById('popupContent').innerHTML = html;
+                popup.style.display = 'flex';
+            }
+            window.innRecruit = function() {
+                if (gold < 100) return;
+                gold -= 100;
+                population++;
+                updateOrAddMessage('upgrade', `<i class="fas fa-user-plus"></i> Recruited 1 villager.`);
+                closeUniversalPopup();
+                updateUI();
+            };
+            window.innRest = function() {
+                if (gold < 200 || restEndTime > Date.now()) return;
+                gold -= 200;
+                restEndTime = Date.now() + 20000;
+                restNextTick = Date.now() + 5000;
+                updateOrAddMessage('upgrade', `<i class="fas fa-bed"></i> Resting 20s... +4 pop every 5s.`);
+                closeUniversalPopup();
+                updateUI();
+            };
+
+            function bakeBread() {
+                if (wheat < 5) return;
+                let used = Math.min(wheat, 50);
+                let bread = Math.floor(used * 1.2);
+                wheat -= used;
+                food += bread;
+                dailyFoodCollected += bread;
+                updateOrAddMessage('bakery', `<i class="fas fa-bread-slice"></i> ${used} wheat → ${bread} food.`);
+            }
+
+            function openFishingShop() {
+                subMenu = 'fishing_shop';
+                updateUI();
+                const rodCost = getRodUpgradeCost();
+                updateOrAddMessage('fishing_shop', `<i class="fas fa-store"></i> FISHING SHOP | Baits: ${baits} | Rod Lv.${rodLevel} | Upgrade: ${rodCost}g`);
+            }
+
+            function goFish() {
+                if (baits <= 0) return;
+                baits--;
+                const isLegendary = Math.random() < 0.04;
+                let species, weight, price;
+                if (isLegendary) {
+                    species = fishSpecies[5];
+                    weight = 200;
+                    if (rodLevel < 10 && Math.random() < 0.75) {
+                        rodLevel = Math.max(1, rodLevel - 1);
+                        updateOrAddMessage('fishing', `<i class="fas fa-exclamation-triangle"></i> Legendary fish broke your rod! Lv.${rodLevel}.`);
+                        updateUI();
+                        return;
+                    }
+                    price = Math.floor(species.basePrice * (weight / 10));
+                } else {
+                    species = fishSpecies[Math.floor(Math.random() * 5)];
+                    const maxWeight = 4.5 + rodLevel * 1.2;
+                    weight = parseFloat((0.5 + Math.random() * maxWeight).toFixed(1));
+                    price = Math.floor(species.basePrice * weight);
+                }
+                fishInventory.push({ name: species.name, weight, price });
+                updateOrAddMessage('fishing', `<i class="fas fa-fish"></i> Caught ${species.name} ${weight}kg worth ${price}g. (Rod Lv.${rodLevel})`);
+                if (subMenu === 'fishing_shop') openFishingShop();
+            }
+
+            function buyBait() {
+                if (gold < 5) return;
+                gold -= 5;
+                baits++;
+                if (subMenu === 'fishing_shop') openFishingShop();
+            }
+
+            function upgradeRod() {
+                const cost = getRodUpgradeCost();
+                if (gold < cost) return;
+                gold -= cost;
+                rodLevel++;
+                if (subMenu === 'fishing_shop') openFishingShop();
+            }
+
+            function sellAllFish() {
+                if (fishInventory.length === 0) return;
+                let total = fishInventory.reduce((s, f) => s + f.price, 0);
+                gold += total;
+                updateOrAddMessage('fishing_shop', `<i class="fas fa-coins"></i> Sold ${fishInventory.length} fish for ${total}g.`);
+                fishInventory = [];
+                if (subMenu === 'fishing_shop') openFishingShop();
+            }
+
+            function showStorage() {
+                let lines = [
+                    `<i class="fas fa-box"></i> STORAGE`,
+                    `Food: ${Math.floor(food)} | Gold: ${gold}`,
+                    `Wheat: ${Math.floor(wheat)} | Carrot: ${carrot}`,
+                    `Medals: ${medals} | Jewelry: ${jewelry} | Swords: ${swords} | Clothes: ${clothes}`,
+                    `Fish: ${fishInventory.length} (Baits: ${baits}, Rod Lv.${rodLevel})`
+                ];
+                updateOrAddMessage('storage', lines.join('<br>'));
+            }
+
+            function openMarket() {
+                let inv = `<i class="fas fa-store"></i> MARKET<br>`;
+                inv += `Wheat: ${wheat} (3g) | Carrot: ${carrot} (3g)<br>`;
+                inv += `Medals: ${medals} (10k) | Jewelry: ${jewelry} (500) | Swords: ${swords} (250) | Clothes: ${clothes} (100)`;
+                updateOrAddMessage('market', inv);
+                const msgEl = getMessageElement('market');
+                if (msgEl) {
+                    const container = document.createElement('div');
+                    container.className = 'market-buttons-container';
+                    const items = [
+                        { name: '<i class="fas fa-wheat-awn"></i> Wheat', action: () => { sellItem('wheat'); refreshMarket(); } },
+                        { name: '<i class="fas fa-carrot"></i> Carrot', action: () => { sellItem('carrot'); refreshMarket(); } },
+                        { name: '<i class="fas fa-medal"></i> Medal', action: () => { sellMedal(); refreshMarket(); } },
+                        { name: '<i class="fas fa-gem"></i> Jewelry', action: () => { sellLoot('jewelry', 500); refreshMarket(); } },
+                        { name: '<i class="fas fa-sword"></i> Sword', action: () => { sellLoot('swords', 250); refreshMarket(); } },
+                        { name: '<i class="fas fa-tshirt"></i> Clothes', action: () => { sellLoot('clothes', 100); refreshMarket(); } }
+                    ];
+                    items.forEach(it => {
+                        let btn = document.createElement('button');
+                        btn.innerHTML = it.name;
+                        btn.className = 'market-btn';
+                        btn.addEventListener('click', it.action);
+                        container.appendChild(btn);
+                    });
+                    let sellAllBtn = document.createElement('button');
+                    sellAllBtn.innerHTML = '<i class="fas fa-coins"></i> Sell All (except plants)';
+                    sellAllBtn.className = 'market-btn';
+                    sellAllBtn.addEventListener('click', () => { sellAllNonPlants(); refreshMarket(); });
+                    container.appendChild(sellAllBtn);
+                    msgEl.appendChild(container);
+                }
+            }
+
+            function refreshMarket() {
+                removeMessagesOfType('market');
+                openMarket();
+            }
+
+            function sellItem(type) {
+                let amt = 0;
+                if (type === 'wheat') { amt = wheat; wheat = 0; }
+                else if (type === 'carrot') { amt = carrot; carrot = 0; }
+                if (amt <= 0) return;
+                gold += amt * 3;
+            }
+
+            function sellMedal() { if (medals > 0) { medals--; gold += 10000; } }
+            function sellLoot(item, price) {
+                if (item === 'jewelry') { if (jewelry > 0) { gold += jewelry * price; jewelry = 0; } }
+                else if (item === 'swords') { if (swords > 0) { gold += swords * price; swords = 0; } }
+                else if (item === 'clothes') { if (clothes > 0) { gold += clothes * price; clothes = 0; } }
+            }
+
+            function sellAllNonPlants() {
+                let total = 0;
+                if (medals > 0) { total += medals * 10000; medals = 0; }
+                if (jewelry > 0) { total += jewelry * 500; jewelry = 0; }
+                if (swords > 0) { total += swords * 250; swords = 0; }
+                if (clothes > 0) { total += clothes * 100; clothes = 0; }
+                if (total > 0) gold += total;
+            }
+
+            function joinCompetition() {
+                if (competitionJoined || gold < 100) return;
+                gold -= 100;
+                competitionJoined = true;
+                updateOrAddMessage('competition', `<i class="fas fa-medal"></i> Joined comp! Beat ${botName} (${botTargetScore} food).`);
+            }
+
+            function generateBotScore() { return Math.floor(200 + Math.random() * 80000); }
+            function pickRandomBot() { return botNames[Math.floor(Math.random() * botNames.length)]; }
+
+            function checkCompetitionReset() {
+                const now = new Date();
+                const dateKey = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+                if (lastCompetitionDate !== dateKey && now.getHours() >= 9) {
+                    if (lastCompetitionDate) resolveCompetition();
+                    dailyFoodCollected = 0;
+                    competitionJoined = false;
+                    botTargetScore = generateBotScore();
+                    botName = pickRandomBot();
+                    lastCompetitionDate = dateKey;
+                    updateOrAddMessage('system', `<i class="fas fa-flag-checkered"></i> New comp! ${botName} ${botTargetScore} food`, true);
+                } else if (!lastCompetitionDate) {
+                    botTargetScore = generateBotScore();
+                    botName = pickRandomBot();
+                    lastCompetitionDate = dateKey;
+                    updateOrAddMessage('system', `<i class="fas fa-flag-checkered"></i> Today: ${botName} ${botTargetScore} food`, true);
+                }
+                updateUI();
+            }
+
+            function resolveCompetition() {
+                if (!competitionJoined) return;
+                if (dailyFoodCollected > botTargetScore) {
+                    medals++;
+                    gold += dailyFoodCollected;
+                    updateOrAddMessage('system', `<i class="fas fa-trophy"></i> You beat ${botName}! +${dailyFoodCollected}g +1 medal`, true);
+                } else {
+                    updateOrAddMessage('system', `<i class="fas fa-frown"></i> ${botName} won.`, true);
+                }
+            }
+
+            function startWar() {
+                if (population < 10 || gold < 500 || food < 200) return;
+                gold -= 500;
+                food -= 200;
+                population = Math.max(1, population - (5 + Math.floor(Math.random() * 3)));
+                const r = Math.random();
+                let msg = "";
+                if (r < 0.2) { swords += 3; msg = "3 Swords!"; }
+                else if (r < 0.35) { jewelry += 2; msg = "2 Jewelry!"; }
+                else if (r < 0.5) { clothes += 4; msg = "4 Clothes!"; }
+                else if (r < 0.65) { gold += 5000; msg = "5k gold!"; }
+                else if (r < 0.8) { gold += 10000; msg = "10k gold!"; }
+                else if (r < 0.93) { gold += 25000; msg = "25k gold!"; }
+                else { gold += 200000; msg = "200k gold!!"; }
+                updateOrAddMessage('war', `<i class="fas fa-skull"></i> WAR! ${msg}`);
+            }
+
+            function openCropSelectionPopup() {
+                const popup = document.getElementById('universalPopup');
+                document.getElementById('popupTitle').innerHTML = '<i class="fas fa-leaf"></i> Select Crop';
+                let html = '';
+                Object.entries(cropData).forEach(([key, crop]) => {
+                    html += `<div class="crop-option" onclick="selectCrop('${key}')">
+                        <h3><i class="fas ${crop.icon}"></i> ${crop.name}</h3>
+                        <p>Yield: ${crop.minYield}-${crop.maxYield} ${crop.type}</p>
+                    </div>`;
+                });
+                document.getElementById('popupContent').innerHTML = html;
+                popup.style.display = 'flex';
+            }
+            window.selectCrop = function(key) { selectedCropKey = key; closeUniversalPopup(); updateUI(); };
+            window.closeUniversalPopup = function() { document.getElementById('universalPopup').style.display = 'none'; };
+
+            function processRest() {
+                if (restEndTime && Date.now() >= restEndTime) {
+                    population += 4;
+                    restEndTime = 0;
+                    restNextTick = 0;
+                    updateOrAddMessage('upgrade', '<i class="fas fa-bed"></i> Rest complete: +4 population.');
+                }
+                if (restNextTick && Date.now() >= restNextTick && restEndTime > Date.now()) {
+                    population += 4;
+                    restNextTick += 5000;
+                    updateOrAddMessage('upgrade', `<i class="fas fa-bed"></i> Rest tick: +4 pop (now ${population}).`);
+                }
+            }
+
+            function passiveFoodGain() {
+                const gain = (BASE_FOOD_PER_HOUR * farmLevel) / 3600;
+                food += gain;
+                dailyFoodCollected += gain;
+                processRest();
+                updateUI();
+            }
+
+            btn1.addEventListener('click', () => handleAction(1));
+            btn2.addEventListener('click', () => handleAction(2));
+            btn3.addEventListener('click', () => handleAction(3));
+            btn4.addEventListener('click', () => handleAction(4));
+
+            setInterval(passiveFoodGain, 1000);
+            setInterval(checkCompetitionReset, 1000);
+
+            loadGame();
+            if (!lastCompetitionDate) { botTargetScore = generateBotScore(); botName = pickRandomBot(); }
+            chatMessages.innerHTML = '';
+            updateOrAddMessage('system', `<i class="fas fa-leaf"></i> Farm, fish, fight. Beat ${botName} (${botTargetScore} food)`, true);
+            updateUI();
+        })();
+    </script>
+</body>
+</html>
