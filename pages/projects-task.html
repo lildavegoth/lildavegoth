@@ -564,6 +564,30 @@
             cursor: not-allowed;
         }
 
+        .clear-tasks-btn {
+            margin-top: 0;
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            color: #ff6b6b;
+            border-radius: var(--radius-small);
+            padding: 7px 14px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            width: fit-content;
+        }
+
+        .clear-tasks-btn:hover {
+            background: rgba(220, 53, 69, 0.2);
+            border-color: rgba(220, 53, 69, 0.5);
+        }
+
+        .add-task-btn {
+            margin-top: 0;
+        }
+
         .folders-container {
             display: flex;
             gap: var(--spacing-sm);
@@ -830,6 +854,7 @@
         let currentFolderId = null
         let rowToDeleteIndex = -1
         let filterActive = false
+        let clearProject = null
                                 
         const body = document.getElementById("tableBody")
         const addRowBtnTop = document.getElementById("addRowBtnTop")
@@ -872,10 +897,12 @@
             openUniversalPopup(title, contentHTML)
         }
         
-        function showModalWithInput(title, message, buttonText, inputPlaceholder = "Folder name", inputValue = "") {
+        function showModalWithInput(title, message, buttonText, inputPlaceholder, inputValue) {
+            const placeholder = inputPlaceholder || "Folder name"
+            const value = inputValue || ""
             const contentHTML = `
                 <p style="color: var(--text-primary); font-size: 1rem; line-height: 1.5; margin-bottom: var(--spacing-md);">${message}</p>
-                <input type="text" id="modalInput" class="form-input" placeholder="${inputPlaceholder}" value="${inputValue}" style="margin-bottom: var(--spacing-md);">
+                <input type="text" id="modalInput" class="form-input" placeholder="${placeholder}" value="${value}" style="margin-bottom: var(--spacing-md);">
                 <div style="display: flex; gap: var(--spacing-sm);">
                     <button class="btn" onclick="closeUniversalPopup()">Cancel</button>
                     <button class="btn primary" id="modalActionBtn">${buttonText}</button>
@@ -1138,6 +1165,12 @@
             }
         }
         
+        function fixStatus(project) {
+            if (project.status === "Completed" && project.tasks.length > 0) {
+                project.status = "Pending"
+            }
+        }
+        
         function updateStatusColor(nameInput, status) {
             const colors = {
                 "Pending": "#D9C181",
@@ -1146,6 +1179,29 @@
                 "Deprecated": "#C42833"
             }
             nameInput.style.color = colors[status] || "var(--text-primary)"
+        }
+        
+        function openClearTasksConfirmation(project) {
+            clearProject = project
+            openUniversalPopup("Clear Tasks", `
+                <p style="color: var(--text-primary); font-size: 1rem; line-height: 1.5; margin-bottom: var(--spacing-md);">Are you sure you want to clear all tasks?</p>
+                <div style="display: flex; gap: var(--spacing-sm);">
+                    <button class="btn" onclick="closeUniversalPopup()">Cancel</button>
+                    <button class="btn danger" onclick="confirmClearTasks()">Yes</button>
+                </div>
+            `)
+        }
+        
+        function confirmClearTasks() {
+            if (clearProject) {
+                clearProject.tasks = []
+                fixStatus(clearProject)
+                save()
+                render()
+                closeUniversalPopup()
+                window.showMessage("Current projector tasks has been cleared")
+                clearProject = null
+            }
         }
         
         function rowTemplate(project, index) {
@@ -1203,6 +1259,7 @@
                 remove.innerHTML = "×"
                 remove.onclick = () => {
                     project.tasks.splice(i, 1)
+                    fixStatus(project)
                     save()
                     render()
                 }
@@ -1216,11 +1273,26 @@
             addTask.textContent = "Add Task"
             addTask.onclick = () => {
                 project.tasks.push({ text: "", done: false })
+                fixStatus(project)
                 save()
                 render()
             }
             
-            tasksTd.append(tasksBox, addTask)
+            const clearTasks = document.createElement("button")
+            clearTasks.className = "clear-tasks-btn"
+            clearTasks.textContent = "Clear"
+            clearTasks.onclick = () => {
+                openClearTasksConfirmation(project)
+            }
+            
+            const buttonsRow = document.createElement("div")
+            buttonsRow.style.display = "flex"
+            buttonsRow.style.gap = "8px"
+            buttonsRow.style.alignItems = "center"
+            buttonsRow.appendChild(addTask)
+            buttonsRow.appendChild(clearTasks)
+            
+            tasksTd.append(tasksBox, buttonsRow)
             
             const notesTd = document.createElement("td")
             const notesInput = document.createElement("textarea")
@@ -1249,6 +1321,7 @@
             })
             status.onchange = e => {
                 project.status = e.target.value
+                fixStatus(project)
                 save()
                 render()
             }
