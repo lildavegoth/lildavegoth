@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Multi Countdown | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --red: #C42833;
+            --purple: #7E50B5;
+            --green: #C1FC32;
+            --card: #242424;
+            --bg: #000000;
+            --radius-card: 24px;
+            --radius-btn: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: #f5f5f7;
+            min-height: 100vh;
+            padding: 20px 16px 100px;
+        }
+
+        .header {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 40px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 20px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-stop {
+            background-color: #242424;
+            color: white;
+        }
+
+        .btn-reset {
+            background-color: var(--red);
+            color: white;
+        }
+
+        .btn-add {
+            background-color: #242424;
+            color: white;
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            border-radius: var(--radius-btn);
+        }
+
+        .btn-add:active {
+            transform: scale(0.95);
+        }
+
+        .category {
+            margin-bottom: 40px;
+        }
+
+        .category-name {
+            color: #a1a1a6;
+            font-size: 17px;
+            margin-bottom: 16px;
+            padding-left: 8px;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .timer-card {
+            background-color: var(--card);
+            border-radius: var(--radius-card);
+            padding: 20px 24px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            cursor: pointer;
+        }
+
+        .timer-info {
+            flex: 1;
+        }
+
+        .timer-title {
+            font-size: 15px;
+            color: #a1a1a6;
+            margin-bottom: 6px;
+        }
+
+        .timer-time {
+            font-size: 42px;
+            font-weight: 600;
+            letter-spacing: -2px;
+        }
+
+        .timer-time.over {
+            color: var(--red);
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .control-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-btn);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:active {
+            transform: scale(0.92);
+        }
+
+        .btn-purple {
+            background-color: var(--purple);
+            color: white;
+        }
+
+        .btn-green {
+            background-color: var(--green);
+            color: #000;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-icon {
+            font-size: 60px;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+        }
+
+        .popup-content {
+            background: #242424;
+            border-radius: 28px;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: #a1a1a6;
+            font-size: 1.4rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .popup-body {
+            padding: 24px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .popup-footer {
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 12px;
+        }
+
+        .save-btn {
+            background: var(--green);
+            color: black;
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 16px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .delete-btn {
+            background: var(--red);
+            color: white;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 16px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .cancel-btn {
+            background: #3a3a3a;
+            color: white;
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 16px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            color: white;
+            font-size: 17px;
+            margin-bottom: 16px;
+        }
+
+        .category-select-btn {
+            width: 100%;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            color: white;
+            font-size: 17px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: left;
+        }
+
+        .category-select-btn span {
+            flex: 1;
+        }
+
+        .category-select-btn i {
+            font-size: 14px;
+            color: #a1a1a6;
+            margin-left: 12px;
+        }
+
+        .time-inputs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .time-inputs input {
+            flex: 1;
+            text-align: center;
+        }
+
+        .menu-option {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 18px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            font-size: 17px;
+            transition: background 0.15s ease;
+        }
+
+        .menu-option:active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .menu-option.selected {
+            background: rgba(193, 252, 50, 0.15);
+            border: 1px solid var(--green);
+        }
+
+        .confirm-message {
+            font-size: 17px;
+            text-align: center;
+            padding: 10px 0;
+            color: #f5f5f7;
+        }
+
+        @media (min-width: 720px) {
+            .categories-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="btn btn-stop" onclick="stopAll()">Stop</button>
+        <button class="btn btn-reset" onclick="resetAll()">Reset</button>
+        <button class="btn btn-add" onclick="showAddPopup()"><i class="fas fa-plus"></i></button>
+    </div>
+
+    <div id="content"></div>
+
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle">Add New</h2>
+                <button class="close-popup" onclick="closeUniversalPopup()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="popup-body" id="popupBody"></div>
+            <div class="popup-footer" id="popupFooter" style="display: none;">
+                <button class="delete-btn" id="deleteBtn" onclick="deleteCurrentItem()" style="display: none;">Delete</button>
+                <button class="save-btn" onclick="saveCurrentAction()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmPopup" class="popup-overlay" style="display: none; z-index: 1000000000;">
+        <div class="popup-content" style="max-width: 400px;">
+            <div class="popup-header">
+                <h2>Confirmation</h2>
+            </div>
+            <div class="popup-body">
+                <div class="confirm-message" id="confirmMessage"></div>
+            </div>
+            <div class="popup-footer">
+                <button class="cancel-btn" onclick="closeConfirmPopup(false)">Cancel</button>
+                <button class="delete-btn" onclick="closeConfirmPopup(true)">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="categorySelectPopup" class="popup-overlay" style="display: none; z-index: 1000000000;">
+        <div class="popup-content" style="max-width: 400px;">
+            <div class="popup-header">
+                <h2>Select Category</h2>
+                <button class="close-popup" onclick="closeCategorySelectPopup()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="popup-body" id="categorySelectList"></div>
+        </div>
+    </div>
+
+    <script>
+        let countdownData = {
+            categories: []
+        };
+        let currentTimers = {};
+        let editingItem = null;
+        let editingCategoryIndex = null;
+        let currentAction = null;
+        let selectedCategoryIndex = 0;
+        let confirmCallback = null;
+
+        function loadData() {
+            const saved = localStorage.getItem('countdownApp');
+            if (saved) {
+                countdownData = JSON.parse(saved);
+            }
+            if (!countdownData.categories) {
+                countdownData.categories = [];
+            }
+            renderAll();
+        }
+
+        function saveData() {
+            localStorage.setItem('countdownApp', JSON.stringify(countdownData));
+        }
+
+        function formatTime(seconds) {
+            let displaySeconds = Math.abs(seconds);
+            const h = Math.floor(displaySeconds / 3600);
+            const m = Math.floor((displaySeconds % 3600) / 60);
+            const s = displaySeconds % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer(catIndex, itemIndex) {
+            const itemId = `${catIndex}-${itemIndex}`;
+            if (currentTimers[itemId]) clearInterval(currentTimers[itemId]);
+            const item = countdownData.categories[catIndex].items[itemIndex];
+            let remaining = item.remaining !== undefined ? item.remaining : item.totalSeconds;
+            const timeEl = document.getElementById(`time-${itemId}`);
+            if (!timeEl) return;
+
+            currentTimers[itemId] = setInterval(() => {
+                remaining--;
+                item.remaining = remaining;
+                if (timeEl) {
+                    timeEl.textContent = formatTime(remaining);
+                    if (remaining < 0) {
+                        timeEl.classList.add('over');
+                    } else {
+                        timeEl.classList.remove('over');
+                    }
+                }
+                saveData();
+            }, 1000);
+        }
+
+        function stopTimer(catIndex, itemIndex) {
+            const itemId = `${catIndex}-${itemIndex}`;
+            if (currentTimers[itemId]) {
+                clearInterval(currentTimers[itemId]);
+                delete currentTimers[itemId];
+            }
+        }
+
+        function createCardHTML(catIndex, item, itemIndex) {
+            const itemId = `${catIndex}-${itemIndex}`;
+            const isOver = (item.remaining !== undefined && item.remaining < 0);
+            return `
+                <div class="timer-card" onclick="editCountdown(${catIndex}, ${itemIndex})">
+                    <div class="timer-info">
+                        <div class="timer-title">${item.title}</div>
+                        <div class="timer-time ${isOver ? 'over' : ''}" id="time-${itemId}">${formatTime(item.remaining !== undefined ? item.remaining : item.totalSeconds)}</div>
+                    </div>
+                    <div class="timer-controls">
+                        <button class="control-btn btn-purple" onclick="event.stopImmediatePropagation(); restartSingleCountdown(${catIndex}, ${itemIndex});">
+                            <i class="fas fa-arrow-rotate-right"></i>
+                        </button>
+                        <button class="control-btn btn-green" onclick="event.stopImmediatePropagation(); toggleTimer(${catIndex}, ${itemIndex}, this);">
+                            <i class="fas fa-play"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAll() {
+            let html = '';
+            if (countdownData.categories.length === 0) {
+                html = `
+                    <div class="empty-state">
+                        <i class="fas fa-clock empty-icon"></i>
+                        <div>There are no Countdown added yet</div>
+                    </div>
+                `;
+            } else {
+                html += `<div class="categories-container">`;
+                countdownData.categories.forEach((cat, catIndex) => {
+                    html += `<div class="category">`;
+                    html += `<div class="category-name" onclick="editCategory(${catIndex})">${cat.name}</div>`;
+                    cat.items.forEach((item, itemIndex) => {
+                        html += createCardHTML(catIndex, item, itemIndex);
+                    });
+                    html += `</div>`;
+                });
+                html += `</div>`;
+            }
+            document.getElementById('content').innerHTML = html;
+        }
+
+        function showAddPopup() {
+            editingItem = null;
+            editingCategoryIndex = null;
+            currentAction = null;
+            document.getElementById('popupTitle').textContent = 'Add New';
+            document.getElementById('popupBody').innerHTML = `
+                <div class="menu-option" onclick="selectAddType('category')">Category</div>
+                <div class="menu-option" onclick="selectAddType('countdown')">Countdown</div>
+            `;
+            document.getElementById('popupFooter').style.display = 'none';
+            document.getElementById('universalPopup').style.display = 'flex';
+        }
+
+        function selectAddType(type) {
+            currentAction = type;
+            const body = document.getElementById('popupBody');
+            document.getElementById('deleteBtn').style.display = 'none';
+            if (type === 'category') {
+                body.innerHTML = `
+                    <input type="text" id="catTitle" placeholder="Category title" maxlength="19">
+                `;
+            } else {
+                if (countdownData.categories.length === 0) {
+                    body.innerHTML = `
+                        <div class="confirm-message" style="padding: 20px 0;">Please add a Category first before creating a Countdown.</div>
+                    `;
+                    document.getElementById('popupFooter').style.display = 'none';
+                    return;
+                }
+                selectedCategoryIndex = 0;
+                const defaultCatName = countdownData.categories[0].name;
+                body.innerHTML = `
+                    <input type="text" id="cdTitle" placeholder="Title" maxlength="19">
+                    <div class="time-inputs">
+                        <input type="number" id="hours" placeholder="HH" min="0" max="99" value="0">
+                        <input type="number" id="minutes" placeholder="MM" min="0" max="59" value="20">
+                        <input type="number" id="seconds" placeholder="SS" min="0" max="59" value="0">
+                    </div>
+                    <div class="category-select-btn" onclick="showCategorySelectPopup()">
+                        <span id="selectedCatDisplay">${defaultCatName}</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                `;
+            }
+            document.getElementById('popupFooter').style.display = 'flex';
+        }
+
+        function saveCurrentAction() {
+            if (currentAction === 'category' || currentAction === 'editCategory') {
+                const title = document.getElementById('catTitle').value.trim().substring(0, 19);
+                if (title) {
+                    if (editingCategoryIndex !== null) {
+                        countdownData.categories[editingCategoryIndex].name = title;
+                        window.showMessage('Category updated');
+                    } else {
+                        countdownData.categories.push({
+                            name: title,
+                            items: []
+                        });
+                        window.showMessage('Category added');
+                    }
+                    saveData();
+                    renderAll();
+                    closeUniversalPopup();
+                }
+            } else if (currentAction === 'countdown') {
+                const title = document.getElementById('cdTitle').value.trim().substring(0, 19);
+                const h = parseInt(document.getElementById('hours').value) || 0;
+                const m = parseInt(document.getElementById('minutes').value) || 0;
+                const s = parseInt(document.getElementById('seconds').value) || 0;
+                const totalSeconds = h * 3600 + m * 60 + s;
+                const targetCatIndex = selectedCategoryIndex;
+                if (title && totalSeconds > 0 && !isNaN(targetCatIndex) && countdownData.categories[targetCatIndex]) {
+                    if (editingItem !== null) {
+                        const [oldCatIndex, itemIndex] = editingItem;
+                        const item = countdownData.categories[oldCatIndex].items[itemIndex];
+                        item.title = title;
+                        item.totalSeconds = totalSeconds;
+                        item.remaining = totalSeconds;
+                        if (oldCatIndex !== targetCatIndex) {
+                            const movedItem = countdownData.categories[oldCatIndex].items.splice(itemIndex, 1)[0];
+                            countdownData.categories[targetCatIndex].items.push(movedItem);
+                        }
+                        window.showMessage('Countdown updated');
+                    } else {
+                        countdownData.categories[targetCatIndex].items.push({
+                            title: title,
+                            totalSeconds: totalSeconds,
+                            remaining: totalSeconds
+                        });
+                        window.showMessage('The Countdown has been added');
+                    }
+                    saveData();
+                    renderAll();
+                    closeUniversalPopup();
+                }
+            }
+        }
+
+        function editCategory(catIndex) {
+            editingCategoryIndex = catIndex;
+            currentAction = 'editCategory';
+            document.getElementById('popupTitle').textContent = 'Edit Category';
+            document.getElementById('popupBody').innerHTML = `
+                <input type="text" id="catTitle" placeholder="Category title" maxlength="19" value="${countdownData.categories[catIndex].name}">
+            `;
+            document.getElementById('deleteBtn').style.display = 'block';
+            document.getElementById('popupFooter').style.display = 'flex';
+            document.getElementById('universalPopup').style.display = 'flex';
+        }
+
+        function editCountdown(catIndex, itemIndex) {
+            editingItem = [catIndex, itemIndex];
+            currentAction = 'countdown';
+            selectedCategoryIndex = catIndex;
+            const item = countdownData.categories[catIndex].items[itemIndex];
+            const h = Math.floor(item.totalSeconds / 3600);
+            const m = Math.floor((item.totalSeconds % 3600) / 60);
+            const s = item.totalSeconds % 60;
+            const catName = countdownData.categories[catIndex].name;
+            document.getElementById('popupTitle').textContent = 'Edit Countdown';
+            document.getElementById('popupBody').innerHTML = `
+                <input type="text" id="cdTitle" placeholder="Title" maxlength="19" value="${item.title}">
+                <div class="time-inputs">
+                    <input type="number" id="hours" placeholder="HH" min="0" max="99" value="${h}">
+                    <input type="number" id="minutes" placeholder="MM" min="0" max="59" value="${m}">
+                    <input type="number" id="seconds" placeholder="SS" min="0" max="59" value="${s}">
+                </div>
+                <div class="category-select-btn" onclick="showCategorySelectPopup()">
+                    <span id="selectedCatDisplay">${catName}</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            `;
+            document.getElementById('deleteBtn').style.display = 'block';
+            document.getElementById('popupFooter').style.display = 'flex';
+            document.getElementById('universalPopup').style.display = 'flex';
+        }
+
+        function showCategorySelectPopup() {
+            const listEl = document.getElementById('categorySelectList');
+            let html = '';
+            countdownData.categories.forEach((cat, i) => {
+                const isSelected = i === selectedCategoryIndex;
+                html += `<div class="menu-option${isSelected ? ' selected' : ''}" onclick="selectCategory(${i})">${cat.name}</div>`;
+            });
+            listEl.innerHTML = html;
+            document.getElementById('categorySelectPopup').style.display = 'flex';
+        }
+
+        function selectCategory(index) {
+            selectedCategoryIndex = index;
+            const catName = countdownData.categories[index].name;
+            const displayEl = document.getElementById('selectedCatDisplay');
+            if (displayEl) {
+                displayEl.textContent = catName;
+            }
+            closeCategorySelectPopup();
+        }
+
+        function closeCategorySelectPopup() {
+            document.getElementById('categorySelectPopup').style.display = 'none';
+        }
+
+        function deleteCurrentItem() {
+            showConfirm('Delete this item?', function() {
+                if (editingCategoryIndex !== null) {
+                    countdownData.categories.splice(editingCategoryIndex, 1);
+                    window.showMessage('Category deleted');
+                } else if (editingItem !== null) {
+                    const [catIndex, itemIndex] = editingItem;
+                    const itemId = `${catIndex}-${itemIndex}`;
+                    stopTimer(catIndex, itemIndex);
+                    countdownData.categories[catIndex].items.splice(itemIndex, 1);
+                    window.showMessage('Countdown deleted');
+                }
+                saveData();
+                renderAll();
+                closeUniversalPopup();
+            });
+        }
+
+        function showConfirm(message, callback) {
+            document.getElementById('confirmMessage').textContent = message;
+            document.getElementById('confirmPopup').style.display = 'flex';
+            confirmCallback = callback;
+        }
+
+        function closeConfirmPopup(confirmed) {
+            document.getElementById('confirmPopup').style.display = 'none';
+            if (confirmed && confirmCallback) {
+                confirmCallback();
+            }
+            confirmCallback = null;
+        }
+
+        function toggleTimer(catIndex, itemIndex, btn) {
+            const itemId = `${catIndex}-${itemIndex}`;
+            if (currentTimers[itemId]) {
+                stopTimer(catIndex, itemIndex);
+                if (btn) btn.innerHTML = `<i class="fas fa-play"></i>`;
+            } else {
+                startTimer(catIndex, itemIndex);
+                if (btn) btn.innerHTML = `<i class="fas fa-pause"></i>`;
+            }
+        }
+
+        function restartSingleCountdown(catIndex, itemIndex) {
+            const itemId = `${catIndex}-${itemIndex}`;
+            stopTimer(catIndex, itemIndex);
+            const item = countdownData.categories[catIndex].items[itemIndex];
+            item.remaining = item.totalSeconds;
+            saveData();
+            renderAll();
+            startTimer(catIndex, itemIndex);
+            const timeEl = document.getElementById(`time-${itemId}`);
+            if (timeEl) {
+                const card = timeEl.closest('.timer-card');
+                if (card) {
+                    const playBtn = card.querySelector('.btn-green');
+                    if (playBtn) playBtn.innerHTML = `<i class="fas fa-pause"></i>`;
+                }
+            }
+        }
+
+        function stopAll() {
+            Object.keys(currentTimers).forEach(id => {
+                clearInterval(currentTimers[id]);
+            });
+            currentTimers = {};
+            countdownData.categories.forEach(cat => {
+                cat.items.forEach(item => {
+                    item.remaining = item.totalSeconds;
+                });
+            });
+            saveData();
+            renderAll();
+        }
+
+        function resetAll() {
+            showConfirm('Clear all data?', function() {
+                localStorage.removeItem('countdownApp');
+                countdownData = { categories: [] };
+                Object.keys(currentTimers).forEach(id => {
+                    clearInterval(currentTimers[id]);
+                });
+                currentTimers = {};
+                renderAll();
+                window.showMessage('All data cleared');
+            });
+        }
+
+        function closeUniversalPopup() {
+            document.getElementById('universalPopup').style.display = 'none';
+            editingItem = null;
+            editingCategoryIndex = null;
+            currentAction = null;
+        }
+
+        window.onload = function() {
+            loadData();
+        };
+    </script>
+</body>
+</html>
