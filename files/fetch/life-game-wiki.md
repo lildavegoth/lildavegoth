@@ -1,4 +1,4 @@
-# Text-based Life game of Kira Wiki
+# Wiki of Kira Text-based Life game
 ### General Constants
 
 | Constant | Value |
