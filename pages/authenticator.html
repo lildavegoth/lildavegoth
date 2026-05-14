@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Authenticator | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 90px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+            min-height: calc(100vh - 90px);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            justify-content: flex-start;
+        }
+
+        .reset-btn {
+            background: #C42833;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: var(--radius-small);
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .add-btn {
+            background: #27272a;
+            color: white;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-small);
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .section-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin: 8px 0 16px 4px;
+            color: #a1a1a6;
+        }
+
+        .auth-card {
+            background: #27272a;
+            border-radius: var(--radius-medium);
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .auth-card:active {
+            background: #333;
+        }
+
+        .auth-card.archived {
+            opacity: 0.5;
+        }
+
+        .auth-info {
+            display: flex;
+            flex-direction: column;
+            pointer-events: none;
+        }
+
+        .auth-service {
+            font-size: 15px;
+            color: #a1a1a6;
+            margin-bottom: 4px;
+            user-select: none;
+        }
+
+        .auth-code {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: 4px;
+            user-select: none;
+            color: #ffffff;
+        }
+
+        .auth-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .progress-circle {
+            width: 47px;
+            height: 47px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .progress-svg {
+            width: 47px;
+            height: 47px;
+            transform: rotate(-90deg);
+        }
+
+        .progress-bg {
+            stroke: #3f3f46;
+            fill: none;
+            stroke-width: 6;
+        }
+        
+        .progress-fill {
+            stroke: #C1FC32;
+            fill: none;
+            stroke-width: 6;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.3s linear;
+        }
+
+        .copy-btn {
+            width: 44px;
+            height: 44px;
+            background: #C1FC32;
+            border: none;
+            border-radius: var(--radius-small);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000000;
+            font-size: 18px;
+            cursor: pointer;
+            pointer-events: auto;
+            z-index: 2;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #707070;
+            font-style: italic;
+            padding: 1.5rem;
+            user-select: none;
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s 0.3s, opacity 0.3s;
+        }
+
+        .popup-overlay.active {
+            visibility: visible;
+            opacity: 1;
+            transition: visibility 0s 0s, opacity 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .popup-content {
+            background: #1e1e1e;
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .popup-body {
+            padding: var(--spacing-sm) var(--spacing-md);
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .popup-footer {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            flex-shrink: 0;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            font-size: 14px;
+            color: #a1a1a6;
+        }
+
+        .input-group input {
+            background: #2c2c2c;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 15px;
+            color: #fff;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .btn {
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius-small);
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .btn-danger {
+            background: #C42833;
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: #3a3a3a;
+            color: #fff;
+        }
+
+        .error-text {
+            color: #ff5252;
+            font-size: 13px;
+            min-height: 18px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in" onclick="window.location.hash='';">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <app-header class="fade-in">
+            <div>
+                <h1 class="username">Authenticator</h1>
+                <p class="tagline">Track and save all of your TOTP for 2FA needs in one encrypted vault!</p>
+            </div>
+        </app-header>
+        
+        <div class="header-actions">
+            <button class="reset-btn" id="resetBtn">
+                <i class="fa-solid fa-trash-can"></i> Reset
+            </button>
+            <button class="add-btn" id="addBtn">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+        <div class="section-title">Active</div>
+        <div id="accountsContainer"></div>
+        
+        <footer style="margin-bottom: 100px;">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Authenticator</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+    <div id="universalPopup" class="popup-overlay">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" id="popupCloseBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="popup-body" id="popupBody"></div>
+            <div class="popup-footer" id="popupFooter"></div>
+        </div>
+    </div>
+
+    <script>
+        (async function() {
+            const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+            const BASE32_MAP = {};
+            for (let i = 0; i < BASE32_ALPHABET.length; i++) {
+                BASE32_MAP[BASE32_ALPHABET[i]] = i;
+            }
+
+            function base32Decode(base32) {
+                base32 = base32.replace(/\s+/g, '').replace(/=+$/, '').toUpperCase();
+                if (!/^[A-Z2-7]+$/.test(base32)) {
+                    throw new Error('Invalid Base32 characters');
+                }
+                let bits = '';
+                for (let i = 0; i < base32.length; i++) {
+                    const val = BASE32_MAP[base32[i]];
+                    if (val === undefined) throw new Error('Invalid character');
+                    bits += val.toString(2).padStart(5, '0');
+                }
+                const bytes = [];
+                for (let i = 0; i + 8 <= bits.length; i += 8) {
+                    bytes.push(parseInt(bits.substring(i, i + 8), 2));
+                }
+                return new Uint8Array(bytes);
+            }
+
+            async function generateTOTP(secretBase32) {
+                const keyBytes = base32Decode(secretBase32);
+                const period = 30;
+                const now = Math.floor(Date.now() / 1000);
+                const counter = Math.floor(now / period);
+                const counterBytes = new Uint8Array(8);
+                const view = new DataView(counterBytes.buffer);
+                view.setBigUint64(0, BigInt(counter), false);
+                const cryptoKey = await crypto.subtle.importKey(
+                    'raw',
+                    keyBytes,
+                    { name: 'HMAC', hash: 'SHA-1' },
+                    false,
+                    ['sign']
+                );
+                const hmacBuffer = await crypto.subtle.sign('HMAC', cryptoKey, counterBytes);
+                const hmac = new Uint8Array(hmacBuffer);
+                const offset = hmac[19] & 0x0f;
+                const binary = ((hmac[offset] & 0x7f) << 24) |
+                    (hmac[offset + 1] << 16) |
+                    (hmac[offset + 2] << 8) |
+                    hmac[offset + 3];
+                const otp = binary % 1000000;
+                return otp.toString().padStart(6, '0');
+            }
+
+            const STORAGE_KEY = 'authTotp';
+            const ENC_PASSPHRASE = 'totp_local_vault_2024';
+            let encryptionKey = null;
+
+            async function getEncryptionKey() {
+                if (encryptionKey) return encryptionKey;
+                const enc = new TextEncoder();
+                const keyMaterial = await crypto.subtle.digest('SHA-256', enc.encode(ENC_PASSPHRASE));
+                encryptionKey = await crypto.subtle.importKey(
+                    'raw',
+                    keyMaterial,
+                    { name: 'AES-GCM' },
+                    false,
+                    ['encrypt', 'decrypt']
+                );
+                return encryptionKey;
+            }
+
+            async function encryptSecret(plaintext) {
+                const key = await getEncryptionKey();
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const enc = new TextEncoder();
+                const ciphertext = await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    key,
+                    enc.encode(plaintext)
+                );
+                return {
+                    iv: btoa(String.fromCharCode(...iv)),
+                    ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext)))
+                };
+            }
+
+            async function decryptSecret(encryptedData) {
+                const key = await getEncryptionKey();
+                const iv = Uint8Array.from(atob(encryptedData.iv), c => c.charCodeAt(0));
+                const ciphertext = Uint8Array.from(atob(encryptedData.ciphertext), c => c.charCodeAt(0));
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    key,
+                    ciphertext
+                );
+                const dec = new TextDecoder();
+                return dec.decode(decrypted);
+            }
+
+            let accounts = [];
+            const accountsContainer = document.getElementById('accountsContainer');
+            const universalPopup = document.getElementById('universalPopup');
+            const popupTitle = document.getElementById('popupTitle');
+            const popupBody = document.getElementById('popupBody');
+            const popupFooter = document.getElementById('popupFooter');
+            const popupCloseBtn = document.getElementById('popupCloseBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const addBtn = document.getElementById('addBtn');
+
+            function showPopup() {
+                universalPopup.classList.add('active');
+            }
+
+            function hidePopup() {
+                universalPopup.classList.remove('active');
+            }
+
+            popupCloseBtn.addEventListener('click', hidePopup);
+            universalPopup.addEventListener('click', function(e) {
+                if (e.target === universalPopup) hidePopup();
+            });
+
+            async function loadAccounts() {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (!stored) {
+                    accounts = [];
+                    return;
+                }
+                try {
+                    const raw = JSON.parse(stored);
+                    const decryptedAccounts = [];
+                    for (const item of raw) {
+                        let secret;
+                        if (item.secretEncrypted && item.iv) {
+                            secret = await decryptSecret({ iv: item.iv, ciphertext: item.secretEncrypted });
+                        } else if (item.secret) {
+                            secret = item.secret;
+                        } else {
+                            continue;
+                        }
+                        decryptedAccounts.push({
+                            id: item.id,
+                            name: item.name,
+                            secret: secret,
+                            status: item.status || 'active'
+                        });
+                    }
+                    accounts = decryptedAccounts;
+                } catch (e) {
+                    accounts = [];
+                }
+            }
+
+            async function saveAccounts() {
+                const toStore = [];
+                for (const acc of accounts) {
+                    const encrypted = await encryptSecret(acc.secret);
+                    toStore.push({
+                        id: acc.id,
+                        name: acc.name,
+                        secretEncrypted: encrypted.ciphertext,
+                        iv: encrypted.iv,
+                        status: acc.status
+                    });
+                }
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+            }
+
+            let currentEditAccountId = null;
+            let pendingDeleteAccountId = null;
+
+            function openAddAccountPopup() {
+                currentEditAccountId = null;
+                popupTitle.textContent = 'Add Account';
+                popupBody.innerHTML = `
+                    <div class="input-group">
+                        <label for="popupAccountName">Account name</label>
+                        <input type="text" id="popupAccountName" placeholder="e.g. user@example.com" autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label for="popupSecretKey">Secret key (Base32)</label>
+                        <input type="text" id="popupSecretKey" placeholder="e.g. JBSWY3DPEHPK3PXP" autocomplete="off" spellcheck="false">
+                    </div>
+                    <div class="error-text" id="popupError"></div>
+                `;
+                popupFooter.innerHTML = `
+                    <button class="btn btn-primary" id="popupSaveBtn">
+                        <i class="fa-solid fa-plus"></i> Add
+                    </button>
+                `;
+                document.getElementById('popupSaveBtn').addEventListener('click', async function() {
+                    const name = document.getElementById('popupAccountName').value.trim();
+                    const secret = document.getElementById('popupSecretKey').value.trim();
+                    const errorEl = document.getElementById('popupError');
+                    if (!name || !secret) {
+                        errorEl.textContent = 'Both fields are required.';
+                        return;
+                    }
+                    try {
+                        base32Decode(secret);
+                    } catch (e) {
+                        errorEl.textContent = 'Invalid secret key.';
+                        return;
+                    }
+                    accounts.push({
+                        id: Date.now().toString(),
+                        name: name,
+                        secret: secret.replace(/\s+/g, '').toUpperCase(),
+                        status: 'active'
+                    });
+                    await saveAccounts();
+                    hidePopup();
+                    renderAll();
+                });
+                showPopup();
+                setTimeout(() => document.getElementById('popupAccountName').focus(), 100);
+            }
+
+            function openEditAccountPopup(accountId) {
+                const acc = accounts.find(a => a.id === accountId);
+                if (!acc) return;
+                currentEditAccountId = accountId;
+                popupTitle.textContent = 'Edit Account';
+                popupBody.innerHTML = `
+                    <div class="input-group">
+                        <label for="popupAccountName">Account name</label>
+                        <input type="text" id="popupAccountName" value="${escapeHtml(acc.name)}" autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label for="popupSecretKey">Secret key (Base32)</label>
+                        <input type="text" id="popupSecretKey" placeholder="Leave blank to keep current secret" autocomplete="off" spellcheck="false">
+                    </div>
+                    <div class="error-text" id="popupError"></div>
+                `;
+                const isArchived = acc.status === 'archived';
+                popupFooter.innerHTML = `
+                    <button class="btn btn-danger" id="popupDeleteBtn">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    <button class="btn btn-secondary" id="popupArchiveBtn">
+                        <i class="fa-solid fa-${isArchived ? 'box-open' : 'box-archive'}"></i> ${isArchived ? 'Active' : 'Archive'}
+                    </button>
+                    <button class="btn btn-primary" id="popupSaveBtn">
+                        <i class="fa-solid fa-floppy-disk"></i> Save
+                    </button>
+                `;
+
+                document.getElementById('popupDeleteBtn').addEventListener('click', function() {
+                    openDeleteConfirmPopup(acc);
+                });
+
+                document.getElementById('popupArchiveBtn').addEventListener('click', async function() {
+                    const target = accounts.find(a => a.id === currentEditAccountId);
+                    if (target) {
+                        target.status = target.status === 'active' ? 'archived' : 'active';
+                        await saveAccounts();
+                        hidePopup();
+                        renderAll();
+                    }
+                });
+
+                document.getElementById('popupSaveBtn').addEventListener('click', async function() {
+                    const name = document.getElementById('popupAccountName').value.trim();
+                    const secretInput = document.getElementById('popupSecretKey').value.trim();
+                    const errorEl = document.getElementById('popupError');
+                    if (!name) {
+                        errorEl.textContent = 'Account name is required.';
+                        return;
+                    }
+                    const target = accounts.find(a => a.id === currentEditAccountId);
+                    if (!target) return;
+
+                    if (secretInput === '') {
+                        target.name = name;
+                    } else {
+                        try {
+                            base32Decode(secretInput);
+                        } catch (e) {
+                            errorEl.textContent = 'Invalid secret key.';
+                            return;
+                        }
+                        target.name = name;
+                        target.secret = secretInput.replace(/\s+/g, '').toUpperCase();
+                    }
+                    await saveAccounts();
+                    hidePopup();
+                    renderAll();
+                });
+
+                showPopup();
+            }
+
+            function openResetConfirmPopup() {
+                popupTitle.textContent = 'Reset All Accounts';
+                popupBody.innerHTML = '<p style="color:#fff;">Are you sure you want to delete all accounts? This cannot be undone.</p>';
+                popupFooter.innerHTML = `
+                    <button class="btn btn-secondary" id="popupCancelBtn">Cancel</button>
+                    <button class="btn btn-danger" id="popupConfirmResetBtn">Yes, Reset</button>
+                `;
+                document.getElementById('popupCancelBtn').addEventListener('click', hidePopup);
+                document.getElementById('popupConfirmResetBtn').addEventListener('click', async function() {
+                    accounts = [];
+                    await saveAccounts();
+                    hidePopup();
+                    renderAll();
+                });
+                showPopup();
+            }
+
+            function openDeleteConfirmPopup(acc) {
+                pendingDeleteAccountId = acc.id;
+                popupTitle.textContent = 'Delete Account';
+                popupBody.innerHTML = `<p style="color:#fff;">Are you sure you want to delete ${escapeHtml(acc.name)}? This cannot be undone!</p>`;
+                popupFooter.innerHTML = `
+                    <button class="btn btn-secondary" id="popupCancelBtn">Cancel</button>
+                    <button class="btn btn-danger" id="popupConfirmDeleteBtn">Delete</button>
+                `;
+                document.getElementById('popupCancelBtn').addEventListener('click', function() {
+                    pendingDeleteAccountId = null;
+                    hidePopup();
+                });
+                document.getElementById('popupConfirmDeleteBtn').addEventListener('click', async function() {
+                    if (pendingDeleteAccountId) {
+                        accounts = accounts.filter(a => a.id !== pendingDeleteAccountId);
+                        pendingDeleteAccountId = null;
+                        await saveAccounts();
+                        hidePopup();
+                        renderAll();
+                    }
+                });
+                showPopup();
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            function copyTextToClipboard(text) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {}).catch(() => {
+                        fallbackCopy(text);
+                    });
+                } else {
+                    fallbackCopy(text);
+                }
+            }
+
+            function fallbackCopy(text) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                } catch (e) {}
+                document.body.removeChild(textarea);
+            }
+
+            addBtn.addEventListener('click', openAddAccountPopup);
+            resetBtn.addEventListener('click', function() {
+                if (accounts.length === 0) return;
+                openResetConfirmPopup();
+            });
+
+            async function renderAll() {
+                const activeAccounts = accounts.filter(a => a.status === 'active');
+                const archivedAccounts = accounts.filter(a => a.status === 'archived');
+
+                if (activeAccounts.length === 0 && archivedAccounts.length === 0) {
+                    accountsContainer.innerHTML = '<div class="empty-message">No accounts. Tap + to add one.</div>';
+                    return;
+                }
+
+                const now = Math.floor(Date.now() / 1000);
+                const secondsRemaining = 30 - (now % 30);
+                const progressPercent = secondsRemaining / 30;
+                const circumference = 2 * Math.PI * 19;
+
+                let html = '';
+
+                if (activeAccounts.length > 0) {
+                    const codesPromises = activeAccounts.map(acc =>
+                        generateTOTP(acc.secret).catch(() => '------')
+                    );
+                    const codes = await Promise.all(codesPromises);
+
+                    for (let i = 0; i < activeAccounts.length; i++) {
+                        const acc = activeAccounts[i];
+                        const code = codes[i];
+                        const dashOffset = circumference * (1 - progressPercent);
+                        html += `
+                            <div class="auth-card" data-account-id="${acc.id}">
+                                <div class="auth-info">
+                                    <div class="auth-service">${escapeHtml(acc.name)}</div>
+                                    <div class="auth-code">${code}</div>
+                                </div>
+                                <div class="auth-actions">
+                                    <div class="progress-circle">
+                                        <svg class="progress-svg" viewBox="0 0 47 47">
+                                            <circle class="progress-bg" cx="23.5" cy="23.5" r="19"/>
+                                            <circle class="progress-fill" cx="23.5" cy="23.5" r="19"
+                                                stroke-dasharray="${circumference}"
+                                                stroke-dashoffset="${dashOffset}"/>
+                                        </svg>
+                                    </div>
+                                    <button class="copy-btn" data-code="${code}">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                if (archivedAccounts.length > 0) {
+                    html += '<div class="section-title" style="margin-top: 32px;">Archived</div>';
+                    for (const acc of archivedAccounts) {
+                        html += `
+                            <div class="auth-card archived" data-account-id="${acc.id}">
+                                <div class="auth-info">
+                                    <div class="auth-service">${escapeHtml(acc.name)}</div>
+                                    <div class="auth-code">------</div>
+                                </div>
+                                <div class="auth-actions">
+                                    <div class="progress-circle">
+                                        <svg class="progress-svg" viewBox="0 0 47 47">
+                                            <circle class="progress-bg" cx="23.5" cy="23.5" r="19"/>
+                                        </svg>
+                                    </div>
+                                    <button class="copy-btn" style="background:#555; pointer-events:none;">
+                                        <i class="fa-solid fa-lock"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                accountsContainer.innerHTML = html;
+
+                document.querySelectorAll('.auth-card').forEach(card => {
+                    card.addEventListener('click', function(e) {
+                        if (e.target.closest('.copy-btn')) return;
+                        const id = this.getAttribute('data-account-id');
+                        openEditAccountPopup(id);
+                    });
+                });
+
+                document.querySelectorAll('.copy-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const code = this.getAttribute('data-code');
+                        if (code && code !== '------') {
+                            copyTextToClipboard(code);
+                            this.innerHTML = '<i class="fa-solid fa-check"></i>';
+                            setTimeout(() => {
+                                this.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                            }, 1500);
+                        }
+                    });
+                });
+            }
+
+            await loadAccounts();
+            renderAll();
+            setInterval(renderAll, 1000);
+        })();
+    </script>
+</body>
+</html>
