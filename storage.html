@@ -58,6 +58,7 @@
             align-items: center;
             margin-bottom: 30px;
             gap: 15px;
+            flex-wrap: wrap;
         }
 
         .avatar {
@@ -99,13 +100,6 @@
             font-size: 1rem;
         }
 
-        .action-buttons {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-        }
-
         .action-btn {
             flex: 1;
             padding: 14px 20px;
@@ -136,6 +130,11 @@
             color: #fff;
             border: 1px solid rgba(255,255,255,0.1);
         }
+        
+        .button-row {
+            display: flex;
+            gap: 12px;
+        }
 
         .clear-all-btn {
             width: 100%;
@@ -151,13 +150,32 @@
             justify-content: center;
             gap: 8px;
             cursor: pointer;
-            margin-bottom: 24px;
+            margin-bottom: 0;
             transition: transform 0.1s ease;
         }
 
         .clear-all-btn:active {
             transform: scale(0.97);
-            background: rgba(255, 80, 80, 0.1);
+            background: rgba(255, 80, 80, 0.8);
+        }
+
+        .settings-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .settings-btn:hover {
+            background: rgba(255,255,255,0.1);
         }
 
         .search-container {
@@ -439,7 +457,7 @@
 
         #dropboxStatus {
             font-size: 0.9rem;
-            margin-left: 10px;
+            margin-left: auto;
             font-weight: 800;
         }
 
@@ -456,7 +474,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 101%;
+            height: 100%;
             background: rgba(0, 0, 0, 1.0);
             display: flex;
             align-items: center;
@@ -548,6 +566,24 @@
             line-height: 1.5;
             margin-bottom: 8px;
         }
+
+        .guide-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-medium);
+            padding: 16px;
+        }
+        
+        .guide-box p {
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+        
+        .guide-box small {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            display: block;
+            margin-top: 6px;
+        }
     </style>
 </head>
 <body>
@@ -568,21 +604,11 @@
                 <div class="avatar" id="avatar"></div>
                 <div class="username" id="username">User</div>
             </div>
+            <button id="settingsBtn" class="settings-btn" title="Settings">
+                <i class="fas fa-cog"></i>
+            </button>
             <span id="dropboxStatus"></span>
         </div>
-
-        <div class="action-buttons">
-            <button id="dropboxBackupBtn" class="action-btn btn-backup">
-                <i class="fas fa-cloud-upload-alt"></i> Backup
-            </button>
-            <button id="dropboxRestoreBtn" class="action-btn btn-restore">
-                <i class="fas fa-cloud-download-alt"></i> Restore
-            </button>
-        </div>
-
-        <button class="clear-all-btn" id="clearAllBtn">
-            <i class="fas fa-trash-alt"></i> Clear All
-        </button>
 
         <div class="search-container">
             <div>
@@ -628,6 +654,77 @@
     </div>
 
     <script>
+        async function saveFile(content, filename, mimeType) {
+            return new Promise((resolve, reject) => {
+                if (window.cordova) {
+                    const writeFile = (dirEntry, isDownloads) => {
+                        dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
+                            fileEntry.createWriter((writer) => {
+                                writer.onwriteend = () => {
+                                    const location = isDownloads ? 'Downloads' : 'app folder';
+                                    window.showMessage(`File saved to ${location}!`);
+                                    if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
+                                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
+                                    }
+                                    resolve();
+                                };
+                                writer.onerror = () => {
+                                    window.showMessage('Backup failed');
+                                    reject();
+                                };
+                                writer.write(content);
+                            }, () => {
+                                window.showMessage('Backup failed');
+                                reject();
+                            });
+                        }, () => {
+                            window.showMessage('Backup failed');
+                            reject();
+                        });
+                    };
+
+                    const saveToDownloads = () => {
+                        window.resolveLocalFileSystemURL(
+                            cordova.file.externalRootDirectory + 'Download/',
+                            (dir) => {
+                                writeFile(dir, true);
+                            },
+                            () => {
+                                window.resolveLocalFileSystemURL(
+                                    cordova.file.dataDirectory,
+                                    (dir) => {
+                                        writeFile(dir, false);
+                                    },
+                                    () => {
+                                        window.showMessage('Backup failed');
+                                        reject();
+                                    }
+                                );
+                            }
+                        );
+                    };
+
+                    if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
+                        saveToDownloads();
+                    } else {
+                        document.addEventListener('deviceready', saveToDownloads);
+                    }
+                } else {
+                    const blob = new Blob([content], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    window.showMessage('Backup saved locally');
+                    resolve();
+                }
+            });
+        }
+
         const folderDefinitions = [
             { name: 'Account', keys: ['currentUser', 'profilePhoto'] },
             { name: 'AI Chats', keys: ['chatHistory', 'chatAvatars'] },
@@ -666,7 +763,7 @@
             'showBanner', 'showQuickLinks', 'pinnedItems', 'app_hash_v2', 'app_salt_v2',
             'dropbox_tokens', 'hideImportNote', 'hideSwipeIndicator', 'hintModeEnabled',
             'hiraganaStars', 'hiraganaStreak', 'moneyTrackerCurrentCardId', 'showAllEntries',
-            'userName', 'lastPageState', 'giveaway_admins', 'openrouterAPIKey', 'showHeader', 
+            'userName', 'lastPageState', 'giveaway_admins', 'openrouterAPIKey', 'showHeader',
             'hideIcons'
         ];
 
@@ -680,7 +777,7 @@
             const backLink = document.querySelector('.back-link');
             if (backLink) backLink.style.display = 'none';
         }
-        
+
         function updateUserDisplay() {
             const currentUserRaw = localStorage.getItem('currentUser');
             let displayName = 'User';
@@ -693,7 +790,6 @@
                 } catch (e) {}
             }
             usernameEl.textContent = displayName;
-
             const profilePhoto = localStorage.getItem('profilePhoto');
             if (profilePhoto && profilePhoto.startsWith('data:image')) {
                 avatarEl.style.backgroundImage = `url(${profilePhoto})`;
@@ -748,9 +844,7 @@
         function buildFolders() {
             const foldersEl = document.getElementById('folders');
             foldersEl.innerHTML = '';
-
             const allFolders = ['All', ...folderDefinitions.map(f => f.name), 'Other'];
-
             allFolders.forEach(f => {
                 let btn = document.createElement('button');
                 btn.className = 'folder-btn';
@@ -786,7 +880,6 @@
         function buildCards() {
             const search = document.getElementById('globalSearch').value.toLowerCase();
             let allKeys = getFilteredKeys();
-
             let filtered = allKeys.filter(key => {
                 if (currentFolder === 'All') return true;
                 if (currentFolder === 'Other') {
@@ -794,7 +887,6 @@
                 }
                 return getFolderForKey(key) === currentFolder;
             });
-
             filtered = filtered.filter(key => {
                 let val = localStorage.getItem(key);
                 if (key === 'currentUser') {
@@ -808,26 +900,20 @@
                 }
                 return key.toLowerCase().includes(search) || val.toLowerCase().includes(search);
             });
-
             filtered.sort((a, b) => {
                 if (isPinned(a) && !isPinned(b)) return -1;
                 if (!isPinned(a) && isPinned(b)) return 1;
                 return 0;
             });
-
             const container = document.getElementById('storageContainer');
             container.innerHTML = '';
-
             let totalSize = getTotalStorageSize();
             let formattedSize = formatSize(totalSize);
-
             const pill = document.getElementById('folderPill');
             pill.textContent = currentFolder;
-
             if (filtered.length === 0) {
                 pill.style.background = '#333';
                 pill.style.color = '#888';
-
                 let card = document.createElement('div');
                 card.className = 'storage-card';
                 card.innerHTML = `
@@ -847,13 +933,11 @@
             } else {
                 pill.style.background = 'var(--accent-color)';
                 pill.style.color = '#000';
-
                 filtered.forEach(key => {
                     let rawValue = localStorage.getItem(key);
                     let valueForDisplay = rawValue;
                     let isJSON = false;
                     let isBase64 = false;
-
                     if (key === 'currentUser') {
                         try {
                             let userObj = JSON.parse(rawValue);
@@ -886,15 +970,12 @@
                             }
                         }
                     }
-
                     if (!isJSON && !isBase64 && valueForDisplay.length > 300 && typeof valueForDisplay === 'string') {
                         valueForDisplay = valueForDisplay.substring(0, 300) + '...';
                     }
-
                     let percent = rawValue.length ? Math.min(100, Math.round((rawValue.length / 500) * 100)) : 0;
                     let itemSizeBytes = key.length + rawValue.length;
                     let itemSizeFormatted = formatSize(itemSizeBytes);
-
                     let card = document.createElement('div');
                     card.className = 'storage-card';
                     card.innerHTML = `
@@ -922,7 +1003,6 @@
                     }
                 });
             }
-
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -936,7 +1016,6 @@
                     });
                 };
             });
-
             document.querySelectorAll('.pin-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -964,7 +1043,6 @@
             const popup = document.getElementById('universalPopup');
             const titleEl = document.getElementById('popupTitle');
             const contentEl = document.getElementById('popupContent');
-
             titleEl.textContent = title;
             contentEl.innerHTML = `
                 <div class="popup-message">${message}</div>
@@ -973,143 +1051,12 @@
                     <button class="confirm-btn cancel" id="confirmNo">No</button>
                 </div>
             `;
-
             document.getElementById('confirmYes').onclick = () => {
                 closeUniversalPopup();
                 onConfirm();
             };
-
             document.getElementById('confirmNo').onclick = closeUniversalPopup;
-
             popup.style.display = 'flex';
-        }
-
-        let searchTimeout;
-        function setupSearchDebounce() {
-            const searchInput = document.getElementById('globalSearch');
-            const suggestionsContainer = document.getElementById('searchSuggestions');
-
-            if (searchInput) {
-                searchInput.addEventListener('input', function() {
-                    clearTimeout(searchTimeout);
-                    showSearchSuggestions(this.value);
-                });
-
-                document.getElementById('searchIcon').addEventListener('click', function() {
-                    suggestionsContainer.style.display = 'none';
-                });
-
-                searchInput.addEventListener('keypress', function(event) {
-                    if (event.key === 'Enter') {
-                        suggestionsContainer.style.display = 'none';
-                    }
-                });
-
-                searchInput.addEventListener('focus', function() {
-                    if (this.value.trim()) {
-                        showSearchSuggestions(this.value);
-                    }
-                });
-
-                document.addEventListener('click', function(event) {
-                    if (!searchInput.contains(event.target) && !suggestionsContainer.contains(event.target)) {
-                        suggestionsContainer.style.display = 'none';
-                    }
-                });
-
-                suggestionsContainer.addEventListener('click', function(event) {
-                    const suggestionItem = event.target.closest('.search-suggestion-item');
-                    if (suggestionItem) {
-                        const key = suggestionItem.dataset.key;
-                        if (key) {
-                            searchInput.value = key;
-                            suggestionsContainer.style.display = 'none';
-                            const folder = getFolderForKey(key);
-                            if (folder !== currentFolder) {
-                                currentFolder = folder;
-                                buildFolders();
-                                buildCards();
-                            } else {
-                                buildCards();
-                            }
-                            setTimeout(() => {
-                                const cards = document.querySelectorAll('.storage-card');
-                                for (let card of cards) {
-                                    const keyEl = card.querySelector('.storage-key');
-                                    if (keyEl && keyEl.textContent.trim() === (key.length > 50 ? key.substring(0, 50) + '...' : key)) {
-                                        card.style.borderColor = 'var(--accent-color)';
-                                        card.style.borderWidth = '2px';
-                                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                        setTimeout(() => {
-                                            card.style.borderColor = 'rgba(255, 255, 255, 0.05)';
-                                            card.style.borderWidth = '1px';
-                                        }, 2000);
-                                        break;
-                                    }
-                                }
-                            }, 100);
-                        }
-                    }
-                });
-
-                document.addEventListener('keydown', function(event) {
-                    if (event.key === 'Escape' && suggestionsContainer.style.display === 'block') {
-                        suggestionsContainer.style.display = 'none';
-                    }
-                });
-            }
-        }
-
-        function showSearchSuggestions(searchTerm) {
-            const suggestionsContainer = document.getElementById('searchSuggestions');
-            if (!searchTerm.trim()) {
-                suggestionsContainer.style.display = 'none';
-                return;
-            }
-
-            let allKeys = getFilteredKeys();
-            const term = searchTerm.toLowerCase();
-
-            const matches = allKeys.filter(key => {
-                let val = localStorage.getItem(key);
-                if (key === 'currentUser') {
-                    try {
-                        let user = JSON.parse(val);
-                        if (user && typeof user === 'object') {
-                            const { admin, ...cleanUser } = user;
-                            val = JSON.stringify(cleanUser);
-                        }
-                    } catch (e) {}
-                }
-                return key.toLowerCase().includes(term) || val.toLowerCase().includes(term);
-            }).slice(0, 7);
-
-            if (matches.length === 0) {
-                suggestionsContainer.innerHTML = `<div class="search-suggestion-item"><div class="suggestion-title">No results found</div><div class="suggestion-description">Try different keywords</div></div>`;
-            } else {
-                suggestionsContainer.innerHTML = matches.map(key => {
-                    const folder = getFolderForKey(key);
-                    let val = localStorage.getItem(key) || '';
-                    if (key === 'currentUser') {
-                        try {
-                            let user = JSON.parse(val);
-                            if (user && typeof user === 'object') {
-                                const { admin, ...cleanUser } = user;
-                                val = JSON.stringify(cleanUser);
-                            }
-                        } catch (e) {}
-                    }
-                    const snippet = val.length > 50 ? val.substring(0, 50) + '…' : val;
-                    return `
-                        <div class="search-suggestion-item" data-key="${key}">
-                            <div class="suggestion-title">${key}</div>
-                            <div class="suggestion-description">${snippet}</div>
-                            <div class="suggestion-category">${folder}</div>
-                        </div>
-                    `;
-                }).join('');
-            }
-            suggestionsContainer.style.display = 'block';
         }
 
         const DROPBOX_CLIENT_ID = '5630n4t14l8r80h';
@@ -1190,7 +1137,6 @@
             const verifier = generateCodeVerifier();
             const challenge = await generateCodeChallenge(verifier);
             sessionStorage.setItem('code_verifier', verifier);
-
             const authUrl = 'https://www.dropbox.com/oauth2/authorize?' + new URLSearchParams({
                 client_id: DROPBOX_CLIENT_ID,
                 response_type: 'code',
@@ -1199,7 +1145,6 @@
                 code_challenge: challenge,
                 token_access_type: 'offline'
             });
-
             if (window.cordova) {
                 const browser = cordova.InAppBrowser.open(authUrl, '_blank', 'location=no,hidden=no');
                 browser.addEventListener('loadstart', function (event) {
@@ -1276,32 +1221,33 @@
         async function uploadBackup() {
             const token = await getValidAccessToken();
             if (!token) {
-                showConfirmPopup('Dropbox', 'Not connected to Dropbox. Connect now?', () => {
+                showConfirmPopup('Dropbox', 'Not connected. Connect?', () => {
                     authenticateDropbox();
                 });
                 return;
             }
-
-            const exclude = ['giveaway_settings', 'giveaway_participants',
-            'giveawayParticipants', 'lastGiveawayWinner', 'giveawayData',
-            'showDescription', 'hideSettingsButton', 'showSearchBar', 'bodyPosition',
-            'showBanner', 'showQuickLinks', 'pinnedItems', 'app_hash_v2', 'app_salt_v2',
-            'dropbox_tokens', 'hideImportNote', 'hideSwipeIndicator', 'hintModeEnabled',
-            'hiraganaStars', 'hiraganaStreak', 'moneyTrackerCurrentCardId', 'showAllEntries',
-            'userName', 'lastPageState', 'giveaway_admins', 'openrouterAPIKey', 'showHeader', 'hideIcons'];
-
-            const backup = {};
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (!exclude.includes(key)) {
-                    backup[key] = localStorage.getItem(key);
+            const notif = window.createTimerNotification('Cloud Backup', 100);
+            const progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
+            const timeElement = notif.wrapper.querySelector('.timer-time-notif');
+            if (progressBar) progressBar.style.width = '0%';
+            if (timeElement) timeElement.textContent = '0%';
+            let progress = 0;
+            const interval = setInterval(() => {
+                if (progress < 90) {
+                    progress += Math.random() * 10 + 5;
+                    if (progress > 90) progress = 90;
+                    progressBar.style.width = progress + '%';
+                    timeElement.textContent = Math.floor(progress) + '%';
                 }
-            }
-
-            const content = JSON.stringify(backup, null, 2);
-            const fileName = `kakoikiraku_backup_${new Date().toISOString().slice(0,10)}.json`;
-
+            }, 300);
             try {
+                const backup = {};
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (!excludedKeys.includes(key)) backup[key] = localStorage.getItem(key);
+                }
+                const content = JSON.stringify(backup, null, 2);
+                const fileName = `kakoikiraku_backup_${new Date().toISOString().slice(0,10)}.json`;
                 const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
                     method: 'POST',
                     headers: {
@@ -1315,8 +1261,14 @@
                     const errorBody = await resp.text();
                     throw new Error(`Dropbox API error (${resp.status}): ${errorBody}`);
                 }
+                clearInterval(interval);
+                progressBar.style.width = '100%';
+                timeElement.textContent = '100%';
+                setTimeout(() => notif.close(), 1500);
                 window.showMessage(`Backup saved as ${fileName}`);
             } catch (err) {
+                clearInterval(interval);
+                notif.close();
                 window.showMessage('Upload error: ' + err.message, true);
             }
         }
@@ -1324,12 +1276,11 @@
         async function downloadAndRestore() {
             const token = await getValidAccessToken();
             if (!token) {
-                showConfirmPopup('Dropbox', 'Not connected to Dropbox. Connect now?', () => {
+                showConfirmPopup('Dropbox', 'Not connected. Connect?', () => {
                     authenticateDropbox();
                 });
                 return;
             }
-
             try {
                 const listResp = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
                     method: 'POST',
@@ -1349,25 +1300,46 @@
                     return;
                 }
                 const latest = backups[0].path_lower;
-
-                const dlResp = await fetch('https://content.dropboxapi.com/2/files/download', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Dropbox-API-Arg': JSON.stringify({ path: latest })
+                showConfirmPopup('Restore', `Restore latest backup (${backups[0].name})? Current data will be overwritten.`, async () => {
+                    const notif = window.createTimerNotification('Cloud Restore', 100);
+                    const progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
+                    const timeElement = notif.wrapper.querySelector('.timer-time-notif');
+                    if (progressBar) progressBar.style.width = '0%';
+                    if (timeElement) timeElement.textContent = '0%';
+                    let progress = 0;
+                    const interval = setInterval(() => {
+                        if (progress < 90) {
+                            progress += Math.random() * 10 + 5;
+                            if (progress > 90) progress = 90;
+                            progressBar.style.width = progress + '%';
+                            timeElement.textContent = Math.floor(progress) + '%';
+                        }
+                    }, 300);
+                    try {
+                        const dlResp = await fetch('https://content.dropboxapi.com/2/files/download', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Dropbox-API-Arg': JSON.stringify({ path: latest })
+                            }
+                        });
+                        if (!dlResp.ok) throw new Error('Download failed');
+                        const backupData = await dlResp.json();
+                        for (const [key, value] of Object.entries(backupData)) {
+                            localStorage.setItem(key, value);
+                        }
+                        clearInterval(interval);
+                        progressBar.style.width = '100%';
+                        timeElement.textContent = '100%';
+                        setTimeout(() => notif.close(), 1500);
+                        window.showMessage('Restore complete!');
+                        initialize();
+                    } catch (err) {
+                        clearInterval(interval);
+                        notif.close();
+                        window.showMessage('Restore error: ' + err.message, true);
                     }
                 });
-                if (!dlResp.ok) throw new Error('Download failed');
-                const backupData = await dlResp.json();
-
-                showConfirmPopup('Restore', `Restore ${Object.keys(backupData).length} items? Current data will be overwritten.`, () => {
-                    for (const [key, value] of Object.entries(backupData)) {
-                        localStorage.setItem(key, value);
-                    }
-                    window.showMessage('Restore complete!');
-                    initialize();
-                });
-
             } catch (err) {
                 window.showMessage('Restore error: ' + err.message, true);
             }
@@ -1391,24 +1363,289 @@
             }
         }
 
+        async function localBackup() {
+            const progress = startProgressNotification();
+            const backup = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!excludedKeys.includes(key)) backup[key] = localStorage.getItem(key);
+            }
+            const json = JSON.stringify(backup, null, 2);
+            const filename = `kakoikiraku_local_backup_${new Date().toISOString().slice(0,10)}.json`;
+            const mimeType = 'application/json';
+            await saveFile(json, filename, mimeType);
+            progress.complete();
+        }
+
+        function localRestore() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        showConfirmPopup('Local Restore', `Restore ${Object.keys(data).length} items? Current data will be overwritten.`, () => {
+                            for (const [key, value] of Object.entries(data)) {
+                                localStorage.setItem(key, value);
+                            }
+                            window.showMessage('Local restore complete');
+                            initialize();
+                        });
+                    } catch (err) {
+                        window.showMessage('Invalid backup file', true);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        async function deleteBackups() {
+            const token = await getValidAccessToken();
+            if (!token) {
+                showConfirmPopup('Dropbox', 'Not connected. Connect?', authenticateDropbox);
+                return;
+            }
+            showConfirmPopup('Delete Backups', 'Delete all backups in Dropbox folder? This cannot be undone.', async () => {
+                const progress = startProgressNotification();
+                try {
+                    let hasMore = true;
+                    let cursor = null;
+                    while (hasMore) {
+                        const listPayload = cursor ? { cursor } : { path: '', recursive: false };
+                        const listResp = await fetch('https://api.dropboxapi.com/2/files/list_folder' + (cursor ? '/continue' : ''), {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(listPayload)
+                        });
+                        if (!listResp.ok) throw new Error('Failed to list files');
+                        const data = await listResp.json();
+                        const entries = data.entries.filter(e => e['.tag'] === 'file');
+                        for (let entry of entries) {
+                            await fetch('https://api.dropboxapi.com/2/files/delete_v2', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ path: entry.path_lower })
+                            });
+                        }
+                        hasMore = data.has_more;
+                        cursor = data.cursor;
+                    }
+                    progress.complete();
+                    window.showMessage('All backups deleted. Creating a fresh backup...');
+                    await uploadBackup();
+                } catch (err) {
+                    progress.error();
+                    window.showMessage('Delete backups error: ' + err.message, true);
+                }
+            });
+        }
+
+        function openSettingsPopup() {
+            const popup = document.getElementById('universalPopup');
+            const title = document.getElementById('popupTitle');
+            const content = document.getElementById('popupContent');
+            title.textContent = 'Settings';
+            content.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <h3>Cloud</h3>
+                    <div class="button-row">
+                        <button class="action-btn btn-backup" id="popupCloudBackup"><i class="fas fa-cloud-upload-alt"></i> Backup</button>
+                        <button class="action-btn btn-restore" id="popupCloudRestore"><i class="fas fa-cloud-download-alt"></i> Restore</button>
+                    </div>
+                    <h3>Local</h3>
+                    <div class="button-row">
+                        <button class="action-btn btn-backup" id="popupLocalBackup"><i class="fas fa-download"></i> Backup</button>
+                        <button class="action-btn btn-restore" id="popupLocalRestore"><i class="fas fa-upload"></i> Restore</button>
+                    </div>
+                    <h3>Danger Zone</h3>
+                    <button class="clear-all-btn" id="popupResetAppData"><i class="fas fa-trash-alt"></i> Reset App Data</button>
+                    <button class="clear-all-btn" id="popupDeleteBackups"><i class="fas fa-trash"></i> Delete Backups</button>
+                    <h3>Notes</h3>
+                    <div class="guide-box">
+                        <p><strong>Delete Backups</strong></p>
+                        <p style="font-size: 0.8rem;">Delete Backups button will clear all the backed up JSON files inside your Dropbox entirely, but also Backup the newest JSON to the storage</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('popupCloudBackup').addEventListener('click', () => {
+                closeUniversalPopup();
+                uploadBackup();
+            });
+            document.getElementById('popupCloudRestore').addEventListener('click', () => {
+                closeUniversalPopup();
+                downloadAndRestore();
+            });
+            document.getElementById('popupLocalBackup').addEventListener('click', () => {
+                closeUniversalPopup();
+                localBackup();
+            });
+            document.getElementById('popupLocalRestore').addEventListener('click', () => {
+                closeUniversalPopup();
+                localRestore();
+            });
+            document.getElementById('popupResetAppData').addEventListener('click', () => {
+                closeUniversalPopup();
+                showConfirmPopup('Reset App Data', 'Clear all LocalStorage? This will clear all app data and log you out immediately. It cannot be undone.', () => {
+                    localStorage.clear();
+                    location.reload();
+                });
+            });
+            document.getElementById('popupDeleteBackups').addEventListener('click', () => {
+                closeUniversalPopup();
+                deleteBackups();
+            });
+            popup.style.display = 'flex';
+        }
+
+        const popupData = {
+            settings: { title: 'Settings' }
+        };
+
+        function openPopup(type) {
+            if (type === 'settings') {
+                openSettingsPopup();
+                return;
+            }
+        }
+
         if (window.cordova) {
             document.addEventListener('deviceready', function() {
-                document.getElementById('dropboxBackupBtn').addEventListener('click', uploadBackup);
-                document.getElementById('dropboxRestoreBtn').addEventListener('click', downloadAndRestore);
+                document.getElementById('settingsBtn').addEventListener('click', () => openPopup('settings'));
                 handleOAuthRedirect().then(() => updateDropboxStatus());
             });
         } else {
-            document.getElementById('dropboxBackupBtn').addEventListener('click', uploadBackup);
-            document.getElementById('dropboxRestoreBtn').addEventListener('click', downloadAndRestore);
+            document.getElementById('settingsBtn').addEventListener('click', () => openPopup('settings'));
             handleOAuthRedirect();
         }
 
-        document.getElementById('clearAllBtn').addEventListener('click', () => {
-            showConfirmPopup('Clear All', 'Clear all LocalStorage? This action will Clear All the apps data and your account will be logged out immediately, it also cannot be undone.', () => {
-                localStorage.clear();
-                location.reload();
-            });
-        });
+        let searchTimeout;
+        function setupSearchDebounce() {
+            const searchInput = document.getElementById('globalSearch');
+            const suggestionsContainer = document.getElementById('searchSuggestions');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    showSearchSuggestions(this.value);
+                });
+                document.getElementById('searchIcon').addEventListener('click', function() {
+                    suggestionsContainer.style.display = 'none';
+                });
+                searchInput.addEventListener('keypress', function(event) {
+                    if (event.key === 'Enter') {
+                        suggestionsContainer.style.display = 'none';
+                    }
+                });
+                searchInput.addEventListener('focus', function() {
+                    if (this.value.trim()) {
+                        showSearchSuggestions(this.value);
+                    }
+                });
+                document.addEventListener('click', function(event) {
+                    if (!searchInput.contains(event.target) && !suggestionsContainer.contains(event.target)) {
+                        suggestionsContainer.style.display = 'none';
+                    }
+                });
+                suggestionsContainer.addEventListener('click', function(event) {
+                    const suggestionItem = event.target.closest('.search-suggestion-item');
+                    if (suggestionItem) {
+                        const key = suggestionItem.dataset.key;
+                        if (key) {
+                            searchInput.value = key;
+                            suggestionsContainer.style.display = 'none';
+                            const folder = getFolderForKey(key);
+                            if (folder !== currentFolder) {
+                                currentFolder = folder;
+                                buildFolders();
+                                buildCards();
+                            } else {
+                                buildCards();
+                            }
+                            setTimeout(() => {
+                                const cards = document.querySelectorAll('.storage-card');
+                                for (let card of cards) {
+                                    const keyEl = card.querySelector('.storage-key');
+                                    if (keyEl && keyEl.textContent.trim() === (key.length > 50 ? key.substring(0, 50) + '...' : key)) {
+                                        card.style.borderColor = 'var(--accent-color)';
+                                        card.style.borderWidth = '2px';
+                                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        setTimeout(() => {
+                                            card.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                                            card.style.borderWidth = '1px';
+                                        }, 2000);
+                                        break;
+                                    }
+                                }
+                            }, 100);
+                        }
+                    }
+                });
+                document.addEventListener('keydown', function(event) {
+                    if (event.key === 'Escape' && suggestionsContainer.style.display === 'block') {
+                        suggestionsContainer.style.display = 'none';
+                    }
+                });
+            }
+        }
+
+        function showSearchSuggestions(searchTerm) {
+            const suggestionsContainer = document.getElementById('searchSuggestions');
+            if (!searchTerm.trim()) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            let allKeys = getFilteredKeys();
+            const term = searchTerm.toLowerCase();
+            const matches = allKeys.filter(key => {
+                let val = localStorage.getItem(key);
+                if (key === 'currentUser') {
+                    try {
+                        let user = JSON.parse(val);
+                        if (user && typeof user === 'object') {
+                            const { admin, ...cleanUser } = user;
+                            val = JSON.stringify(cleanUser);
+                        }
+                    } catch (e) {}
+                }
+                return key.toLowerCase().includes(term) || val.toLowerCase().includes(term);
+            }).slice(0, 7);
+            if (matches.length === 0) {
+                suggestionsContainer.innerHTML = `<div class="search-suggestion-item"><div class="suggestion-title">No results found</div><div class="suggestion-description">Try different keywords</div></div>`;
+            } else {
+                suggestionsContainer.innerHTML = matches.map(key => {
+                    const folder = getFolderForKey(key);
+                    let val = localStorage.getItem(key) || '';
+                    if (key === 'currentUser') {
+                        try {
+                            let user = JSON.parse(val);
+                            if (user && typeof user === 'object') {
+                                const { admin, ...cleanUser } = user;
+                                val = JSON.stringify(cleanUser);
+                            }
+                        } catch (e) {}
+                    }
+                    const snippet = val.length > 50 ? val.substring(0, 50) + '…' : val;
+                    return `
+                        <div class="search-suggestion-item" data-key="${key}">
+                            <div class="suggestion-title">${key}</div>
+                            <div class="suggestion-description">${snippet}</div>
+                            <div class="suggestion-category">${folder}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            suggestionsContainer.style.display = 'block';
+        }
 
         setupSearchDebounce();
         initialize();
