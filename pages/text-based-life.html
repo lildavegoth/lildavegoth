@@ -44,8 +44,8 @@
             background-color: #111111;
             padding: 12px 16px;
             display: flex;
-            align-items: center;
-            justify-content: flex-end;
+            flex-direction: column;
+            gap: 6px;
             position: sticky;
             top: 0;
             z-index: 12;
@@ -58,11 +58,13 @@
             background: #1f1f21;
             padding: 6px 12px;
             border-radius: 40px;
+            flex-wrap: wrap;
         }
         .resource-badge {
             display: flex;
             align-items: center;
             gap: 4px;
+            white-space: nowrap;
         }
         .chat-area {
             flex: 1;
@@ -95,26 +97,27 @@
             max-width: 90%;
             text-align: center;
         }
-        .button-grid {
+        .action-row {
+            display: flex;
+            gap: 10px;
+            padding: 12px 16px 6px;
             background: #0c0c0c;
-            padding: 16px 16px 24px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px 16px;
         }
         .action-btn {
+            flex: 1;
             background: #1f1f21;
             border: 1px solid #3a3a3c;
             color: var(--text-primary);
             font-weight: 600;
-            font-size: 16px;
-            padding: 16px 8px;
+            font-size: 15px;
+            padding: 14px 4px;
             border-radius: 60px;
             box-shadow: 0 4px 0 #0a0a0a;
             cursor: pointer;
             transition: all 0.05s;
             text-transform: uppercase;
             letter-spacing: 0.3px;
+            text-align: center;
         }
         .action-btn:active {
             transform: translateY(3px);
@@ -124,6 +127,31 @@
             opacity: 0.4;
             transform: none;
             box-shadow: 0 4px 0 #0a0a0a;
+        }
+        .nav-row {
+            display: flex;
+            gap: 10px;
+            padding: 6px 16px 18px;
+            background: #0c0c0c;
+        }
+        .nav-btn {
+            flex: 1;
+            background: #2c2c2e;
+            border: 1px solid #4a4a4d;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            padding: 12px 4px;
+            border-radius: 40px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .nav-btn:active {
+            transform: scale(0.97);
+        }
+        .nav-btn.disabled {
+            opacity: 0.3;
+            pointer-events: none;
         }
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
@@ -247,15 +275,27 @@
                 <span class="resource-badge"><i class="fas fa-home"></i> <span id="housePopDisplay">1-3/10</span></span>
                 <span class="resource-badge"><i class="fas fa-tractor"></i> <span id="farmLevelBadge">Lv.1</span></span>
             </div>
+            <div class="resource-row" id="extraResourceRow">
+                <span class="resource-badge"><i class="fas fa-gem"></i> <span id="jewelsDisplay">0</span></span>
+                <span class="resource-badge"><i class="fas fa-mountain"></i> <span id="rocksDisplay">0</span></span>
+                <span class="resource-badge"><i class="fas fa-cube"></i> <span id="ironDisplay">0</span></span>
+                <span class="resource-badge"><i class="fas fa-coins"></i> <span id="goldOreDisplay">0</span></span>
+                <span class="resource-badge"><i class="fas fa-tree"></i> <span id="logsDisplay">0</span></span>
+                <span class="resource-badge"><i class="fas fa-hammer"></i> <span id="pickaxeDisplay">Pick 0</span></span>
+                <span class="resource-badge"><i class="fas fa-cogs"></i> <span id="drillStatus">Drill -</span></span>
+            </div>
         </div>
         <div class="chat-area" id="chatMessages">
             <div class="chat-message system"><i class="fas fa-crown"></i> Welcome, chieftain. Build your realm.</div>
         </div>
-        <div class="button-grid" id="buttonGrid">
-            <button class="action-btn" id="btn1"><i class="fas fa-seedling"></i> Plant</button>
-            <button class="action-btn" id="btn2"><i class="fas fa-leaf"></i> Crop</button>
-            <button class="action-btn" id="btn3"><i class="fas fa-bread-slice"></i> Bakery</button>
-            <button class="action-btn" id="btn4"><i class="fas fa-arrow-right"></i> Next</button>
+        <div class="action-row" id="actionRow">
+            <button class="action-btn" id="actionBtn1"><i class="fas fa-seedling"></i> Plant</button>
+            <button class="action-btn" id="actionBtn2"><i class="fas fa-leaf"></i> Crop</button>
+            <button class="action-btn" id="actionBtn3"><i class="fas fa-bread-slice"></i> Bakery</button>
+        </div>
+        <div class="nav-row" id="navRow">
+            <button class="nav-btn" id="prevBtn"><i class="fas fa-arrow-left"></i> Prev</button>
+            <button class="nav-btn" id="nextBtn">Next <i class="fas fa-arrow-right"></i></button>
         </div>
     </div>
     <div id="universalPopup" class="popup-overlay" style="display: none;">
@@ -269,9 +309,7 @@
     </div>
     <script>
         (function() {
-            "use strict";
-
-            const STORAGE_KEY = 'textFarm';
+            const STORAGE_KEY = 'textFarmV2';
             let food = 300;
             let gold = 400;
             let wheat = 60;
@@ -315,6 +353,17 @@
             let currentPage = 0;
             let subMenu = null;
 
+            let jewels = 0;
+            let rocks = 0;
+            let ironOre = 0;
+            let goldOre = 0;
+            let logs = 0;
+            let pickaxeLevel = 0;
+            let drillOwned = false;
+            let drillBonusActive = false;
+            let drillCooldownEnd = 0;
+            let axeOwned = false;
+
             const botNames = ["Aldric", "Bryn", "Cedric", "Doran", "Eldon", "Finn", "Garrett", "Harlan", "Ivor",
                 "Jasper", "Kellan", "Lorcan", "Merrick", "Niall", "Orson"
             ];
@@ -331,13 +380,33 @@
             const wheatDisplay = document.getElementById('wheatDisplay');
             const housePopDisplay = document.getElementById('housePopDisplay');
             const farmLevelBadge = document.getElementById('farmLevelBadge');
+            const jewelsDisplay = document.getElementById('jewelsDisplay');
+            const rocksDisplay = document.getElementById('rocksDisplay');
+            const ironDisplay = document.getElementById('ironDisplay');
+            const goldOreDisplay = document.getElementById('goldOreDisplay');
+            const logsDisplay = document.getElementById('logsDisplay');
+            const pickaxeDisplay = document.getElementById('pickaxeDisplay');
+            const drillStatus = document.getElementById('drillStatus');
             const chatMessages = document.getElementById('chatMessages');
-            const btn1 = document.getElementById('btn1');
-            const btn2 = document.getElementById('btn2');
-            const btn3 = document.getElementById('btn3');
-            const btn4 = document.getElementById('btn4');
+            const actionBtn1 = document.getElementById('actionBtn1');
+            const actionBtn2 = document.getElementById('actionBtn2');
+            const actionBtn3 = document.getElementById('actionBtn3');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
 
-            let maxPopulation = houses * HOUSE_CAPACITY;
+            function formatNumber(n) {
+                if (n >= 1000000) {
+                    const val = n / 1000000;
+                    const fixed = val.toFixed(1).replace('.', ',');
+                    return (val % 1 === 0 ? val : fixed) + 'M';
+                }
+                if (n >= 1000) {
+                    const val = n / 1000;
+                    const fixed = val.toFixed(1).replace('.', ',');
+                    return (val % 1 === 0 ? val : fixed) + 'K';
+                }
+                return Math.floor(n).toString();
+            }
 
             function loadGame() {
                 const saved = localStorage.getItem(STORAGE_KEY);
@@ -368,6 +437,15 @@
                         baits = data.baits ?? 5;
                         rodLevel = data.rodLevel || 1;
                         restEndTime = data.restEndTime || 0;
+                        jewels = data.jewels || 0;
+                        rocks = data.rocks || 0;
+                        ironOre = data.ironOre || 0;
+                        goldOre = data.goldOre || 0;
+                        logs = data.logs || 0;
+                        pickaxeLevel = data.pickaxeLevel || 0;
+                        drillOwned = data.drillOwned || false;
+                        drillCooldownEnd = data.drillCooldownEnd || 0;
+                        axeOwned = data.axeOwned || false;
                     } catch (e) {}
                 }
             }
@@ -397,7 +475,16 @@
                     fishInventory,
                     baits,
                     rodLevel,
-                    restEndTime
+                    restEndTime,
+                    jewels,
+                    rocks,
+                    ironOre,
+                    goldOre,
+                    logs,
+                    pickaxeLevel,
+                    drillOwned,
+                    drillCooldownEnd,
+                    axeOwned
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             }
@@ -458,96 +545,158 @@
             function getHarvestMultiplier() { return 1 + (farmLevel - 1) * 0.25; }
 
             function updateUI() {
-                maxPopulation = houses * HOUSE_CAPACITY;
-                foodDisplay.textContent = Math.floor(food);
-                goldDisplay.textContent = gold;
-                wheatDisplay.textContent = Math.floor(wheat);
-                housePopDisplay.textContent = `${houses}-${population}/${maxPopulation}`;
+                let maxPop = houses * HOUSE_CAPACITY;
+                foodDisplay.textContent = formatNumber(Math.floor(food));
+                goldDisplay.textContent = formatNumber(gold);
+                wheatDisplay.textContent = formatNumber(Math.floor(wheat));
+                housePopDisplay.textContent = `${houses}-${population}/${maxPop}`;
                 farmLevelBadge.textContent = `Lv.${farmLevel}`;
-                updateButtonPage();
+                jewelsDisplay.textContent = formatNumber(jewels);
+                rocksDisplay.textContent = formatNumber(rocks);
+                ironDisplay.textContent = formatNumber(ironOre);
+                goldOreDisplay.textContent = formatNumber(goldOre);
+                logsDisplay.textContent = formatNumber(logs);
+                pickaxeDisplay.textContent = `Pick ${pickaxeLevel}`;
+                if (drillOwned) {
+                    const cd = drillCooldownEnd > Date.now() ? Math.ceil((drillCooldownEnd - Date.now()) / 1000) + 's' : 'Ready';
+                    drillStatus.textContent = `Drill ${cd}`;
+                } else {
+                    drillStatus.textContent = 'Drill -';
+                }
+                updateActionButtons();
+                updateNavButtons();
                 saveGame();
             }
 
-            function updateButtonPage() {
-                btn1.classList.remove('disabled');
-                btn2.classList.remove('disabled');
-                btn3.classList.remove('disabled');
-                btn4.classList.remove('disabled');
-                btn1.style.display = 'block';
-                btn2.style.display = 'block';
-                btn3.style.display = 'block';
-                btn4.style.display = 'block';
+            function updateActionButtons() {
+                actionBtn1.classList.remove('disabled');
+                actionBtn2.classList.remove('disabled');
+                actionBtn3.classList.remove('disabled');
+                actionBtn1.style.display = 'block';
+                actionBtn2.style.display = 'block';
+                actionBtn3.style.display = 'block';
                 const resting = restEndTime > Date.now();
 
                 if (subMenu === 'upgrades') {
-                    btn1.innerHTML = '<i class="fas fa-tractor"></i> Farm';
-                    btn2.innerHTML = '<i class="fas fa-home"></i> House';
-                    btn3.style.display = 'none';
-                    btn4.innerHTML = '<i class="fas fa-arrow-left"></i> Back';
-                    if (gold < getFarmUpgradeGoldCost() || food < getFarmUpgradeFoodCost()) btn1.classList.add('disabled');
-                    if (gold < getHouseUpgradeGoldCost() || food < getHouseUpgradeFoodCost()) btn2.classList.add('disabled');
+                    actionBtn1.innerHTML = '<i class="fas fa-tractor"></i> Farm';
+                    actionBtn2.innerHTML = '<i class="fas fa-home"></i> House';
+                    actionBtn3.innerHTML = '<i class="fas fa-user-plus"></i> Recruit';
+                    if (gold < getFarmUpgradeGoldCost() || food < getFarmUpgradeFoodCost()) actionBtn1.classList.add('disabled');
+                    if (gold < getHouseUpgradeGoldCost() || food < getHouseUpgradeFoodCost()) actionBtn2.classList.add('disabled');
+                    if (gold < 100) actionBtn3.classList.add('disabled');
                     return;
                 }
                 if (subMenu === 'adventure') {
-                    btn1.innerHTML = '<i class="fas fa-dragon"></i> Explore';
-                    btn2.innerHTML = '<i class="fas fa-running"></i> Auto';
-                    btn3.innerHTML = '<i class="fas fa-inn"></i> Inn';
-                    btn4.innerHTML = '<i class="fas fa-arrow-left"></i> Back';
-                
-                    if (innOfferActive || resting || food < 10 || population < 2) btn1.classList.add('disabled');
-                
-                    if (innOfferActive || resting || autoExploring || food < 10 || population < 2) btn2.classList.add('disabled');
-                
-                    if (!innNearby || autoExploring || innOfferActive) btn3.classList.add('disabled');
-                
+                    actionBtn1.innerHTML = '<i class="fas fa-dragon"></i> Explore';
+                    actionBtn2.innerHTML = '<i class="fas fa-running"></i> Auto';
+                    actionBtn3.innerHTML = '<i class="fas fa-inn"></i> Inn';
+                    if (innOfferActive || resting || food < 10 || population < 2) actionBtn1.classList.add('disabled');
+                    if (innOfferActive || resting || autoExploring || food < 10 || population < 2) actionBtn2.classList.add('disabled');
+                    if (!innNearby || autoExploring || innOfferActive) actionBtn3.classList.add('disabled');
                     return;
                 }
                 if (subMenu === 'fishing') {
-                    btn1.innerHTML = '<i class="fas fa-fish"></i> Fish';
-                    btn2.innerHTML = '<i class="fas fa-store"></i> Shop';
-                    btn3.style.display = 'none';
-                    btn4.innerHTML = '<i class="fas fa-arrow-left"></i> Back';
-                    if (baits <= 0) btn1.classList.add('disabled');
+                    actionBtn1.innerHTML = '<i class="fas fa-fish"></i> Fish';
+                    actionBtn2.innerHTML = '<i class="fas fa-store"></i> Shop';
+                    actionBtn3.style.display = 'none';
+                    if (baits <= 0) actionBtn1.classList.add('disabled');
                     return;
                 }
                 if (subMenu === 'fishing_shop') {
-                    btn1.innerHTML = '<i class="fas fa-worm"></i> Baits (5g)';
-                    btn2.innerHTML = `<i class="fas fa-fishing-rod"></i> Rod (${getRodUpgradeCost()}g)`;
-                    btn3.innerHTML = '<i class="fas fa-coins"></i> Sell fish';
-                    btn4.innerHTML = '<i class="fas fa-arrow-left"></i> Back';
-                    if (gold < 5) btn1.classList.add('disabled');
-                    if (gold < getRodUpgradeCost()) btn2.classList.add('disabled');
+                    actionBtn1.innerHTML = '<i class="fas fa-worm"></i> Baits (5g)';
+                    actionBtn2.innerHTML = `<i class="fas fa-fishing-rod"></i> Rod (${getRodUpgradeCost()}g)`;
+                    actionBtn3.innerHTML = '<i class="fas fa-coins"></i> Sell fish';
+                    if (gold < 5) actionBtn1.classList.add('disabled');
+                    if (gold < getRodUpgradeCost()) actionBtn2.classList.add('disabled');
+                    return;
+                }
+                if (subMenu === 'mining') {
+                    actionBtn1.innerHTML = '<i class="fas fa-gem"></i> Mine';
+                    actionBtn2.innerHTML = '<i class="fas fa-store"></i> Shop';
+                    actionBtn3.innerHTML = '<i class="fas fa-cogs"></i> Drill';
+                    if (pickaxeLevel <= 0) actionBtn1.classList.add('disabled');
+                    if (!drillOwned || drillBonusActive || drillCooldownEnd > Date.now()) actionBtn3.classList.add('disabled');
+                    if (drillCooldownEnd > Date.now() && drillOwned && !drillBonusActive) {
+                        actionBtn3.innerHTML = `<i class="fas fa-cogs"></i> Drill (${Math.ceil((drillCooldownEnd-Date.now())/1000)}s)`;
+                    }
+                    return;
+                }
+                if (subMenu === 'mining_shop') {
+                    const pickCost = 100 + 50 * pickaxeLevel;
+                    actionBtn1.innerHTML = `<i class="fas fa-hammer"></i> Pickaxe (${pickCost}g)`;
+                    actionBtn2.innerHTML = '<i class="fas fa-cogs"></i> Drill (1000g)';
+                    actionBtn3.innerHTML = '<i class="fas fa-coins"></i> Sell mined';
+                    if (gold < pickCost) actionBtn1.classList.add('disabled');
+                    if (gold < 1000 || drillOwned) actionBtn2.classList.add('disabled');
+                    return;
+                }
+                if (subMenu === 'blacksmith') {
+                    actionBtn1.innerHTML = '<i class="fas fa-hammer"></i> Forge Sword';
+                    actionBtn2.innerHTML = '<i class="fas fa-coins"></i> Smelt Gold';
+                    actionBtn3.style.display = 'none';
+                    if (ironOre < 3) actionBtn1.classList.add('disabled');
+                    if (goldOre < 1) actionBtn2.classList.add('disabled');
+                    return;
+                }
+                if (subMenu === 'forager') {
+                    actionBtn1.innerHTML = '<i class="fas fa-tree"></i> Forage';
+                    actionBtn2.innerHTML = '<i class="fas fa-store"></i> Shop';
+                    actionBtn3.style.display = 'none';
+                    if (!axeOwned) actionBtn1.classList.add('disabled');
+                    return;
+                }
+                if (subMenu === 'forager_shop') {
+                    actionBtn1.innerHTML = '<i class="fas fa-axe"></i> Buy Axe (100g)';
+                    actionBtn2.innerHTML = '<i class="fas fa-coins"></i> Sell Logs';
+                    actionBtn3.style.display = 'none';
+                    if (axeOwned || gold < 100) actionBtn1.classList.add('disabled');
+                    if (logs <= 0) actionBtn2.classList.add('disabled');
                     return;
                 }
 
                 if (currentPage === 0) {
-                    btn1.innerHTML = plantedCrop ? (Date.now() - plantTime >= 5000 ?
+                    actionBtn1.innerHTML = plantedCrop ? (Date.now() - plantTime >= 5000 ?
                         '<i class="fas fa-tractor"></i> Harvest' :
                         '<i class="fas fa-hourglass-half"></i> Growing') :
                         '<i class="fas fa-seedling"></i> Plant';
-                    btn2.innerHTML = '<i class="fas fa-leaf"></i> Crop';
-                    btn3.innerHTML = '<i class="fas fa-bread-slice"></i> Bakery';
-                    btn4.innerHTML = '<i class="fas fa-arrow-right"></i> Next';
-                    if (plantedCrop && Date.now() - plantTime < 5000) btn1.classList.add('disabled');
-                    if (wheat < 5) btn3.classList.add('disabled');
+                    actionBtn2.innerHTML = '<i class="fas fa-leaf"></i> Crop';
+                    actionBtn3.innerHTML = '<i class="fas fa-bread-slice"></i> Bakery';
+                    if (plantedCrop && Date.now() - plantTime < 5000) actionBtn1.classList.add('disabled');
+                    if (wheat < 5) actionBtn3.classList.add('disabled');
                 } else if (currentPage === 1) {
-                    btn1.innerHTML = '<i class="fas fa-arrow-up"></i> Upgrades';
-                    btn2.innerHTML = '<i class="fas fa-dragon"></i> Adventure';
-                    btn3.innerHTML = '<i class="fas fa-fish"></i> Fishing';
-                    btn4.innerHTML = '<i class="fas fa-arrow-right"></i> Next';
+                    actionBtn1.innerHTML = '<i class="fas fa-arrow-up"></i> Upgrades';
+                    actionBtn2.innerHTML = '<i class="fas fa-dragon"></i> Adventure';
+                    actionBtn3.innerHTML = '<i class="fas fa-fish"></i> Fishing';
                 } else if (currentPage === 2) {
-                    btn1.innerHTML = '<i class="fas fa-box"></i> Storage';
-                    btn2.innerHTML = '<i class="fas fa-store"></i> Market';
-                    btn3.innerHTML = competitionJoined ? '<i class="fas fa-trophy"></i> Joined' :
+                    actionBtn1.innerHTML = '<i class="fas fa-box"></i> Storage';
+                    actionBtn2.innerHTML = '<i class="fas fa-store"></i> Market';
+                    actionBtn3.innerHTML = competitionJoined ? '<i class="fas fa-trophy"></i> Joined' :
                         '<i class="fas fa-medal"></i> Join Comp';
-                    btn4.innerHTML = '<i class="fas fa-arrow-right"></i> Next';
-                    if (competitionJoined || gold < 100) btn3.classList.add('disabled');
+                    if (competitionJoined || gold < 100) actionBtn3.classList.add('disabled');
                 } else if (currentPage === 3) {
-                    btn1.innerHTML = '<i class="fas fa-skull"></i> War';
-                    btn2.style.display = 'none';
-                    btn3.style.display = 'none';
-                    btn4.innerHTML = '<i class="fas fa-arrow-left"></i> Prev';
-                    if (population < 10 || gold < 500 || food < 200) btn1.classList.add('disabled');
+                    actionBtn1.innerHTML = '<i class="fas fa-skull"></i> War';
+                    actionBtn2.style.display = 'none';
+                    actionBtn3.style.display = 'none';
+                    if (population < 10 || gold < 500 || food < 200) actionBtn1.classList.add('disabled');
+                } else if (currentPage === 4) {
+                    actionBtn1.innerHTML = '<i class="fas fa-gem"></i> Mining';
+                    actionBtn2.innerHTML = '<i class="fas fa-hammer"></i> Blacksmith';
+                    actionBtn3.innerHTML = '<i class="fas fa-tree"></i> Forager';
+                }
+            }
+
+            function updateNavButtons() {
+                prevBtn.classList.remove('disabled');
+                nextBtn.classList.remove('disabled');
+                if (subMenu) {
+                    prevBtn.innerHTML = '<i class="fas fa-arrow-left"></i> Back';
+                    nextBtn.classList.add('disabled');
+                    nextBtn.innerHTML = 'Next <i class="fas fa-arrow-right"></i>';
+                } else {
+                    prevBtn.innerHTML = '<i class="fas fa-arrow-left"></i> Prev';
+                    nextBtn.innerHTML = 'Next <i class="fas fa-arrow-right"></i>';
+                    if (currentPage === 0) prevBtn.classList.add('disabled');
+                    if (currentPage === 4) nextBtn.classList.add('disabled');
                 }
             }
 
@@ -558,34 +707,31 @@
             function getRodUpgradeCost() { return 100 + (rodLevel - 1) * 50; }
 
             function handleAction(actionId) {
-                const button = [btn1, btn2, btn3, btn4][actionId - 1];
-                if (button.classList.contains('disabled')) {
-                    let shakeType = null;
-                    if (subMenu === 'upgrades') {
-                        shakeType = 'upgrade';
-                    } else if (subMenu === 'adventure') {
-                        shakeType = 'adventure';
-                    } else if (subMenu === 'fishing') {
-                        shakeType = 'fishing';
-                    } else if (subMenu === 'fishing_shop') {
-                        shakeType = 'fishing_shop';
-                    } else if (currentPage === 0 && actionId === 1) {
-                        shakeType = plantedCrop ? 'plant' : 'harvest';
-                    } else if (currentPage === 0 && actionId === 3) {
-                        shakeType = 'bakery';
-                    } else if (currentPage === 2 && actionId === 3) {
-                        shakeType = 'competition';
-                    } else if (currentPage === 3 && actionId === 1) {
-                        shakeType = 'war';
-                    }
-                    if (shakeType) shakeMessage(shakeType);
+                const buttons = [actionBtn1, actionBtn2, actionBtn3];
+                const button = buttons[actionId - 1];
+                if (!button || button.classList.contains('disabled')) {
+                    let shakeType = subMenu || `page${currentPage}`;
+                    if (subMenu === 'upgrades') shakeType = 'upgrade';
+                    else if (subMenu === 'adventure') shakeType = 'adventure';
+                    else if (subMenu === 'fishing') shakeType = 'fishing';
+                    else if (subMenu === 'fishing_shop') shakeType = 'fishing_shop';
+                    else if (subMenu === 'mining') shakeType = 'mining';
+                    else if (subMenu === 'mining_shop') shakeType = 'mining_shop';
+                    else if (subMenu === 'blacksmith') shakeType = 'blacksmith';
+                    else if (subMenu === 'forager') shakeType = 'forager';
+                    else if (subMenu === 'forager_shop') shakeType = 'forager_shop';
+                    else if (currentPage === 0 && actionId === 1) shakeType = plantedCrop ? 'plant' : 'harvest';
+                    else if (currentPage === 0 && actionId === 3) shakeType = 'bakery';
+                    else if (currentPage === 2 && actionId === 3) shakeType = 'competition';
+                    else if (currentPage === 3 && actionId === 1) shakeType = 'war';
+                    shakeMessage(shakeType);
                     return;
                 }
 
                 if (subMenu === 'upgrades') {
                     if (actionId === 1) upgradeFarm();
                     else if (actionId === 2) upgradeHouse();
-                    else if (actionId === 4) subMenu = null;
+                    else if (actionId === 3) recruitPopulation();
                     updateUI();
                     return;
                 }
@@ -593,14 +739,12 @@
                     if (actionId === 1) exploreAdventure();
                     else if (actionId === 2) startAutoExplore();
                     else if (actionId === 3) openInnPopup();
-                    else if (actionId === 4) { subMenu = null; innOfferActive = false; innNearby = false; removeMessagesOfType('inn_offer'); }
                     updateUI();
                     return;
                 }
                 if (subMenu === 'fishing') {
                     if (actionId === 1) goFish();
-                    else if (actionId === 2) openFishingShop();
-                    else if (actionId === 4) subMenu = null;
+                    else if (actionId === 2) { subMenu = 'fishing_shop'; updateUI(); }
                     updateUI();
                     return;
                 }
@@ -608,7 +752,38 @@
                     if (actionId === 1) buyBait();
                     else if (actionId === 2) upgradeRod();
                     else if (actionId === 3) sellAllFish();
-                    else if (actionId === 4) subMenu = 'fishing';
+                    updateUI();
+                    return;
+                }
+                if (subMenu === 'mining') {
+                    if (actionId === 1) mine(false);
+                    else if (actionId === 2) { subMenu = 'mining_shop'; updateUI(); }
+                    else if (actionId === 3) mine(true);
+                    updateUI();
+                    return;
+                }
+                if (subMenu === 'mining_shop') {
+                    if (actionId === 1) upgradePickaxe();
+                    else if (actionId === 2) buyDrill();
+                    else if (actionId === 3) sellMined();
+                    updateUI();
+                    return;
+                }
+                if (subMenu === 'blacksmith') {
+                    if (actionId === 1) forgeSword();
+                    else if (actionId === 2) smeltGold();
+                    updateUI();
+                    return;
+                }
+                if (subMenu === 'forager') {
+                    if (actionId === 1) forage();
+                    else if (actionId === 2) { subMenu = 'forager_shop'; updateUI(); }
+                    updateUI();
+                    return;
+                }
+                if (subMenu === 'forager_shop') {
+                    if (actionId === 1) buyAxe();
+                    else if (actionId === 2) sellLogs();
                     updateUI();
                     return;
                 }
@@ -617,22 +792,122 @@
                     if (actionId === 1) togglePlantHarvest();
                     else if (actionId === 2) openCropSelectionPopup();
                     else if (actionId === 3) bakeBread();
-                    else if (actionId === 4) { currentPage = 1; updateUI(); }
                 } else if (currentPage === 1) {
                     if (actionId === 1) subMenu = 'upgrades';
                     else if (actionId === 2) { innNearby = Math.random() < 0.5; innOfferActive = false; subMenu = 'adventure'; removeMessagesOfType('inn_offer'); }
                     else if (actionId === 3) subMenu = 'fishing';
-                    else if (actionId === 4) { currentPage = 2; updateUI(); }
                 } else if (currentPage === 2) {
                     if (actionId === 1) showStorage();
                     else if (actionId === 2) openMarket();
                     else if (actionId === 3) joinCompetition();
-                    else if (actionId === 4) { currentPage = 3; updateUI(); }
                 } else if (currentPage === 3) {
                     if (actionId === 1) startWar();
-                    else if (actionId === 4) { currentPage = 0; updateUI(); }
+                } else if (currentPage === 4) {
+                    if (actionId === 1) subMenu = 'mining';
+                    else if (actionId === 2) subMenu = 'blacksmith';
+                    else if (actionId === 3) subMenu = 'forager';
                 }
                 updateUI();
+            }
+
+            function recruitPopulation() {
+                if (gold < 100) return;
+                gold -= 100;
+                population++;
+                updateOrAddMessage('upgrade', `<i class="fas fa-user-plus"></i> Recruited 1 villager.`);
+            }
+
+            function upgradePickaxe() {
+                const cost = 100 + 50 * pickaxeLevel;
+                if (gold < cost) return;
+                gold -= cost;
+                pickaxeLevel++;
+                updateOrAddMessage('mining_shop', `<i class="fas fa-hammer"></i> Pickaxe upgraded to Lv.${pickaxeLevel}.`);
+            }
+
+            function buyDrill() {
+                if (gold < 1000 || drillOwned) return;
+                gold -= 1000;
+                drillOwned = true;
+                updateOrAddMessage('mining_shop', `<i class="fas fa-cogs"></i> Drill Machine purchased!`);
+            }
+
+            function mine(useDrill) {
+                if (pickaxeLevel <= 0) return;
+                if (useDrill) {
+                    if (!drillOwned || drillBonusActive || drillCooldownEnd > Date.now()) return;
+                    drillBonusActive = true;
+                    drillCooldownEnd = Date.now() + 5 * 60 * 1000;
+                }
+                const mult = useDrill ? 5 : 1;
+                const jewelCount = Math.floor(Math.random() * 3 + 1) * mult;
+                const rockCount = Math.floor(Math.random() * 5 + 1) * mult;
+                const ironCount = Math.floor(Math.random() * 3 + 1) * mult;
+                const goldOreCount = Math.floor(Math.random() * 2 + 1) * mult;
+                jewels += jewelCount;
+                rocks += rockCount;
+                ironOre += ironCount;
+                goldOre += goldOreCount;
+                let msg = `Mined ${jewelCount} jewels, ${rockCount} rocks, ${ironCount} iron, ${goldOreCount} gold ore.`;
+                if (useDrill) {
+                    msg = `Drill activated: ` + msg;
+                    drillBonusActive = false;
+                }
+                updateOrAddMessage('mining', `<i class="fas fa-gem"></i> ${msg}`);
+            }
+
+            function sellMined() {
+                if (jewels === 0 && rocks === 0 && ironOre === 0 && goldOre === 0) return;
+                let total = 0;
+                for (let i = 0; i < jewels; i++) total += Math.floor(Math.random() * 41 + 80);
+                for (let i = 0; i < rocks; i++) total += Math.floor(Math.random() * 10 + 3);
+                for (let i = 0; i < ironOre; i++) total += Math.floor(Math.random() * 10 + 6);
+                for (let i = 0; i < goldOre; i++) total += Math.floor(Math.random() * 12 + 9);
+                gold += total;
+                const count = jewels + rocks + ironOre + goldOre;
+                jewels = 0;
+                rocks = 0;
+                ironOre = 0;
+                goldOre = 0;
+                updateOrAddMessage('mining_shop', `<i class="fas fa-coins"></i> Sold ${count} mined items for ${formatNumber(total)}g.`);
+            }
+
+            function forgeSword() {
+                if (ironOre < 3) return;
+                ironOre -= 3;
+                swords++;
+                updateOrAddMessage('blacksmith', `<i class="fas fa-hammer"></i> Forged 1 sword from 3 iron.`);
+            }
+
+            function smeltGold() {
+                if (goldOre < 1) return;
+                goldOre--;
+                gold += 500;
+                updateOrAddMessage('blacksmith', `<i class="fas fa-coins"></i> Smelted gold ore into 500 coins.`);
+            }
+
+            function forage() {
+                if (!axeOwned) return;
+                const logCount = Math.floor(Math.random() * 3) + 1;
+                logs += logCount;
+                updateOrAddMessage('forager', `<i class="fas fa-tree"></i> Foraged ${logCount} logs.`);
+            }
+
+            function buyAxe() {
+                if (axeOwned || gold < 100) return;
+                gold -= 100;
+                axeOwned = true;
+                updateOrAddMessage('forager_shop', `<i class="fas fa-axe"></i> Axe purchased!`);
+            }
+
+            function sellLogs() {
+                if (logs <= 0) return;
+                let total = 0;
+                for (let i = 0; i < logs; i++) total += Math.floor(Math.random() * 16 + 5);
+                gold += total;
+                const count = logs;
+                logs = 0;
+                updateOrAddMessage('forager_shop', `<i class="fas fa-coins"></i> Sold ${count} logs for ${formatNumber(total)}g.`);
             }
 
             function togglePlantHarvest() {
@@ -689,7 +964,6 @@
 
             function exploreAdventure() {
                 if (population < 2 || food < 10) return;
-            
                 innNearby = false;
                 food -= 10;
                 const dice = Math.random();
@@ -763,7 +1037,6 @@
 
             function startAutoExplore() {
                 if (autoExploring || innOfferActive || restEndTime > Date.now()) return;
-            
                 innNearby = false;
                 autoExploreCount = 10;
                 autoExploring = true;
@@ -873,7 +1146,7 @@
                 if (fishInventory.length === 0) return;
                 let total = fishInventory.reduce((s, f) => s + f.price, 0);
                 gold += total;
-                updateOrAddMessage('fishing_shop', `<i class="fas fa-coins"></i> Sold ${fishInventory.length} fish for ${total}g.`);
+                updateOrAddMessage('fishing_shop', `<i class="fas fa-coins"></i> Sold ${fishInventory.length} fish for ${formatNumber(total)}g.`);
                 fishInventory = [];
                 if (subMenu === 'fishing_shop') openFishingShop();
             }
@@ -881,18 +1154,21 @@
             function showStorage() {
                 let lines = [
                     `<i class="fas fa-box"></i> STORAGE`,
-                    `Food: ${Math.floor(food)} | Gold: ${gold}`,
-                    `Wheat: ${Math.floor(wheat)} | Carrot: ${carrot}`,
-                    `Medals: ${medals} | Jewelry: ${jewelry} | Swords: ${swords} | Clothes: ${clothes}`,
-                    `Fish: ${fishInventory.length} (Baits: ${baits}, Rod Lv.${rodLevel})`
+                    `Food: ${formatNumber(Math.floor(food))} | Gold: ${formatNumber(gold)}`,
+                    `Wheat: ${formatNumber(Math.floor(wheat))} | Carrot: ${formatNumber(carrot)}`,
+                    `Medals: ${formatNumber(medals)} | Jewelry: ${formatNumber(jewelry)} | Swords: ${formatNumber(swords)} | Clothes: ${formatNumber(clothes)}`,
+                    `Fish: ${fishInventory.length} (Baits: ${baits}, Rod Lv.${rodLevel})`,
+                    `Jewels: ${formatNumber(jewels)} | Rocks: ${formatNumber(rocks)} | Iron: ${formatNumber(ironOre)} | Gold Ore: ${formatNumber(goldOre)}`,
+                    `Logs: ${formatNumber(logs)} | Axe: ${axeOwned ? 'Yes' : 'No'} | Pickaxe Lv.${pickaxeLevel} | Drill: ${drillOwned ? 'Yes' : 'No'}`
                 ];
                 updateOrAddMessage('storage', lines.join('<br>'));
             }
 
             function openMarket() {
                 let inv = `<i class="fas fa-store"></i> MARKET<br>`;
-                inv += `Wheat: ${wheat} (3g) | Carrot: ${carrot} (3g)<br>`;
-                inv += `Medals: ${medals} (10k) | Jewelry: ${jewelry} (500) | Swords: ${swords} (250) | Clothes: ${clothes} (100)`;
+                inv += `Wheat: ${formatNumber(wheat)} (3g) | Carrot: ${formatNumber(carrot)} (3g)<br>`;
+                inv += `Medals: ${formatNumber(medals)} (10k) | Jewelry: ${formatNumber(jewelry)} (500) | Swords: ${formatNumber(swords)} (250) | Clothes: ${formatNumber(clothes)} (100)<br>`;
+                inv += `Jewels: ${formatNumber(jewels)} | Rocks: ${formatNumber(rocks)} | Iron Ore: ${formatNumber(ironOre)} | Gold Ore: ${formatNumber(goldOre)} | Logs: ${formatNumber(logs)}`;
                 updateOrAddMessage('market', inv);
                 const msgEl = getMessageElement('market');
                 if (msgEl) {
@@ -904,7 +1180,12 @@
                         { name: '<i class="fas fa-medal"></i> Medal', action: () => { sellMedal(); refreshMarket(); } },
                         { name: '<i class="fas fa-gem"></i> Jewelry', action: () => { sellLoot('jewelry', 500); refreshMarket(); } },
                         { name: '<i class="fas fa-sword"></i> Sword', action: () => { sellLoot('swords', 250); refreshMarket(); } },
-                        { name: '<i class="fas fa-tshirt"></i> Clothes', action: () => { sellLoot('clothes', 100); refreshMarket(); } }
+                        { name: '<i class="fas fa-tshirt"></i> Clothes', action: () => { sellLoot('clothes', 100); refreshMarket(); } },
+                        { name: '<i class="fas fa-gem"></i> Jewels', action: () => { sellMinedType('jewels'); refreshMarket(); } },
+                        { name: '<i class="fas fa-mountain"></i> Rocks', action: () => { sellMinedType('rocks'); refreshMarket(); } },
+                        { name: '<i class="fas fa-cube"></i> Iron Ore', action: () => { sellMinedType('ironOre'); refreshMarket(); } },
+                        { name: '<i class="fas fa-coins"></i> Gold Ore', action: () => { sellMinedType('goldOre'); refreshMarket(); } },
+                        { name: '<i class="fas fa-tree"></i> Logs', action: () => { sellLogsAll(); refreshMarket(); } }
                     ];
                     items.forEach(it => {
                         let btn = document.createElement('button');
@@ -942,12 +1223,33 @@
                 else if (item === 'clothes') { if (clothes > 0) { gold += clothes * price; clothes = 0; } }
             }
 
+            function sellMinedType(type) {
+                let count = 0;
+                if (type === 'jewels') { count = jewels; jewels = 0; for (let i=0;i<count;i++) gold += Math.floor(Math.random()*41+80); }
+                else if (type === 'rocks') { count = rocks; rocks = 0; for (let i=0;i<count;i++) gold += Math.floor(Math.random()*10+3); }
+                else if (type === 'ironOre') { count = ironOre; ironOre = 0; for (let i=0;i<count;i++) gold += Math.floor(Math.random()*10+6); }
+                else if (type === 'goldOre') { count = goldOre; goldOre = 0; for (let i=0;i<count;i++) gold += Math.floor(Math.random()*12+9); }
+            }
+
+            function sellLogsAll() {
+                if (logs <= 0) return;
+                let total = 0;
+                for (let i=0;i<logs;i++) total += Math.floor(Math.random()*16+5);
+                gold += total;
+                logs = 0;
+            }
+
             function sellAllNonPlants() {
                 let total = 0;
                 if (medals > 0) { total += medals * 10000; medals = 0; }
                 if (jewelry > 0) { total += jewelry * 500; jewelry = 0; }
                 if (swords > 0) { total += swords * 250; swords = 0; }
                 if (clothes > 0) { total += clothes * 100; clothes = 0; }
+                sellMinedType('jewels');
+                sellMinedType('rocks');
+                sellMinedType('ironOre');
+                sellMinedType('goldOre');
+                sellLogsAll();
                 if (total > 0) gold += total;
             }
 
@@ -955,7 +1257,7 @@
                 if (competitionJoined || gold < 100) return;
                 gold -= 100;
                 competitionJoined = true;
-                updateOrAddMessage('competition', `<i class="fas fa-medal"></i> Joined comp! Beat ${botName} (${botTargetScore} food).`);
+                updateOrAddMessage('competition', `<i class="fas fa-medal"></i> Joined comp! Beat ${botName} (${formatNumber(botTargetScore)} food). If you collect more food today, you win 1 medal and gold equal to your daily food. Next reset at 9:00 AM.`);
             }
 
             function generateBotScore() { return Math.floor(200 + Math.random() * 80000); }
@@ -971,12 +1273,12 @@
                     botTargetScore = generateBotScore();
                     botName = pickRandomBot();
                     lastCompetitionDate = dateKey;
-                    updateOrAddMessage('system', `<i class="fas fa-flag-checkered"></i> New comp! ${botName} ${botTargetScore} food`, true);
+                    updateOrAddMessage('system', `<i class="fas fa-flag-checkered"></i> New comp! ${botName} needs ${formatNumber(botTargetScore)} food. Reset at 9 AM.`, true);
                 } else if (!lastCompetitionDate) {
                     botTargetScore = generateBotScore();
                     botName = pickRandomBot();
                     lastCompetitionDate = dateKey;
-                    updateOrAddMessage('system', `<i class="fas fa-flag-checkered"></i> Today: ${botName} ${botTargetScore} food`, true);
+                    updateOrAddMessage('system', `<i class="fas fa-flag-checkered"></i> Today's competition: ${botName} needs ${formatNumber(botTargetScore)} food. Reset at 9 AM.`, true);
                 }
                 updateUI();
             }
@@ -986,9 +1288,9 @@
                 if (dailyFoodCollected > botTargetScore) {
                     medals++;
                     gold += dailyFoodCollected;
-                    updateOrAddMessage('system', `<i class="fas fa-trophy"></i> You beat ${botName}! +${dailyFoodCollected}g +1 medal`, true);
+                    updateOrAddMessage('system', `<i class="fas fa-trophy"></i> You beat ${botName}! +${formatNumber(dailyFoodCollected)}g +1 medal.`, true);
                 } else {
-                    updateOrAddMessage('system', `<i class="fas fa-frown"></i> ${botName} won.`, true);
+                    updateOrAddMessage('system', `<i class="fas fa-frown"></i> ${botName} won. Better luck next time.`, true);
                 }
             }
 
@@ -1047,10 +1349,25 @@
                 updateUI();
             }
 
-            btn1.addEventListener('click', () => handleAction(1));
-            btn2.addEventListener('click', () => handleAction(2));
-            btn3.addEventListener('click', () => handleAction(3));
-            btn4.addEventListener('click', () => handleAction(4));
+            actionBtn1.addEventListener('click', () => handleAction(1));
+            actionBtn2.addEventListener('click', () => handleAction(2));
+            actionBtn3.addEventListener('click', () => handleAction(3));
+
+            prevBtn.addEventListener('click', () => {
+                if (subMenu) {
+                    subMenu = null;
+                    updateUI();
+                } else if (currentPage > 0) {
+                    currentPage--;
+                    updateUI();
+                }
+            });
+            nextBtn.addEventListener('click', () => {
+                if (!subMenu && currentPage < 4) {
+                    currentPage++;
+                    updateUI();
+                }
+            });
 
             setInterval(passiveFoodGain, 1000);
             setInterval(checkCompetitionReset, 1000);
@@ -1058,7 +1375,7 @@
             loadGame();
             if (!lastCompetitionDate) { botTargetScore = generateBotScore(); botName = pickRandomBot(); }
             chatMessages.innerHTML = '';
-            updateOrAddMessage('system', `<i class="fas fa-leaf"></i> Farm, fish, fight. Beat ${botName} (${botTargetScore} food)`, true);
+            updateOrAddMessage('system', `<i class="fas fa-leaf"></i> Farm, mine, fish, fight. Beat ${botName} (${formatNumber(botTargetScore)} food)`, true);
             updateUI();
         })();
     </script>

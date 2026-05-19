@@ -79,6 +79,34 @@
             border-radius: 50px;
         }
 
+        .mode-selector {
+            display: flex;
+            background-color: #27272a;
+            border-radius: 50px;
+            padding: 6px;
+            margin-bottom: var(--spacing-lg);
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn.active {
+            background-color: var(--accent-color);
+            color: #000;
+            font-weight: 700;
+        }
+
         .difficulty {
             display: flex;
             background-color: #27272a;
@@ -167,7 +195,6 @@
             margin-right: auto;
             display: none;
         }
-        
     </style>
 </head>
 <body>
@@ -179,7 +206,7 @@
         <app-header class="fade-in">
             <div>
                 <h1 class="username">Tic-Tac-Toe</h1>
-                <p class="tagline">Play a classic Tic-Tac-Toe against AI</p>
+                <p class="tagline">Play a classic Tic-Tac-Toe against AI or a friend</p>
             </div>
         </app-header>
         
@@ -188,9 +215,14 @@
             <div class="wins">Wins: <span id="winCount">0</span></div>
         </div>
 
+        <div class="mode-selector" id="modeSelector">
+            <button class="mode-btn active" data-mode="ai">AI</button>
+            <button class="mode-btn" data-mode="2p">2 Players</button>
+        </div>
+
         <div class="difficulty" id="difficulty">
             <button class="diff-btn active" data-diff="easy">Easy</button>
-            <button class="diff-btn" data-diff="normal">Normal</button>
+            <button class="diff-btn" data-diff="medium">Medium</button>
             <button class="diff-btn" data-diff="hard">Hard</button>
         </div>
 
@@ -227,7 +259,8 @@
         let gameActive = true
         let timerInterval = null
         let seconds = 0
-        let difficulty = "normal"
+        let difficulty = "easy"
+        let gameMode = "ai"
         let playerWins = 0
 
         const cells = document.querySelectorAll(".cell")
@@ -236,6 +269,8 @@
         const winCountEl = document.getElementById("winCount")
         const guideEl = document.getElementById("guide")
         const diffButtons = document.querySelectorAll(".diff-btn")
+        const modeButtons = document.querySelectorAll(".mode-btn")
+        const difficultyContainer = document.getElementById("difficulty")
 
         const xSVG = `<svg width="88" height="88" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="18" x2="82" y2="82" stroke="currentColor" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/><line x1="82" y1="18" x2="18" y2="82" stroke="currentColor" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></svg>`
         const oSVG = `<svg width="88" height="88" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="33" stroke="currentColor" stroke-width="15" fill="none"/></svg>`
@@ -267,8 +302,17 @@
             timerInterval = null
         }
 
-        function hideGuide() {
-            guideEl.style.display = "none"
+        function updateGuideMessage() {
+            if (!gameActive) return
+            if (gameMode === "ai") {
+                if (currentPlayer === "X") {
+                    guideEl.textContent = "Your turn (X)"
+                } else {
+                    guideEl.textContent = "AI thinking..."
+                }
+            } else {
+                guideEl.textContent = `Player ${currentPlayer}'s turn`
+            }
         }
 
         function resetGame() {
@@ -279,12 +323,11 @@
             timerEl.textContent = "00:00"
             stopTimer()
             restartBtn.style.display = "none"
-            guideEl.style.display = "block"
-            
             cells.forEach(cell => {
                 cell.innerHTML = ""
                 cell.classList.remove("x", "o", "disabled")
             })
+            updateGuideMessage()
         }
 
         function checkWin(player) {
@@ -307,14 +350,24 @@
                 gameActive = false
                 stopTimer()
                 restartBtn.style.display = "block"
-                if (player === "X") {
-                    playerWins++
-                    winCountEl.textContent = playerWins
-                    saveWins()
-                    window.showMessage("You Win!")
+                if (gameMode === "ai") {
+                    if (player === "X") {
+                        playerWins++
+                        winCountEl.textContent = playerWins
+                        saveWins()
+                        window.showMessage("You Win!")
+                    } else {
+                        window.showMessage("AI Wins")
+                    }
                 } else {
-                    window.showMessage("AI Wins")
+                    if (player === "X") {
+                        playerWins++
+                        winCountEl.textContent = playerWins
+                        saveWins()
+                    }
+                    window.showMessage(`Player ${player} Wins!`)
                 }
+                guideEl.textContent = `Player ${player} wins!`
                 return true
             }
 
@@ -323,6 +376,7 @@
                 stopTimer()
                 restartBtn.style.display = "block"
                 window.showMessage("Draw Game")
+                guideEl.textContent = "It's a draw!"
                 return true
             }
             return false
@@ -333,9 +387,8 @@
             return empty[Math.floor(Math.random() * empty.length)]
         }
 
-        function aiNormal() {
+        function aiMedium() {
             const empty = boardState.map((v,i) => v === null ? i : null).filter(v => v !== null)
-            
             for (let i of empty) {
                 boardState[i] = "O"
                 if (checkWin("O")) {
@@ -344,7 +397,6 @@
                 }
                 boardState[i] = null
             }
-
             for (let i of empty) {
                 boardState[i] = "X"
                 if (checkWin("X")) {
@@ -353,7 +405,6 @@
                 }
                 boardState[i] = null
             }
-
             return empty[Math.floor(Math.random() * empty.length)]
         }
 
@@ -405,17 +456,18 @@
         }
 
         function aiMove() {
-            if (!gameActive) return
-
+            if (!gameActive || gameMode !== "ai") return
             let moveIndex
             if (difficulty === "easy") moveIndex = aiEasy()
-            else if (difficulty === "normal") moveIndex = aiNormal()
+            else if (difficulty === "medium") moveIndex = aiMedium()
             else moveIndex = aiHard()
 
             if (moveIndex !== undefined) {
                 setTimeout(() => {
+                    if (!gameActive || currentPlayer !== "O") return
                     makeMove(moveIndex, "O")
                     currentPlayer = "X"
+                    updateGuideMessage()
                 }, 380)
             }
         }
@@ -427,25 +479,52 @@
             }
 
             const index = parseInt(e.target.dataset.index)
-            if (boardState[index] || currentPlayer !== "X") return
+            if (isNaN(index)) return
+            if (boardState[index]) return
+
+            if (gameMode === "ai" && currentPlayer !== "X") return
+            if (gameMode === "2p" && currentPlayer !== "X" && currentPlayer !== "O") return
 
             if (seconds === 0) {
                 startTimer()
-                hideGuide()
             }
 
-            const gameEnded = makeMove(index, "X")
+            const player = currentPlayer
+            const gameEnded = makeMove(index, player)
+
             if (!gameEnded) {
-                currentPlayer = "O"
-                aiMove()
+                if (gameMode === "ai") {
+                    currentPlayer = "O"
+                    updateGuideMessage()
+                    aiMove()
+                } else {
+                    currentPlayer = currentPlayer === "X" ? "O" : "X"
+                    updateGuideMessage()
+                }
             }
         }
 
         diffButtons.forEach(btn => {
             btn.addEventListener("click", () => {
+                if (gameMode === "2p") return
                 diffButtons.forEach(b => b.classList.remove("active"))
                 btn.classList.add("active")
                 difficulty = btn.dataset.diff
+                resetGame()
+            })
+        })
+
+        modeButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
+                modeButtons.forEach(b => b.classList.remove("active"))
+                btn.classList.add("active")
+                gameMode = btn.dataset.mode
+                if (gameMode === "2p") {
+                    difficultyContainer.style.display = "none"
+                } else {
+                    difficultyContainer.style.display = "flex"
+                }
+                resetGame()
             })
         })
 
@@ -459,7 +538,6 @@
             loadWins()
             resetGame()
         }
-        
     </script>
 </body>
 </html>
