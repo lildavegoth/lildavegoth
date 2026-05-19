@@ -130,7 +130,7 @@
             color: #fff;
             border: 1px solid rgba(255,255,255,0.1);
         }
-        
+
         .button-row {
             display: flex;
             gap: 12px;
@@ -455,20 +455,6 @@
             margin-bottom: 10px;
         }
 
-        #dropboxStatus {
-            font-size: 0.9rem;
-            margin-left: auto;
-            font-weight: 800;
-        }
-
-        .dropbox-online {
-            color: var(--accent-color);
-        }
-
-        .dropbox-expired {
-            color: #C42833;
-        }
-
         .popup-overlay {
             position: fixed;
             top: 0;
@@ -572,17 +558,128 @@
             border-radius: var(--radius-medium);
             padding: 16px;
         }
-        
+
         .guide-box p {
             font-size: 0.85rem;
             margin-bottom: 8px;
         }
-        
+
         .guide-box small {
             color: var(--text-secondary);
             font-size: 0.75rem;
             display: block;
             margin-top: 6px;
+        }
+
+        .cloud-status-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 4px;
+            font-size: 1.17em;
+            font-weight: bold;
+        }
+
+        .cloud-status-text {
+            color: var(--text-primary);
+        }
+
+        .cloud-status-connected {
+            color: var(--accent-color);
+        }
+
+        .cloud-status-date {
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+        }
+
+        #foldersPopup .popup-content {
+            max-width: 500px;
+        }
+
+        #folderSearch {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            margin-bottom: 16px;
+        }
+
+        #folderSearch:focus {
+            border-color: var(--accent-color);
+        }
+
+        .folder-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            max-height: 50vh;
+        }
+
+        .folder-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 16px 20px;
+            border-radius: 16px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .folder-card:hover {
+            background: rgba(193, 252, 50, 0.05);
+            border-color: var(--accent-color);
+        }
+
+        .folder-card-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .folder-card-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .folder-card-count {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .folder-card-arrow {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+        
+        .arrow-circle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: var(--accent-color);
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+        
+        .arrow-circle i {
+            color: #000;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            .folder-card {
+                padding: 14px 16px;
+            }
         }
     </style>
 </head>
@@ -607,7 +704,6 @@
             <button id="settingsBtn" class="settings-btn" title="Settings">
                 <i class="fas fa-cog"></i>
             </button>
-            <span id="dropboxStatus"></span>
         </div>
 
         <div class="search-container">
@@ -650,6 +746,21 @@
                 </button>
             </div>
             <div class="tools-grid" id="popupContent"></div>
+        </div>
+    </div>
+
+    <div id="foldersPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2>Folders</h2>
+                <button class="close-popup" onclick="closeFoldersPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="padding: 16px;">
+                <input type="text" id="folderSearch" placeholder="Search folders...">
+                <div class="folder-list" id="folderList"></div>
+            </div>
         </div>
     </div>
 
@@ -764,11 +875,12 @@
             'dropbox_tokens', 'hideImportNote', 'hideSwipeIndicator', 'hintModeEnabled',
             'hiraganaStars', 'hiraganaStreak', 'moneyTrackerCurrentCardId', 'showAllEntries',
             'userName', 'lastPageState', 'giveaway_admins', 'openrouterAPIKey', 'showHeader',
-            'hideIcons'
+            'hideIcons', 'privacy-policy-notice-dismissed', 'loginPop', 'lastCloudBackupDate'
         ];
 
         let currentFolder = 'All';
         let pinnedItems = JSON.parse(localStorage.getItem('pinnedItems') || '[]');
+        let tempFolders = [];
 
         const avatarEl = document.getElementById('avatar');
         const usernameEl = document.getElementById('username');
@@ -844,21 +956,34 @@
         function buildFolders() {
             const foldersEl = document.getElementById('folders');
             foldersEl.innerHTML = '';
-            const allFolders = ['All', ...folderDefinitions.map(f => f.name), 'Other'];
-            allFolders.forEach(f => {
-                let btn = document.createElement('button');
+
+            function addFolderButton(name) {
+                const btn = document.createElement('button');
                 btn.className = 'folder-btn';
-                if (f === currentFolder) btn.classList.add('active');
-                btn.textContent = f;
-                btn.dataset.folder = f;
+                if (name === currentFolder) btn.classList.add('active');
+                btn.textContent = name;
                 btn.onclick = () => {
-                    currentFolder = f;
-                    document.querySelectorAll('.folder-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
+                    currentFolder = name;
+                    buildFolders();
                     buildCards();
                 };
                 foldersEl.appendChild(btn);
+            }
+
+            addFolderButton('All');
+            addFolderButton('Other');
+
+            tempFolders.forEach(folder => {
+                addFolderButton(folder);
             });
+
+            const expandBtn = document.createElement('button');
+            expandBtn.className = 'folder-btn';
+            expandBtn.innerHTML = 'Expand';
+            expandBtn.onclick = () => {
+                openFoldersPopup();
+            };
+            foldersEl.appendChild(expandBtn);
         }
 
         function getTotalStorageSize() {
@@ -1039,6 +1164,10 @@
             document.getElementById('universalPopup').style.display = 'none';
         }
 
+        function closeFoldersPopup() {
+            document.getElementById('foldersPopup').style.display = 'none';
+        }
+
         function showConfirmPopup(title, message, onConfirm) {
             const popup = document.getElementById('universalPopup');
             const titleEl = document.getElementById('popupTitle');
@@ -1199,7 +1328,6 @@
                 };
                 setDropboxTokens(tokens);
                 window.showMessage('Dropbox connected!');
-                updateDropboxStatus();
             } catch (err) {
                 window.showMessage('OAuth error: ' + err.message, true);
             }
@@ -1221,7 +1349,7 @@
         async function uploadBackup() {
             const token = await getValidAccessToken();
             if (!token) {
-                showConfirmPopup('Dropbox', 'Not connected. Connect?', () => {
+                showConfirmPopup('Dropbox', 'Not connected. Do you want to connect to your Dropbox first?', () => {
                     authenticateDropbox();
                 });
                 return;
@@ -1264,6 +1392,7 @@
                 clearInterval(interval);
                 progressBar.style.width = '100%';
                 timeElement.textContent = '100%';
+                localStorage.setItem('lastCloudBackupDate', new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
                 setTimeout(() => notif.close(), 1500);
                 window.showMessage(`Backup saved as ${fileName}`);
             } catch (err) {
@@ -1276,7 +1405,7 @@
         async function downloadAndRestore() {
             const token = await getValidAccessToken();
             if (!token) {
-                showConfirmPopup('Dropbox', 'Not connected. Connect?', () => {
+                showConfirmPopup('Dropbox', 'Not connected. Do you want to connect to your Dropbox first?', () => {
                     authenticateDropbox();
                 });
                 return;
@@ -1345,22 +1474,59 @@
             }
         }
 
-        async function updateDropboxStatus() {
-            const statusSpan = document.getElementById('dropboxStatus');
-            const tokens = getDropboxTokens();
-            if (!tokens) {
-                statusSpan.textContent = '';
-                return;
+        function openFoldersPopup() {
+            const popup = document.getElementById('foldersPopup');
+            const searchInput = document.getElementById('folderSearch');
+            const listContainer = document.getElementById('folderList');
+            searchInput.value = '';
+            renderFolderList('');
+            popup.style.display = 'flex';
+
+            searchInput.oninput = function() {
+                renderFolderList(this.value.toLowerCase());
+            };
+        }
+
+        function renderFolderList(filterText) {
+            const listContainer = document.getElementById('folderList');
+            const allKeys = getFilteredKeys();
+            const folderCounts = {};
+            folderDefinitions.forEach(def => {
+                const count = allKeys.filter(key => getFolderForKey(key) === def.name).length;
+                if (count > 0) folderCounts[def.name] = count;
+            });
+
+            let folders = Object.keys(folderCounts);
+            if (filterText) {
+                folders = folders.filter(name => name.toLowerCase().includes(filterText));
             }
-            const valid = await getValidAccessToken();
-            if (valid) {
-                statusSpan.textContent = 'Connected';
-                statusSpan.className = 'dropbox-online';
-            } else {
-                statusSpan.textContent = 'Expired';
-                statusSpan.className = 'dropbox-expired';
-                clearDropboxTokens();
-            }
+            folders.sort();
+
+            listContainer.innerHTML = folders.map(name => {
+                const count = folderCounts[name];
+                return `
+                    <div class="folder-card" data-folder="${name}">
+                        <div class="folder-card-left">
+                            <div class="folder-card-name">${name}</div>
+                            <div class="folder-card-count">${count} Data</div>
+                        </div>
+                        <span class="arrow-circle"><i class="fas fa-arrow-right"></i></span>
+                    </div>
+                `;
+            }).join('');
+
+            document.querySelectorAll('.folder-card').forEach(card => {
+                card.onclick = () => {
+                    const folderName = card.dataset.folder;
+                    if (!tempFolders.includes(folderName)) {
+                        tempFolders.push(folderName);
+                    }
+                    currentFolder = folderName;
+                    closeFoldersPopup();
+                    buildFolders();
+                    buildCards();
+                };
+            });
         }
 
         async function localBackup() {
@@ -1407,7 +1573,7 @@
         async function deleteBackups() {
             const token = await getValidAccessToken();
             if (!token) {
-                showConfirmPopup('Dropbox', 'Not connected. Connect?', authenticateDropbox);
+                showConfirmPopup('Dropbox', 'Not connected. Do you want to connect to your Dropbox first?', authenticateDropbox);
                 return;
             }
             showConfirmPopup('Delete Backups', 'Delete all backups in Dropbox folder? This cannot be undone.', async () => {
@@ -1455,10 +1621,17 @@
             const popup = document.getElementById('universalPopup');
             const title = document.getElementById('popupTitle');
             const content = document.getElementById('popupContent');
+            const tokens = getDropboxTokens();
+            const isConnected = !!tokens;
+            const lastBackupDate = localStorage.getItem('lastCloudBackupDate') || '';
+
             title.textContent = 'Settings';
             content.innerHTML = `
                 <div style="display: flex; flex-direction: column; gap: 12px;">
-                    <h3>Cloud</h3>
+                    <div class="cloud-status-line">
+                        <span class="cloud-status-text">Cloud — <span class="cloud-status-connected">${isConnected ? 'Connected' : 'Not connected'}</span></span>
+                        ${isConnected && lastBackupDate ? `<span class="cloud-status-date">${lastBackupDate}</span>` : ''}
+                    </div>
                     <div class="button-row">
                         <button class="action-btn btn-backup" id="popupCloudBackup"><i class="fas fa-cloud-upload-alt"></i> Backup</button>
                         <button class="action-btn btn-restore" id="popupCloudRestore"><i class="fas fa-cloud-download-alt"></i> Restore</button>
@@ -1473,8 +1646,12 @@
                     <button class="clear-all-btn" id="popupDeleteBackups"><i class="fas fa-trash"></i> Delete Backups</button>
                     <h3>Notes</h3>
                     <div class="guide-box">
+                        <p><strong>Cloud Details</strong></p>
+                        <p style="font-size: 0.8rem;">Cloud Backups and Restore are using Dropbox Storage with OAuth app that i made myself (no third-party used except Dropbox), and nothing i collects or see from your Dropbox except Kakoi Kiraku folder.</p>
+                    </div>
+                    <div class="guide-box">
                         <p><strong>Delete Backups</strong></p>
-                        <p style="font-size: 0.8rem;">Delete Backups button will clear all the backed up JSON files inside your Dropbox entirely, but also Backup the newest JSON to the storage</p>
+                        <p style="font-size: 0.8rem;">Delete Backups button will clear all the backed up JSON files inside your Dropbox entirely, but also Backup the newest JSON to the storage.</p>
                     </div>
                 </div>
             `;
@@ -1508,24 +1685,20 @@
             popup.style.display = 'flex';
         }
 
-        const popupData = {
-            settings: { title: 'Settings' }
-        };
-
-        function openPopup(type) {
-            if (type === 'settings') {
-                openSettingsPopup();
-                return;
-            }
+        function startProgressNotification() {
+            return {
+                complete: () => {},
+                error: () => {}
+            };
         }
 
         if (window.cordova) {
             document.addEventListener('deviceready', function() {
-                document.getElementById('settingsBtn').addEventListener('click', () => openPopup('settings'));
-                handleOAuthRedirect().then(() => updateDropboxStatus());
+                document.getElementById('settingsBtn').addEventListener('click', () => openSettingsPopup());
+                handleOAuthRedirect();
             });
         } else {
-            document.getElementById('settingsBtn').addEventListener('click', () => openPopup('settings'));
+            document.getElementById('settingsBtn').addEventListener('click', () => openSettingsPopup());
             handleOAuthRedirect();
         }
 
