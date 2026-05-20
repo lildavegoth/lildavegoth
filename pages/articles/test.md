@@ -10,23 +10,18 @@ image: "../../images/4ever.webp"
 #### Heading 4
 ##### Heading 5
 ###### Heading 6
-#↓ Special Heading 1
 - Test
 - Test
     - Test
     - Test
         - Test
         - Test
-        
-####↓ Special Heading 4
 1. Test
 2. Test
     1. Test
     2. ~~Test~~
         1. Test
         2. Test
-        
-######↓ Special Heading 6
 - [ ] Test
     - [x] Test
     - [ ] Test
