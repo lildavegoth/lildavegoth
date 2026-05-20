@@ -414,11 +414,15 @@
 
         .callout-content {
             color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
         }
 
-        .callout-content ul, .callout-content ol {
-            margin-left: 0.5rem;
-            padding-left: 1rem;
+        .callout-content p,
+        .callout-content ul,
+        .callout-content ol {
+            margin: 0;
         }
 
         .callout-note .callout-title { color: #7cb8ff; }
@@ -688,42 +692,51 @@
 
         function enhanceCallouts(container) {
             var blockquotes = container.querySelectorAll('blockquote');
+        
             blockquotes.forEach(function(blockquote) {
-                var fullHTML = blockquote.innerHTML.trim();
-                var match = fullHTML.match(/^<p>\[!(.*?)\]\s*(.*?)<\/p>/is);
+                var paragraphs = blockquote.querySelectorAll('p');
+                if (!paragraphs.length) return;
+        
+                var firstText = paragraphs[0].textContent.trim();
+                var match = firstText.match(/^\[!(.*?)\]\s*(.*)$/i);
                 if (!match) return;
-
+        
                 var typeSelector = match[1].trim();
-                var remainingFirstLine = match[2].trim();
+                var titleText = match[2].trim();
                 var typeLower = typeSelector.toLowerCase();
-
+        
                 var callout = document.createElement('div');
-                callout.className = 'callout callout-' + (['note','warning','tip'].includes(typeLower) ? typeLower : 'default');
-
+                callout.className = 'callout callout-' + (
+                    ['note','warning','tip'].includes(typeLower)
+                    ? typeLower
+                    : 'default'
+                );
+        
                 var titleDiv = document.createElement('div');
                 titleDiv.className = 'callout-title';
-
+        
                 var iconHTML = '<i class="fas fa-circle-info"></i>';
-                if (typeLower === 'warning') iconHTML = '<i class="fas fa-triangle-exclamation"></i>';
-                else if (typeLower === 'tip') iconHTML = '<i class="fas fa-lightbulb"></i>';
-                else if (typeSelector.startsWith('fa')) {
+        
+                if (typeLower === 'warning') {
+                    iconHTML = '<i class="fas fa-triangle-exclamation"></i>';
+                } else if (typeLower === 'tip') {
+                    iconHTML = '<i class="fas fa-lightbulb"></i>';
+                } else if (typeSelector.startsWith('fa')) {
                     iconHTML = '<i class="' + typeSelector + '"></i>';
                 }
-
-                titleDiv.innerHTML = iconHTML + ' ' + (remainingFirstLine || (typeSelector.startsWith('fa') ? 'Notice' : typeSelector.toUpperCase()));
-
+        
+                titleDiv.innerHTML = iconHTML + ' ' + titleText;
+        
                 var contentDiv = document.createElement('div');
                 contentDiv.className = 'callout-content';
-
-                var sliceIndex = match[0].length;
-                var remainingHTML = fullHTML.substring(sliceIndex).trim();
-
-                if (remainingHTML) {
-                    contentDiv.innerHTML = remainingHTML;
+        
+                for (var i = 1; i < paragraphs.length; i++) {
+                    contentDiv.appendChild(paragraphs[i].cloneNode(true));
                 }
-
+        
                 callout.appendChild(titleDiv);
                 callout.appendChild(contentDiv);
+        
                 blockquote.parentNode.replaceChild(callout, blockquote);
             });
         }
