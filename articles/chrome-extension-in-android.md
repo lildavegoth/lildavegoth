@@ -1,3 +1,9 @@
+---
+title: "Chrome Extension in Android"
+date: "2024-02-15"
+image: "../../images/4ever.webp"
+---
+
 Usually, **Chrome Extensions** can be installed in **Chrome** for **Desktop**, but in this tutorial, i'll guides you to use them.
 
 # Notes →
