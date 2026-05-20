@@ -1,6 +1,6 @@
 ---
 title: "Test"
-date: "2024-02-15"
+date: "2026-06-21"
 image: "../../images/4ever.webp"
 ---
 
@@ -46,7 +46,7 @@ pm uninstall -k --user 0 com.test.apk and also com.test.double.apk
 | test |        | test test test test |      | test |      |
 | ------ | ------ | ---- | ---- | ---- | ---- |
 |        | [test](https://t.me/lildavegoth) |      |      |      | test |
-|        |        |      | - test\n- test\n 1. test\n 2. test |      |      |
+|        |        |      | - test \n - test\n 1. test\n 2. test |      |      |
 | test test test ![test](../../images/4ever.webp)   |        |      |      |      | test test test test |
 
 test [test](https://g.com) test
