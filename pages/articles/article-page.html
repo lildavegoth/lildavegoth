@@ -27,11 +27,6 @@
             --radius-small: 12px;
             --radius-medium: 20px;
             --radius-large: 28px;
-            --spacing-xs: 8px;
-            --spacing-sm: 16px;
-            --spacing-md: 24px;
-            --spacing-lg: 32px;
-            --spacing-xl: 48px;
         }
 
         body {
@@ -84,7 +79,6 @@
         .back-btn {
             left: 16px;
             text-decoration: none;
-            color: black;
         }
 
         .back-btn i {
@@ -162,11 +156,20 @@
 
         #articleContent a {
             color: var(--accent-color);
-            text-decoration: none;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            position: relative;
         }
 
-        #articleContent a:hover {
-            text-decoration: underline;
+        #articleContent a::after {
+            content: "\f360";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            font-size: 0.7em;
+            margin-left: 3px;
+            vertical-align: super;
+            text-decoration: none;
+            display: inline-block;
         }
 
         #articleContent strong {
@@ -231,34 +234,6 @@
             height: 1px;
             background-color: var(--bg-card);
             margin: 1.5rem 0;
-        }
-
-        #articleContent table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 1rem auto;
-            overflow-x: auto;
-            display: block;
-            white-space: nowrap;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-
-        #articleContent table::-webkit-scrollbar {
-            display: none;
-        }
-
-        #articleContent table th,
-        #articleContent table td {
-            border: 1px solid var(--bg-card);
-            padding: 8px 12px;
-            text-align: left;
-        }
-
-        #articleContent table th {
-            font-weight: bold;
-            background: rgba(193, 252, 50, 0.1);
-            color: var(--accent-color);
         }
 
         .code-block-wrapper {
@@ -376,6 +351,72 @@
             padding-left: 2rem;
         }
 
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 1rem 0;
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #articleContent table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: max-content;
+            white-space: normal;
+        }
+
+        #articleContent table th,
+        #articleContent table td {
+            border: 1px solid var(--bg-card);
+            padding: 8px 12px;
+            text-align: left;
+            max-width: 26ch;
+            word-break: break-word;
+            white-space: normal;
+            vertical-align: top;
+        }
+
+        #articleContent table th {
+            font-weight: bold;
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+
+        .callout {
+            margin: 1rem 0;
+            padding: 1rem 1.2rem;
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(30, 30, 30, 0.5);
+        }
+
+        .callout-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .callout-note .callout-title {
+            color: #7cb8ff;
+        }
+
+        .callout-warning .callout-title {
+            color: #ffb86c;
+        }
+
+        .callout-tip .callout-title {
+            color: #50fa7b;
+        }
+
+        .divider {
+            margin-top: 2rem;
+            display: block;
+            max-width: 200px;
+            opacity: 0.8;
+        }
+
         @media (min-width: 720px) {
             .main {
                 display: flex;
@@ -411,7 +452,7 @@
         <div class="left-column">
             <div class="image-container">
                 <img id="heroImage" src="../../images/4ever.webp" alt="" class="hero-image">
-                <a class="back-btn" href="articles-home.html" onclick="window.location.hash='';">
+                <a class="back-btn" href="articles-home.html">
                     <i class="fas fa-arrow-left"></i>
                 </a>
                 <button class="share-btn" id="shareBarBtn">
@@ -441,52 +482,182 @@
     <script>
         function setupMoreShareButton() {
             const shareButton = document.getElementById('shareBarBtn');
-            if (shareButton) {
-                shareButton.addEventListener('click', async function(event) {
-                    const shareData = {
-                        title: document.getElementById('articleTitle').textContent || 'Kakoi Kiraku',
-                        text: 'Check out this article on lildavegoth',
-                        url: window.location.href,
-                    };
-                    const originalSVG = shareButton.innerHTML;
+            if (!shareButton) return;
+
+            shareButton.addEventListener('click', async function(event) {
+                const shareData = {
+                    title: document.getElementById('articleTitle').textContent || 'Kakoi Kiraku',
+                    text: 'Check out this article on Kakoi Kiraku  Articles ' + window.location.href,
+                    url: window.location.href,
+                };
+                const originalSVG = shareButton.innerHTML;
+                try {
+                    if (navigator.share) {
+                        await navigator.share(shareData);
+                    } else {
+                        await navigator.clipboard.writeText(shareData.url);
+                        shareButton.innerHTML = `
+                            <svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='#4CAF50'>
+                                <path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/>
+                            </svg>`;
+                        setTimeout(() => {
+                            shareButton.innerHTML = originalSVG;
+                        }, 1500);
+                    }
+                } catch (error) {
+                    if (error.name === 'AbortError') return;
                     try {
-                        if (navigator.share) {
-                            await navigator.share(shareData);
-                        } else {
-                            await navigator.clipboard.writeText(shareData.url);
-                            shareButton.innerHTML = `
-                                <svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='#4CAF50'>
-                                    <path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/>
-                                </svg>`;
-                            setTimeout(() => {
-                                shareButton.innerHTML = originalSVG;
-                            }, 1500);
+                        await navigator.clipboard.writeText(shareData.url);
+                        shareButton.innerHTML = `
+                            <svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='#4CAF50'>
+                                <path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/>
+                            </svg>`;
+                        setTimeout(() => {
+                            shareButton.innerHTML = originalSVG;
+                        }, 1500);
+                    } catch (clipboardError) {
+                        shareButton.innerHTML = `
+                            <svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='#FF3B30'>
+                                <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/>
+                            </svg>`;
+                        setTimeout(() => {
+                            shareButton.innerHTML = originalSVG;
+                        }, 1500);
+                    }
+                }
+            });
+        }
+
+        function replaceArrowsInTextNodes(element) {
+            const walker = document.createTreeWalker(
+                element,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: function(node) {
+                        if (node.parentNode.tagName === 'CODE' || node.parentNode.tagName === 'PRE') {
+                            return NodeFilter.FILTER_REJECT;
                         }
-                    } catch (error) {
-                        if (error.name === 'AbortError') {
-                            return;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                }
+            );
+
+            const replacements = {
+                '←': 'fa-arrow-left',
+                '↑': 'fa-arrow-up',
+                '↓': 'fa-arrow-down',
+                '→': 'fa-arrow-right'
+            };
+
+            const nodesToReplace = [];
+            while (walker.nextNode()) {
+                nodesToReplace.push(walker.currentNode);
+            }
+
+            nodesToReplace.forEach(node => {
+                let html = node.textContent;
+                let changed = false;
+                for (const [arrow, iconClass] of Object.entries(replacements)) {
+                    if (html.includes(arrow)) {
+                        html = html.split(arrow).join(`<i class="fas ${iconClass}"></i>`);
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    const span = document.createElement('span');
+                    span.innerHTML = html;
+                    node.parentNode.replaceChild(span, node);
+                }
+            });
+        }
+
+        function enhanceTables(container) {
+            const tables = container.querySelectorAll('table');
+            tables.forEach(table => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'table-wrapper';
+
+                const rows = table.querySelectorAll('tr');
+                if (rows.length > 0) {
+                    const firstRow = rows[0];
+                    const isHeaderRow = firstRow.querySelectorAll('th').length > 0;
+                    if (!isHeaderRow) {
+                        const thead = document.createElement('thead');
+                        const tbody = table.querySelector('tbody') || document.createElement('tbody');
+                        while (firstRow.firstChild) {
+                            const th = document.createElement('th');
+                            th.innerHTML = firstRow.firstChild.innerHTML;
+                            thead.appendChild(th);
+                            firstRow.firstChild.remove();
                         }
-                        try {
-                            await navigator.clipboard.writeText(shareData.url);
-                            shareButton.innerHTML = `
-                                <svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='#4CAF50'>
-                                    <path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/>
-                                </svg>`;
-                            setTimeout(() => {
-                                shareButton.innerHTML = originalSVG;
-                            }, 1500);
-                        } catch (clipboardError) {
-                            shareButton.innerHTML = `
-                                <svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='#FF3B30'>
-                                    <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/>
-                                </svg>`;
-                            setTimeout(() => {
-                                shareButton.innerHTML = originalSVG;
-                            }, 1500);
+                        firstRow.remove();
+                        table.insertBefore(thead, table.firstChild);
+                        if (!table.querySelector('tbody')) {
+                            table.appendChild(tbody);
+                        }
+                        while (table.querySelector('tbody tr')) {
+                            tbody.appendChild(table.querySelector('tbody tr'));
                         }
                     }
-                });
-            }
+                }
+
+                table.parentNode.insertBefore(wrapper, table);
+                wrapper.appendChild(table);
+            });
+        }
+
+        function enhanceCallouts(container) {
+            const blockquotes = container.querySelectorAll('blockquote');
+            blockquotes.forEach(blockquote => {
+                const firstParagraph = blockquote.querySelector('p:first-child');
+                if (!firstParagraph) return;
+                const text = firstParagraph.textContent.trim();
+                const match = text.match(/^\[!(NOTE|WARNING|TIP)\]\s*(.*)/i);
+                if (!match) return;
+
+                const type = match[1].toLowerCase();
+                const title = match[2] || type.charAt(0).toUpperCase() + type.slice(1);
+
+                const calloutDiv = document.createElement('div');
+                calloutDiv.className = `callout callout-${type}`;
+
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'callout-title';
+                let icon = 'fa-circle-info';
+                if (type === 'warning') icon = 'fa-triangle-exclamation';
+                if (type === 'tip') icon = 'fa-lightbulb';
+                titleDiv.innerHTML = `<i class="fas ${icon}"></i> ${title}`;
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'callout-content';
+                while (blockquote.childNodes.length > 0) {
+                    const node = blockquote.childNodes[0];
+                    if (node === firstParagraph && node.nodeType === 1) {
+                        node.remove();
+                        continue;
+                    }
+                    contentDiv.appendChild(node);
+                }
+
+                calloutDiv.appendChild(titleDiv);
+                calloutDiv.appendChild(contentDiv);
+                blockquote.parentNode.replaceChild(calloutDiv, blockquote);
+            });
+        }
+
+        function enhanceContent() {
+            const content = document.getElementById('articleContent');
+            if (!content) return;
+
+            replaceArrowsInTextNodes(content);
+            enhanceTables(content);
+            enhanceCallouts(content);
+
+            const dividerImg = document.createElement('img');
+            dividerImg.src = 'images/divider.webp';
+            dividerImg.alt = '';
+            dividerImg.className = 'divider';
+            content.appendChild(dividerImg);
         }
 
         function generateTableOfContents() {
@@ -578,19 +749,23 @@
 
             try {
                 const response = await fetch(`/api/articles?slug=${encodeURIComponent(slug)}&_=${Date.now()}`);
-                if (!response.ok) {
-                    throw new Error('Article not found');
-                }
+                if (!response.ok) throw new Error('Article not found');
                 const article = await response.json();
 
                 document.getElementById('articleTitle').textContent = article.title;
                 document.getElementById('heroImage').src = article.image;
-                document.getElementById('datePill').textContent = article.date ? new Date(article.date).toLocaleString('default', { month: 'short' }) : 'Unknown';
+
+                const dateObj = new Date(article.date);
+                const day = dateObj.getDate();
+                const month = dateObj.toLocaleString('default', { month: 'short' });
+                document.getElementById('datePill').textContent = `${day} ${month}`;
+
                 document.getElementById('articleContent').innerHTML = article.html;
                 document.getElementById('wordCount').textContent = `${article.wordCount} words`;
                 document.title = `${article.title} | lildavegoth`;
 
                 enhanceCodeBlocks();
+                enhanceContent();
                 generateTableOfContents();
             } catch (error) {
                 document.getElementById('articleContent').innerHTML = '<p style="color:var(--accent-color);">Article could not be loaded.</p>';
