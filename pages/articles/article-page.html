@@ -158,18 +158,6 @@
             color: var(--accent-color);
             text-decoration: underline;
             text-underline-offset: 2px;
-            position: relative;
-        }
-
-        #articleContent a::after {
-            content: "\f360";
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-            font-size: 0.7em;
-            margin-left: 3px;
-            vertical-align: super;
-            text-decoration: none;
-            display: inline-block;
         }
 
         #articleContent strong {
@@ -190,9 +178,13 @@
         }
 
         #articleContent ol ol {
-            list-style-type: upper-roman;
+            list-style-type: lower-alpha;
             margin-top: 0.25rem;
             margin-bottom: 0.25rem;
+        }
+
+        #articleContent ol ol ol {
+            list-style-type: upper-roman;
         }
 
         #articleContent img {
@@ -218,8 +210,7 @@
         }
 
         #articleContent input[type="checkbox"]:checked {
-            background: var(--accent-color);
-            box-shadow: inset 0 0 0 3px var(--bg-black);
+            display: none;
         }
 
         #articleContent li:has(> input[type="checkbox"]) {
@@ -234,6 +225,19 @@
             height: 1px;
             background-color: var(--bg-card);
             margin: 1.5rem 0;
+        }
+
+        #articleContent h1, #articleContent h2, #articleContent h3, #articleContent h4, #articleContent h5, #articleContent h6 {
+            margin-top: 1.2em;
+            margin-bottom: 0.5em;
+        }
+
+        #articleContent blockquote {
+            border-left: 2px solid var(--accent-color);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: var(--text-secondary);
+            background: transparent;
         }
 
         .code-block-wrapper {
@@ -296,7 +300,7 @@
 
         .code-content pre {
             margin: 0;
-            padding: 1rem;
+            padding: 1.4rem;
             background: transparent;
             border: none;
         }
@@ -398,16 +402,81 @@
             gap: 6px;
         }
 
-        .callout-note .callout-title {
-            color: #7cb8ff;
+        .callout-note .callout-title { color: #7cb8ff; }
+        .callout-warning .callout-title { color: #ffb86c; }
+        .callout-tip .callout-title { color: #50fa7b; }
+        .callout-default .callout-title { color: var(--accent-color); }
+
+        .custom-quote {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            position: relative;
         }
 
-        .callout-warning .callout-title {
-            color: #ffb86c;
+        .custom-quote .quote-icon {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            font-size: 1.2rem;
+            color: var(--accent-color);
+            opacity: 0.8;
         }
 
-        .callout-tip .callout-title {
-            color: #50fa7b;
+        .custom-quote p {
+            margin: 0.25rem 0;
+        }
+
+        .collapsible-section > h1,
+        .collapsible-section > h2,
+        .collapsible-section > h3,
+        .collapsible-section > h4,
+        .collapsible-section > h5,
+        .collapsible-section > h6 {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .collapsible-section > h1::before,
+        .collapsible-section > h2::before,
+        .collapsible-section > h3::before,
+        .collapsible-section > h4::before,
+        .collapsible-section > h5::before,
+        .collapsible-section > h6::before {
+            content: "\f0d7";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            font-size: 0.7em;
+            transition: transform 0.2s ease;
+            display: inline-block;
+        }
+
+        .collapsible-section.collapsed > h1::before,
+        .collapsible-section.collapsed > h2::before,
+        .collapsible-section.collapsed > h3::before,
+        .collapsible-section.collapsed > h4::before,
+        .collapsible-section.collapsed > h5::before,
+        .collapsible-section.collapsed > h6::before {
+            transform: rotate(-90deg);
+        }
+
+        .collapsible-section .collapsible-content {
+            display: block;
+        }
+
+        .collapsible-section.collapsed .collapsible-content {
+            display: none;
+        }
+
+        .checked-icon {
+            color: var(--accent-color);
+            font-size: 1.1em;
+            vertical-align: middle;
+            margin-right: 0.5em;
         }
 
         .divider {
@@ -481,90 +550,71 @@
 
     <script>
         function setupMoreShareButton() {
-            const shareButton = document.getElementById('shareBarBtn');
+            var shareButton = document.getElementById('shareBarBtn');
             if (!shareButton) return;
 
             shareButton.addEventListener('click', async function(event) {
-                const shareData = {
+                var shareData = {
                     title: document.getElementById('articleTitle').textContent || 'Kakoi Kiraku',
-                    text: 'Check out this article on Kakoi Kiraku  Articles ' + window.location.href,
+                    text: 'Check out this article on Kakoi Kiraku Articles ' + window.location.href,
                     url: window.location.href,
                 };
-                const originalSVG = shareButton.innerHTML;
+                var originalSVG = shareButton.innerHTML;
                 try {
                     if (navigator.share) {
                         await navigator.share(shareData);
                     } else {
                         await navigator.clipboard.writeText(shareData.url);
-                        shareButton.innerHTML = `
-                            <svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='#4CAF50'>
-                                <path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/>
-                            </svg>`;
-                        setTimeout(() => {
-                            shareButton.innerHTML = originalSVG;
-                        }, 1500);
+                        shareButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="#4CAF50"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+                        setTimeout(function() { shareButton.innerHTML = originalSVG; }, 1500);
                     }
                 } catch (error) {
                     if (error.name === 'AbortError') return;
                     try {
                         await navigator.clipboard.writeText(shareData.url);
-                        shareButton.innerHTML = `
-                            <svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='#4CAF50'>
-                                <path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/>
-                            </svg>`;
-                        setTimeout(() => {
-                            shareButton.innerHTML = originalSVG;
-                        }, 1500);
+                        shareButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="#4CAF50"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+                        setTimeout(function() { shareButton.innerHTML = originalSVG; }, 1500);
                     } catch (clipboardError) {
-                        shareButton.innerHTML = `
-                            <svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='#FF3B30'>
-                                <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/>
-                            </svg>`;
-                        setTimeout(() => {
-                            shareButton.innerHTML = originalSVG;
-                        }, 1500);
+                        shareButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="#FF3B30"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+                        setTimeout(function() { shareButton.innerHTML = originalSVG; }, 1500);
                     }
                 }
             });
         }
 
         function replaceArrowsInTextNodes(element) {
-            const walker = document.createTreeWalker(
-                element,
-                NodeFilter.SHOW_TEXT,
-                {
-                    acceptNode: function(node) {
-                        if (node.parentNode.tagName === 'CODE' || node.parentNode.tagName === 'PRE') {
-                            return NodeFilter.FILTER_REJECT;
-                        }
-                        return NodeFilter.FILTER_ACCEPT;
+            var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+                acceptNode: function(node) {
+                    if (node.parentNode.tagName === 'CODE' || node.parentNode.tagName === 'PRE') {
+                        return NodeFilter.FILTER_REJECT;
                     }
+                    return NodeFilter.FILTER_ACCEPT;
                 }
-            );
+            });
 
-            const replacements = {
-                '←': 'fa-arrow-left',
-                '↑': 'fa-arrow-up',
-                '↓': 'fa-arrow-down',
-                '→': 'fa-arrow-right'
+            var replacements = {
+                '\u2190': 'fa-arrow-left',
+                '\u2191': 'fa-arrow-up',
+                '\u2193': 'fa-arrow-down',
+                '\u2192': 'fa-arrow-right'
             };
 
-            const nodesToReplace = [];
+            var nodesToReplace = [];
             while (walker.nextNode()) {
                 nodesToReplace.push(walker.currentNode);
             }
 
-            nodesToReplace.forEach(node => {
-                let html = node.textContent;
-                let changed = false;
-                for (const [arrow, iconClass] of Object.entries(replacements)) {
-                    if (html.includes(arrow)) {
-                        html = html.split(arrow).join(`<i class="fas ${iconClass}"></i>`);
+            nodesToReplace.forEach(function(node) {
+                var html = node.textContent;
+                var changed = false;
+                for (var arrow in replacements) {
+                    if (html.indexOf(arrow) !== -1) {
+                        html = html.split(arrow).join('<i class="fas ' + replacements[arrow] + '"></i>');
                         changed = true;
                     }
                 }
                 if (changed) {
-                    const span = document.createElement('span');
+                    var span = document.createElement('span');
                     span.innerHTML = html;
                     node.parentNode.replaceChild(span, node);
                 }
@@ -572,20 +622,20 @@
         }
 
         function enhanceTables(container) {
-            const tables = container.querySelectorAll('table');
-            tables.forEach(table => {
-                const wrapper = document.createElement('div');
+            var tables = container.querySelectorAll('table');
+            tables.forEach(function(table) {
+                var wrapper = document.createElement('div');
                 wrapper.className = 'table-wrapper';
 
-                const rows = table.querySelectorAll('tr');
+                var rows = table.querySelectorAll('tr');
                 if (rows.length > 0) {
-                    const firstRow = rows[0];
-                    const isHeaderRow = firstRow.querySelectorAll('th').length > 0;
+                    var firstRow = rows[0];
+                    var isHeaderRow = firstRow.querySelectorAll('th').length > 0;
                     if (!isHeaderRow) {
-                        const thead = document.createElement('thead');
-                        const tbody = table.querySelector('tbody') || document.createElement('tbody');
+                        var thead = document.createElement('thead');
+                        var tbody = table.querySelector('tbody') || document.createElement('tbody');
                         while (firstRow.firstChild) {
-                            const th = document.createElement('th');
+                            var th = document.createElement('th');
                             th.innerHTML = firstRow.firstChild.innerHTML;
                             thead.appendChild(th);
                             firstRow.firstChild.remove();
@@ -606,32 +656,41 @@
             });
         }
 
+        function enhanceTableCellMarkdown(container) {
+            var cells = container.querySelectorAll('td, th');
+            cells.forEach(function(cell) {
+                var text = cell.innerText;
+                if (/\n- |\n\d+\. |\n    /.test(text) || /^(\s*[-*]|\d+\.)/.test(text.trim())) {
+                    cell.innerHTML = marked.parse(text);
+                }
+            });
+        }
+
         function enhanceCallouts(container) {
-            const blockquotes = container.querySelectorAll('blockquote');
-            blockquotes.forEach(blockquote => {
-                const firstParagraph = blockquote.querySelector('p:first-child');
+            var blockquotes = container.querySelectorAll('blockquote');
+            blockquotes.forEach(function(blockquote) {
+                var firstParagraph = blockquote.querySelector('p:first-child');
                 if (!firstParagraph) return;
-                const text = firstParagraph.textContent.trim();
-                const match = text.match(/^\[!(NOTE|WARNING|TIP)\]\s*(.*)/i);
+                var text = firstParagraph.textContent.trim();
+                var match = text.match(/^\[!(.*?)\]\s*(.*)/i);
                 if (!match) return;
 
-                const type = match[1].toLowerCase();
-                const title = match[2] || type.charAt(0).toUpperCase() + type.slice(1);
+                var type = match[1].toLowerCase();
+                var title = match[2] || type.charAt(0).toUpperCase() + type.slice(1);
+                var calloutDiv = document.createElement('div');
+                calloutDiv.className = 'callout callout-' + (['note', 'warning', 'tip'].includes(type) ? type : 'default');
 
-                const calloutDiv = document.createElement('div');
-                calloutDiv.className = `callout callout-${type}`;
-
-                const titleDiv = document.createElement('div');
+                var titleDiv = document.createElement('div');
                 titleDiv.className = 'callout-title';
-                let icon = 'fa-circle-info';
+                var icon = 'fa-circle-info';
                 if (type === 'warning') icon = 'fa-triangle-exclamation';
                 if (type === 'tip') icon = 'fa-lightbulb';
-                titleDiv.innerHTML = `<i class="fas ${icon}"></i> ${title}`;
+                titleDiv.innerHTML = '<i class="fas ' + icon + '"></i> ' + title;
 
-                const contentDiv = document.createElement('div');
+                var contentDiv = document.createElement('div');
                 contentDiv.className = 'callout-content';
                 while (blockquote.childNodes.length > 0) {
-                    const node = blockquote.childNodes[0];
+                    var node = blockquote.childNodes[0];
                     if (node === firstParagraph && node.nodeType === 1) {
                         node.remove();
                         continue;
@@ -645,15 +704,119 @@
             });
         }
 
+        function enhanceCustomQuotes(container) {
+            var children = Array.from(container.children);
+            var i = 0;
+            while (i < children.length) {
+                var child = children[i];
+                if (child.tagName === 'P' && child.textContent.trim() === '""') {
+                    var quoteDiv = document.createElement('div');
+                    quoteDiv.className = 'custom-quote';
+                    var icon = document.createElement('i');
+                    icon.className = 'fas fa-quote-right quote-icon';
+                    quoteDiv.appendChild(icon);
+
+                    var next = child.nextSibling;
+                    while (next && (next.nodeType !== 1 || next.tagName !== 'P' || next.textContent.trim() !== '""')) {
+                        var toMove = next;
+                        next = next.nextSibling;
+                        quoteDiv.appendChild(toMove);
+                    }
+                    if (next && next.nodeType === 1 && next.tagName === 'P' && next.textContent.trim() === '""') {
+                        next.remove();
+                    }
+                    child.parentNode.replaceChild(quoteDiv, child);
+                    children = Array.from(container.children);
+                    continue;
+                } else if (child.tagName === 'P' && child.textContent.trim().startsWith('""') && child.textContent.trim().endsWith('""') && child.textContent.trim().length > 4) {
+                    var innerText = child.textContent.trim().slice(2, -2).trim();
+                    var quoteDiv = document.createElement('div');
+                    quoteDiv.className = 'custom-quote';
+                    var icon = document.createElement('i');
+                    icon.className = 'fas fa-quote-right quote-icon';
+                    quoteDiv.appendChild(icon);
+                    var p = document.createElement('p');
+                    p.textContent = innerText;
+                    quoteDiv.appendChild(p);
+                    child.parentNode.replaceChild(quoteDiv, child);
+                    children = Array.from(container.children);
+                    continue;
+                }
+                i++;
+            }
+        }
+
+        function replaceCheckedCheckboxes(container) {
+            var inputs = container.querySelectorAll('input[type="checkbox"]:checked');
+            inputs.forEach(function(input) {
+                var icon = document.createElement('i');
+                icon.className = 'fas fa-circle-check checked-icon';
+                input.parentNode.insertBefore(icon, input);
+                input.remove();
+            });
+        }
+
+        function setupCollapsibleHeadings(container) {
+            var headings = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+            if (headings.length === 0) return;
+
+            var fragment = document.createDocumentFragment();
+            var currentSection = null;
+            var currentContent = null;
+
+            function finalizeSection() {
+                if (currentSection) {
+                    var wrapper = document.createElement('div');
+                    wrapper.className = 'collapsible-section';
+                    wrapper.appendChild(currentSection.cloneNode(true));
+                    var contentDiv = document.createElement('div');
+                    contentDiv.className = 'collapsible-content';
+                    while (currentContent.firstChild) {
+                        contentDiv.appendChild(currentContent.firstChild);
+                    }
+                    wrapper.appendChild(contentDiv);
+                    fragment.appendChild(wrapper);
+                    currentSection = null;
+                    currentContent = null;
+                }
+            }
+
+            Array.from(container.childNodes).forEach(function(node) {
+                if (node.nodeType === 1 && /^H[1-6]$/.test(node.tagName)) {
+                    finalizeSection();
+                    currentSection = node;
+                    currentContent = document.createDocumentFragment();
+                } else if (currentContent) {
+                    currentContent.appendChild(node);
+                } else {
+                    fragment.appendChild(node);
+                }
+            });
+            finalizeSection();
+
+            container.innerHTML = '';
+            container.appendChild(fragment);
+
+            container.querySelectorAll('.collapsible-section > h1, .collapsible-section > h2, .collapsible-section > h3, .collapsible-section > h4, .collapsible-section > h5, .collapsible-section > h6').forEach(function(heading) {
+                heading.addEventListener('click', function() {
+                    this.parentNode.classList.toggle('collapsed');
+                });
+            });
+        }
+
         function enhanceContent() {
-            const content = document.getElementById('articleContent');
+            var content = document.getElementById('articleContent');
             if (!content) return;
 
             replaceArrowsInTextNodes(content);
+            replaceCheckedCheckboxes(content);
             enhanceTables(content);
+            enhanceTableCellMarkdown(content);
             enhanceCallouts(content);
+            enhanceCustomQuotes(content);
+            setupCollapsibleHeadings(content);
 
-            const dividerImg = document.createElement('img');
+            var dividerImg = document.createElement('img');
             dividerImg.src = 'images/divider.webp';
             dividerImg.alt = '';
             dividerImg.className = 'divider';
@@ -661,24 +824,24 @@
         }
 
         function generateTableOfContents() {
-            const content = document.getElementById('articleContent');
-            const headers = content.querySelectorAll('h1, h2, h3, h4, h5, h6');
+            var content = document.getElementById('articleContent');
+            var headers = content.querySelectorAll('h1, h2, h3, h4, h5, h6');
             if (headers.length === 0) return;
 
-            const tocContainer = document.getElementById('tocContainer');
+            var tocContainer = document.getElementById('tocContainer');
             tocContainer.innerHTML = '<h3>Contents</h3><ul class="toc-list"></ul>';
-            const tocList = tocContainer.querySelector('.toc-list');
+            var tocList = tocContainer.querySelector('.toc-list');
 
-            headers.forEach((header, index) => {
-                const level = parseInt(header.tagName[1]);
-                const text = header.textContent;
-                const id = `heading-${index}-${text.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+            headers.forEach(function(header, index) {
+                var level = parseInt(header.tagName[1]);
+                var text = header.textContent;
+                var id = 'heading-' + index + '-' + text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                 header.id = id;
 
-                const listItem = document.createElement('li');
-                listItem.className = `toc-h${level}`;
-                const link = document.createElement('a');
-                link.href = `#${id}`;
+                var listItem = document.createElement('li');
+                listItem.className = 'toc-h' + level;
+                var link = document.createElement('a');
+                link.href = '#' + id;
                 link.textContent = text;
                 listItem.appendChild(link);
                 tocList.appendChild(listItem);
@@ -686,51 +849,51 @@
         }
 
         function enhanceCodeBlocks() {
-            const preElements = document.querySelectorAll('#articleContent pre');
-            preElements.forEach((pre) => {
-                const wrapper = document.createElement('div');
+            var preElements = document.querySelectorAll('#articleContent pre');
+            preElements.forEach(function(pre) {
+                var wrapper = document.createElement('div');
                 wrapper.className = 'code-block-wrapper';
 
-                const header = document.createElement('div');
+                var header = document.createElement('div');
                 header.className = 'code-header';
 
-                const codeElement = pre.querySelector('code');
-                let language = '';
+                var codeElement = pre.querySelector('code');
+                var language = '';
                 if (codeElement && codeElement.className) {
-                    const match = codeElement.className.match(/language-(\w+)/);
+                    var match = codeElement.className.match(/language-(\w+)/);
                     if (match) language = match[1];
                 }
 
-                const label = document.createElement('span');
+                var label = document.createElement('span');
                 label.className = 'code-label';
                 label.textContent = language || 'code';
                 header.appendChild(label);
 
-                const button = document.createElement('button');
+                var button = document.createElement('button');
                 button.className = 'copy-code-btn';
                 button.innerHTML = '<i class="far fa-copy"></i>';
                 button.setAttribute('aria-label', 'Copy code');
-                button.addEventListener('click', async (e) => {
+                button.addEventListener('click', async function(e) {
                     e.stopPropagation();
-                    const code = codeElement ? codeElement.innerText : pre.innerText;
+                    var code = codeElement ? codeElement.innerText : pre.innerText;
                     try {
                         await navigator.clipboard.writeText(code);
                         button.innerHTML = '<i class="fas fa-check"></i>';
                         button.classList.add('copied');
-                        setTimeout(() => {
+                        setTimeout(function() {
                             button.innerHTML = '<i class="far fa-copy"></i>';
                             button.classList.remove('copied');
                         }, 1500);
                     } catch (err) {
                         button.innerHTML = '<i class="fas fa-times"></i>';
-                        setTimeout(() => {
+                        setTimeout(function() {
                             button.innerHTML = '<i class="far fa-copy"></i>';
                         }, 1500);
                     }
                 });
                 header.appendChild(button);
 
-                const contentDiv = document.createElement('div');
+                var contentDiv = document.createElement('div');
                 contentDiv.className = 'code-content';
                 pre.parentNode.insertBefore(wrapper, pre);
                 wrapper.appendChild(header);
@@ -740,29 +903,29 @@
         }
 
         async function loadArticle() {
-            const params = new URLSearchParams(window.location.search);
-            const slug = params.get('slug');
+            var params = new URLSearchParams(window.location.search);
+            var slug = params.get('slug');
             if (!slug) {
                 document.getElementById('articleContent').innerHTML = '<p style="color:var(--accent-color);">No article specified.</p>';
                 return;
             }
 
             try {
-                const response = await fetch(`/api/articles?slug=${encodeURIComponent(slug)}&_=${Date.now()}`);
+                var response = await fetch('/api/articles?slug=' + encodeURIComponent(slug) + '&_=' + Date.now());
                 if (!response.ok) throw new Error('Article not found');
-                const article = await response.json();
+                var article = await response.json();
 
                 document.getElementById('articleTitle').textContent = article.title;
                 document.getElementById('heroImage').src = article.image;
 
-                const dateObj = new Date(article.date);
-                const day = dateObj.getDate();
-                const month = dateObj.toLocaleString('default', { month: 'short' });
-                document.getElementById('datePill').textContent = `${day} ${month}`;
+                var dateObj = new Date(article.date);
+                var day = dateObj.getDate();
+                var month = dateObj.toLocaleString('default', { month: 'short' });
+                document.getElementById('datePill').textContent = day + ' ' + month;
 
                 document.getElementById('articleContent').innerHTML = article.html;
-                document.getElementById('wordCount').textContent = `${article.wordCount} words`;
-                document.title = `${article.title} | lildavegoth`;
+                document.getElementById('wordCount').textContent = article.wordCount + ' words';
+                document.title = article.title + ' | lildavegoth';
 
                 enhanceCodeBlocks();
                 enhanceContent();
@@ -772,12 +935,15 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function() {
             setupMoreShareButton();
             loadArticle();
-            document.getElementById('telegramUser').addEventListener('click', () => {
-                window.open('https://t.me/lildavegoth', '_blank');
-            });
+            var tg = document.getElementById('telegramUser');
+            if (tg) {
+                tg.addEventListener('click', function() {
+                    window.open('https://t.me/lildavegoth', '_blank');
+                });
+            }
         });
     </script>
 </body>
