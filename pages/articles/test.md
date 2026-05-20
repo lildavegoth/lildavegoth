@@ -55,6 +55,10 @@ test [test](https://g.com) test
 > Test Test Test
 > Test Test Test
 
+> [!fas fa-ambulance] Test icon
+> Font awesome
+> Font awesome
+
 > Text Text
 > Text
 
