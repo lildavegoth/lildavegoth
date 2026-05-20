@@ -8,6 +8,7 @@
     <script src="../../protections.js"></script>
     <link rel="stylesheet" href="../../media.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -227,7 +228,8 @@
             margin: 1.5rem 0;
         }
 
-        #articleContent h1, #articleContent h2, #articleContent h3, #articleContent h4, #articleContent h5, #articleContent h6 {
+        #articleContent h1, #articleContent h2, #articleContent h3,
+        #articleContent h4, #articleContent h5, #articleContent h6 {
             margin-top: 1.2em;
             margin-bottom: 0.5em;
         }
@@ -237,7 +239,6 @@
             padding-left: 1rem;
             margin: 1rem 0;
             color: var(--text-secondary);
-            background: transparent;
         }
 
         .code-block-wrapper {
@@ -424,10 +425,6 @@
             opacity: 0.8;
         }
 
-        .custom-quote p {
-            margin: 0.25rem 0;
-        }
-
         .collapsible-section > h1,
         .collapsible-section > h2,
         .collapsible-section > h3,
@@ -553,7 +550,7 @@
             var shareButton = document.getElementById('shareBarBtn');
             if (!shareButton) return;
 
-            shareButton.addEventListener('click', async function(event) {
+            shareButton.addEventListener('click', async function() {
                 var shareData = {
                     title: document.getElementById('articleTitle').textContent || 'Kakoi Kiraku',
                     text: 'Check out this article on Kakoi Kiraku Articles ' + window.location.href,
@@ -630,8 +627,7 @@
                 var rows = table.querySelectorAll('tr');
                 if (rows.length > 0) {
                     var firstRow = rows[0];
-                    var isHeaderRow = firstRow.querySelectorAll('th').length > 0;
-                    if (!isHeaderRow) {
+                    if (!firstRow.querySelector('th')) {
                         var thead = document.createElement('thead');
                         var tbody = table.querySelector('tbody') || document.createElement('tbody');
                         while (firstRow.firstChild) {
@@ -642,12 +638,7 @@
                         }
                         firstRow.remove();
                         table.insertBefore(thead, table.firstChild);
-                        if (!table.querySelector('tbody')) {
-                            table.appendChild(tbody);
-                        }
-                        while (table.querySelector('tbody tr')) {
-                            tbody.appendChild(table.querySelector('tbody tr'));
-                        }
+                        if (!table.querySelector('tbody')) table.appendChild(tbody);
                     }
                 }
 
@@ -659,8 +650,8 @@
         function enhanceTableCellMarkdown(container) {
             var cells = container.querySelectorAll('td, th');
             cells.forEach(function(cell) {
-                var text = cell.innerText;
-                if (/\n- |\n\d+\. |\n    /.test(text) || /^(\s*[-*]|\d+\.)/.test(text.trim())) {
+                var text = cell.innerText.trim();
+                if (/\n/.test(text)) {
                     cell.innerHTML = marked.parse(text);
                 }
             });
@@ -669,16 +660,17 @@
         function enhanceCallouts(container) {
             var blockquotes = container.querySelectorAll('blockquote');
             blockquotes.forEach(function(blockquote) {
-                var firstParagraph = blockquote.querySelector('p:first-child');
-                if (!firstParagraph) return;
-                var text = firstParagraph.textContent.trim();
+                var firstP = blockquote.querySelector('p:first-child');
+                if (!firstP) return;
+                var text = firstP.textContent.trim();
                 var match = text.match(/^\[!(.*?)\]\s*(.*)/i);
                 if (!match) return;
 
                 var type = match[1].toLowerCase();
                 var title = match[2] || type.charAt(0).toUpperCase() + type.slice(1);
-                var calloutDiv = document.createElement('div');
-                calloutDiv.className = 'callout callout-' + (['note', 'warning', 'tip'].includes(type) ? type : 'default');
+
+                var callout = document.createElement('div');
+                callout.className = 'callout callout-' + (['note','warning','tip'].includes(type) ? type : 'default');
 
                 var titleDiv = document.createElement('div');
                 titleDiv.className = 'callout-title';
@@ -688,19 +680,18 @@
                 titleDiv.innerHTML = '<i class="fas ' + icon + '"></i> ' + title;
 
                 var contentDiv = document.createElement('div');
-                contentDiv.className = 'callout-content';
                 while (blockquote.childNodes.length > 0) {
                     var node = blockquote.childNodes[0];
-                    if (node === firstParagraph && node.nodeType === 1) {
+                    if (node === firstP && node.nodeType === 1) {
                         node.remove();
                         continue;
                     }
                     contentDiv.appendChild(node);
                 }
 
-                calloutDiv.appendChild(titleDiv);
-                calloutDiv.appendChild(contentDiv);
-                blockquote.parentNode.replaceChild(calloutDiv, blockquote);
+                callout.appendChild(titleDiv);
+                callout.appendChild(contentDiv);
+                blockquote.parentNode.replaceChild(callout, blockquote);
             });
         }
 
@@ -872,7 +863,6 @@
                 var button = document.createElement('button');
                 button.className = 'copy-code-btn';
                 button.innerHTML = '<i class="far fa-copy"></i>';
-                button.setAttribute('aria-label', 'Copy code');
                 button.addEventListener('click', async function(e) {
                     e.stopPropagation();
                     var code = codeElement ? codeElement.innerText : pre.innerText;
