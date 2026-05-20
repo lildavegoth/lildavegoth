@@ -1,0 +1,257 @@
+# Created by lildavegoth at 20 May 2026
+
+import json
+from typing import Any, List
+
+from android.content import ClipData, Context
+from base_plugin import BasePlugin, HookResult, HookStrategy
+from android_utils import run_on_ui_thread
+from client_utils import get_last_fragment
+from hook_utils import find_class
+from org.telegram.messenger import ApplicationLoader
+from ui.settings import Header, Text, Divider, Input
+
+__name__ = "Notes Vault"
+__description__ = "Save and manage personal notes.\nCommands: .savenote, .notes, .deletenote, .copynote"
+__version__ = "1.1.1"
+__id__ = "notes_vault"
+__author__ = "lildavegoth"
+
+GITHUB_URL = "https://github.com/lildavegoth/lildavegoth/"
+
+class NotesVault(BasePlugin):
+
+    def _load(self) -> List[str]:
+        try:
+            raw = self.get_setting("notes", "[]")
+            data = json.loads(str(raw))
+            if isinstance(data, list):
+                return data
+        except Exception:
+            pass
+        return []
+
+    def _save_notes(self, notes: List[str]):
+        try:
+            self.set_setting("notes", json.dumps(notes, ensure_ascii=False))
+        except Exception:
+            pass
+
+    def _show_telegram_dialog(self, title: str, message: str):
+        def show():
+            activity = None
+            try:
+                fragment = get_last_fragment()
+                if fragment:
+                    activity = fragment.getParentActivity()
+            except Exception:
+                pass
+            if activity:
+                try:
+                    AlertDialog = find_class("org.telegram.ui.ActionBar.AlertDialog")
+                    builder = AlertDialog.Builder(activity)
+                    builder.setTitle(title)
+                    builder.setMessage(message)
+                    builder.setPositiveButton("OK", None)
+                    builder.show()
+                except Exception:
+                    pass
+        run_on_ui_thread(show)
+
+    def _copy_to_clipboard(self, text: str):
+        def copy():
+            try:
+                ctx = ApplicationLoader.applicationContext
+                clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE)
+                clip = ClipData.newPlainText("note", text)
+                clipboard.setPrimaryClip(clip)
+                from android.widget import Toast
+                Toast.makeText(ctx, "Copied!", Toast.LENGTH_SHORT).show()
+            except Exception:
+                pass
+        run_on_ui_thread(copy)
+
+    def _go_back(self):
+        try:
+            run_on_ui_thread(lambda: self._do_go_back())
+        except Exception:
+            pass
+
+    def _do_go_back(self):
+        try:
+            fragment = get_last_fragment()
+            if fragment:
+                fragment.finishFragment()
+        except Exception:
+            try:
+                get_last_fragment().getParentActivity().onBackPressed()
+            except Exception:
+                pass
+
+    def on_plugin_load(self):
+        self._note_text = ""
+        self._deleting = False
+        self.add_on_send_message_hook()
+
+    def create_settings(self) -> List[Any]:
+        self._deleting = False
+        notes = self._load()
+        items = [
+            Header(text="My Notes"),
+            Text(
+                text="Add Note",
+                icon="msg_add",
+                accent=True,
+                create_sub_fragment=self._add_page,
+            ),
+            Divider(),
+        ]
+        if not notes:
+            items.append(Text(text="No notes yet.", icon="msg_info"))
+        else:
+            for i, note in enumerate(notes):
+                preview = note if len(note) <= 30 else note[:27] + "..."
+                items.append(
+                    Text(
+                        text=preview,
+                        icon="msg_doc",
+                        create_sub_fragment=lambda idx=i: self._note_page(idx),
+                    )
+                )
+        return items
+
+    def _add_page(self) -> List[Any]:
+        return [
+            Header(text="New Note"),
+            Input(
+                key="note_input",
+                text="Note text",
+                default="",
+                subtext="Type your note here.",
+                icon="msg_edit",
+                on_change=self._cb_note_text,
+            ),
+            Divider(),
+            Text(
+                text="Save",
+                icon="msg_forward",
+                accent=True,
+                on_click=self._on_save,
+            ),
+        ]
+
+    def _cb_note_text(self, v: str):
+        self._note_text = str(v) if v else ""
+
+    def _on_save(self, view):
+        text = self._note_text.strip() or str(self.get_setting("note_input", "")).strip()
+        if not text:
+            return
+        notes = self._load()
+        notes.append(text)
+        self._save_notes(notes)
+        self._note_text = ""
+        self.set_setting("note_input", "")
+        self.set_setting("_v", len(notes), reload_settings=True)
+        self._go_back()
+
+    def _note_page(self, idx: int) -> List[Any]:
+        notes = self._load()
+        if idx >= len(notes):
+            return [Text(text="Note not found.", icon="msg_info")]
+        note = notes[idx]
+        return [
+            Header(text="Note"),
+            Text(text=note, icon="msg_doc"),
+            Divider(),
+            Text(
+                text="Delete Note",
+                icon="msg_delete",
+                red=True,
+                on_click=lambda view, i=idx: self._on_delete(i),
+            ),
+        ]
+
+    def _on_delete(self, idx: int):
+        if self._deleting:
+            return
+        self._deleting = True
+        notes = self._load()
+        if idx < len(notes):
+            notes.pop(idx)
+            self._save_notes(notes)
+            self.set_setting("_v", len(notes), reload_settings=True)
+            self._go_back()
+        self._deleting = False
+
+    def on_send_message_hook(self, account: int, params: Any) -> HookResult:
+        msg = params.message
+        if not msg:
+            return HookResult(strategy=HookStrategy.PROCEED, params=params)
+
+        cmd = msg.lower()
+        if cmd.startswith(".savenote") or cmd.startswith("/savenote"):
+            rest = msg.split(" ", 1)
+            text = rest[1] if len(rest) > 1 else ""
+            if not text.strip():
+                self._show_telegram_dialog("Usage", ".savenote <note text>")
+            else:
+                notes = self._load()
+                notes.append(text.strip())
+                self._save_notes(notes)
+                self.set_setting("_v", len(notes), reload_settings=True)
+                self._show_telegram_dialog("Notes Vault", "Note saved!")
+            return HookResult(strategy=HookStrategy.CANCEL, params=params)
+
+        elif cmd.startswith(".notes") or cmd.startswith("/notes"):
+            notes = self._load()
+            if not notes:
+                self._show_telegram_dialog("My Notes", "No notes yet.")
+            else:
+                lines = "\n".join([f"{i+1}. {n}" for i, n in enumerate(notes)])
+                self._show_telegram_dialog("My Notes", lines)
+            return HookResult(strategy=HookStrategy.CANCEL, params=params)
+
+        elif cmd.startswith(".deletenote") or cmd.startswith("/deletenote"):
+            rest = msg.split(" ", 1)
+            if len(rest) < 2 or not rest[1].strip():
+                self._show_telegram_dialog("Usage", ".deletenote <number>")
+            else:
+                try:
+                    num = int(rest[1].strip())
+                except ValueError:
+                    self._show_telegram_dialog("Error", "Invalid note number.")
+                    return HookResult(strategy=HookStrategy.CANCEL, params=params)
+
+                notes = self._load()
+                if num < 1 or num > len(notes):
+                    self._show_telegram_dialog("Error", f"Note #{num} not found.")
+                else:
+                    removed = notes.pop(num - 1)
+                    self._save_notes(notes)
+                    self.set_setting("_v", len(notes), reload_settings=True)
+                    preview = removed[:30] + ("..." if len(removed) > 30 else "")
+                    self._show_telegram_dialog("Notes Vault", f"Note #{num} deleted: {preview}")
+            return HookResult(strategy=HookStrategy.CANCEL, params=params)
+
+        elif cmd.startswith(".copynote") or cmd.startswith("/copynote"):
+            rest = msg.split(" ", 1)
+            if len(rest) < 2 or not rest[1].strip():
+                self._show_telegram_dialog("Usage", ".copynote <number>")
+            else:
+                try:
+                    num = int(rest[1].strip())
+                except ValueError:
+                    self._show_telegram_dialog("Error", "Invalid note number.")
+                    return HookResult(strategy=HookStrategy.CANCEL, params=params)
+
+                notes = self._load()
+                if num < 1 or num > len(notes):
+                    self._show_telegram_dialog("Error", f"Note #{num} not found.")
+                else:
+                    note_text = notes[num - 1]
+                    self._copy_to_clipboard(note_text)
+                    self._show_telegram_dialog("Copied", f"Note #{num} copied to clipboard.")
+            return HookResult(strategy=HookStrategy.CANCEL, params=params)
+
+        return HookResult(strategy=HookStrategy.PROCEED, params=params)
