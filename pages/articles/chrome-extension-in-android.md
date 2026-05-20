@@ -1,6 +1,6 @@
 ---
 title: "Chrome Extension in Android"
-date: "2024-02-15"
+date: "2026-05-11"
 image: "../../images/4ever.webp"
 ---
 
@@ -10,7 +10,6 @@ Usually, **Chrome Extensions** can be installed in **Chrome** for **Desktop**, b
 This guides will not use normal Chrome from Play Store, but using an Open Source Cromite Project.
 
 **Cromite**, a **Bromite** fork with ad blocking and privacy enhancements, and not like other Browser with Extensions supports, Cromite has ability to use **ALL** extensions in **Chrome Web Extensions Store** (Other browser are only be able to install any crypto or wallet extensions)
-
 
 # Guides →
 1. Download and install [Cromite](https://github.com/uazo/cromite) app from GitHub Release
