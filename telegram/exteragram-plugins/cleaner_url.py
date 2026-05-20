@@ -5,7 +5,7 @@ from base_plugin import BasePlugin, HookResult, HookStrategy
 from client_utils import get_send_messages_helper, run_on_queue
 from android_utils import run_on_ui_thread
 
-__id__ = "cleanerurl"
+__id__ = "cleaner_url"
 __name__ = "Cleaner URL"
 __description__ = "Automatically cleans Instagram & YouTube URLs by removing tracking parameters."
 __author__ = "@ravana69 & @lildavegoth"
