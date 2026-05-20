@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
   const branch = 'homepage';
   const path = `pages/articles/${slug}.md`;
 
-  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+  const url = `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${branch}/${path}`;
 
   try {
     const response = await fetch(url);
