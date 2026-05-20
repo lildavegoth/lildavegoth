@@ -460,32 +460,6 @@
             opacity: 0.8;
         }
 
-        .collapsible-section .toggle-heading {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .collapsible-section .toggle-heading .toggle-icon {
-            font-size: 1em;
-            margin-left: auto;
-            color: var(--text-secondary);
-        }
-
-        .collapsible-section.collapsed .collapse-content {
-            display: none;
-        }
-
-        .collapsible-section.collapsed .toggle-heading .toggle-icon i {
-            transform: rotate(-90deg);
-        }
-
-        .collapsible-section .toggle-heading .toggle-icon i {
-            transition: transform 0.2s ease;
-        }
-
         .checked-icon {
             color: var(--accent-color);
             font-size: 1.1em;
@@ -666,8 +640,10 @@
 
         function enhanceTableCellMarkdown(container) {
             var cells = container.querySelectorAll('td, th');
+        
             cells.forEach(function(cell) {
                 var raw = cell.innerHTML.trim();
+        
                 if (raw.includes('\\n')) {
                     raw = raw.replace(/\\n/g, '\n');
                     cell.innerHTML = marked.parse(raw);
@@ -677,6 +653,7 @@
 
         function enhanceCallouts(container) {
             var blockquotes = container.querySelectorAll('blockquote');
+        
             blockquotes.forEach(function(blockquote) {
                 var lines = blockquote.innerHTML
                     .replace(/<\/p>\s*<p>/gi, '\n')
@@ -685,27 +662,28 @@
                     .split('\n')
                     .map(function(line){ return line.trim(); })
                     .filter(function(line){ return line; });
-
+        
                 if (!lines.length) return;
-
+        
                 var match = lines[0].match(/^\[!(.*?)\]\s*(.*)$/i);
                 if (!match) return;
-
+        
                 var typeSelector = match[1].trim();
                 var titleText = match[2].trim();
                 var typeLower = typeSelector.toLowerCase();
-
+        
                 var callout = document.createElement('div');
                 callout.className = 'callout callout-' + (
                     ['note','warning','tip'].includes(typeLower)
                     ? typeLower
                     : 'default'
                 );
-
+        
                 var titleDiv = document.createElement('div');
                 titleDiv.className = 'callout-title';
-
+        
                 var iconHTML = '<i class="fas fa-circle-info"></i>';
+        
                 if (typeLower === 'warning') {
                     iconHTML = '<i class="fas fa-triangle-exclamation"></i>';
                 } else if (typeLower === 'tip') {
@@ -713,20 +691,21 @@
                 } else if (/^fa[srlbd]?\s+fa-/.test(typeSelector)) {
                     iconHTML = '<i class="' + typeSelector + '"></i>';
                 }
-
+        
                 titleDiv.innerHTML = iconHTML + ' ' + titleText;
-
+        
                 var contentDiv = document.createElement('div');
                 contentDiv.className = 'callout-content';
-
+        
                 for (var i = 1; i < lines.length; i++) {
                     var p = document.createElement('p');
                     p.innerHTML = lines[i];
                     contentDiv.appendChild(p);
                 }
-
+        
                 callout.appendChild(titleDiv);
                 callout.appendChild(contentDiv);
+        
                 blockquote.parentNode.replaceChild(callout, blockquote);
             });
         }
@@ -775,16 +754,22 @@
 
         function replaceCheckedCheckboxes(container) {
             var checkboxes = container.querySelectorAll('input[type="checkbox"]');
+        
             checkboxes.forEach(function(input) {
                 var li = input.closest('li');
                 if (!li) return;
+        
                 li.classList.add('task-list-item');
+        
                 if (input.checked) {
                     var icon = document.createElement('i');
                     icon.className = 'fas fa-circle-check checked-icon';
+        
                     var strike = document.createElement('span');
                     strike.className = 'task-strike';
+        
                     var text = '';
+        
                     var node = input.nextSibling;
                     while (node) {
                         text += node.textContent || '';
@@ -792,96 +777,13 @@
                         node.remove();
                         node = next;
                     }
+        
                     strike.textContent = text.trim();
+        
                     input.replaceWith(icon);
                     li.appendChild(strike);
                 }
             });
-        }
-
-        function enhanceCollapsibleHeadings(container) {
-            var allHeadings = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6'));
-            var specialHeadings = allHeadings.filter(function(h) {
-                return h.textContent.trim().startsWith('↓');
-            });
-
-            if (specialHeadings.length === 0) return;
-
-            var fragment = document.createDocumentFragment();
-            var currentWrapper = null;
-            var currentContentDiv = null;
-
-            function finalizeWrapper() {
-                if (currentWrapper) {
-                    fragment.appendChild(currentWrapper);
-                    currentWrapper = null;
-                    currentContentDiv = null;
-                }
-            }
-
-            Array.from(container.childNodes).forEach(function(node) {
-                if (node.nodeType === 1 && /^H[1-6]$/.test(node.tagName) && node.textContent.trim().startsWith('↓')) {
-                    finalizeWrapper();
-
-                    currentWrapper = document.createElement('div');
-                    currentWrapper.className = 'collapsible-section';
-
-                    var headingText = node.textContent.trim().replace(/^↓/, '').trim();
-                    var headingTag = node.tagName;
-                    var headingEl = document.createElement(headingTag);
-                    headingEl.className = node.className;
-                    headingEl.setAttribute('id', node.getAttribute('id') || '');
-
-                    var toggleHeading = document.createElement('div');
-                    toggleHeading.className = 'toggle-heading';
-
-                    var textSpan = document.createElement('span');
-                    textSpan.textContent = headingText;
-                    toggleHeading.appendChild(textSpan);
-
-                    var iconSpan = document.createElement('span');
-                    iconSpan.className = 'toggle-icon';
-                    iconSpan.innerHTML = '<i class="fas fa-caret-down"></i>';
-                    toggleHeading.appendChild(iconSpan);
-
-                    headingEl.appendChild(toggleHeading);
-                    currentWrapper.appendChild(headingEl);
-
-                    currentContentDiv = document.createElement('div');
-                    currentContentDiv.className = 'collapse-content';
-                    currentWrapper.appendChild(currentContentDiv);
-
-                    toggleHeading.addEventListener('click', function(e) {
-                        var wrapper = this.closest('.collapsible-section');
-                        if (wrapper) {
-                            wrapper.classList.toggle('collapsed');
-                            var icon = wrapper.querySelector('.toggle-icon i');
-                            if (icon) {
-                                icon.style.transform =
-                                    wrapper.classList.contains('collapsed')
-                                    ? 'rotate(-90deg)'
-                                    : 'rotate(0deg)';
-                            }
-                        }
-                    });
-                } else if (currentContentDiv) {
-                    if (node.nodeType === 1 && node.tagName === 'P' && node.textContent.trim() === '') {
-                        finalizeWrapper();
-                        fragment.appendChild(node);
-                    } else if (node.nodeType === 1 && /^H[1-6]$/.test(node.tagName)) {
-                        finalizeWrapper();
-                        fragment.appendChild(node);
-                    } else {
-                        currentContentDiv.appendChild(node);
-                    }
-                } else {
-                    fragment.appendChild(node);
-                }
-            });
-
-            finalizeWrapper();
-            container.innerHTML = '';
-            container.appendChild(fragment);
         }
 
         function enhanceContent() {
@@ -894,7 +796,6 @@
             enhanceTables(content);
             enhanceTableCellMarkdown(content);
             enhanceCustomQuotes(content);
-            enhanceCollapsibleHeadings(content);
 
             var dividerImg = document.createElement('img');
             dividerImg.src = 'images/divider.webp';
@@ -914,7 +815,7 @@
 
             headers.forEach(function(header, index) {
                 var level = parseInt(header.tagName[1]);
-                var text = header.textContent.trim();
+                var text = header.textContent;
                 var id = 'heading-' + index + '-' + text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                 header.id = id;
 
@@ -997,7 +898,7 @@
                 var month = dateObj.toLocaleString('default', { month: 'short' });
                 document.getElementById('datePill').textContent = day + ' ' + month;
 
-                document.getElementById('articleContent').innerHTML = marked.parse(article.html);
+                document.getElementById('articleContent').innerHTML = article.html;
                 document.getElementById('wordCount').textContent = article.wordCount + ' words';
                 document.title = article.title + ' | lildavegoth';
 
