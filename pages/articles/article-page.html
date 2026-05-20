@@ -693,7 +693,7 @@
         function enhanceCallouts(container) {
             var blockquotes = container.querySelectorAll('blockquote');
             blockquotes.forEach(function(blockquote) {
-                var firstP = blockquote.querySelector('p:first-child');
+                var firstP = blockquote.querySelector('p');
                 if (!firstP) return;
         
                 var text = firstP.textContent.trim();
@@ -723,7 +723,35 @@
                 var contentDiv = document.createElement('div');
                 contentDiv.className = 'callout-content';
         
-                firstP.remove();
+                var afterContent = document.createDocumentFragment();
+        
+                if (firstP.innerHTML.indexOf('<br>') !== -1) {
+                    var lines = firstP.innerHTML.split('<br>');
+                    var inCallout = true;
+                    var calloutLines = [];
+                    var restLines = [];
+        
+                    lines.forEach(function(line) {
+                        if (inCallout && line.trim().startsWith('[!')) {
+                            calloutLines.push(line);
+                        } else if (inCallout && line.trim().startsWith('> ')) {
+                            calloutLines.push(line.trim().replace(/^> /, ''));
+                        } else {
+                            inCallout = false;
+                            restLines.push(line);
+                        }
+                    });
+        
+                    contentDiv.innerHTML = calloutLines.join('<br>').trim();
+                    if (restLines.length > 0) {
+                        var p = document.createElement('p');
+                        p.innerHTML = restLines.join('<br>');
+                        afterContent.appendChild(p);
+                    }
+                    firstP.remove();
+                } else {
+                    firstP.remove();
+                }
         
                 while (blockquote.firstChild) {
                     contentDiv.appendChild(blockquote.firstChild);
@@ -732,6 +760,10 @@
                 callout.appendChild(titleDiv);
                 callout.appendChild(contentDiv);
                 blockquote.parentNode.replaceChild(callout, blockquote);
+        
+                if (afterContent.hasChildNodes()) {
+                    callout.parentNode.insertBefore(afterContent, callout.nextSibling);
+                }
             });
         }
 
