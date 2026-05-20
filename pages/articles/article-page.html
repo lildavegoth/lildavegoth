@@ -691,74 +691,48 @@
         }
 
         function enhanceCallouts(container) {
-            var children = Array.from(container.childNodes);
-            var i = 0;
-            while (i < children.length) {
-                var node = children[i];
-                if (node.nodeType === 1 && node.tagName === 'P' && node.textContent.trim() === '===') {
-                    var openingNode = node;
-                    var contentNodes = [];
-                    var j = i + 1;
-                    while (j < children.length) {
-                        var next = children[j];
-                        if (next.nodeType === 1 && next.tagName === 'P' && next.textContent.trim() === '===') {
-                            break;
-                        }
-                        contentNodes.push(next);
-                        j++;
-                    }
-                    if (j >= children.length) {
-                        i++;
-                        continue;
-                    }
-                    var closingNode = children[j];
-                    if (contentNodes.length === 0) {
-                        i = j + 1;
-                        children = Array.from(container.childNodes);
-                        continue;
-                    }
-                    var firstLineNode = contentNodes[0];
-                    var firstLineText = firstLineNode.textContent.trim();
-                    var match = firstLineText.match(/^\[!(.*?)\]\s*(.*)/);
-                    if (!match) {
-                        i = j + 1;
-                        children = Array.from(container.childNodes);
-                        continue;
-                    }
-                    var typeSelector = match[1].trim();
-                    var titleText = match[2].trim();
-                    var typeLower = typeSelector.toLowerCase();
-                    var callout = document.createElement('div');
-                    callout.className = 'callout callout-' + (['note','warning','tip'].includes(typeLower) ? typeLower : 'default');
-                    var titleDiv = document.createElement('div');
-                    titleDiv.className = 'callout-title';
-                    var iconHTML = '<i class="fas fa-circle-info"></i>';
-                    if (typeLower === 'warning') iconHTML = '<i class="fas fa-triangle-exclamation"></i>';
-                    else if (typeLower === 'tip') iconHTML = '<i class="fas fa-lightbulb"></i>';
-                    else if (typeSelector.startsWith('fa')) {
-                        iconHTML = '<i class="' + typeSelector + '"></i>';
-                        if (!titleText) titleText = 'Notice';
-                    }
-                    titleDiv.innerHTML = iconHTML + ' ' + titleText;
-                    var contentDiv = document.createElement('div');
-                    contentDiv.className = 'callout-content';
-                    for (var k = 1; k < contentNodes.length; k++) {
-                        contentDiv.appendChild(contentNodes[k].cloneNode(true));
-                    }
-                    callout.appendChild(titleDiv);
-                    callout.appendChild(contentDiv);
-                    openingNode.parentNode.insertBefore(callout, openingNode);
-                    for (var m = 0; m <= j; m++) {
-                        if (children[m] && children[m].parentNode) {
-                            children[m].parentNode.removeChild(children[m]);
-                        }
-                    }
-                    children = Array.from(container.childNodes);
-                    i = Array.from(container.childNodes).indexOf(callout) + 1;
-                } else {
-                    i++;
+            var blockquotes = container.querySelectorAll('blockquote');
+            blockquotes.forEach(function(blockquote) {
+                var firstP = blockquote.querySelector('p:first-child');
+                if (!firstP) return;
+        
+                var text = firstP.textContent.trim();
+                var match = text.match(/^\[!(.*?)\]\s*(.*)/);
+                if (!match) return;
+        
+                var typeSelector = match[1].trim();
+                var titleText = match[2].trim();
+                var typeLower = typeSelector.toLowerCase();
+        
+                var callout = document.createElement('div');
+                callout.className = 'callout callout-' + (['note','warning','tip'].includes(typeLower) ? typeLower : 'default');
+        
+                var titleDiv = document.createElement('div');
+                titleDiv.className = 'callout-title';
+        
+                var iconHTML = '<i class="fas fa-circle-info"></i>';
+                if (typeLower === 'warning') iconHTML = '<i class="fas fa-triangle-exclamation"></i>';
+                else if (typeLower === 'tip') iconHTML = '<i class="fas fa-lightbulb"></i>';
+                else if (typeSelector.startsWith('fa')) {
+                    iconHTML = '<i class="' + typeSelector + '"></i>';
+                    if (!titleText) titleText = 'Notice';
                 }
-            }
+        
+                titleDiv.innerHTML = iconHTML + ' ' + titleText;
+        
+                var contentDiv = document.createElement('div');
+                contentDiv.className = 'callout-content';
+        
+                firstP.remove();
+        
+                while (blockquote.firstChild) {
+                    contentDiv.appendChild(blockquote.firstChild);
+                }
+        
+                callout.appendChild(titleDiv);
+                callout.appendChild(contentDiv);
+                blockquote.parentNode.replaceChild(callout, blockquote);
+            });
         }
 
         function enhanceCustomQuotes(container) {
