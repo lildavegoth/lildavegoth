@@ -474,6 +474,29 @@
             opacity: 0.8;
         }
 
+        .collapsible-section > h1,
+        .collapsible-section > h2,
+        .collapsible-section > h3,
+        .collapsible-section > h4,
+        .collapsible-section > h5,
+        .collapsible-section > h6 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-heading-icon {
+            cursor: pointer;
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-left: 1rem;
+            flex-shrink: 0;
+        }
+
+        .collapsible-section.collapsed .collapsible-content {
+            display: none;
+        }
+
         @media (min-width: 720px) {
             .main {
                 display: flex;
@@ -786,6 +809,65 @@
             });
         }
 
+        function setupToggleHeadings(container) {
+            var headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+            headings.forEach(function(heading) {
+                var text = heading.textContent.trim();
+                var match = text.match(/^(#[1-6])\↓\s+(.+)/);
+                if (!match) return;
+
+                var wrapper = document.createElement('div');
+                wrapper.className = 'collapsible-section';
+
+                var contentDiv = document.createElement('div');
+                contentDiv.className = 'collapsible-content';
+
+                var sibling = heading.nextSibling;
+                var stop = false;
+                while (sibling && !stop) {
+                    if (sibling.nodeType === 1) {
+                        var tag = sibling.tagName;
+                        if (/^H[1-6]$/.test(tag)) {
+                            stop = true;
+                            break;
+                        }
+                        if (tag === 'P' && !sibling.textContent.trim()) {
+                            stop = true;
+                            break;
+                        }
+                        contentDiv.appendChild(sibling.cloneNode(true));
+                        var nextSibling = sibling.nextSibling;
+                        sibling.parentNode.removeChild(sibling);
+                        sibling = nextSibling;
+                        continue;
+                    } else if (sibling.nodeType === 3 && !sibling.textContent.trim()) {
+                        stop = true;
+                        break;
+                    }
+                    sibling = sibling.nextSibling;
+                }
+
+                heading.parentNode.insertBefore(wrapper, heading);
+                wrapper.appendChild(heading);
+
+                var toggleIcon = document.createElement('i');
+                toggleIcon.className = 'fas fa-caret-up toggle-heading-icon';
+                heading.appendChild(toggleIcon);
+
+                wrapper.appendChild(contentDiv);
+
+                toggleIcon.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    wrapper.classList.toggle('collapsed');
+                    if (wrapper.classList.contains('collapsed')) {
+                        toggleIcon.className = 'fas fa-caret-down toggle-heading-icon';
+                    } else {
+                        toggleIcon.className = 'fas fa-caret-up toggle-heading-icon';
+                    }
+                });
+            });
+        }
+
         function enhanceContent() {
             var content = document.getElementById('articleContent');
             if (!content) return;
@@ -796,6 +878,7 @@
             enhanceTables(content);
             enhanceTableCellMarkdown(content);
             enhanceCustomQuotes(content);
+            setupToggleHeadings(content);
 
             var dividerImg = document.createElement('img');
             dividerImg.src = 'images/divider.webp';
