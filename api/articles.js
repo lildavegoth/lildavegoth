@@ -18,13 +18,12 @@ module.exports = async (req, res) => {
 
   try {
     const response = await fetch(url);
-    
     if (!response.ok) {
-      console.error(`GitHub raw fetch failed: ${url} returned ${response.status}`);
       return res.status(404).json({ error: 'Article not found' });
     }
 
     const fileContent = await response.text();
+
     const { data: frontmatter, content } = matter(fileContent);
     const htmlContent = marked(content);
 
@@ -36,7 +35,7 @@ module.exports = async (req, res) => {
       wordCount: content.split(/\s+/).filter(w => w.length > 0).length,
     });
   } catch (error) {
-    console.error('Fetch error:', error);
+    console.error('Article fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
