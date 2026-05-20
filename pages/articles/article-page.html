@@ -210,27 +210,6 @@
             background: transparent;
         }
 
-        #articleContent input[type="checkbox"]:checked {
-            display: none;
-        }
-
-        #articleContent li:has(> input[type="checkbox"]) {
-            list-style: none;
-            margin-left: -1.5rem;
-            padding-left: 1.5rem;
-            text-indent: -1.5rem;
-        }
-
-        /* Tasklist styles including targeted strikethroughs */
-        #articleContent li.task-list-item {
-            list-style-type: none !important;
-        }
-        
-        #articleContent li.task-list-item-checked {
-            text-decoration: line-through;
-            color: var(--text-secondary);
-        }
-
         #articleContent hr {
             border: none;
             height: 1px;
@@ -238,11 +217,10 @@
             margin: 1.5rem 0;
         }
 
-        /* Force unified top margins for all Headings */
         #articleContent h1, #articleContent h2, #articleContent h3,
         #articleContent h4, #articleContent h5, #articleContent h6 {
-            margin-top: 1.5rem !important;
-            margin-bottom: 0.5rem;
+            margin-top: 1.2em;
+            margin-bottom: 0.5em;
         }
 
         #articleContent blockquote {
@@ -411,17 +389,7 @@
             margin-bottom: 0.5rem;
             display: flex;
             align-items: center;
-            gap: 8px;
-        }
-
-        .callout-content {
-            color: var(--text-primary);
-        }
-
-        /* Style lists if they are contained within callout bodies */
-        .callout-content ul, .callout-content ol {
-            margin-left: 0.5rem;
-            padding-left: 1rem;
+            gap: 6px;
         }
 
         .callout-note .callout-title { color: #7cb8ff; }
@@ -435,14 +403,7 @@
             padding: 1rem 1.5rem;
             margin: 1rem 0;
             position: relative;
-        }
-
-        .custom-quote p {
-            white-space: pre-wrap; /* Keeps manual line breaks within custom quotes */
-            margin-bottom: 0.5rem;
-        }
-        .custom-quote p:last-child {
-            margin-bottom: 0;
+            white-space: pre-line;
         }
 
         .custom-quote .quote-icon {
@@ -462,34 +423,6 @@
         .collapsible-section > h6 {
             cursor: pointer;
             user-select: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* Toggle layout changed from ::before layout to custom click handler on parent element */
-        .collapsible-section > h1::after,
-        .collapsible-section > h2::after,
-        .collapsible-section > h3::after,
-        .collapsible-section > h4::after,
-        .collapsible-section > h5::after,
-        .collapsible-section > h6::after {
-            content: "\f0d7";
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-            font-size: 0.7em;
-            transition: transform 0.2s ease;
-            display: inline-block;
-            margin-left: auto; /* Pushes arrow icon cleanly to the right side of your text */
-        }
-
-        .collapsible-section.collapsed > h1::after,
-        .collapsible-section.collapsed > h2::after,
-        .collapsible-section.collapsed > h3::after,
-        .collapsible-section.collapsed > h4::after,
-        .collapsible-section.collapsed > h5::after,
-        .collapsible-section.collapsed > h6::after {
-            transform: rotate(-90deg);
         }
 
         .collapsible-section .collapsible-content {
@@ -498,6 +431,11 @@
 
         .collapsible-section.collapsed .collapsible-content {
             display: none;
+        }
+
+        .checked-line {
+            text-decoration: line-through;
+            color: var(--text-secondary);
         }
 
         .checked-icon {
@@ -683,9 +621,7 @@
             cells.forEach(function(cell) {
                 var text = cell.innerText.trim();
                 if (/\n/.test(text)) {
-                    // Replace literal \n markers or actual line-breaks cleanly inside cellular context 
-                    var formattedText = text.replace(/\\n/g, '\n');
-                    cell.innerHTML = marked.parse(formattedText);
+                    cell.innerHTML = marked.parse(text);
                 }
             });
         }
@@ -693,77 +629,48 @@
         function enhanceCallouts(container) {
             var blockquotes = container.querySelectorAll('blockquote');
             blockquotes.forEach(function(blockquote) {
-                var firstP = blockquote.querySelector('p');
+                var firstP = blockquote.querySelector('p:first-child');
                 if (!firstP) return;
-        
                 var text = firstP.textContent.trim();
-                var match = text.match(/^\[!(.*?)\]\s*(.*)/);
+                var match = text.match(/^\[!(.*?)\]\s*(.*)/i);
                 if (!match) return;
-        
-                var typeSelector = match[1].trim();
-                var titleText = match[2].trim();
-                var typeLower = typeSelector.toLowerCase();
-        
+
+                var typeRaw = match[1].trim();
+                var titleText = match[2] || typeRaw;
+                var iconHTML = '';
+
+                if (typeRaw.startsWith('fas ') || typeRaw.startsWith('far ') || typeRaw.startsWith('fab ') || typeRaw.startsWith('fa-')) {
+                    iconHTML = '<i class="' + typeRaw + '"></i> ';
+                    titleText = match[2] || '';
+                    if (!titleText) titleText = typeRaw;
+                } else {
+                    var type = typeRaw.toLowerCase();
+                    var iconClass = 'fa-circle-info';
+                    if (type === 'warning') iconClass = 'fa-triangle-exclamation';
+                    if (type === 'tip') iconClass = 'fa-lightbulb';
+                    iconHTML = '<i class="fas ' + iconClass + '"></i> ';
+                }
+
                 var callout = document.createElement('div');
-                callout.className = 'callout callout-' + (['note','warning','tip'].includes(typeLower) ? typeLower : 'default');
-        
+                callout.className = 'callout callout-default';
+
                 var titleDiv = document.createElement('div');
                 titleDiv.className = 'callout-title';
-        
-                var iconHTML = '<i class="fas fa-circle-info"></i>';
-                if (typeLower === 'warning') iconHTML = '<i class="fas fa-triangle-exclamation"></i>';
-                else if (typeLower === 'tip') iconHTML = '<i class="fas fa-lightbulb"></i>';
-                else if (typeSelector.startsWith('fa')) {
-                    iconHTML = '<i class="' + typeSelector + '"></i>';
-                    if (!titleText) titleText = 'Notice';
-                }
-        
-                titleDiv.innerHTML = iconHTML + ' ' + titleText;
-        
+                titleDiv.innerHTML = iconHTML + titleText;
+
                 var contentDiv = document.createElement('div');
-                contentDiv.className = 'callout-content';
-        
-                var afterContent = document.createDocumentFragment();
-        
-                if (firstP.innerHTML.indexOf('<br>') !== -1) {
-                    var lines = firstP.innerHTML.split('<br>');
-                    var inCallout = true;
-                    var calloutLines = [];
-                    var restLines = [];
-        
-                    lines.forEach(function(line) {
-                        if (inCallout && line.trim().startsWith('[!')) {
-                            calloutLines.push(line);
-                        } else if (inCallout && line.trim().startsWith('> ')) {
-                            calloutLines.push(line.trim().replace(/^> /, ''));
-                        } else {
-                            inCallout = false;
-                            restLines.push(line);
-                        }
-                    });
-        
-                    contentDiv.innerHTML = calloutLines.join('<br>').trim();
-                    if (restLines.length > 0) {
-                        var p = document.createElement('p');
-                        p.innerHTML = restLines.join('<br>');
-                        afterContent.appendChild(p);
-                    }
-                    firstP.remove();
-                } else {
-                    firstP.remove();
-                }
-        
                 while (blockquote.firstChild) {
-                    contentDiv.appendChild(blockquote.firstChild);
+                    var node = blockquote.firstChild;
+                    if (node === firstP && node.nodeType === 1) {
+                        node.remove();
+                        continue;
+                    }
+                    contentDiv.appendChild(node);
                 }
-        
+
                 callout.appendChild(titleDiv);
                 callout.appendChild(contentDiv);
                 blockquote.parentNode.replaceChild(callout, blockquote);
-        
-                if (afterContent.hasChildNodes()) {
-                    callout.parentNode.insertBefore(afterContent, callout.nextSibling);
-                }
             });
         }
 
@@ -780,7 +687,6 @@
                     quoteDiv.appendChild(icon);
 
                     var next = child.nextSibling;
-                    var quoteContent = [];
                     while (next && (next.nodeType !== 1 || next.tagName !== 'P' || next.textContent.trim() !== '""')) {
                         var toMove = next;
                         next = next.nextSibling;
@@ -793,14 +699,14 @@
                     children = Array.from(container.children);
                     continue;
                 } else if (child.tagName === 'P' && child.textContent.trim().startsWith('""') && child.textContent.trim().endsWith('""') && child.textContent.trim().length > 4) {
-                    var innerText = child.innerHTML.trim().slice(2, -2).trim();
+                    var innerText = child.textContent.trim().slice(2, -2).trim();
                     var quoteDiv = document.createElement('div');
                     quoteDiv.className = 'custom-quote';
                     var icon = document.createElement('i');
                     icon.className = 'fas fa-quote-right quote-icon';
                     quoteDiv.appendChild(icon);
                     var p = document.createElement('p');
-                    p.innerHTML = innerText;
+                    p.textContent = innerText;
                     quoteDiv.appendChild(p);
                     child.parentNode.replaceChild(quoteDiv, child);
                     children = Array.from(container.children);
@@ -810,20 +716,24 @@
             }
         }
 
-        function replaceCheckedCheckboxes(container) {
-            // Find task-list items rendered by Marked parser engine systems
-            var checkboxes = container.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(function(input) {
-                var li = input.closest('li');
-                if (li) {
-                    li.classList.add('task-list-item');
-                    if (input.checked) {
-                        li.classList.add('task-list-item-checked');
-                        var icon = document.createElement('i');
-                        icon.className = 'fas fa-circle-check checked-icon';
-                        input.parentNode.insertBefore(icon, input);
-                        input.remove();
+        function handleCheckedCheckboxes(container) {
+            var lists = container.querySelectorAll('li');
+            lists.forEach(function(li) {
+                var input = li.querySelector('input[type="checkbox"]');
+                if (!input) return;
+                if (input.checked) {
+                    var icon = document.createElement('i');
+                    icon.className = 'fas fa-circle-check checked-icon';
+                    li.insertBefore(icon, input);
+                    input.remove();
+
+                    var span = document.createElement('span');
+                    span.className = 'checked-line';
+                    while (li.firstChild !== icon) {
+                        span.appendChild(li.firstChild);
                     }
+                    span.appendChild(li.firstChild);
+                    li.appendChild(span);
                 }
             });
         }
@@ -880,12 +790,11 @@
             var content = document.getElementById('articleContent');
             if (!content) return;
 
-            // Step-by-step sequential parsing operations optimized to secure custom nested elements safely
             replaceArrowsInTextNodes(content);
-            enhanceCallouts(content); // Evaluates callouts early to capture full nested components cleanly
-            replaceCheckedCheckboxes(content);
+            handleCheckedCheckboxes(content);
             enhanceTables(content);
             enhanceTableCellMarkdown(content);
+            enhanceCallouts(content);
             enhanceCustomQuotes(content);
             setupCollapsibleHeadings(content);
 
@@ -952,38 +861,69 @@
                         await navigator.clipboard.writeText(code);
                         button.innerHTML = '<i class="fas fa-check"></i>';
                         button.classList.add('copied');
-                        setTimeout(() => {
+                        setTimeout(function() {
                             button.innerHTML = '<i class="far fa-copy"></i>';
                             button.classList.remove('copied');
-                        }, 2000);
+                        }, 1500);
                     } catch (err) {
-                        console.error('Failed to copy text: ', err);
+                        button.innerHTML = '<i class="fas fa-times"></i>';
+                        setTimeout(function() {
+                            button.innerHTML = '<i class="far fa-copy"></i>';
+                        }, 1500);
                     }
                 });
                 header.appendChild(button);
 
-                var content = document.createElement('div');
-                content.className = 'code-content';
-                
+                var contentDiv = document.createElement('div');
+                contentDiv.className = 'code-content';
                 pre.parentNode.insertBefore(wrapper, pre);
-                content.appendChild(pre);
                 wrapper.appendChild(header);
-                wrapper.appendChild(content);
+                wrapper.appendChild(contentDiv);
+                contentDiv.appendChild(pre);
             });
         }
 
-        // Dummy renderer initialization setup for testing environment contexts
-        document.addEventListener("DOMContentLoaded", function() {
-            // If fetching dynamically, replace this block with your file extraction setups
-            var sampleMarkdown = "# Header 1\nSome introductory content text.\n\n## Header 2\n- [x] Task one checked\n- [ ] Task two unchecked\n\n> [!fas fa-anchor-circle-xmark] Anchor Warning Callout\n> 1. Multi line sub elements\n>    2. Second level indented lines\n> - Bullet layouts\n\n\"\"\nlildavegoth\nlildavegoth\n\"\"\n\n| Character | Profile Details |\n|--- |--- |\n| Test Cell | First item\\n- Sub bullet text\\n- Second sub item |";
-            
-            var contentContainer = document.getElementById('articleContent');
-            if(contentContainer) {
-                contentContainer.innerHTML = marked.parse(sampleMarkdown);
+        async function loadArticle() {
+            var params = new URLSearchParams(window.location.search);
+            var slug = params.get('slug');
+            if (!slug) {
+                document.getElementById('articleContent').innerHTML = '<p style="color:var(--accent-color);">No article specified.</p>';
+                return;
+            }
+
+            try {
+                var response = await fetch('/api/articles?slug=' + encodeURIComponent(slug) + '&_=' + Date.now());
+                if (!response.ok) throw new Error('Article not found');
+                var article = await response.json();
+
+                document.getElementById('articleTitle').textContent = article.title;
+                document.getElementById('heroImage').src = article.image;
+
+                var dateObj = new Date(article.date);
+                var day = dateObj.getDate();
+                var month = dateObj.toLocaleString('default', { month: 'short' });
+                document.getElementById('datePill').textContent = day + ' ' + month;
+
+                document.getElementById('articleContent').innerHTML = article.html;
+                document.getElementById('wordCount').textContent = article.wordCount + ' words';
+                document.title = article.title + ' | lildavegoth';
+
+                enhanceCodeBlocks();
                 enhanceContent();
                 generateTableOfContents();
-                enhanceCodeBlocks();
-                setupMoreShareButton();
+            } catch (error) {
+                document.getElementById('articleContent').innerHTML = '<p style="color:var(--accent-color);">Article could not be loaded.</p>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupMoreShareButton();
+            loadArticle();
+            var tg = document.getElementById('telegramUser');
+            if (tg) {
+                tg.addEventListener('click', function() {
+                    window.open('https://t.me/lildavegoth', '_blank');
+                });
             }
         });
     </script>
