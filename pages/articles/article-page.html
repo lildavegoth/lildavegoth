@@ -221,11 +221,10 @@
             text-indent: -1.5rem;
         }
 
-        /* Tasklist styles including targeted strikethroughs */
         #articleContent li.task-list-item {
             list-style-type: none !important;
         }
-        
+
         #articleContent li.task-list-item-checked {
             text-decoration: line-through;
             color: var(--text-secondary);
@@ -238,7 +237,6 @@
             margin: 1.5rem 0;
         }
 
-        /* Force unified top margins for all Headings */
         #articleContent h1, #articleContent h2, #articleContent h3,
         #articleContent h4, #articleContent h5, #articleContent h6 {
             margin-top: 1.5rem !important;
@@ -418,7 +416,6 @@
             color: var(--text-primary);
         }
 
-        /* Style lists if they are contained within callout bodies */
         .callout-content ul, .callout-content ol {
             margin-left: 0.5rem;
             padding-left: 1rem;
@@ -438,9 +435,10 @@
         }
 
         .custom-quote p {
-            white-space: pre-wrap; /* Keeps manual line breaks within custom quotes */
+            white-space: pre-wrap;
             margin-bottom: 0.5rem;
         }
+
         .custom-quote p:last-child {
             margin-bottom: 0;
         }
@@ -467,7 +465,6 @@
             gap: 8px;
         }
 
-        /* Toggle layout changed from ::before layout to custom click handler on parent element */
         .collapsible-section > h1::after,
         .collapsible-section > h2::after,
         .collapsible-section > h3::after,
@@ -480,7 +477,7 @@
             font-size: 0.7em;
             transition: transform 0.2s ease;
             display: inline-block;
-            margin-left: auto; /* Pushes arrow icon cleanly to the right side of your text */
+            margin-left: auto;
         }
 
         .collapsible-section.collapsed > h1::after,
@@ -683,7 +680,6 @@
             cells.forEach(function(cell) {
                 var text = cell.innerText.trim();
                 if (/\n/.test(text)) {
-                    // Replace literal \n markers or actual line-breaks cleanly inside cellular context 
                     var formattedText = text.replace(/\\n/g, '\n');
                     cell.innerHTML = marked.parse(formattedText);
                 }
@@ -693,10 +689,7 @@
         function enhanceCallouts(container) {
             var blockquotes = container.querySelectorAll('blockquote');
             blockquotes.forEach(function(blockquote) {
-                // To support advanced multi-line lists, process total internal blockquote content text
                 var fullHTML = blockquote.innerHTML.trim();
-                
-                // Matches standard callout labels [!TEST] or explicit font awesome syntax [!fas fa-anchor]
                 var match = fullHTML.match(/^<p>\[!(.*?)\]\s*(.*?)<\/p>/is);
                 if (!match) return;
 
@@ -709,13 +702,11 @@
 
                 var titleDiv = document.createElement('div');
                 titleDiv.className = 'callout-title';
-                
-                // Establish callout structural icon assignment systems
+
                 var iconHTML = '<i class="fas fa-circle-info"></i>';
                 if (typeLower === 'warning') iconHTML = '<i class="fas fa-triangle-exclamation"></i>';
                 else if (typeLower === 'tip') iconHTML = '<i class="fas fa-lightbulb"></i>';
                 else if (typeSelector.startsWith('fa')) {
-                    // Handle complex user-specified custom class strings directly
                     iconHTML = '<i class="' + typeSelector + '"></i>';
                 }
 
@@ -723,16 +714,12 @@
 
                 var contentDiv = document.createElement('div');
                 contentDiv.className = 'callout-content';
-                
-                // Capture everything that followed the setup line tags inside the blockquote container element
+
                 var sliceIndex = match[0].length;
                 var remainingHTML = fullHTML.substring(sliceIndex).trim();
-                
+
                 if (remainingHTML) {
                     contentDiv.innerHTML = remainingHTML;
-                } else {
-                    // Pull from text fragments directly if single-line setup rules were utilized
-                    contentDiv.innerHTML = '';
                 }
 
                 callout.appendChild(titleDiv);
@@ -754,7 +741,6 @@
                     quoteDiv.appendChild(icon);
 
                     var next = child.nextSibling;
-                    var quoteContent = [];
                     while (next && (next.nodeType !== 1 || next.tagName !== 'P' || next.textContent.trim() !== '""')) {
                         var toMove = next;
                         next = next.nextSibling;
@@ -767,14 +753,14 @@
                     children = Array.from(container.children);
                     continue;
                 } else if (child.tagName === 'P' && child.textContent.trim().startsWith('""') && child.textContent.trim().endsWith('""') && child.textContent.trim().length > 4) {
-                    var innerText = child.innerHTML.trim().slice(2, -2).trim();
+                    var innerHTML = child.innerHTML.trim().slice(2, -2).trim();
                     var quoteDiv = document.createElement('div');
                     quoteDiv.className = 'custom-quote';
                     var icon = document.createElement('i');
                     icon.className = 'fas fa-quote-right quote-icon';
                     quoteDiv.appendChild(icon);
                     var p = document.createElement('p');
-                    p.innerHTML = innerText;
+                    p.innerHTML = innerHTML;
                     quoteDiv.appendChild(p);
                     child.parentNode.replaceChild(quoteDiv, child);
                     children = Array.from(container.children);
@@ -785,7 +771,6 @@
         }
 
         function replaceCheckedCheckboxes(container) {
-            // Find task-list items rendered by Marked parser engine systems
             var checkboxes = container.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(function(input) {
                 var li = input.closest('li');
@@ -854,9 +839,8 @@
             var content = document.getElementById('articleContent');
             if (!content) return;
 
-            // Step-by-step sequential parsing operations optimized to secure custom nested elements safely
             replaceArrowsInTextNodes(content);
-            enhanceCallouts(content); // Evaluates callouts early to capture full nested components cleanly
+            enhanceCallouts(content);
             replaceCheckedCheckboxes(content);
             enhanceTables(content);
             enhanceTableCellMarkdown(content);
@@ -926,38 +910,64 @@
                         await navigator.clipboard.writeText(code);
                         button.innerHTML = '<i class="fas fa-check"></i>';
                         button.classList.add('copied');
-                        setTimeout(() => {
+                        setTimeout(function() {
                             button.innerHTML = '<i class="far fa-copy"></i>';
                             button.classList.remove('copied');
-                        }, 2000);
-                    } catch (err) {
-                        console.error('Failed to copy text: ', err);
-                    }
+                        }, 1500);
+                    } catch (err) {}
                 });
                 header.appendChild(button);
 
-                var content = document.createElement('div');
-                content.className = 'code-content';
-                
+                var contentDiv = document.createElement('div');
+                contentDiv.className = 'code-content';
                 pre.parentNode.insertBefore(wrapper, pre);
-                content.appendChild(pre);
                 wrapper.appendChild(header);
-                wrapper.appendChild(content);
+                wrapper.appendChild(contentDiv);
+                contentDiv.appendChild(pre);
             });
         }
 
-        // Dummy renderer initialization setup for testing environment contexts
-        document.addEventListener("DOMContentLoaded", function() {
-            // If fetching dynamically, replace this block with your file extraction setups
-            var sampleMarkdown = "# Header 1\nSome introductory content text.\n\n## Header 2\n- [x] Task one checked\n- [ ] Task two unchecked\n\n> [!fas fa-anchor-circle-xmark] Anchor Warning Callout\n> 1. Multi line sub elements\n>    2. Second level indented lines\n> - Bullet layouts\n\n\"\"\nlildavegoth\nlildavegoth\n\"\"\n\n| Character | Profile Details |\n|--- |--- |\n| Test Cell | First item\\n- Sub bullet text\\n- Second sub item |";
-            
-            var contentContainer = document.getElementById('articleContent');
-            if(contentContainer) {
-                contentContainer.innerHTML = marked.parse(sampleMarkdown);
+        async function loadArticle() {
+            var params = new URLSearchParams(window.location.search);
+            var slug = params.get('slug');
+            if (!slug) {
+                document.getElementById('articleContent').innerHTML = '<p style="color:var(--accent-color);">No article specified.</p>';
+                return;
+            }
+
+            try {
+                var response = await fetch('/api/articles?slug=' + encodeURIComponent(slug) + '&_=' + Date.now());
+                if (!response.ok) throw new Error('Article not found');
+                var article = await response.json();
+
+                document.getElementById('articleTitle').textContent = article.title;
+                document.getElementById('heroImage').src = article.image;
+
+                var dateObj = new Date(article.date);
+                var day = dateObj.getDate();
+                var month = dateObj.toLocaleString('default', { month: 'short' });
+                document.getElementById('datePill').textContent = day + ' ' + month;
+
+                document.getElementById('articleContent').innerHTML = article.html;
+                document.getElementById('wordCount').textContent = article.wordCount + ' words';
+                document.title = article.title + ' | lildavegoth';
+
+                enhanceCodeBlocks();
                 enhanceContent();
                 generateTableOfContents();
-                enhanceCodeBlocks();
-                setupMoreShareButton();
+            } catch (error) {
+                document.getElementById('articleContent').innerHTML = '<p style="color:var(--accent-color);">Article could not be loaded.</p>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupMoreShareButton();
+            loadArticle();
+            var tg = document.getElementById('telegramUser');
+            if (tg) {
+                tg.addEventListener('click', function() {
+                    window.open('https://t.me/lildavegoth', '_blank');
+                });
             }
         });
     </script>
