@@ -15,7 +15,7 @@ __name__ = "Notes Vault"
 __description__ = "Save and manage personal notes.\nCommands: .savenote, .notes, .deletenote, .copynote"
 __version__ = "1.1.1"
 __id__ = "notes_vault"
-__author__ = "lildavegoth"
+__author__ = "@lildavegoth"
 
 GITHUB_URL = "https://github.com/lildavegoth/lildavegoth/"
 
