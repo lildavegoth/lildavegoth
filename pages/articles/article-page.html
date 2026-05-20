@@ -694,11 +694,14 @@
             var blockquotes = container.querySelectorAll('blockquote');
         
             blockquotes.forEach(function(blockquote) {
-                var paragraphs = blockquote.querySelectorAll('p');
-                if (!paragraphs.length) return;
+                var lines = blockquote.innerText
+                    .split('\n')
+                    .map(function(line){ return line.trim(); })
+                    .filter(function(line){ return line; });
         
-                var firstText = paragraphs[0].textContent.trim();
-                var match = firstText.match(/^\[!(.*?)\]\s*(.*)$/i);
+                if (!lines.length) return;
+        
+                var match = lines[0].match(/^\[!(.*?)\]\s*(.*)$/i);
                 if (!match) return;
         
                 var typeSelector = match[1].trim();
@@ -730,8 +733,10 @@
                 var contentDiv = document.createElement('div');
                 contentDiv.className = 'callout-content';
         
-                for (var i = 1; i < paragraphs.length; i++) {
-                    contentDiv.appendChild(paragraphs[i].cloneNode(true));
+                for (var i = 1; i < lines.length; i++) {
+                    var p = document.createElement('p');
+                    p.textContent = lines[i];
+                    contentDiv.appendChild(p);
                 }
         
                 callout.appendChild(titleDiv);
