@@ -19,7 +19,7 @@ image: "../../images/4ever.webp"
 1. Test
 2. Test
     1. Test
-    2. Test
+    2. ~~Test~~
         1. Test
         2. Test
 - [ ] Test
@@ -29,8 +29,6 @@ image: "../../images/4ever.webp"
         - [ ] Test
   
 ---
-
-![test](https://github.com/lildavegoth/lildavegoth/blob/homepage/images/4ever.webp)
 
 ![test](https://github.com/lildavegoth/lildavegoth/raw/refs/heads/homepage/images/4ever.webp)
 
@@ -56,3 +54,6 @@ test [test](https://g.com) test
 > [!TEST] Test
 > Test Test Test
 > Test Test Test
+
+> Text Text
+> Text
