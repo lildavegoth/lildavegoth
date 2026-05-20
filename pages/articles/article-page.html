@@ -210,17 +210,6 @@
             background: transparent;
         }
 
-        #articleContent input[type="checkbox"]:checked {
-            display: none;
-        }
-
-        #articleContent li:has(> input[type="checkbox"]) {
-            list-style: none;
-            margin-left: -1.5rem;
-            padding-left: 1.5rem;
-            text-indent: -1.5rem;
-        }
-
         #articleContent hr {
             border: none;
             height: 1px;
@@ -414,6 +403,7 @@
             padding: 1rem 1.5rem;
             margin: 1rem 0;
             position: relative;
+            white-space: pre-line;
         }
 
         .custom-quote .quote-icon {
@@ -433,32 +423,6 @@
         .collapsible-section > h6 {
             cursor: pointer;
             user-select: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .collapsible-section > h1::before,
-        .collapsible-section > h2::before,
-        .collapsible-section > h3::before,
-        .collapsible-section > h4::before,
-        .collapsible-section > h5::before,
-        .collapsible-section > h6::before {
-            content: "\f0d7";
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-            font-size: 0.7em;
-            transition: transform 0.2s ease;
-            display: inline-block;
-        }
-
-        .collapsible-section.collapsed > h1::before,
-        .collapsible-section.collapsed > h2::before,
-        .collapsible-section.collapsed > h3::before,
-        .collapsible-section.collapsed > h4::before,
-        .collapsible-section.collapsed > h5::before,
-        .collapsible-section.collapsed > h6::before {
-            transform: rotate(-90deg);
         }
 
         .collapsible-section .collapsible-content {
@@ -467,6 +431,11 @@
 
         .collapsible-section.collapsed .collapsible-content {
             display: none;
+        }
+
+        .checked-line {
+            text-decoration: line-through;
+            color: var(--text-secondary);
         }
 
         .checked-icon {
@@ -666,22 +635,32 @@
                 var match = text.match(/^\[!(.*?)\]\s*(.*)/i);
                 if (!match) return;
 
-                var type = match[1].toLowerCase();
-                var title = match[2] || type.charAt(0).toUpperCase() + type.slice(1);
+                var typeRaw = match[1].trim();
+                var titleText = match[2] || typeRaw;
+                var iconHTML = '';
+
+                if (typeRaw.startsWith('fas ') || typeRaw.startsWith('far ') || typeRaw.startsWith('fab ') || typeRaw.startsWith('fa-')) {
+                    iconHTML = '<i class="' + typeRaw + '"></i> ';
+                    titleText = match[2] || '';
+                    if (!titleText) titleText = typeRaw;
+                } else {
+                    var type = typeRaw.toLowerCase();
+                    var iconClass = 'fa-circle-info';
+                    if (type === 'warning') iconClass = 'fa-triangle-exclamation';
+                    if (type === 'tip') iconClass = 'fa-lightbulb';
+                    iconHTML = '<i class="fas ' + iconClass + '"></i> ';
+                }
 
                 var callout = document.createElement('div');
-                callout.className = 'callout callout-' + (['note','warning','tip'].includes(type) ? type : 'default');
+                callout.className = 'callout callout-default';
 
                 var titleDiv = document.createElement('div');
                 titleDiv.className = 'callout-title';
-                var icon = 'fa-circle-info';
-                if (type === 'warning') icon = 'fa-triangle-exclamation';
-                if (type === 'tip') icon = 'fa-lightbulb';
-                titleDiv.innerHTML = '<i class="fas ' + icon + '"></i> ' + title;
+                titleDiv.innerHTML = iconHTML + titleText;
 
                 var contentDiv = document.createElement('div');
-                while (blockquote.childNodes.length > 0) {
-                    var node = blockquote.childNodes[0];
+                while (blockquote.firstChild) {
+                    var node = blockquote.firstChild;
                     if (node === firstP && node.nodeType === 1) {
                         node.remove();
                         continue;
@@ -737,13 +716,25 @@
             }
         }
 
-        function replaceCheckedCheckboxes(container) {
-            var inputs = container.querySelectorAll('input[type="checkbox"]:checked');
-            inputs.forEach(function(input) {
-                var icon = document.createElement('i');
-                icon.className = 'fas fa-circle-check checked-icon';
-                input.parentNode.insertBefore(icon, input);
-                input.remove();
+        function handleCheckedCheckboxes(container) {
+            var lists = container.querySelectorAll('li');
+            lists.forEach(function(li) {
+                var input = li.querySelector('input[type="checkbox"]');
+                if (!input) return;
+                if (input.checked) {
+                    var icon = document.createElement('i');
+                    icon.className = 'fas fa-circle-check checked-icon';
+                    li.insertBefore(icon, input);
+                    input.remove();
+
+                    var span = document.createElement('span');
+                    span.className = 'checked-line';
+                    while (li.firstChild !== icon) {
+                        span.appendChild(li.firstChild);
+                    }
+                    span.appendChild(li.firstChild);
+                    li.appendChild(span);
+                }
             });
         }
 
@@ -800,7 +791,7 @@
             if (!content) return;
 
             replaceArrowsInTextNodes(content);
-            replaceCheckedCheckboxes(content);
+            handleCheckedCheckboxes(content);
             enhanceTables(content);
             enhanceTableCellMarkdown(content);
             enhanceCallouts(content);
