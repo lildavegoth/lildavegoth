@@ -17,7 +17,7 @@ module.exports = async (req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', async () => {
         try {
-            const { slug } = JSON.parse(body);
+            const { slug, title } = JSON.parse(body);
             if (!slug) return res.status(400).json({ error: 'Missing slug' });
 
             const owner = 'lildavegoth';
@@ -47,7 +47,7 @@ module.exports = async (req, res) => {
                         Authorization: `token ${ghToken}`,
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ message: `Delete article ${slug}`, sha, branch }),
+                    body: JSON.stringify({ message: `delete Article ${title || slug}`, sha, branch }),
                 });
             };
 
@@ -87,7 +87,7 @@ module.exports = async (req, res) => {
             articles.allArticles = filtered;
             const updatedJson = JSON.stringify(articles, null, 2);
             const articlesSha = await getFileSha(articlesPath);
-            await putFile(articlesPath, Buffer.from(updatedJson).toString('base64'), `Remove article ${slug}`, articlesSha);
+            await putFile(articlesPath, Buffer.from(updatedJson).toString('base64'), `update Articles Data after deleting ${title || slug}`, articlesSha);
 
             res.status(200).json({ success: true });
         } catch (e) {

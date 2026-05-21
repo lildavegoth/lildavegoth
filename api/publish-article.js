@@ -64,7 +64,7 @@ ${content}`;
     };
 
     try {
-        await putFile(mdPath, mdBase64, `Update article ${slug}`);
+        await putFile(mdPath, mdBase64, `update article ${title}`);
 
         const articlesPath = 'files/fetch/articles.json';
         let articlesData = JSON.parse(await getFileContent(articlesPath) || '{"featured":[],"highlight":[],"allArticles":[]}');
@@ -90,7 +90,7 @@ ${content}`;
         }
 
         const updatedJson = JSON.stringify(articlesData, null, 2);
-        await putFile(articlesPath, Buffer.from(updatedJson).toString('base64'), `Update articles.json for ${slug}`);
+        await putFile(articlesPath, Buffer.from(updatedJson).toString('base64'), `update Articles Data for ${title}`);
 
         res.status(200).json({ success: true });
     } catch (err) {
