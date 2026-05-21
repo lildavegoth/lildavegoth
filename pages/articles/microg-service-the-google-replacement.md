@@ -10,7 +10,7 @@ categories: "Tutorials, Recommended, Open Source"
 # Guides →
 1. Go to [BitGApps MicroGPlus](https://bitgapps.io/extra.html) site
 2. Click download button and scroll to the variants selection (If you confused, see the screenshot below of which one the Variants Selection is)
-![microGPlus Selection Variants](images/variants.webp)
+![microGPlus Selection Variants](images/microgvariants.webp)
 3. Select the variants as you like (You can check the details on the website but you can also see it on the image below)
 ![microGPlus Package Comparison](images/microgpackage.webp)
 4. After select your variant, click the Download button to download the file
