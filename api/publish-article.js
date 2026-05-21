@@ -1,5 +1,14 @@
 const jwt = require('jsonwebtoken');
 
+function getRawBody(req) {
+    return new Promise((resolve, reject) => {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => resolve(body));
+        req.on('error', reject);
+    });
+}
+
 module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     if (req.method === 'OPTIONS') return res.status(200).end();
@@ -13,19 +22,29 @@ module.exports = async (req, res) => {
         return res.status(401).json({ error: 'Invalid token' });
     }
 
-    let body = '';
-    req.on('data', chunk => body += chunk);
-    req.on('end', async () => {
-        try {
-            const { slug, title, author, profile, date, image, description, categories, content } = JSON.parse(body);
-            if (!slug || !content) return res.status(400).json({ error: 'Missing fields' });
+    let body;
+    try {
+        body = await getRawBody(req);
+    } catch {
+        return res.status(500).json({ error: 'Failed to read request body' });
+    }
 
-            const owner = 'lildavegoth';
-            const repo = 'lildavegoth';
-            const branch = 'homepage';
-            const ghToken = process.env.GH_TOKEN;
+    let payload;
+    try {
+        payload = JSON.parse(body);
+    } catch {
+        return res.status(400).json({ error: 'Invalid JSON' });
+    }
 
-            const fileContent = `---
+    const { slug, title, author, profile, date, image, description, categories, content } = payload;
+    if (!slug || !content) return res.status(400).json({ error: 'Missing fields' });
+
+    const owner = 'lildavegoth';
+    const repo = 'lildavegoth';
+    const branch = 'homepage';
+    const ghToken = process.env.GH_TOKEN;
+
+    const fileContent = `---
 title: "${title}"
 date: "${date}"
 image: "${image}"
@@ -40,31 +59,37 @@ ${content}`;
     const mdPath = `pages/articles/${slug}.md`;
     const mdBase64 = Buffer.from(fileContent).toString('base64');
 
-    const putFile = async (path, contentBase64, message) => {
-        const sha = await getFileSha(path);
-        const body = { message, content: contentBase64, branch };
-        if (sha) body.sha = sha;
-        await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-            method: 'PUT',
-            headers: {
-                Authorization: `token ${ghToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body),
-        });
-    };
-
     const getFileSha = async (path) => {
-        const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`, {
-            headers: { Authorization: `token ${ghToken}` }
-        });
+        const response = await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`,
+            { headers: { Authorization: `token ${ghToken}` } }
+        );
         if (!response.ok) return null;
         const data = await response.json();
         return data.sha;
     };
 
+    const putFile = async (path, contentBase64, message) => {
+        const sha = await getFileSha(path);
+        const bodyObj = { message, content: contentBase64, branch };
+        if (sha) bodyObj.sha = sha;
+        await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+            {
+                method: 'PUT',
+                headers: {
+                    Authorization: `token ${ghToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(bodyObj),
+            }
+        );
+    };
+
     const getFileContent = async (path) => {
-        const response = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`);
+        const response = await fetch(
+            `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`
+        );
         if (!response.ok) return null;
         return response.text();
     };
@@ -73,14 +98,17 @@ ${content}`;
         await putFile(mdPath, mdBase64, `updated article ${title}`);
 
         const articlesPath = 'files/fetch/articles.json';
-        let articlesData = JSON.parse(await getFileContent(articlesPath) || '{"featured":[],"highlight":[],"allArticles":[]}');
+        const rawArticles = await getFileContent(articlesPath);
+        let articlesData = rawArticles
+            ? JSON.parse(rawArticles)
+            : { featured: [], highlight: [], allArticles: [] };
 
         const newEntry = {
             name: title,
             categories: categories,
             image: image,
             link: `article-page.html?slug=${slug}`,
-            description: description
+            description: description,
         };
 
         let found = false;
@@ -96,7 +124,11 @@ ${content}`;
         }
 
         const updatedJson = JSON.stringify(articlesData, null, 2);
-        await putFile(articlesPath, Buffer.from(updatedJson).toString('base64'), `updated Articles Data for ${title}`);
+        await putFile(
+            articlesPath,
+            Buffer.from(updatedJson).toString('base64'),
+            `updated Articles Data for ${title}`
+        );
 
         res.status(200).json({ success: true });
     } catch (err) {
