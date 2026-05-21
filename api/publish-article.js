@@ -13,16 +13,19 @@ module.exports = async (req, res) => {
         return res.status(401).json({ error: 'Invalid token' });
     }
 
-    const { slug, title, author, profile, date, image, description, categories, content } = req.body;
-    if (!slug || !content) return res.status(400).json({ error: 'Missing fields' });
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', async () => {
+        try {
+            const { slug, title, author, profile, date, image, description, categories, content } = JSON.parse(body);
+            if (!slug || !content) return res.status(400).json({ error: 'Missing fields' });
 
-    const owner = 'lildavegoth';
-    const repo = 'lildavegoth';
-    const branch = 'homepage';
-    const ghToken = process.env.GH_TOKEN;
+            const owner = 'lildavegoth';
+            const repo = 'lildavegoth';
+            const branch = 'homepage';
+            const ghToken = process.env.GH_TOKEN;
 
-    const { author, profile } = req.body;
-const fileContent = `---
+            const fileContent = `---
 title: "${title}"
 date: "${date}"
 image: "${image}"
