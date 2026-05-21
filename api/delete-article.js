@@ -87,7 +87,7 @@ module.exports = async (req, res) => {
             articles.allArticles = filtered;
             const updatedJson = JSON.stringify(articles, null, 2);
             const articlesSha = await getFileSha(articlesPath);
-            await putFile(articlesPath, Buffer.from(updatedJson).toString('base64'), `update Articles Data after deleting ${title || slug}`, articlesSha);
+            await putFile(articlesPath, Buffer.from(updatedJson).toString('base64'), `updated Articles Data after deleting ${title || slug}`, articlesSha);
 
             res.status(200).json({ success: true });
         } catch (e) {
