@@ -2,9 +2,11 @@
 title: "Chrome Extension in Android"
 date: "2026-05-11"
 image: "images/chromeex.webp"
+description: "Usually, Chrome Extensions can be installed in Chrome for Desktop, but in this tutorial, i'll guides you to use..."
+categories: "App, Useful, Extension"
 ---
 
-Usually, **Chrome Extensions** can be installed in **Chrome** for **Desktop**, but in this tutorial, i'll guides you to use them.
+Usually, **Chrome Extensions** can be installed in **Chrome** for **Desktop** only, but in this tutorial, i'll guides you to use them.
 
 # Notes →
 This guides will not use normal Chrome from Play Store, but using an Open Source Cromite Project.
