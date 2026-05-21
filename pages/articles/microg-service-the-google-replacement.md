@@ -4,6 +4,8 @@ date: "2026-05-21"
 image: "images/microgplus.webp"
 description: "Google and Google Services has been much ways creepier every years, it's more alike a spy on your phone than a helpful app, and..."
 categories: "Tutorials, Recommended, Open Source"
+author: "lildavegoth"
+profile: "https://t.me/lildavegoth"
 ---
 
 **Google** and **Google Services** has been much ways creepier every years, it's more alike a spy on your phone than a helpful app, and that's why there's so much Open Source project apps that helps people to get their own privacy, and the one who can replace **Google Services** is **microG Service** by **BitGApps** — [Source](https://bitgapps.io/extra.html)

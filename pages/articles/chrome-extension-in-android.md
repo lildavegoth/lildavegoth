@@ -4,6 +4,8 @@ date: "2026-05-11"
 image: "images/chromeex.webp"
 description: "Usually, Chrome Extensions can be installed in Chrome for Desktop, but in this tutorial, i'll guides you to use..."
 categories: "App, Useful, Tutorials"
+author: "lildavegoth"
+profile: "https://t.me/lildavegoth"
 ---
 
 Usually, **Chrome Extensions** can be installed in **Chrome** for **Desktop** only, but in this tutorial, i'll guides you to use them.
