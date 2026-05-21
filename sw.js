@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.6.9';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.7.0';
 const urlsToCache = [
     // Root
     '/',
@@ -56,6 +56,7 @@ const urlsToCache = [
     'pages/o-table-formatting.html',
     'pages/ocr-tool.html',
     'pages/pixel-svg-maker.html',
+    'pages/pocket-garden/pocket-garden.html',
     'pages/posters-gallery.html',
     'pages/private-storage.html',
     'pages/projects-task.html',
@@ -77,20 +78,10 @@ const urlsToCache = [
     'pages/weather.html',
     'pages/yaml-validator.html',
     'pages/youtube-thumbnail-grabber.html',
-    // Pocket Garden
-    'pages/pocket-garden/pocket-garden.html',
-    'pages/pocket-garden/images/decorations/flowery-hanger.png',
-    'pages/pocket-garden/images/decorations/wood-bed-board.png',
-    'pages/pocket-garden/images/plants/empty.png',
-    'pages/pocket-garden/images/plants/pothos-hearted.png',
-    'pages/pocket-garden/images/plants/pothos-normal.png',
-    'pages/pocket-garden/images/plants/pothos-hearted/stage1.png',
-    'pages/pocket-garden/images/plants/pothos-hearted/stage2.png',
-    'pages/pocket-garden/images/plants/pothos-hearted/stage3.png',
-    'pages/pocket-garden/images/plants/pothos-normal/stage1.png',
-    'pages/pocket-garden/images/plants/pothos-normal/stage2.png',
-    'pages/pocket-garden/images/plants/pothos-normal/stage3.png',
-    'pages/pocket-garden/images/pots/glassy.png',
+    // Articles
+    'pages/articles/articles-home.html',
+    'pages/articles/article-page.html',
+    'pages/articles/editor.html',
     // Voidgarden
     'pages/voidgarden/adventure.html',
     'pages/voidgarden/character.html',
@@ -98,38 +89,6 @@ const urlsToCache = [
     'pages/voidgarden/shared-data.js',
     'pages/voidgarden/shop.html',
     'pages/voidgarden/voidgarden.html',
-    'pages/voidgarden/images/carrot-grow.png',
-    'pages/voidgarden/images/carrot-ready.png',
-    'pages/voidgarden/images/carrot-seed.png',
-    'pages/voidgarden/images/door-closed.png',
-    'pages/voidgarden/images/door-open.png',
-    'pages/voidgarden/images/land-decor.png',
-    'pages/voidgarden/images/land-decor2.gif',
-    'pages/voidgarden/images/land.png',
-    'pages/voidgarden/images/land2.png',
-    'pages/voidgarden/images/wheat-grow.png',
-    'pages/voidgarden/images/wheat-ready.png',
-    'pages/voidgarden/images/wheat-seed.png',
-    'pages/voidgarden/images/ui/icon-carrot.png',
-    'pages/voidgarden/images/ui/icon-wheat.png',
-    // Images
-    'images/4ever.webp',
-    'images/card.webp',
-    'images/left-side.webp',
-    'images/right-side.webp',
-    'images/screenshots.webp',
-    'images/icons/kiraku-home.png',
-    'images/cards/browser-homepage.webp',
-    'images/cards/icon-pack.webp',
-    'images/cards/kiraku-store.webp',
-    'images/cards/posters-gallery.webp',
-    // Posters
-    'images/posters/again-n-again.webp',
-    'images/posters/dear-god.webp',
-    'images/posters/feelings.webp',
-    'images/posters/its-too-late.webp',
-    'images/posters/no-longer-priority.webp',
-    'images/posters/sickens-me.webp',
     // Fetches
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/articles/articles.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/pages.json',
@@ -201,6 +160,12 @@ self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
 
     const url = new URL(event.request.url);
+
+    if (url.pathname.startsWith('/pages/articles/images/')) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+
     const requestPath = url.origin + url.pathname;
 
     if (STALE_WHILE_REVALIDATE_URLS.includes(requestPath)) {
