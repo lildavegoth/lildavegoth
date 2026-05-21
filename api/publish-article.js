@@ -13,7 +13,7 @@ module.exports = async (req, res) => {
         return res.status(401).json({ error: 'Invalid token' });
     }
 
-    const { slug, title, date, image, description, categories, content } = req.body;
+    const { slug, title, author, profile, date, image, description, categories, content } = req.body;
     if (!slug || !content) return res.status(400).json({ error: 'Missing fields' });
 
     const owner = 'lildavegoth';
