@@ -37,11 +37,13 @@ module.exports = async (req, res) => {
         );
 
         res.status(200).json({
-            title: frontmatter.title || 'Untitled',
-            date: frontmatter.date || null,
-            image: frontmatter.image || '/images/default.jpg',
-            html: updatedHtml,
-            wordCount: content.split(/\s+/).filter(w => w.length > 0).length,
+          title: frontmatter.title || 'Untitled',
+          date: frontmatter.date || null,
+          image: frontmatter.image || '/images/default.jpg',
+          author: frontmatter.author || 'lildavegoth',
+          profile: frontmatter.profile || 'https://t.me/lildavegoth',
+          html: htmlContent,
+          wordCount: content.split(/\s+/).filter(w => w.length > 0).length,
         });
     } catch (error) {
         res.status(500).json({ error: 'Internal server error' });
