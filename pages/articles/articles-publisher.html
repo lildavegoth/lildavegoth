@@ -554,7 +554,7 @@
                 <input type="text" id="imageInput" placeholder="chromeex.webp">
 
                 <div id="imageUploadContainer">
-                    <label style="margin-bottom: 5px;" for="imageFileInput">Upload header image (.webp)</label>
+                    <label style="margin-bottom: 20px;" for="imageFileInput">Upload header image (.webp)</label>
                     <input type="file" id="imageFileInput" accept=".webp">
                 </div>
 
@@ -598,6 +598,7 @@
         var articlesData = [];
         var publishCooldown = false;
         var deleteCooldown = false;
+        var selectedImageFile = null;
         var isEditing = false;
 
         function showHome() {
@@ -610,6 +611,8 @@
         function goToEditor(slug) {
             document.getElementById('homeContainer').classList.add('hidden');
             document.getElementById('editorContainer').classList.remove('hidden');
+            selectedImageFile = null;
+            document.getElementById('imageFileInput').value = '';
             if (slug) {
                 isEditing = true;
                 loadArticle(slug);
@@ -650,9 +653,10 @@
             showHome();
         });
 
-        async function uploadImage(file) {
+        async function uploadImage(file, customName) {
             var formData = new FormData();
             formData.append('image', file);
+            formData.append('customName', customName);
             var customName = document.getElementById('imageInput').value.trim();
             if (customName) {
                 formData.append('customName', customName);
@@ -670,16 +674,21 @@
             return data.filename;
         }
 
-        document.getElementById('imageFileInput').addEventListener('change', async function() {
-            var file = this.files[0];
-            if (!file) return;
-            try {
-                var filename = await uploadImage(file);
-                document.getElementById('imageInput').value = filename;
-                window.showMessage('Image uploaded successfully');
-            } catch (e) {
-                window.showMessage('Image upload failed: ' + e.message);
-                this.value = '';
+        document.getElementById('imageFileInput').addEventListener('change', function() {
+            selectedImageFile = this.files[0];
+            if (selectedImageFile) {
+                if (!selectedImageFile.name.toLowerCase().endsWith('.webp')) {
+                    window.showMessage('Only .webp files are allowed');
+                    this.value = '';
+                    selectedImageFile = null;
+                    return;
+                }
+                var imageNameInput = document.getElementById('imageInput');
+                if (!imageNameInput.value.trim()) {
+                    imageNameInput.value = selectedImageFile.name;
+                }
+            } else {
+                selectedImageFile = null;
             }
         });
 
@@ -717,6 +726,7 @@
             document.getElementById('descInput').value = '';
             document.getElementById('contentInput').value = '';
             document.getElementById('imageFileInput').value = '';
+            selectedImageFile = null;
         }
 
         async function loadArticle(slug) {
@@ -776,7 +786,27 @@
                 categories: document.getElementById('catInput').value,
                 content: document.getElementById('contentInput').value
             };
-
+    
+            if (selectedImageFile) {
+                var customName = document.getElementById('imageInput').value.trim();
+                if (!customName) {
+                    window.showMessage('Please enter an image name');
+                    return;
+                }
+                if (!customName.toLowerCase().endsWith('.webp')) {
+                    customName += '.webp';
+                }
+                try {
+                    var uploadedFilename = await uploadImage(selectedImageFile, customName);
+                    payload.image = 'images/' + uploadedFilename;
+                    selectedImageFile = null;
+                    document.getElementById('imageFileInput').value = '';
+                } catch (e) {
+                    window.showMessage('Image upload failed: ' + e.message);
+                    return;
+                }
+            }
+    
             publishCooldown = true;
             var publishBtn = document.getElementById('publishBtn');
             publishBtn.disabled = true;
