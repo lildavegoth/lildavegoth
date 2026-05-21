@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Articles Publisher | lildavegoth</title>
+    <script src="../../protections.js"></script>
+    <script src="../../notification.cssjs"></script>
+    <link rel="stylesheet" href="../../media.css">
+    <meta name="color-scheme" content="dark">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 90px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+            min-height: calc(100vh - 90px);
+        }
+
+        h2 {
+            color: var(--text-primary);
+            font-size: 1.8rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #loginContainer {
+            max-width: 400px;
+            margin: 6rem auto;
+            padding: var(--spacing-md);
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        #loginContainer input {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: var(--spacing-sm);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        #loginContainer button {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        #loginContainer button:active {
+            transform: scale(0.96);
+        }
+
+        #loginContainer button:hover {
+            opacity: 0.85;
+        }
+
+        .articles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: var(--spacing-sm);
+        }
+
+        .article-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            border: 1px solid rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .article-card:hover {
+            background: rgba(40, 40, 40, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .article-card .card-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .article-card .card-date {
+            font-size: 0.85rem;
+            color: var(--accent-color);
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            color: #000;
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(193,252,50,0.3);
+            z-index: 20;
+            transition: transform 0.1s;
+        }
+
+        .fab:active {
+            transform: scale(0.92);
+        }
+
+        .fab:hover {
+            opacity: 0.9;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--accent-color);
+            text-decoration: none;
+            margin-bottom: var(--spacing-md);
+            font-weight: 500;
+        }
+
+        .back-link i {
+            font-size: 0.9em;
+        }
+
+        .editor-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: -4px;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 1rem;
+            resize: none;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 10px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        input[type="file"]::file-selector-button {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            padding: 6px 12px;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(193,252,50,0.15);
+        }
+
+        textarea {
+            min-height: 80px;
+        }
+
+        #contentInput {
+            min-height: 300px;
+        }
+
+        .date-wrapper {
+            position: relative;
+        }
+
+        .date-wrapper input[type="date"] {
+            appearance: none;
+            -webkit-appearance: none;
+            padding-right: 40px;
+        }
+
+        .date-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+            display: none;
+        }
+
+        .date-wrapper .date-icon {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            pointer-events: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+
+        #deleteBtn {
+            padding: 12px 24px;
+            background: #C42833;
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        #deleteBtn:active {
+            transform: scale(0.96);
+        }
+
+        #deleteBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #publishBtn {
+            padding: 12px 24px;
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        #publishBtn:active {
+            transform: scale(0.96);
+        }
+
+        #publishBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            margin: var(--spacing-md) 0;
+        }
+
+        .search-container {
+            margin-bottom: var(--spacing-md);
+            position: relative;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+        }
+
+        .search-input-wrapper input {
+            width: 100%;
+            padding: 12px 44px 12px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-medium);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .search-input-wrapper input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .search-input-wrapper .search-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .search-suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .search-suggestion-item:hover {
+            background: rgba(193, 252, 50, 0.1);
+        }
+
+        .search-suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .suggestion-description {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .suggestion-category {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-top: 4px;
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .popup-body {
+            padding: var(--spacing-md);
+            flex: 1;
+        }
+
+        .popup-footer {
+            padding: var(--spacing-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-sm);
+        }
+
+        .popup-footer button {
+            padding: 10px 20px;
+            border-radius: var(--radius-small);
+            font-weight: 600;
+            font-size: 0.95rem;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .popup-footer button:active {
+            transform: scale(0.96);
+        }
+
+        .btn-yes {
+            background: #C42833;
+            color: #fff;
+        }
+
+        .btn-cancel {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loginContainer">
+            <h2>Admin Login</h2>
+            <input type="password" id="passwordInput" placeholder="Enter admin password">
+            <button id="loginBtn">Login</button>
+        </div>
+
+        <div id="homeContainer" class="hidden">
+            <h2>Articles Publisher</h2>
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <input type="text" id="globalSearch" placeholder="Search articles...">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <div class="search-suggestions" id="searchSuggestions"></div>
+            </div>
+            <div class="articles-grid" id="articleList"></div>
+            <button class="fab" id="fabAdd">+</button>
+        </div>
+
+        <div id="editorContainer" class="hidden">
+            <a href="#" id="backToHome" class="back-link"><i class="fas fa-arrow-left"></i> Back to articles</a>
+            <h2>Article Editor</h2>
+            <div class="editor-form">
+                <label for="slugInput">Slug (filename without .md)</label>
+                <input type="text" id="slugInput" placeholder="chrome-extension-in-android">
+
+                <label for="titleInput">Title</label>
+                <input type="text" id="titleInput" placeholder="Article title">
+
+                <label for="authorInput">Author</label>
+                <input type="text" id="authorInput" placeholder="lildavegoth" value="lildavegoth">
+
+                <label for="profileInput">Profile URL</label>
+                <input type="text" id="profileInput" placeholder="https://t.me/lildavegoth" value="https://t.me/lildavegoth">
+
+                <label for="dateInput">Date (YYYY-MM-DD)</label>
+                <div class="date-wrapper">
+                    <input type="date" id="dateInput">
+                    <i class="fas fa-caret-down date-icon"></i>
+                </div>
+
+                <label for="imageInput">Image name</label>
+                <input type="text" id="imageInput" placeholder="chromeex.webp">
+
+                <div id="imageUploadContainer">
+                    <label for="imageFileInput">Upload header image (.webp)</label>
+                    <input type="file" id="imageFileInput" accept=".webp">
+                </div>
+
+                <label for="catInput">Categories (comma separated)</label>
+                <input type="text" id="catInput" placeholder="Tutorials, Design">
+
+                <label for="descInput">Description</label>
+                <textarea id="descInput" rows="3" placeholder="A short description..."></textarea>
+
+                <label for="contentInput">Article Content</label>
+                <textarea id="contentInput" rows="22" placeholder="Write your Markdown here..."></textarea>
+
+                <div class="button-group">
+                    <button id="deleteBtn">Delete</button>
+                    <button id="publishBtn">Publish</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmDeletePopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2>Confirm Delete</h2>
+                <button class="close-popup" onclick="closeConfirmPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="popup-body">
+                <p>Are you sure you want to delete this Article? Make sure you have a backup cause this action cannot be undone!</p>
+            </div>
+            <div class="popup-footer">
+                <button class="btn-cancel" onclick="closeConfirmPopup()">Cancel</button>
+                <button class="btn-yes" id="confirmDeleteBtn">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var token = localStorage.getItem('admin_token');
+        var articlesData = [];
+        var publishCooldown = false;
+        var deleteCooldown = false;
+        var isEditing = false;
+
+        window.showMessage = function(msg) {
+            alert(msg);
+        };
+
+        function showHome() {
+            document.getElementById('loginContainer').classList.add('hidden');
+            document.getElementById('homeContainer').classList.remove('hidden');
+            document.getElementById('editorContainer').classList.add('hidden');
+            loadArticleList();
+        }
+
+        function goToEditor(slug) {
+            document.getElementById('homeContainer').classList.add('hidden');
+            document.getElementById('editorContainer').classList.remove('hidden');
+            if (slug) {
+                isEditing = true;
+                loadArticle(slug);
+            } else {
+                isEditing = false;
+                clearForm();
+            }
+            document.getElementById('imageUploadContainer').style.display = isEditing ? 'none' : 'block';
+        }
+
+        if (token) {
+            showHome();
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', async function() {
+            var password = document.getElementById('passwordInput').value;
+            var res = await fetch('/api/verify-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: password })
+            });
+            if (res.ok) {
+                var data = await res.json();
+                token = data.token;
+                localStorage.setItem('admin_token', token);
+                showHome();
+            } else {
+                window.showMessage('Wrong password');
+            }
+        });
+
+        document.getElementById('fabAdd').addEventListener('click', function() {
+            goToEditor(null);
+        });
+
+        document.getElementById('backToHome').addEventListener('click', function(e) {
+            e.preventDefault();
+            showHome();
+        });
+
+        async function uploadImage(file) {
+            var formData = new FormData();
+            formData.append('image', file);
+            var res = await fetch('/api/article-image', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: formData
+            });
+            if (!res.ok) {
+                var err = await res.json();
+                throw new Error(err.error || 'Upload failed');
+            }
+            var data = await res.json();
+            return data.filename;
+        }
+
+        document.getElementById('imageFileInput').addEventListener('change', async function() {
+            var file = this.files[0];
+            if (!file) return;
+            try {
+                var filename = await uploadImage(file);
+                document.getElementById('imageInput').value = filename;
+                window.showMessage('Image uploaded successfully');
+            } catch (e) {
+                window.showMessage('Image upload failed: ' + e.message);
+                this.value = '';
+            }
+        });
+
+        async function loadArticleList() {
+            var res = await fetch('https://raw.githubusercontent.com/lildavegoth/lildavegoth/homepage/files/fetch/articles.json?t=' + Date.now());
+            var data = await res.json();
+            articlesData = data.allArticles;
+            renderArticleCards(articlesData);
+        }
+
+        function renderArticleCards(articles) {
+            var list = document.getElementById('articleList');
+            list.innerHTML = '';
+            articles.forEach(function(art) {
+                var slug = art.link.split('slug=')[1]?.split('&')[0];
+                if (!slug) return;
+                var card = document.createElement('div');
+                card.className = 'article-card';
+                card.innerHTML = '<div class="card-title">' + art.name + '</div><div class="card-date">' + (art.date || '') + '</div>';
+                card.addEventListener('click', function() {
+                    goToEditor(slug);
+                });
+                list.appendChild(card);
+            });
+        }
+
+        function clearForm() {
+            document.getElementById('slugInput').value = '';
+            document.getElementById('titleInput').value = '';
+            document.getElementById('authorInput').value = 'lildavegoth';
+            document.getElementById('profileInput').value = 'https://t.me/lildavegoth';
+            document.getElementById('dateInput').value = new Date().toISOString().slice(0,10);
+            document.getElementById('imageInput').value = '';
+            document.getElementById('catInput').value = '';
+            document.getElementById('descInput').value = '';
+            document.getElementById('contentInput').value = '';
+            document.getElementById('imageFileInput').value = '';
+        }
+
+        async function loadArticle(slug) {
+            var res = await fetch('https://raw.githubusercontent.com/lildavegoth/lildavegoth/homepage/pages/articles/' + slug + '.md?t=' + Date.now());
+            if (!res.ok) return window.showMessage('Article not found');
+            var raw = await res.text();
+            var parts = parseFrontmatter(raw);
+            document.getElementById('slugInput').value = slug;
+            document.getElementById('titleInput').value = parts.data.title || '';
+            document.getElementById('authorInput').value = parts.data.author || 'lildavegoth';
+            document.getElementById('profileInput').value = parts.data.profile || 'https://t.me/lildavegoth';
+            document.getElementById('dateInput').value = parts.data.date || '';
+            var img = parts.data.image || '';
+            if (img.startsWith('images/')) {
+                img = img.replace('images/', '');
+            }
+            document.getElementById('imageInput').value = img;
+            document.getElementById('catInput').value = parts.data.categories || '';
+            document.getElementById('descInput').value = parts.data.description || '';
+            document.getElementById('contentInput').value = parts.content.trim();
+        }
+
+        function parseFrontmatter(md) {
+            var match = md.match(/^---\s*\n([\s\S]*?)\n---\s*\n/);
+            if (!match) return { data: {}, content: md };
+            var yamlBlock = match[1];
+            var content = md.substring(match[0].length);
+            var data = {};
+            yamlBlock.split('\n').forEach(function(line) {
+                var idx = line.indexOf(':');
+                if (idx > -1) {
+                    var key = line.substring(0, idx).trim();
+                    var value = line.substring(idx+1).trim().replace(/^["']|["']$/g, '');
+                    data[key] = value;
+                }
+            });
+            return { data: data, content: content };
+        }
+
+        document.getElementById('publishBtn').addEventListener('click', async function() {
+            if (publishCooldown) {
+                window.showMessage('Please wait 15 seconds before publishing again.');
+                return;
+            }
+            var slug = document.getElementById('slugInput').value.trim();
+            if (!slug) return window.showMessage('Slug required');
+            var imageName = document.getElementById('imageInput').value.trim();
+            var imagePath = imageName ? ('images/' + imageName) : '';
+            var payload = {
+                slug: slug,
+                title: document.getElementById('titleInput').value,
+                author: document.getElementById('authorInput').value,
+                profile: document.getElementById('profileInput').value,
+                date: document.getElementById('dateInput').value,
+                image: imagePath,
+                description: document.getElementById('descInput').value,
+                categories: document.getElementById('catInput').value,
+                content: document.getElementById('contentInput').value
+            };
+
+            publishCooldown = true;
+            var publishBtn = document.getElementById('publishBtn');
+            publishBtn.disabled = true;
+
+            var notif = window.createTimerNotification('Publishing Article', 100);
+            var progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
+            var timeElement = notif.wrapper.querySelector('.timer-time-notif');
+            if (progressBar) progressBar.style.width = '0%';
+            if (timeElement) timeElement.textContent = '0/100';
+
+            try {
+                for (var i = 0; i <= 100; i += 25) {
+                    await sleep(300);
+                    if (progressBar) progressBar.style.width = i + '%';
+                    if (timeElement) timeElement.textContent = i + '/100';
+                }
+
+                var res = await fetch('/api/publish-article', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    notif.close();
+                    window.showMessage('Published!');
+                    showHome();
+                } else {
+                    var err = await res.json();
+                    window.showMessage('Error: ' + (err.error || 'Unknown'));
+                }
+            } catch (e) {
+                window.showMessage('Network error');
+            } finally {
+                publishCooldown = false;
+                publishBtn.disabled = false;
+                setTimeout(function() {
+                    publishCooldown = false;
+                }, 15000);
+            }
+        });
+
+        function sleep(ms) {
+            return new Promise(function(resolve) { setTimeout(resolve, ms); });
+        }
+
+        document.getElementById('deleteBtn').addEventListener('click', function() {
+            var slug = document.getElementById('slugInput').value.trim();
+            if (!slug) return window.showMessage('No article to delete.');
+            openConfirmPopup(slug);
+        });
+
+        function openConfirmPopup(slug) {
+            document.getElementById('confirmDeletePopup').style.display = 'flex';
+            document.getElementById('confirmDeleteBtn').onclick = function() {
+                performDelete(slug);
+            };
+        }
+
+        function closeConfirmPopup() {
+            document.getElementById('confirmDeletePopup').style.display = 'none';
+        }
+
+        async function performDelete(slug) {
+            if (deleteCooldown) return;
+            deleteCooldown = true;
+            var deleteBtn = document.getElementById('deleteBtn');
+            deleteBtn.disabled = true;
+
+            try {
+                var res = await fetch('/api/delete-article', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ slug: slug })
+                });
+                if (res.ok) {
+                    window.showMessage('Article deleted.');
+                    closeConfirmPopup();
+                    showHome();
+                } else {
+                    var err = await res.json();
+                    window.showMessage('Error: ' + (err.error || 'Unknown'));
+                }
+            } catch (e) {
+                window.showMessage('Network error');
+            } finally {
+                deleteCooldown = false;
+                deleteBtn.disabled = false;
+            }
+        }
+
+        function setupSearch() {
+            var searchInput = document.getElementById('globalSearch');
+            var suggestionsContainer = document.getElementById('searchSuggestions');
+
+            searchInput.addEventListener('input', function() {
+                var term = this.value.trim().toLowerCase();
+                if (!term) {
+                    suggestionsContainer.style.display = 'none';
+                    renderArticleCards(articlesData);
+                    return;
+                }
+                var filtered = articlesData.filter(function(art) {
+                    var slug = art.link.split('slug=')[1]?.split('&')[0];
+                    return (art.name && art.name.toLowerCase().includes(term)) ||
+                           (slug && slug.toLowerCase().includes(term)) ||
+                           (art.description && art.description.toLowerCase().includes(term));
+                });
+                renderArticleCards(filtered);
+
+                var suggestions = filtered.slice(0, 5);
+                if (suggestions.length) {
+                    suggestionsContainer.innerHTML = suggestions.map(function(item) {
+                        var slug = item.link.split('slug=')[1]?.split('&')[0];
+                        return '<div class="search-suggestion-item" data-slug="' + slug + '">' +
+                            '<div class="suggestion-title">' + item.name + '</div>' +
+                            '<div class="suggestion-description">' + (item.description || '') + '</div>' +
+                            '<div class="suggestion-category">' + (item.categories || '') + '</div>' +
+                            '</div>';
+                    }).join('');
+                    suggestionsContainer.style.display = 'block';
+                } else {
+                    suggestionsContainer.innerHTML = '<div class="search-suggestion-item"><div class="suggestion-title">No results</div></div>';
+                    suggestionsContainer.style.display = 'block';
+                }
+            });
+
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    suggestionsContainer.style.display = 'none';
+                }
+                if (e.key === 'Enter') {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+
+            suggestionsContainer.addEventListener('click', function(e) {
+                var item = e.target.closest('.search-suggestion-item');
+                if (item) {
+                    var slug = item.getAttribute('data-slug');
+                    if (slug) {
+                        goToEditor(slug);
+                        suggestionsContainer.style.display = 'none';
+                        searchInput.value = '';
+                        renderArticleCards(articlesData);
+                    }
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+        }
+
+        setupSearch();
+    </script>
+</body>
+</html>
