@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Article Editor | lildavegoth</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: #000; color: #f5f5f7; min-height: 100vh; padding: 2rem; }
+        input, textarea, button { font-size: 1rem; border-radius: 12px; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.8); color: #f5f5f7; margin-bottom: 1rem; width: 100%; }
+        button { background: #C1FC32; color: #000; font-weight: 600; cursor: pointer; border: none; }
+        button:hover { opacity: 0.9; }
+        .hidden { display: none; }
+        #articleList { margin-bottom: 2rem; }
+        #articleList a { color: #C1FC32; text-decoration: none; margin-right: 1rem; cursor: pointer; }
+        #loginContainer { max-width: 400px; margin: 4rem auto; }
+    </style>
+</head>
+<body>
+    <div id="loginContainer">
+        <h2>Admin Login</h2>
+        <input type="password" id="passwordInput" placeholder="Enter admin password">
+        <button id="loginBtn">Login</button>
+    </div>
+
+    <div id="editorContainer" class="hidden">
+        <h2>Article Editor</h2>
+        <div id="articleList"></div>
+        <hr style="border-color:#333; margin:1rem 0;">
+        <label>Slug (filename without .md)</label>
+        <input type="text" id="slugInput" placeholder="chrome-extension-in-android">
+        <label>Title</label>
+        <input type="text" id="titleInput">
+        <label>Date (YYYY-MM-DD)</label>
+        <input type="date" id="dateInput">
+        <label>Image path (e.g., images/chromeex.webp)</label>
+        <input type="text" id="imageInput">
+        <label>Categories (comma separated)</label>
+        <input type="text" id="catInput">
+        <label>Description</label>
+        <textarea id="descInput" rows="2"></textarea>
+        <label>Markdown content (without frontmatter)</label>
+        <textarea id="contentInput" rows="12"></textarea>
+        <button id="publishBtn">Publish</button>
+    </div>
+
+    <script>
+        var token = localStorage.getItem('admin_token');
+
+        function showEditor() {
+            document.getElementById('loginContainer').classList.add('hidden');
+            document.getElementById('editorContainer').classList.remove('hidden');
+            loadArticleList();
+        }
+
+        if (token) {
+            showEditor();
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', async function() {
+            var password = document.getElementById('passwordInput').value;
+            var res = await fetch('/api/verify-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: password })
+            });
+            if (res.ok) {
+                var data = await res.json();
+                token = data.token;
+                localStorage.setItem('admin_token', token);
+                showEditor();
+            } else {
+                alert('Wrong password');
+            }
+        });
+
+        async function loadArticleList() {
+            var res = await fetch('https://raw.githubusercontent.com/lildavegoth/lildavegoth/homepage/files/fetch/articles.json');
+            var data = await res.json();
+            var list = document.getElementById('articleList');
+            list.innerHTML = '<strong>Existing articles:</strong> ';
+            data.allArticles.forEach(function(art) {
+                var slug = art.link.split('slug=')[1]?.split('&')[0];
+                var a = document.createElement('a');
+                a.textContent = slug;
+                a.href = '#';
+                a.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    loadArticle(slug);
+                });
+                list.appendChild(a);
+                list.appendChild(document.createTextNode(' '));
+            });
+            var newLink = document.createElement('a');
+            newLink.textContent = '[ + New ]';
+            newLink.href = '#';
+            newLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                clearForm();
+            });
+            list.appendChild(newLink);
+        }
+
+        function clearForm() {
+            document.getElementById('slugInput').value = '';
+            document.getElementById('titleInput').value = '';
+            document.getElementById('dateInput').value = new Date().toISOString().slice(0,10);
+            document.getElementById('imageInput').value = '';
+            document.getElementById('catInput').value = '';
+            document.getElementById('descInput').value = '';
+            document.getElementById('contentInput').value = '';
+        }
+
+        async function loadArticle(slug) {
+            var res = await fetch('https://raw.githubusercontent.com/lildavegoth/lildavegoth/homepage/pages/articles/' + slug + '.md');
+            if (!res.ok) return alert('Article not found');
+            var raw = await res.text();
+            var parts = parseFrontmatter(raw);
+            document.getElementById('slugInput').value = slug;
+            document.getElementById('titleInput').value = parts.data.title || '';
+            document.getElementById('dateInput').value = parts.data.date || '';
+            document.getElementById('imageInput').value = parts.data.image || '';
+            document.getElementById('catInput').value = parts.data.categories || '';
+            document.getElementById('descInput').value = parts.data.description || '';
+            document.getElementById('contentInput').value = parts.content.trim();
+        }
+
+        function parseFrontmatter(md) {
+            var match = md.match(/^---\s*\n([\s\S]*?)\n---\s*\n/);
+            if (!match) return { data: {}, content: md };
+            var yamlBlock = match[1];
+            var content = md.substring(match[0].length);
+            var data = {};
+            yamlBlock.split('\n').forEach(function(line) {
+                var idx = line.indexOf(':');
+                if (idx > -1) {
+                    var key = line.substring(0, idx).trim();
+                    var value = line.substring(idx+1).trim().replace(/^["']|["']$/g, '');
+                    data[key] = value;
+                }
+            });
+            return { data: data, content: content };
+        }
+
+        document.getElementById('publishBtn').addEventListener('click', async function() {
+            var slug = document.getElementById('slugInput').value.trim();
+            if (!slug) return alert('Slug required');
+            var payload = {
+                slug: slug,
+                title: document.getElementById('titleInput').value,
+                date: document.getElementById('dateInput').value,
+                image: document.getElementById('imageInput').value,
+                description: document.getElementById('descInput').value,
+                categories: document.getElementById('catInput').value,
+                content: document.getElementById('contentInput').value
+            };
+
+            var res = await fetch('/api/publish-article', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                alert('Published!');
+            } else {
+                var err = await res.json();
+                alert('Error: ' + (err.error || 'Unknown'));
+            }
+        });
+    </script>
+</body>
+</html>
