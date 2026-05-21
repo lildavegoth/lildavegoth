@@ -21,10 +21,13 @@ module.exports = async (req, res) => {
     const branch = 'homepage';
     const ghToken = process.env.GH_TOKEN;
 
-    const fileContent = `---
+    const { author, profile } = req.body;
+const fileContent = `---
 title: "${title}"
 date: "${date}"
 image: "${image}"
+author: "${author || 'lildavegoth'}"
+profile: "${profile || 'https://t.me/lildavegoth'}"
 description: "${description}"
 categories: "${categories}"
 ---
