@@ -38,6 +38,7 @@ module.exports = async (req, res) => {
     let fileBuffer = null;
     let fileName = '';
     let fileError = '';
+    let customName = '';
 
     bb.on('file', (fieldname, file, info) => {
         if (fieldname !== 'image') {
@@ -45,12 +46,11 @@ module.exports = async (req, res) => {
             fileError = 'Wrong field name';
             return;
         }
-        if (!info.filename.toLowerCase().endsWith('.webp')) {
-            file.resume();
-            fileError = 'Only .webp files allowed';
-            return;
+        const originalName = info.filename;
+        fileName = customName || originalName;
+        if (!fileName.toLowerCase().endsWith('.webp')) {
+            fileName += '.webp';
         }
-        fileName = info.filename;
         const chunks = [];
         file.on('data', (chunk) => chunks.push(chunk));
         file.on('end', () => {
@@ -58,7 +58,11 @@ module.exports = async (req, res) => {
         });
     });
 
-    bb.on('field', () => {});
+    bb.on('field', (fieldname, val) => {
+        if (fieldname === 'customName') {
+            customName = val.trim();
+        }
+    });
     bb.on('error', () => {
         res.status(500).json({ error: 'Upload error' });
     });
