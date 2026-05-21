@@ -4,58 +4,303 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Article Editor | lildavegoth</title>
+    <script src="../../protections.js"></script>
+    <script src="../../notification.cssjs"></script>
+    <link rel="stylesheet" href="../../media.css">
+    <meta name="color-scheme" content="dark">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        body { background: #000; color: #f5f5f7; min-height: 100vh; padding: 2rem; }
-        input, textarea, button { font-size: 1rem; border-radius: 12px; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.8); color: #f5f5f7; margin-bottom: 1rem; width: 100%; }
-        button { background: #C1FC32; color: #000; font-weight: 600; cursor: pointer; border: none; }
-        button:hover { opacity: 0.9; }
-        .hidden { display: none; }
-        #articleList { margin-bottom: 2rem; }
-        #articleList a { color: #C1FC32; text-decoration: none; margin-right: 1rem; cursor: pointer; }
-        #loginContainer { max-width: 400px; margin: 4rem auto; }
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 90px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+            min-height: calc(100vh - 90px);
+        }
+
+        h2 {
+            color: var(--text-primary);
+            font-size: 1.8rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #loginContainer {
+            max-width: 400px;
+            margin: 6rem auto;
+            padding: var(--spacing-md);
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        #loginContainer input {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: var(--spacing-sm);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        #loginContainer button {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        #loginContainer button:hover {
+            opacity: 0.85;
+        }
+
+        .articles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: var(--spacing-sm);
+        }
+
+        .article-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            border: 1px solid rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .article-card:hover {
+            background: rgba(40, 40, 40, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .article-card .card-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .article-card .card-slug {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            color: #000;
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(193,252,50,0.3);
+            z-index: 20;
+        }
+
+        .fab:hover {
+            opacity: 0.9;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--accent-color);
+            text-decoration: none;
+            margin-bottom: var(--spacing-md);
+            font-weight: 500;
+        }
+
+        .back-link i {
+            font-size: 0.9em;
+        }
+
+        form, .editor-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: -4px;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 1rem;
+            resize: none;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(193,252,50,0.15);
+        }
+
+        textarea {
+            min-height: 80px;
+        }
+
+        #contentInput {
+            min-height: 300px;
+        }
+
+        button[type="submit"],
+        #publishBtn {
+            padding: 12px 24px;
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            align-self: flex-start;
+        }
+
+        button[type="submit"]:hover,
+        #publishBtn:hover {
+            opacity: 0.85;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            margin: var(--spacing-md) 0;
+        }
     </style>
 </head>
 <body>
-    <div id="loginContainer">
-        <h2>Admin Login</h2>
-        <input type="password" id="passwordInput" placeholder="Enter admin password">
-        <button id="loginBtn">Login</button>
-    </div>
+    <div class="container">
+        <div id="loginContainer">
+            <h2>Admin Login</h2>
+            <input type="password" id="passwordInput" placeholder="Enter admin password">
+            <button id="loginBtn">Login</button>
+        </div>
 
-    <div id="editorContainer" class="hidden">
-        <h2>Article Editor</h2>
-        <div id="articleList"></div>
-        <hr style="border-color:#333; margin:1rem 0;">
-        <label>Slug (filename without .md)</label>
-        <input type="text" id="slugInput" placeholder="chrome-extension-in-android">
-        <label>Title</label>
-        <input type="text" id="titleInput">
-        <label>Date (YYYY-MM-DD)</label>
-        <input type="date" id="dateInput">
-        <label>Image path (e.g., images/chromeex.webp)</label>
-        <input type="text" id="imageInput">
-        <label>Categories (comma separated)</label>
-        <input type="text" id="catInput">
-        <label>Description</label>
-        <textarea id="descInput" rows="2"></textarea>
-        <label>Markdown content (without frontmatter)</label>
-        <textarea id="contentInput" rows="12"></textarea>
-        <button id="publishBtn">Publish</button>
+        <div id="homeContainer" class="hidden">
+            <h2>Articles</h2>
+            <div class="articles-grid" id="articleList"></div>
+            <button class="fab" id="fabAdd">+</button>
+        </div>
+
+        <div id="editorContainer" class="hidden">
+            <a href="#" id="backToHome" class="back-link"><i class="fas fa-arrow-left"></i> Back to articles</a>
+            <h2>Article Editor</h2>
+            <div class="editor-form">
+                <label for="slugInput">Slug (filename without .md)</label>
+                <input type="text" id="slugInput" placeholder="chrome-extension-in-android">
+
+                <label for="titleInput">Title</label>
+                <input type="text" id="titleInput" placeholder="Article title">
+
+                <label for="dateInput">Date (YYYY-MM-DD)</label>
+                <input type="date" id="dateInput">
+
+                <label for="imageInput">Image path</label>
+                <input type="text" id="imageInput" placeholder="images/chromeex.webp">
+
+                <label for="catInput">Categories (comma separated)</label>
+                <input type="text" id="catInput" placeholder="Tutorials, Design">
+
+                <label for="descInput">Description</label>
+                <textarea id="descInput" rows="3" placeholder="A short description..."></textarea>
+
+                <label for="contentInput">Markdown content (without frontmatter)</label>
+                <textarea id="contentInput" rows="22" placeholder="Write your Markdown here..."></textarea>
+
+                <button id="publishBtn">Publish</button>
+            </div>
+        </div>
     </div>
 
     <script>
         var token = localStorage.getItem('admin_token');
 
-        function showEditor() {
+        function showHome() {
             document.getElementById('loginContainer').classList.add('hidden');
-            document.getElementById('editorContainer').classList.remove('hidden');
+            document.getElementById('homeContainer').classList.remove('hidden');
+            document.getElementById('editorContainer').classList.add('hidden');
             loadArticleList();
         }
 
+        function goToEditor(slug) {
+            document.getElementById('homeContainer').classList.add('hidden');
+            document.getElementById('editorContainer').classList.remove('hidden');
+            if (slug) {
+                loadArticle(slug);
+            } else {
+                clearForm();
+            }
+        }
+
         if (token) {
-            showEditor();
+            showHome();
         }
 
         document.getElementById('loginBtn').addEventListener('click', async function() {
@@ -69,37 +314,37 @@
                 var data = await res.json();
                 token = data.token;
                 localStorage.setItem('admin_token', token);
-                showEditor();
+                showHome();
             } else {
                 alert('Wrong password');
             }
+        });
+
+        document.getElementById('fabAdd').addEventListener('click', function() {
+            goToEditor(null);
+        });
+
+        document.getElementById('backToHome').addEventListener('click', function(e) {
+            e.preventDefault();
+            showHome();
         });
 
         async function loadArticleList() {
             var res = await fetch('https://raw.githubusercontent.com/lildavegoth/lildavegoth/homepage/files/fetch/articles.json');
             var data = await res.json();
             var list = document.getElementById('articleList');
-            list.innerHTML = '<strong>Existing articles:</strong> ';
+            list.innerHTML = '';
             data.allArticles.forEach(function(art) {
                 var slug = art.link.split('slug=')[1]?.split('&')[0];
-                var a = document.createElement('a');
-                a.textContent = slug;
-                a.href = '#';
-                a.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    loadArticle(slug);
+                if (!slug) return;
+                var card = document.createElement('div');
+                card.className = 'article-card';
+                card.innerHTML = '<div class="card-title">' + art.name + '</div><div class="card-slug">' + slug + '</div>';
+                card.addEventListener('click', function() {
+                    goToEditor(slug);
                 });
-                list.appendChild(a);
-                list.appendChild(document.createTextNode(' '));
+                list.appendChild(card);
             });
-            var newLink = document.createElement('a');
-            newLink.textContent = '[ + New ]';
-            newLink.href = '#';
-            newLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                clearForm();
-            });
-            list.appendChild(newLink);
         }
 
         function clearForm() {
@@ -166,6 +411,7 @@
             });
             if (res.ok) {
                 alert('Published!');
+                showHome();
             } else {
                 var err = await res.json();
                 alert('Error: ' + (err.error || 'Unknown'));
