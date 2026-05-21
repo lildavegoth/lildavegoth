@@ -13,7 +13,9 @@ This guides will not use normal Chrome from Play Store, but using an Open Source
 
 
 # Guides →
+
 > **Enable Extensions Feature**
+
 1. Download and install [Cromite](https://github.com/uazo/cromite) app from GitHub Release
 2. Open **Cromite** and allow all asked permissions
 3. Open **Cromite Settings** and scroll to the bottom and click **Developer Options**
@@ -21,6 +23,7 @@ This guides will not use normal Chrome from Play Store, but using an Open Source
 5. Close or Relaunch Cromite app to load full Extensions system (**MUST FOLLOW THIS STEP**)
 
 > **Install Extensions**
+
 1. Go to Cromite Home and open [Chrome Web Extensions Store](https://chromewebstore.google.com)
 2. Choose whatever **Extensions** you want and click **Add to Chrome** button to install
 3. The popup will appear to confirm **Installations**, click **Add extension** and the Extension will be installed after the download is completed
