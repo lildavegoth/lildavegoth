@@ -12,7 +12,7 @@ categories: "Tutorials, Recommended, Open Source"
 2. Click download button and scroll to the variants selection (If you confused, see the screenshot below of which one the Variants Selection is)
 ![microGPlus Selection Variants](images/variants.webp)
 3. Select the variants as you like (You can check the details on the website but you can also see it on the image below)
-![microGPlus Package Comparison](images/microgpackage)
+![microGPlus Package Comparison](images/microgpackage.webp)
 4. After select your variant, click the Download button to download the file
 5. The last, open **Magisk** app and install the module as usual
 # Notes →
