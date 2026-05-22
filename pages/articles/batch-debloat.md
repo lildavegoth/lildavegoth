@@ -54,7 +54,7 @@ It's pretty simple right? you just need the basic command, and the package name 
 ^^^method1hide^^^
 
 ^^^method2hide^^^
-# Method 2 →
+# Method Two →
 The second Method is using App Manager by Muntashir Al-Islam, this method are way more different but more easier.
 # Guides →
 > **App Setup**
