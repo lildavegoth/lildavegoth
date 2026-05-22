@@ -113,8 +113,6 @@ Did you know? You can search an images inside of Pinterest app.
 2. Then you'll see a camera icon on the top right of your screen
 3. Click on it and open the gallery menu to upload and search the image on Pinterest
 
----
-
 # Carousel Posts →
 Did you know? You can upload 5 images to Pinterest at a time at one post on mobile devices like a **Carousel Images**.
 
