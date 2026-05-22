@@ -95,4 +95,5 @@ Some apps that doesn't recommended to be Debloated
 	- **Media**: com.google.android.providers.media.module | com.android.providers.media
 	- **Phone & Messaging**: com.android.providers.telephony
 # Notes →
-If your device forced rebooted to recovery and got a “rescue_party” message on logs, you've been uninstalled the wrong app that system needed it, uninstall magisk to fix, you can use tools from your custom recovery or, use **Magisk Uninstaller** file (This method not always works)
+If your device forced rebooted to recovery and got a “rescue_party” message on logs, you've been uninstalled the wrong app that system needed it, uninstall magisk to fix, you can use tools from your custom recovery or, use **Magisk** uninstaller.zip file (This method not always works)
+- Rename your magisk.zip file to uninstaller.zip and then flash it on custom recovery
