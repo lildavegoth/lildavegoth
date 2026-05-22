@@ -7,7 +7,6 @@ profile: "https://t.me/lildavegoth"
 description: "Still using Debloater apps and modules? Why bother restarting your device to uninstall system apps when you can do it just by copy and paste text? Restart device after Debloating apps is unnecessary, but..."
 categories: "Tutorials, App, Useful"
 ---
-
 Still using Debloater apps and modules? Why bother restarting your device to uninstall system apps when you can do it just by copy and paste text?
 
 Restart device after Debloating apps is unnecessary, but when you use a **Magisk** module to Debloat system apps, of course you need to reboot your device to make the module run and activated.
@@ -87,13 +86,13 @@ If there's any apps that you might use but has been Debloated, don't worry becau
 ^^^method2hide^^^
 
 # Not Recommended →
-Some apps that doesn't recommend to be Debloated
-- Downloads Manager: com.android.providers.downloads | com.android.providers.downloads.ui [Causing Media Picker crashed when moving, copying, deleting files to or from Download folder]
-- MIUI Find Device: com.xiaomi.finddevice [Will be so many popups that telling your device is broken or something]
-- Apps Storages [Causing crashed to apps that needs permissions from above apps]
-- Calendar: com.android.providers.calendar
-- Contacts: com.android.providers.contacts
-- Media: com.google.android.providers.media.module | com.android.providers.media
-- Phone & Messaging: com.android.providers.telephony
+Some apps that doesn't recommended to be Debloated
+- **Downloads Manager**: com.android.providers.downloads | com.android.providers.downloads.ui [**Causing Media Picker crashed when moving, copying, deleting files to or from Download folder**]
+- **MIUI Find Device**: com.xiaomi.finddevice [**Will be so many popups that telling your device is broken or something**]
+- **Apps Storages** [**Causing crashed to apps that needs permissions**], Such as:
+	- **Calendar**: com.android.providers.calendar
+	- **Contacts**: com.android.providers.contacts
+	- **Media**: com.google.android.providers.media.module | com.android.providers.media
+	- **Phone & Messaging**: com.android.providers.telephony
 # Notes →
 If your device forced rebooted to recovery and got a “rescue_party” message on logs, you uninstalled the wrong app that system needed it, uninstall magisk to fix (Use tools from your custom recovery or, use **Magisk Uninstaller** file)
