@@ -14,8 +14,8 @@ Restart device after Debloating apps is unnecessary, but when you use a **Magisk
 
 # Methods
 Choose your own methods for the tutorials
-- `[Method One — Terminal Emulator](^^^method1show^^^)`
-- `[Method Two — App Manager](^^^method2show^^^)`
+- `[Method One — Terminal Emulator →](^^^method1show^^^)`
+- `[Method Two — App Manager →](^^^method2show^^^)`
 
 ^^^method1hide^^^
 # Method One →
