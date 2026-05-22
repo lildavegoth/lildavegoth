@@ -123,7 +123,7 @@
             pointer-events: auto;
             text-decoration: none;
         }
-        
+
         .user-pill i {
             transform: rotate(-45deg);
             display: inline-block;
@@ -172,7 +172,8 @@
             color: var(--accent-color);
         }
 
-        #articleContent ul, #articleContent ol {
+        #articleContent ul,
+        #articleContent ol {
             padding-left: 1.5rem;
             margin: 0.5rem 0;
         }
@@ -244,8 +245,12 @@
             margin: 1.5rem 0;
         }
 
-        #articleContent h1, #articleContent h2, #articleContent h3,
-        #articleContent h4, #articleContent h5, #articleContent h6 {
+        #articleContent h1,
+        #articleContent h2,
+        #articleContent h3,
+        #articleContent h4,
+        #articleContent h5,
+        #articleContent h6 {
             margin-top: 1.5rem !important;
             margin-bottom: 0.5rem;
         }
@@ -434,10 +439,21 @@
             margin: 0;
         }
 
-        .callout-note .callout-title { color: #7cb8ff; }
-        .callout-warning .callout-title { color: #ffb86c; }
-        .callout-tip .callout-title { color: #50fa7b; }
-        .callout-default .callout-title { color: var(--accent-color); }
+        .callout-note .callout-title {
+            color: #7cb8ff;
+        }
+
+        .callout-warning .callout-title {
+            color: #ffb86c;
+        }
+
+        .callout-tip .callout-title {
+            color: #50fa7b;
+        }
+
+        .callout-default .callout-title {
+            color: var(--accent-color);
+        }
 
         .custom-quote {
             background: var(--bg-card);
@@ -475,7 +491,6 @@
         .toggle-block {
             display: none;
             margin: 1rem 0;
-            padding-left: 0;
         }
 
         .toggle-link {
@@ -520,7 +535,7 @@
                 max-width: none;
             }
         }
-        
+
         .declaration-text {
             position: absolute;
             bottom: 54px;
@@ -536,7 +551,7 @@
             z-index: 1;
             pointer-events: none;
         }
-        
+
         .arrow-icon {
             font-size: 0.75em;
         }
@@ -679,10 +694,8 @@
 
         function enhanceTableCellMarkdown(container) {
             var cells = container.querySelectorAll('td, th');
-        
             cells.forEach(function(cell) {
                 var raw = cell.innerHTML.trim();
-        
                 if (raw.includes('\\n')) {
                     raw = raw.replace(/\\n/g, '\n');
                     cell.innerHTML = marked.parse(raw);
@@ -692,37 +705,33 @@
 
         function enhanceCallouts(container) {
             var blockquotes = container.querySelectorAll('blockquote');
-        
             blockquotes.forEach(function(blockquote) {
                 var lines = blockquote.innerHTML
                     .replace(/<\/p>\s*<p>/gi, '\n')
                     .replace(/<br\s*\/?>/gi, '\n')
                     .replace(/<\/?p>/gi, '')
                     .split('\n')
-                    .map(function(line){ return line.trim(); })
-                    .filter(function(line){ return line; });
-        
+                    .map(function(line) { return line.trim(); })
+                    .filter(function(line) { return line; });
+
                 if (!lines.length) return;
-        
+
                 var match = lines[0].match(/^\[!(.*?)\]\s*(.*)$/i);
                 if (!match) return;
-        
+
                 var typeSelector = match[1].trim();
                 var titleText = match[2].trim();
                 var typeLower = typeSelector.toLowerCase();
-        
+
                 var callout = document.createElement('div');
                 callout.className = 'callout callout-' + (
-                    ['note','warning','tip'].includes(typeLower)
-                    ? typeLower
-                    : 'default'
+                    ['note', 'warning', 'tip'].includes(typeLower) ? typeLower : 'default'
                 );
-        
+
                 var titleDiv = document.createElement('div');
                 titleDiv.className = 'callout-title';
-        
+
                 var iconHTML = '<i class="fas fa-circle-info"></i>';
-        
                 if (typeLower === 'warning') {
                     iconHTML = '<i class="fas fa-triangle-exclamation"></i>';
                 } else if (typeLower === 'tip') {
@@ -730,21 +739,21 @@
                 } else if (/^fa[srlbd]?\s+fa-/.test(typeSelector)) {
                     iconHTML = '<i class="' + typeSelector + '"></i>';
                 }
-        
+
                 titleDiv.innerHTML = iconHTML + ' ' + titleText;
-        
+
                 var contentDiv = document.createElement('div');
                 contentDiv.className = 'callout-content';
-        
+
                 for (var i = 1; i < lines.length; i++) {
                     var p = document.createElement('p');
                     p.innerHTML = lines[i];
                     contentDiv.appendChild(p);
                 }
-        
+
                 callout.appendChild(titleDiv);
                 callout.appendChild(contentDiv);
-        
+
                 blockquote.parentNode.replaceChild(callout, blockquote);
             });
         }
@@ -793,22 +802,20 @@
 
         function replaceCheckedCheckboxes(container) {
             var checkboxes = container.querySelectorAll('input[type="checkbox"]');
-        
             checkboxes.forEach(function(input) {
                 var li = input.closest('li');
                 if (!li) return;
-        
+
                 li.classList.add('task-list-item');
-        
+
                 if (input.checked) {
                     var icon = document.createElement('i');
                     icon.className = 'fas fa-circle-check checked-icon';
-        
+
                     var strike = document.createElement('span');
                     strike.className = 'task-strike';
-        
+
                     var text = '';
-        
                     var node = input.nextSibling;
                     while (node) {
                         text += node.textContent || '';
@@ -816,9 +823,8 @@
                         node.remove();
                         node = next;
                     }
-        
+
                     strike.textContent = text.trim();
-        
                     input.replaceWith(icon);
                     li.appendChild(strike);
                 }
@@ -826,31 +832,18 @@
         }
 
         function processHideTokens(html) {
-            var startTag = '<p>^^^';
-            while (html.indexOf(startTag) !== -1) {
-                var startIdx = html.indexOf(startTag);
-                var endIdx = html.indexOf('hide^^^</p>', startIdx);
-                if (endIdx === -1) break;
-                var idStart = startIdx + startTag.length;
-                var id = html.substring(idStart, endIdx);
-                var startFullTag = '<p>^^^' + id + 'hide^^^</p>';
-                var contentStart = startIdx + startFullTag.length;
-                var contentEnd = html.indexOf(startFullTag, contentStart);
-                if (contentEnd === -1) break;
-                var innerContent = html.substring(contentStart, contentEnd);
-                var wrapper = '<div class="toggle-block" id="toggle-' + id + '" style="display:none;">' + innerContent + '</div>';
-                html = html.substring(0, startIdx) + wrapper + html.substring(contentEnd + startFullTag.length);
-            }
-            return html;
+            var regex = /<p>\^\^\^([a-zA-Z0-9]+)hide\^\^\^<\/p>([\s\S]*?)<p>\^\^\^\1hide\^\^\^<\/p>/g;
+            return html.replace(regex, function(match, id, content) {
+                return '<div class="toggle-block" id="toggle-' + id + '" style="display:none;">' + content + '</div>';
+            });
         }
 
         function enhanceShowLinks(container) {
-            var links = container.querySelectorAll('a[href^="^^^"]');
+            var links = container.querySelectorAll('a');
             links.forEach(function(a) {
                 var href = a.getAttribute('href');
-                var match = href.match(/^\^\^\^(.*?)show\^\^\^$/);
-                if (match) {
-                    var id = match[1];
+                if (href && /^\^\^\^[a-zA-Z0-9]+show\^\^\^$/.test(href)) {
+                    var id = href.replace('^^^^', '').replace('show^^^', '');
                     var span = document.createElement('span');
                     span.className = 'toggle-link';
                     span.setAttribute('data-target', 'toggle-' + id);
@@ -983,7 +976,7 @@
                 document.getElementById('articleContent').innerHTML = processedHtml;
                 document.getElementById('wordCount').textContent = article.wordCount + ' words';
                 document.title = article.title + ' | lildavegoth';
-                
+
                 var pill = document.getElementById('telegramUser');
                 if (pill) {
                     pill.innerHTML = '<i class="fas fa-arrow-right"></i> ' + (article.author || 'lildavegoth');
