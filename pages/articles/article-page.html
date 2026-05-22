@@ -123,7 +123,7 @@
             pointer-events: auto;
             text-decoration: none;
         }
-
+        
         .user-pill i {
             transform: rotate(-45deg);
             display: inline-block;
@@ -172,8 +172,7 @@
             color: var(--accent-color);
         }
 
-        #articleContent ul,
-        #articleContent ol {
+        #articleContent ul, #articleContent ol {
             padding-left: 1.5rem;
             margin: 0.5rem 0;
         }
@@ -245,12 +244,8 @@
             margin: 1.5rem 0;
         }
 
-        #articleContent h1,
-        #articleContent h2,
-        #articleContent h3,
-        #articleContent h4,
-        #articleContent h5,
-        #articleContent h6 {
+        #articleContent h1, #articleContent h2, #articleContent h3,
+        #articleContent h4, #articleContent h5, #articleContent h6 {
             margin-top: 1.5rem !important;
             margin-bottom: 0.5rem;
         }
@@ -439,21 +434,10 @@
             margin: 0;
         }
 
-        .callout-note .callout-title {
-            color: #7cb8ff;
-        }
-
-        .callout-warning .callout-title {
-            color: #ffb86c;
-        }
-
-        .callout-tip .callout-title {
-            color: #50fa7b;
-        }
-
-        .callout-default .callout-title {
-            color: var(--accent-color);
-        }
+        .callout-note .callout-title { color: #7cb8ff; }
+        .callout-warning .callout-title { color: #ffb86c; }
+        .callout-tip .callout-title { color: #50fa7b; }
+        .callout-default .callout-title { color: var(--accent-color); }
 
         .custom-quote {
             background: var(--bg-card);
@@ -486,18 +470,6 @@
             font-size: 1.1em;
             vertical-align: middle;
             margin-right: 0.5em;
-        }
-
-        .toggle-block {
-            display: none;
-            margin: 1rem 0;
-        }
-
-        .toggle-link {
-            color: var(--accent-color);
-            cursor: pointer;
-            text-decoration: underline;
-            text-underline-offset: 2px;
         }
 
         .divider {
@@ -535,7 +507,7 @@
                 max-width: none;
             }
         }
-
+        
         .declaration-text {
             position: absolute;
             bottom: 54px;
@@ -551,7 +523,7 @@
             z-index: 1;
             pointer-events: none;
         }
-
+        
         .arrow-icon {
             font-size: 0.75em;
         }
@@ -694,8 +666,10 @@
 
         function enhanceTableCellMarkdown(container) {
             var cells = container.querySelectorAll('td, th');
+        
             cells.forEach(function(cell) {
                 var raw = cell.innerHTML.trim();
+        
                 if (raw.includes('\\n')) {
                     raw = raw.replace(/\\n/g, '\n');
                     cell.innerHTML = marked.parse(raw);
@@ -705,33 +679,37 @@
 
         function enhanceCallouts(container) {
             var blockquotes = container.querySelectorAll('blockquote');
+        
             blockquotes.forEach(function(blockquote) {
                 var lines = blockquote.innerHTML
                     .replace(/<\/p>\s*<p>/gi, '\n')
                     .replace(/<br\s*\/?>/gi, '\n')
                     .replace(/<\/?p>/gi, '')
                     .split('\n')
-                    .map(function(line) { return line.trim(); })
-                    .filter(function(line) { return line; });
-
+                    .map(function(line){ return line.trim(); })
+                    .filter(function(line){ return line; });
+        
                 if (!lines.length) return;
-
+        
                 var match = lines[0].match(/^\[!(.*?)\]\s*(.*)$/i);
                 if (!match) return;
-
+        
                 var typeSelector = match[1].trim();
                 var titleText = match[2].trim();
                 var typeLower = typeSelector.toLowerCase();
-
+        
                 var callout = document.createElement('div');
                 callout.className = 'callout callout-' + (
-                    ['note', 'warning', 'tip'].includes(typeLower) ? typeLower : 'default'
+                    ['note','warning','tip'].includes(typeLower)
+                    ? typeLower
+                    : 'default'
                 );
-
+        
                 var titleDiv = document.createElement('div');
                 titleDiv.className = 'callout-title';
-
+        
                 var iconHTML = '<i class="fas fa-circle-info"></i>';
+        
                 if (typeLower === 'warning') {
                     iconHTML = '<i class="fas fa-triangle-exclamation"></i>';
                 } else if (typeLower === 'tip') {
@@ -739,21 +717,21 @@
                 } else if (/^fa[srlbd]?\s+fa-/.test(typeSelector)) {
                     iconHTML = '<i class="' + typeSelector + '"></i>';
                 }
-
+        
                 titleDiv.innerHTML = iconHTML + ' ' + titleText;
-
+        
                 var contentDiv = document.createElement('div');
                 contentDiv.className = 'callout-content';
-
+        
                 for (var i = 1; i < lines.length; i++) {
                     var p = document.createElement('p');
                     p.innerHTML = lines[i];
                     contentDiv.appendChild(p);
                 }
-
+        
                 callout.appendChild(titleDiv);
                 callout.appendChild(contentDiv);
-
+        
                 blockquote.parentNode.replaceChild(callout, blockquote);
             });
         }
@@ -802,20 +780,22 @@
 
         function replaceCheckedCheckboxes(container) {
             var checkboxes = container.querySelectorAll('input[type="checkbox"]');
+        
             checkboxes.forEach(function(input) {
                 var li = input.closest('li');
                 if (!li) return;
-
+        
                 li.classList.add('task-list-item');
-
+        
                 if (input.checked) {
                     var icon = document.createElement('i');
                     icon.className = 'fas fa-circle-check checked-icon';
-
+        
                     var strike = document.createElement('span');
                     strike.className = 'task-strike';
-
+        
                     var text = '';
+        
                     var node = input.nextSibling;
                     while (node) {
                         text += node.textContent || '';
@@ -823,38 +803,11 @@
                         node.remove();
                         node = next;
                     }
-
+        
                     strike.textContent = text.trim();
+        
                     input.replaceWith(icon);
                     li.appendChild(strike);
-                }
-            });
-        }
-
-        function processHideTokens(html) {
-            var regex = /<p>\^\^\^([a-zA-Z0-9]+)hide\^\^\^<\/p>([\s\S]*?)<p>\^\^\^\1hide\^\^\^<\/p>/g;
-            return html.replace(regex, function(match, id, content) {
-                return '<div class="toggle-block" id="toggle-' + id + '" style="display:none;">' + content + '</div>';
-            });
-        }
-
-        function enhanceShowLinks(container) {
-            var links = container.querySelectorAll('a');
-            links.forEach(function(a) {
-                var href = a.getAttribute('href');
-                if (href && /^\^\^\^[a-zA-Z0-9]+show\^\^\^$/.test(href)) {
-                    var id = href.replace('^^^^', '').replace('show^^^', '');
-                    var span = document.createElement('span');
-                    span.className = 'toggle-link';
-                    span.setAttribute('data-target', 'toggle-' + id);
-                    span.textContent = a.textContent;
-                    span.onclick = function() {
-                        var block = document.getElementById('toggle-' + id);
-                        if (block) {
-                            block.style.display = block.style.display === 'none' ? 'block' : 'none';
-                        }
-                    };
-                    a.parentNode.replaceChild(span, a);
                 }
             });
         }
@@ -869,7 +822,6 @@
             enhanceTables(content);
             enhanceTableCellMarkdown(content);
             enhanceCustomQuotes(content);
-            enhanceShowLinks(content);
 
             var dividerImg = document.createElement('img');
             dividerImg.src = 'images/divider.webp';
@@ -950,6 +902,41 @@
                 contentDiv.appendChild(pre);
             });
         }
+        
+        function processHideBlocks(html) {
+            var groups = {};
+    
+            html = html.replace(/\^\^\^([a-zA-Z]+[0-9]+)hide\^\^\^([\s\S]*?)\^\^\^\1hide\^\^\^/g, function(match, key, content) {
+                groups[key] = content;
+                return '<div id="hide-' + key + '" style="display:none;">' + content + '</div>';
+            });
+    
+            html = html.replace(/<a href="\^\^\^([a-zA-Z]+[0-9]+)show\^\^\^">(.*?)<\/a>/g, function(match, key, text) {
+                return '<a href="#" data-toggle="' + key + '">' + text + '</a>';
+            });
+    
+            return html;
+        }
+    
+        function setupHideToggles(container) {
+            var toggles = container.querySelectorAll('[data-toggle]');
+    
+            toggles.forEach(function(toggle) {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+    
+                    var key = toggle.getAttribute('data-toggle');
+                    var block = document.getElementById('hide-' + key);
+    
+                    if (!block) return;
+    
+                    block.style.display =
+                        block.style.display === 'none'
+                            ? 'block'
+                            : 'none';
+                });
+            });
+        }
 
         async function loadArticle() {
             var params = new URLSearchParams(window.location.search);
@@ -972,11 +959,12 @@
                 var month = dateObj.toLocaleString('default', { month: 'short' });
                 document.getElementById('datePill').textContent = day + ' ' + month;
 
-                var processedHtml = processHideTokens(article.html);
-                document.getElementById('articleContent').innerHTML = processedHtml;
+                var processed = processHideBlocks(article.html);
+                document.getElementById('articleContent').innerHTML = processed;
+                setupHideToggles(document.getElementById('articleContent'));
                 document.getElementById('wordCount').textContent = article.wordCount + ' words';
                 document.title = article.title + ' | lildavegoth';
-
+                
                 var pill = document.getElementById('telegramUser');
                 if (pill) {
                     pill.innerHTML = '<i class="fas fa-arrow-right"></i> ' + (article.author || 'lildavegoth');
