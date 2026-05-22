@@ -39,7 +39,10 @@ For some users who doesn't and not using a Keyboard with auto save learned word,
 # Notes →
 **UDM** is great right? I've been use **UDM** since January 2025 and even still using it right now in Android 16 device.
 **UDM** is useful indeed, but it can also be annoying sometimes..
-If **UDM** still activated as **On Screen Keyboard** and you accidentally click switch keyboard, it will automatically switched the keyboard to **UDM**, but **UDM** is not a real keyboard app at all, so you'll not be able to typing anything and you MUST go to the system settings and switch back the keyboard to your own real keyboard app. To prevent this problem, use **UDM** only when you needed and always to disable **UDM** as **On Screen Keyboard**. You can also use my replicated **UDM** app from [Kakoi Kiraku Home](https://kakoi-kiraku-home.vercel.app/pages/dictionary-manager.html).
+
+If **UDM** still activated as **On Screen Keyboard** and you accidentally click switch keyboard, it will automatically switched the keyboard to **UDM**, but **UDM** is not a real keyboard app at all, so you'll not be able to typing anything and you MUST go to the system settings and switch back the keyboard to your own real keyboard app.
+
+To prevent this problem, use **UDM** only when you needed and always to disable **UDM** as **On Screen Keyboard**. You can also use my replicated **UDM** app from [Kakoi Kiraku Home](https://kakoi-kiraku-home.vercel.app/pages/dictionary-manager.html).
 
 # [Dictionary Manager →](https://kakoi-kiraku-home.vercel.app/pages/dictionary-manager.html)
 My **Dictionary Manager** app was meant to prevent how annoying **UDM** does, it has exactly the same and persistence as real **UDM** app but you don't need to set as **On Screen Keyboard** to use this, you can just **Import** your backed up .txt file from **UDM** and then you can manage it from **Dictionary Manager**.
