@@ -198,6 +198,7 @@
 
         input[type="text"],
         input[type="date"],
+        input[type="number"],
         textarea {
             width: 100%;
             padding: 12px 16px;
@@ -232,6 +233,7 @@
 
         input[type="text"]:focus,
         input[type="date"]:focus,
+        input[type="number"]:focus,
         textarea:focus {
             outline: none;
             border-color: var(--accent-color);
@@ -268,6 +270,32 @@
             color: var(--text-secondary);
             font-size: 1.2rem;
             pointer-events: none;
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 8px 0;
+            border-radius: var(--radius-small);
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-align: center;
+            transition: background 0.2s, color 0.2s;
+            user-select: none;
+        }
+
+        .toggle-btn.active {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
         }
 
         .button-group {
@@ -566,6 +594,16 @@
                 <label for="catInput">Categories (comma separated)</label>
                 <input type="text" id="catInput" placeholder="Tutorials, Design">
 
+                <label>Special Badge</label>
+                <div class="toggle-group">
+                    <button class="toggle-btn" data-badge="featured" id="btnFeatured">Featured</button>
+                    <button class="toggle-btn" data-badge="highlight" id="btnHighlight">Highlight</button>
+                </div>
+                <div id="highlightNumberGroup" class="hidden">
+                    <label for="highlightNumber">Highlight Number</label>
+                    <input type="number" id="highlightNumber" placeholder="1" min="1">
+                </div>
+
                 <label for="descInput">Description</label>
                 <textarea id="descInput" rows="3" placeholder="A short description..."></textarea>
 
@@ -605,6 +643,38 @@
         var deleteCooldown = false;
         var selectedImageFile = null;
         var isEditing = false;
+        var selectedBadge = '';
+
+        var btnFeatured = document.getElementById('btnFeatured');
+        var btnHighlight = document.getElementById('btnHighlight');
+        var highlightNumberGroup = document.getElementById('highlightNumberGroup');
+        var highlightNumberInput = document.getElementById('highlightNumber');
+
+        btnFeatured.addEventListener('click', function() {
+            if (btnFeatured.classList.contains('active')) {
+                btnFeatured.classList.remove('active');
+                selectedBadge = '';
+                highlightNumberGroup.classList.add('hidden');
+            } else {
+                btnFeatured.classList.add('active');
+                btnHighlight.classList.remove('active');
+                selectedBadge = 'featured';
+                highlightNumberGroup.classList.add('hidden');
+            }
+        });
+
+        btnHighlight.addEventListener('click', function() {
+            if (btnHighlight.classList.contains('active')) {
+                btnHighlight.classList.remove('active');
+                selectedBadge = '';
+                highlightNumberGroup.classList.add('hidden');
+            } else {
+                btnHighlight.classList.add('active');
+                btnFeatured.classList.remove('active');
+                selectedBadge = 'highlight';
+                highlightNumberGroup.classList.remove('hidden');
+            }
+        });
 
         function showHome() {
             document.getElementById('loginContainer').classList.add('hidden');
@@ -696,7 +766,7 @@
         async function loadArticleList() {
             var res = await fetch('https://raw.githubusercontent.com/lildavegoth/lildavegoth/homepage/files/fetch/articles.json?t=' + Date.now());
             var data = await res.json();
-            articlesData = data.allArticles;
+            articlesData = Array.isArray(data) ? data : data.allArticles;
             renderArticleCards(articlesData);
         }
 
@@ -728,6 +798,11 @@
             document.getElementById('contentInput').value = '';
             document.getElementById('imageFileInput').value = '';
             selectedImageFile = null;
+            btnFeatured.classList.remove('active');
+            btnHighlight.classList.remove('active');
+            selectedBadge = '';
+            highlightNumberInput.value = '';
+            highlightNumberGroup.classList.add('hidden');
         }
 
         async function loadArticle(slug) {
@@ -748,6 +823,22 @@
             document.getElementById('catInput').value = parts.data.categories || '';
             document.getElementById('descInput').value = parts.data.description || '';
             document.getElementById('contentInput').value = parts.content.trim();
+
+            var badge = parts.data.badge || '';
+            btnFeatured.classList.remove('active');
+            btnHighlight.classList.remove('active');
+            selectedBadge = '';
+            highlightNumberInput.value = '';
+            highlightNumberGroup.classList.add('hidden');
+            if (badge === 'featured') {
+                btnFeatured.classList.add('active');
+                selectedBadge = 'featured';
+            } else if (badge === 'highlight') {
+                btnHighlight.classList.add('active');
+                selectedBadge = 'highlight';
+                highlightNumberGroup.classList.remove('hidden');
+                highlightNumberInput.value = parts.data.number || '';
+            }
         }
 
         function parseFrontmatter(md) {
@@ -788,6 +879,19 @@
                 content: document.getElementById('contentInput').value
             };
 
+            if (selectedBadge) {
+                payload.badge = selectedBadge;
+                if (selectedBadge === 'highlight') {
+                    var num = parseInt(document.getElementById('highlightNumber').value);
+                    if (!isNaN(num) && num > 0) {
+                        payload.number = num;
+                    } else {
+                        window.showMessage('Please enter a valid highlight number');
+                        return;
+                    }
+                }
+            }
+
             if (selectedImageFile) {
                 var customName = document.getElementById('imageInput').value.trim();
                 if (!customName) {
@@ -816,13 +920,13 @@
             var progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
             var timeElement = notif.wrapper.querySelector('.timer-time-notif');
             if (progressBar) progressBar.style.width = '0%';
-            if (timeElement) timeElement.textContent = '0/100';
+            if (timeElement) timeElement.textContent = '0%';
 
             try {
                 for (var i = 0; i <= 100; i += 25) {
                     await sleep(300);
                     if (progressBar) progressBar.style.width = i + '%';
-                    if (timeElement) timeElement.textContent = i + '/100';
+                    if (timeElement) timeElement.textContent = i + '%';
                 }
 
                 var res = await fetch('/api/publish-article', {
