@@ -12,12 +12,12 @@ This article may be updated in the future, so stay tuned for more information th
 ![FFV Screenshot](images/ffv-ss.webp)
 
 # Fun Facts
-- [GBoard →](^^^gboard1show^^^)
-- [Google Apps →](^^^google1show^^^)
-- [Kustom Industries →](^^^kustom1show^^^)
-- [MiXplorer →](^^^mixplorer1show^^^)
-- [Swift Backups →](^^^swiftb1show^^^)
-- [Telegram →](^^^telegram1show^^^)
+- `[GBoard →](^^^gboard1show^^^)`
+- `[Google Apps →](^^^google1show^^^)`
+- `[Kustom Industries →](^^^kustom1show^^^)`
+- `[MiXplorer →](^^^mixplorer1show^^^)`
+- `[Swift Backups →](^^^swiftb1show^^^)`
+- `[Telegram →](^^^telegram1show^^^)`
 
 ^^^gboard1hide^^^
 # GBoard →
