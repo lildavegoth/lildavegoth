@@ -9,7 +9,7 @@ categories: "Things, Facts"
 ---
 Recently, i was thinking and finds some things that i never knew but it's already there all this time. So i decided to create this article for you and maybe helps you in other days.
 This article may be updated in the future, so stay tuned for more information that will amaze you! Shall we start now? Enjoy reading.
-![[images/ffv-ss.webp]]
+![FFV Screenshot](images/ffv-ss.webp)
 
 # Fun Facts
 - [GBoard →](^^^gboard1show^^^)
@@ -33,7 +33,7 @@ But, did you know? This app has an hidden **Undo** actions? Yes they have it.
 5. After adding the language, open GBoard on a text edit
 6. Change the language of keyboard to Japan by hold press on the spacebar or open expanded toolbar and click on next language
 7. You'll see the undo icon on the top left of the keyboard, click the undo action for undoing the last typing character
-![[images/undogboard.webp]]
+![Undo GBoard](images/undogboard.webp)
 
 # Notes →
 This method are not useful anymore cause in latest GBoard app, Undo action has already available for everyone and not hidden anymore i guess? I once see it on Lunaris AOSP with Android 16, they use GBoard as default system keyboard, and there's an Undo action on it, but i don't know it's real or the app flag has been edited by default.
@@ -57,7 +57,7 @@ Some of the apps may only can be accessed or better experience in **Desktop Mode
 
 ^^^kustom1hide^^^
 # Kustom Industries →
-All the **Kustom** apps is just too great for some of you that always care about how your devices looks, their homescreen setup (KLWP), their lockscreen display (KLCK), and even the widgets (KWGT). Kustom Industries comes with so many features and always be a great app for making a setup and home screen showcases.
+All the **Kustom** apps is just too great for some of you that always care about how your devices looks, their homescreen setup (**KLWP**), their lockscreen display (**KLCK**), and even the widgets (**KWGT**). Kustom Industries comes with so many features and always be a great app for making a setup and home screen showcases.
 
 But did you know? All of the **Kustom** apps is draining your battery. You know what? Actually make those apps running in the background is unnecessary cause the app will always run ans refresh when you're seeing it. Also you can handle it to make your battery usage last longer while using **Kustom** apps.
 
@@ -176,5 +176,5 @@ As you all know, every Telegram users/accounts are always have an ID for each ac
 And did you know? Only lucky old accounts can have an email verification in their Telegram account.
 
 Yes it's true, but now and on the futures, all new Telegram account can have it. All you need to do is just create a new account, and telegram app will ask you to input your email for verification.
-![[images/ffv-tgemail.webp]]
+![FFV Telegram Email](images/ffv-tgemail.webp)
 ^^^telegram1hide^^^
