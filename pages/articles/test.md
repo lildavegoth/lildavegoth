@@ -85,6 +85,6 @@ Text for note 1
 Text for note 2
 1. Notes 2 numbered
 2. Notes 2 numbered
-- [] Notes 2 checkbox
+- [ ] Notes 2 checkbox
     - [x] Notes 2 checked and indent
 ^^^notes2hide^^^
