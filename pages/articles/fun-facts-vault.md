@@ -16,7 +16,7 @@ This article may be updated in the future, so stay tuned for more information th
 - `[Google Apps →](^^^google1show^^^)`
 - `[Kustom Industries →](^^^kustom1show^^^)`
 - `[MiXplorer →](^^^mixplorer1show^^^)`
-- `[Pinterest](^^^pin1show^^^)`
+- `[Pinterest →](^^^pin1show^^^)`
 - `[Swift Backups →](^^^swiftb1show^^^)`
 - `[Telegram →](^^^telegram1show^^^)`
 
@@ -76,7 +76,7 @@ Who doesn't know about **MiXplorer** most everyone knows it and use it for their
 
 # Cloud Storages →
 
-Some of you may not know about this, buy **MiXplorer** can actually open **Cloud Storage** directly from **MiXplorer** app! But how? It's simple, follow the step!
+Some of you may not know about this, but **MiXplorer** can actually open **Cloud Storage** directly from **MiXplorer** app! But how? It's simple, follow the step!
 
 # Guides →
 1. Open **MiXplorer** app and click Plus (+) button
@@ -98,6 +98,7 @@ You'll be asked to sign in to your account and not sign up, because **MiXplorer*
 | Mediafire    | https://www.mediafire.com/signup/      |
 | Yandex       | https://360.yandex.com/disk/           |
 | 4Shared      | https://www.4shared.com/signup.jsp     |
+There's a list of **MiXplorer** Supported Cloud Storages and it's sites for you to register so you'll be able sign in and manage the cloud storage directly from **MiXplorer** app.
 ^^^mixplorer1hide^^^
 
 ^^^pin1hide^^^
