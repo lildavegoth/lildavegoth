@@ -77,8 +77,8 @@ Test content
 Test Content
 ^^^test1hide^^^
 
-[Notes 1](^^^notes1show^^^)
-[Notes 2](^^^notes2show^^^)
+`[Notes 1](^^^notes1show^^^)`
+`[Notes 2](^^^notes2show^^^)`
 
 ^^^notes1hide^^^
 # Notes 1 →
