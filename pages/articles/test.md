@@ -77,7 +77,6 @@ lildavegoth
 Text for note 1
 - Notes 1 bulleted
     - Notes 1 bulleted indent
-    Notes 1 indent
 ^^^notes1hide^^^
 
 ^^^notes2hide^^^
