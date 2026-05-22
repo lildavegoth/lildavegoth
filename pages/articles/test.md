@@ -76,3 +76,16 @@ lildavegoth
 Test content
 Test Content
 ^^^test1hide^^^
+
+[Notes 1](^^^notes1show^^^)
+[Notes 2](^^^notes2show^^^)
+
+^^^notes1hide^^^
+# Notes 1 →
+Text for note 1
+^^^notes1hide^^^
+
+^^^notes2hide^^^
+# Notes 2 →
+Text for note 2
+^^^notes2hide^^^
