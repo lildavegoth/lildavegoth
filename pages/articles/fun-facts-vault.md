@@ -6,10 +6,7 @@ author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
 description: "Recently, i was thinking and finds some things that i never knew but it's already there..."
 categories: "Things, Facts"
-badge: "highlight"
-number: 2
 ---
-
 Recently, i was thinking and finds some things that i never knew but it's already there all this time. So i decided to create this article for you and maybe helps you in other days.
 This article may be updated in the future, so stay tuned for more information that will amaze you! Shall we start now? Enjoy reading.
 ![[images/ffv-ss.webp]]
@@ -18,7 +15,7 @@ This article may be updated in the future, so stay tuned for more information th
 - [GBoard →](^^^gboard1show^^^)
 - [Google Apps →](^^^google1show^^^)
 - [Kustom Industries →](^^^kustom1show^^^)
-- [MiXplorer →](^^^mixplorer 1show^^^)
+- [MiXplorer →](^^^mixplorer1show^^^)
 - [Swift Backups →](^^^swiftb1show^^^)
 - [Telegram →](^^^telegram1show^^^)
 
