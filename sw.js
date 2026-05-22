@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.7.0';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.7.1';
 const urlsToCache = [
     // Root
     '/',
@@ -81,7 +81,7 @@ const urlsToCache = [
     // Articles
     'pages/articles/articles-home.html',
     'pages/articles/article-page.html',
-    'pages/articles/editor.html',
+    'pages/articles/articles-publisher.html',
     // Voidgarden
     'pages/voidgarden/adventure.html',
     'pages/voidgarden/character.html',
