@@ -16,6 +16,7 @@ This article may be updated in the future, so stay tuned for more information th
 - `[Google Apps →](^^^google1show^^^)`
 - `[Kustom Industries →](^^^kustom1show^^^)`
 - `[MiXplorer →](^^^mixplorer1show^^^)`
+- `[Pinterest](^^^pin1show^^^)`
 - `[Swift Backups →](^^^swiftb1show^^^)`
 - `[Telegram →](^^^telegram1show^^^)`
 
@@ -87,16 +88,16 @@ You'll be asked to sign in to your account and not sign up, because **MiXplorer*
 
 # Supported Cloud Storages →
 
-| **Apps**         | Sites                                  |
-| ---------------- | -------------------------------------- |
-| **Mega**         | https://mega.nz/register/register      |
-| **Google Drive** | https://drive.google.com/drive/mobile/ |
-| **Dropbox**      | https://www.dropbox.com/register       |
-| **Box**          | https://www.box.com/personal           |
-| **OneDrive**     | https://onedrive.live.com/signup       |
-| **Mediafire**    | https://www.mediafire.com/signup/      |
-| **Yandex**       | https://360.yandex.com/disk/           |
-| **4Shared**      | https://www.4shared.com/signup.jsp     |
+| **Apps**     | Sites                                  |
+| ------------ | -------------------------------------- |
+| Mega         | https://mega.nz/register/register      |
+| Google Drive | https://drive.google.com/drive/mobile/ |
+| Dropbox      | https://www.dropbox.com/register       |
+| Box          | https://www.box.com/personal           |
+| OneDrive     | https://onedrive.live.com/signup       |
+| Mediafire    | https://www.mediafire.com/signup/      |
+| Yandex       | https://360.yandex.com/disk/           |
+| 4Shared      | https://www.4shared.com/signup.jsp     |
 ^^^mixplorer1hide^^^
 
 ^^^pin1hide^^^
@@ -110,6 +111,8 @@ Did you know? You can search an images inside of Pinterest app.
 1. Open the Pinterest app and click on search button (Search icon)
 2. Then you'll see a camera icon on the top right of your screen
 3. Click on it and open the gallery menu to upload and search the image on Pinterest
+
+---
 
 # Carousel Posts →
 Did you know? You can upload 5 images to Pinterest at a time at one post on mobile devices like a **Carousel Images**.
