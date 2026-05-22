@@ -68,3 +68,11 @@ test [test](https://g.com) test
 lildavegoth
 lildavegoth
 ""
+
+[Test](^^^test1show^^^)
+
+^^^test1hide^^^
+# Test →
+Test content
+Test Content
+^^^test1hide^^^
