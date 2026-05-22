@@ -36,7 +36,7 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'Invalid JSON' });
     }
 
-    const { slug, title, author, profile, date, image, description, categories, content } = payload;
+    const { slug, title, author, profile, date, image, description, categories, content, badge, number } = payload;
     if (!slug || !content) return res.status(400).json({ error: 'Missing fields' });
 
     const owner = 'lildavegoth';
@@ -44,7 +44,7 @@ module.exports = async (req, res) => {
     const branch = 'homepage';
     const ghToken = process.env.GH_TOKEN;
 
-    const fileContent = `---
+    let fileContent = `---
 title: "${title}"
 date: "${date}"
 image: "${image}"
@@ -53,7 +53,6 @@ profile: "${profile || 'https://t.me/lildavegoth'}"
 description: "${description}"
 categories: "${categories}"
 ---
-
 ${content}`;
 
     const mdPath = `pages/articles/${slug}.md`;
@@ -95,13 +94,15 @@ ${content}`;
     };
 
     try {
-        await putFile(mdPath, mdBase64, `updated article ${title}`);
+        await putFile(mdPath, mdBase64, `Update article ${title}`);
 
         const articlesPath = 'files/fetch/articles.json';
         const rawArticles = await getFileContent(articlesPath);
-        let articlesData = rawArticles
-            ? JSON.parse(rawArticles)
-            : { featured: [], highlight: [], allArticles: [] };
+        let articlesData = rawArticles ? JSON.parse(rawArticles) : [];
+
+        if (!Array.isArray(articlesData)) {
+            articlesData = [];
+        }
 
         const newEntry = {
             name: title,
@@ -109,25 +110,34 @@ ${content}`;
             image: image,
             link: `article-page.html?slug=${slug}`,
             description: description,
+            date: date,
         };
 
+        if (badge) {
+            newEntry.badge = badge;
+            if (badge === 'highlight' && number) {
+                newEntry.number = parseInt(number, 10);
+            }
+        }
+
         let found = false;
-        articlesData.allArticles = articlesData.allArticles.map(entry => {
+        articlesData = articlesData.map(entry => {
             if (entry.link && entry.link.includes(`slug=${slug}`)) {
                 found = true;
-                return newEntry;
+                return Object.assign({}, entry, newEntry);
             }
             return entry;
         });
+
         if (!found) {
-            articlesData.allArticles.push(newEntry);
+            articlesData.push(newEntry);
         }
 
         const updatedJson = JSON.stringify(articlesData, null, 2);
         await putFile(
             articlesPath,
             Buffer.from(updatedJson).toString('base64'),
-            `updated Articles Data for ${title}`
+            `Update articles.json for ${title}`
         );
 
         res.status(200).json({ success: true });
