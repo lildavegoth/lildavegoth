@@ -69,7 +69,7 @@ lildavegoth
 lildavegoth
 ""
 
-[Test](^^^test1show^^^)
+`[Test](^^^test1show^^^)`
 
 ^^^test1hide^^^
 # Test →
