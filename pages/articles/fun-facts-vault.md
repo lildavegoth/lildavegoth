@@ -34,7 +34,7 @@ But, did you know? This app has an hidden **Undo** actions? Yes they have it.
 5. After adding the language, open GBoard on a text edit
 6. Change the language of keyboard to Japan by hold press on the spacebar or open expanded toolbar and click on next language
 7. You'll see the undo icon on the top left of the keyboard, click the undo action for undoing the last typing character
-![Undo GBoard](images/undogboard.webp)
+![Undo GBoard](images/ffv-undogboard.webp)
 
 # Notes →
 This method are not useful anymore cause in latest GBoard app, Undo action has already available for everyone and not hidden anymore i guess? I once see it on Lunaris AOSP with Android 16, they use GBoard as default system keyboard, and there's an Undo action on it, but i don't know it's real or the app flag has been edited by default.
@@ -98,7 +98,8 @@ You'll be asked to sign in to your account and not sign up, because **MiXplorer*
 | Mediafire    | https://www.mediafire.com/signup/      |
 | Yandex       | https://360.yandex.com/disk/           |
 | 4Shared      | https://www.4shared.com/signup.jsp     |
-There's a list of **MiXplorer** Supported Cloud Storages and it's sites for you to register so you'll be able sign in and manage the cloud storage directly from **MiXplorer** app.
+
+
 ^^^mixplorer1hide^^^
 
 ^^^pin1hide^^^
@@ -112,6 +113,8 @@ Did you know? You can search an images inside of Pinterest app.
 1. Open the Pinterest app and click on search button (Search icon)
 2. Then you'll see a camera icon on the top right of your screen
 3. Click on it and open the gallery menu to upload and search the image on Pinterest
+
+---
 
 # Carousel Posts →
 Did you know? You can upload 5 images to Pinterest at a time at one post on mobile devices like a **Carousel Images**.
