@@ -604,7 +604,7 @@
 
         .more-article-card {
             flex: 0 0 180px;
-            height: 50px;
+            height: 55px;
             border-radius: var(--radius-small);
             background: var(--bg-card);
             border: 1px solid rgba(255,255,255,0.05);
@@ -1214,44 +1214,43 @@
         }
 
         function initPinSystem(container) {
+            container.removeEventListener('dblclick', handleDoubleClick);
             container.addEventListener('dblclick', handleDoubleClick);
+        
             restorePins(container);
-
+        
             var contextMenu = document.getElementById('contextMenu');
+        
             document.addEventListener('click', function(e) {
                 if (!contextMenu.contains(e.target)) {
                     contextMenu.style.display = 'none';
                 }
             });
-
-            document.getElementById('copyHeadingBtn').addEventListener('click', function() {
+        
+            document.getElementById('copyHeadingBtn').onclick = function() {
                 if (currentLineElement) {
                     copyHeading(currentLineElement);
                 }
                 contextMenu.style.display = 'none';
-            });
-
-            document.getElementById('pinLineBtn').addEventListener('click', function() {
+            };
+        
+            document.getElementById('pinLineBtn').onclick = function() {
                 if (currentLineElement) {
                     pinLine(currentLineElement, container);
                 }
                 contextMenu.style.display = 'none';
-            });
+            };
         }
 
         function handleDoubleClick(e) {
-            var target = e.target;
-            if (target.classList.contains('pin-marker')) {
-                target = target.parentElement;
-            }
-        
             var container = document.getElementById('articleContent');
-            if (!container) return;
+            var lineEl = getLineElement(e.target, container);
         
-            var lineEl = getLineElement(target, container);
             if (!lineEl) return;
         
             e.preventDefault();
+            e.stopPropagation();
+        
             currentLineElement = lineEl;
         
             var contextMenu = document.getElementById('contextMenu');
@@ -1260,20 +1259,30 @@
             contextMenu.style.display = 'block';
         }
 
-        function getLineFingerprint(element) {
-            var text = element.textContent ? element.textContent.trim() : '';
-            var prev = element.previousElementSibling && element.previousElementSibling.textContent
-                ? element.previousElementSibling.textContent.trim()
-                : '';
+        function getLineElement(target, container) {
+            if (target.nodeType === 3) {
+                target = target.parentElement;
+            }
         
-            var heading = findClosestHeading(element);
-            var headingId = heading && heading.id ? heading.id : '';
+            if (target.classList.contains('pin-marker')) {
+                target = target.parentElement;
+            }
         
-            return JSON.stringify({
-                text: text,
-                prev: prev,
-                headingId: headingId
-            });
+            while (target && target !== container) {
+                if (
+                    /^(P|H1|H2|H3|H4|H5|H6|LI|BLOCKQUOTE|TD|TH|DIV)$/.test(target.tagName)
+                ) {
+                    if (
+                        !target.closest('.custom-quote, .callout, .code-block-wrapper, .gallery-wrapper, .video-wrapper, .more-articles-scroll')
+                    ) {
+                        return target;
+                    }
+                }
+        
+                target = target.parentElement;
+            }
+        
+            return null;
         }
 
         function copyHeading(lineElement) {
