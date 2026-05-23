@@ -699,7 +699,7 @@
         <div class="popup-content">
             <div class="popup-header">
                 <h2>Categories</h2>
-                <button class="close-popup" onclick="closeCategoryPopup()">
+                <button class="close-popup" onclick="closeCategoryPopupWithReset()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -892,6 +892,12 @@
         }
 
         function buildCategoryPopup(categories) {
+            var sorted = ['All'];
+            var others = categories.filter(function(c) { return c !== 'All'; });
+            others.sort(function(a, b) { return a.localeCompare(b); });
+            sorted = sorted.concat(others);
+            categories = sorted;
+
             const counts = {};
             allArticlesData.forEach(article => {
                 if (article.categories) {
@@ -924,7 +930,7 @@
                 card.addEventListener('click', () => {
                     const cat = card.dataset.category;
                     activeCategory = cat;
-                    closeCategoryPopup();
+                    categoryPopup.style.display = 'none';
                     buildCategoryTabs();
                     updateMobileCategoryButton();
                     renderRecommended(filterAndSortArticles());
@@ -944,11 +950,7 @@
 
         categoryPopup.addEventListener('click', function(e) {
             if (e.target === categoryPopup) {
-                activeCategory = 'All';
-                closeCategoryPopup();
-                buildCategoryTabs();
-                updateMobileCategoryButton();
-                renderRecommended(filterAndSortArticles());
+                closeCategoryPopupWithReset();
             }
         });
 
@@ -958,6 +960,14 @@
                 ...trendingData.map(a => ({ title: a.name, description: a.categories, category: 'Highlight' })),
                 ...allArticlesData.map(a => ({ title: a.name, description: a.description, category: 'All Articles' }))
             ];
+        }
+        
+        function closeCategoryPopupWithReset() {
+            activeCategory = 'All';
+            categoryPopup.style.display = 'none';
+            buildCategoryTabs();
+            updateMobileCategoryButton();
+            renderRecommended(filterAndSortArticles());
         }
 
         function showSearchSuggestions(term) {
