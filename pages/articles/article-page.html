@@ -647,9 +647,10 @@
             width: 42px;
             height: 42px;
             cursor: pointer;
-            float: right;
-            margin-left: 8px;
-            margin-bottom: 4px;
+            position: absolute;
+            top: 0;
+            right: 0;
+            z-index: 999;
         }
 
         .context-menu {
@@ -1255,12 +1256,20 @@
             contextMenu.style.display = 'block';
         }
 
-        function getLineElement(target, container) {
-            if (target.nodeType === 3) target = target.parentElement;
-            var block = target.closest('p, h1, h2, h3, h4, h5, h6, li, blockquote, td, th, div');
-            if (!block || !container.contains(block)) return null;
-            if (block.closest('.custom-quote, .callout, .code-block-wrapper, .gallery-wrapper, .video-wrapper, .more-articles-scroll, .divider')) return null;
-            return block;
+        function getLineFingerprint(element) {
+            var text = element.textContent ? element.textContent.trim() : '';
+            var prev = element.previousElementSibling && element.previousElementSibling.textContent
+                ? element.previousElementSibling.textContent.trim()
+                : '';
+        
+            var heading = findClosestHeading(element);
+            var headingId = heading && heading.id ? heading.id : '';
+        
+            return JSON.stringify({
+                text: text,
+                prev: prev,
+                headingId: headingId
+            });
         }
 
         function copyHeading(lineElement) {
@@ -1305,11 +1314,12 @@
         }
 
         function addPinMarker(lineElement, fingerprint, container) {
+            lineElement.style.position = 'relative';
             if (lineElement.querySelector('.pin-marker[data-fingerprint="' + fingerprint + '"]')) return;
         
             var img = document.createElement('img');
             img.className = 'pin-marker';
-            img.src = 'images/pin.png';
+            img.src = 'images/pin.webp';
             img.alt = 'Pinned line';
             img.width = 42;
             img.height = 42;
