@@ -167,19 +167,6 @@
             text-decoration: underline;
             text-underline-offset: 2px;
         }
-        
-        #articleContent .code-toggle {
-            font-size: 0.9em;
-            background: var(--bg-card);
-            padding: 1px 6px;
-            border-radius: var(--radius-small);
-            white-space: nowrap;
-        }
-        #articleContent .code-toggle a {
-            color: var(--accent-color);
-            text-decoration: underline;
-            text-underline-offset: 2px;
-        }
 
         #articleContent a[data-toggle] {
             display: inline-block;
@@ -1054,7 +1041,8 @@
         }
 
         function processHideBlocks(html) {
-            html = html.replace(/\^\^\^([a-zA-Z]+[0-9]+)hide\^\^\^([\s\S]*?)\^\^\^\1hide\^\^\^/g, function(match, key, content) {
+            html = html.replace(
+                /^\^\^\^([a-zA-Z0-9]+)hide\^\^\^\s*([\s\S]*?)\s*\^\^\^\1hide\^\^\^$/gm, function(match, key, content) {
                 content = content
                     .replace(/\r/g, '')
                     .replace(/\n\[\]/g, '\n- [ ]')
@@ -1066,10 +1054,7 @@
                     '\n</div>\n';
             });
 
-            html = html.replace(/`\[([^\]]+)\]\(\^\^\^([a-zA-Z]+[0-9]+)show\^\^\^\)`/g, function(match, text, key) {
-                return '<span class="code-toggle"><a href="#" data-toggle="' + key + '">' + text + '</a></span>';
-            });
-            html = html.replace(/\[([^\]]+)\]\(\^\^\^([a-zA-Z]+[0-9]+)show\^\^\^\)/g, function(match, text, key) {
+            html = html.replace(/\\?\[([^\]]+)\]\(\^\^\^([a-zA-Z0-9]+)show\^\^\^\)/g, function(match, text, key) {
                 return '<a href="#" data-toggle="' + key + '">' + text + '</a>';
             });
 
@@ -1077,39 +1062,39 @@
         }
 
         function setupHideToggles(container) {
-            container.addEventListener('click', function(e) {
-                var toggle = e.target.closest('[data-toggle]');
-                if (!toggle) return;
+            var toggles = container.querySelectorAll('[data-toggle]');
 
-                e.preventDefault();
+            toggles.forEach(function(toggle) {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
 
-                var key = toggle.getAttribute('data-toggle');
-                var blocks = container.querySelectorAll('[id^="hide-"]');
+                    var key = toggle.getAttribute('data-toggle');
+                    var blocks = container.querySelectorAll('[id^="hide-"]');
 
-                blocks.forEach(function(block) {
-                    if (block.id !== 'hide-' + key) {
-                        block.style.display = 'none';
-                        block.classList.remove('slide-in-active');
+                    blocks.forEach(function(block) {
+                        if (block.id !== 'hide-' + key) {
+                            block.style.display = 'none';
+                            block.classList.remove('slide-in-active');
+                        }
+                    });
+
+                    var target = document.getElementById('hide-' + key);
+                    if (!target) return;
+
+                    if (target.style.display === 'block') {
+                        target.style.display = 'none';
+                        target.classList.remove('slide-in-active');
+                    } else {
+                        target.style.display = 'block';
+                        target.classList.remove('slide-in-active');
+                        void target.offsetWidth;
+                        target.classList.add('slide-in-active');
                     }
+                    toggle.classList.add('data-toggle-slide');
+                    setTimeout(function() {
+                        toggle.classList.remove('data-toggle-slide');
+                    }, 300);
                 });
-
-                var target = document.getElementById('hide-' + key);
-                if (!target) return;
-
-                if (target.style.display === 'block') {
-                    target.style.display = 'none';
-                    target.classList.remove('slide-in-active');
-                } else {
-                    target.style.display = 'block';
-                    target.classList.remove('slide-in-active');
-                    void target.offsetWidth;
-                    target.classList.add('slide-in-active');
-                }
-
-                toggle.classList.add('data-toggle-slide');
-                setTimeout(function() {
-                    toggle.classList.remove('data-toggle-slide');
-                }, 300);
             });
         }
 
