@@ -604,7 +604,7 @@
 
         .more-article-card {
             flex: 0 0 180px;
-            height: 64px;
+            height: 50px;
             border-radius: var(--radius-small);
             background: var(--bg-card);
             border: 1px solid rgba(255,255,255,0.05);
@@ -613,7 +613,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 6px;
+            padding: 10px;
             overflow: hidden;
             margin-top: 5px;
         }
@@ -643,6 +643,44 @@
             overflow: hidden;
         }
 
+        .pin-marker {
+            width: 42px;
+            height: 42px;
+            cursor: pointer;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        .context-menu {
+            position: fixed;
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: var(--radius-small);
+            padding: 6px 0;
+            z-index: 9999999;
+            min-width: 160px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            display: none;
+        }
+
+        .context-menu button {
+            display: block;
+            width: 100%;
+            padding: 10px 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .context-menu button:hover {
+            background: rgba(193,252,50,0.1);
+        }
+
         @media (min-width: 720px) {
             .main {
                 display: flex;
@@ -652,18 +690,18 @@
                 margin: 0 auto;
                 padding: 2rem;
             }
-        
+
             .image-container {
                 flex: 0 0 300px;
                 margin: 0;
                 max-width: none;
                 width: 300px;
             }
-        
+
             .table-of-contents {
                 display: block;
             }
-        
+
             .content {
                 flex: 1;
                 margin: 0;
@@ -726,7 +764,15 @@
         </div>
     </div>
 
+    <div class="context-menu" id="contextMenu">
+        <button id="copyHeadingBtn">Copy Heading</button>
+        <button id="pinLineBtn">Pin</button>
+    </div>
+
     <script>
+        var currentLineElement = null;
+        var currentPinTarget = null;
+
         function setupMoreShareButton() {
             var shareButton = document.getElementById('shareBarBtn');
             if (!shareButton) return;
@@ -830,10 +876,8 @@
 
         function enhanceTableCellMarkdown(container) {
             var cells = container.querySelectorAll('td, th');
-
             cells.forEach(function(cell) {
                 var raw = cell.innerHTML.trim();
-
                 if (raw.includes('\\n')) {
                     raw = raw.replace(/\\n/g, '\n');
                     cell.innerHTML = marked.parse(raw);
@@ -843,7 +887,6 @@
 
         function enhanceCallouts(container) {
             var blockquotes = container.querySelectorAll('blockquote');
-
             blockquotes.forEach(function(blockquote) {
                 var lines = blockquote.innerHTML
                     .replace(/<\/p>\s*<p>/gi, '\n')
@@ -944,7 +987,6 @@
 
         function replaceCheckedCheckboxes(container) {
             var checkboxes = container.querySelectorAll('input[type="checkbox"]');
-
             checkboxes.forEach(function(input) {
                 var li = input.closest('li');
                 if (!li) return;
@@ -959,7 +1001,6 @@
                     strike.className = 'task-strike';
 
                     var text = '';
-
                     var node = input.nextSibling;
                     while (node) {
                         text += node.textContent || '';
@@ -969,7 +1010,6 @@
                     }
 
                     strike.textContent = text.trim();
-
                     input.replaceWith(icon);
                     li.appendChild(strike);
                 }
@@ -1058,21 +1098,16 @@
                 var rendered = marked.parse(content.trim());
                 var temp = document.createElement('div');
                 temp.innerHTML = rendered;
-        
                 var images = Array.from(temp.querySelectorAll('img')).map(function(img) {
                     return img.getAttribute('src');
                 });
-        
                 if (!images.length) return '';
-        
                 var slides = images.map(function(src) {
                     return '<div class="gallery-slide"><img src="' + src + '" alt=""></div>';
                 }).join('');
-        
                 var dots = images.map(function(_, i) {
                     return '<i class="fas fa-circle gallery-dot' + (i === 0 ? ' active' : '') + '" data-index="' + i + '"></i>';
                 }).join('');
-        
                 return '<div class="gallery-wrapper"><div class="gallery-viewport"><div class="gallery-slides">' + slides + '</div></div><div class="gallery-dots">' + dots + '</div></div>';
             });
         }
@@ -1176,6 +1211,158 @@
             } catch (e) {}
         }
 
+        function initPinSystem(container) {
+            container.addEventListener('dblclick', handleDoubleClick);
+            restorePins(container);
+
+            var contextMenu = document.getElementById('contextMenu');
+            document.addEventListener('click', function(e) {
+                if (!contextMenu.contains(e.target)) {
+                    contextMenu.style.display = 'none';
+                }
+            });
+
+            document.getElementById('copyHeadingBtn').addEventListener('click', function() {
+                if (currentLineElement) {
+                    copyHeading(currentLineElement);
+                }
+                contextMenu.style.display = 'none';
+            });
+
+            document.getElementById('pinLineBtn').addEventListener('click', function() {
+                if (currentLineElement) {
+                    pinLine(currentLineElement, container);
+                }
+                contextMenu.style.display = 'none';
+            });
+        }
+
+        function handleDoubleClick(e) {
+            var target = e.target;
+            var container = document.getElementById('articleContent');
+            if (!container) return;
+            var lineEl = getLineElement(target, container);
+            if (!lineEl) return;
+
+            e.preventDefault();
+            currentLineElement = lineEl;
+
+            var contextMenu = document.getElementById('contextMenu');
+            var x = e.clientX;
+            var y = e.clientY;
+            contextMenu.style.left = x + 'px';
+            contextMenu.style.top = y + 'px';
+            contextMenu.style.display = 'block';
+        }
+
+        function getLineElement(target, container) {
+            if (target.nodeType === 3) target = target.parentElement;
+            var block = target.closest('p, h1, h2, h3, h4, h5, h6, li, blockquote, td, th, div');
+            if (!block || !container.contains(block)) return null;
+            if (block.closest('.custom-quote, .callout, .code-block-wrapper, .gallery-wrapper, .video-wrapper, .more-articles-scroll, .divider')) return null;
+            return block;
+        }
+
+        function copyHeading(lineElement) {
+            var heading = findClosestHeading(lineElement);
+            if (heading && heading.id) {
+                var url = window.location.href.split('#')[0] + '#' + heading.id;
+                navigator.clipboard.writeText(url);
+            }
+        }
+
+        function findClosestHeading(element) {
+            var el = element;
+            while (el) {
+                if (/^H[1-6]$/.test(el.tagName)) {
+                    return el;
+                }
+                el = el.previousElementSibling;
+                if (!el && el !== null) el = element.parentElement;
+            }
+            return null;
+        }
+
+        function getLineFingerprint(element) {
+            var text = element.textContent.trim();
+            var prev = element.previousElementSibling ? element.previousElementSibling.textContent.trim() : '';
+            var heading = findClosestHeading(element);
+            var headingId = heading ? heading.id : '';
+            return JSON.stringify({ text, prev, headingId });
+        }
+
+        function pinLine(lineElement, container) {
+            var fingerprint = getLineFingerprint(lineElement);
+            var pinned = JSON.parse(localStorage.getItem('pinLines') || '[]');
+            if (pinned.some(function(p) { return p.fingerprint === fingerprint; })) return;
+            pinned.push({ fingerprint: fingerprint, slug: window.location.search.split('slug=')[1]?.split('&')[0] });
+            localStorage.setItem('pinLines', JSON.stringify(pinned));
+            addPinMarker(lineElement, fingerprint, container);
+        }
+
+        function unpinLine(fingerprint, pinMarker, container) {
+            var pinned = JSON.parse(localStorage.getItem('pinLines') || '[]');
+            pinned = pinned.filter(function(p) { return p.fingerprint !== fingerprint; });
+            localStorage.setItem('pinLines', JSON.stringify(pinned));
+            if (pinMarker) pinMarker.remove();
+        }
+
+        function addPinMarker(lineElement, fingerprint, container) {
+            var existing = lineElement.parentNode.querySelector('.pin-marker[data-fingerprint="' + fingerprint + '"]');
+            if (existing) return;
+
+            var img = document.createElement('img');
+            img.className = 'pin-marker';
+            img.src = 'images/pin.png';
+            img.alt = 'Pinned line';
+            img.width = 42;
+            img.height = 42;
+            img.setAttribute('data-fingerprint', fingerprint);
+
+            img.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var contextMenu = document.getElementById('contextMenu');
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = e.clientX + 'px';
+                contextMenu.style.top = e.clientY + 'px';
+                document.getElementById('copyHeadingBtn').style.display = 'none';
+                document.getElementById('pinLineBtn').style.display = 'none';
+
+                var unpinBtn = document.getElementById('unpinLineBtn');
+                if (!unpinBtn) {
+                    unpinBtn = document.createElement('button');
+                    unpinBtn.id = 'unpinLineBtn';
+                    unpinBtn.textContent = 'Unpin';
+                    unpinBtn.addEventListener('click', function() {
+                        unpinLine(fingerprint, img, container);
+                        contextMenu.style.display = 'none';
+                        document.getElementById('copyHeadingBtn').style.display = '';
+                        document.getElementById('pinLineBtn').style.display = '';
+                        if (unpinBtn.parentNode) unpinBtn.parentNode.removeChild(unpinBtn);
+                    });
+                    contextMenu.appendChild(unpinBtn);
+                }
+                currentPinTarget = fingerprint;
+            });
+
+            lineElement.parentNode.insertBefore(img, lineElement);
+        }
+
+        function restorePins(container) {
+            var pinned = JSON.parse(localStorage.getItem('pinLines') || '[]');
+            var currentSlug = window.location.search.split('slug=')[1]?.split('&')[0];
+            pinned = pinned.filter(function(p) { return p.slug === currentSlug; });
+
+            var allElements = container.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, td, th, div');
+            allElements.forEach(function(el) {
+                var fingerprint = getLineFingerprint(el);
+                var found = pinned.some(function(p) { return p.fingerprint === fingerprint; });
+                if (found) {
+                    addPinMarker(el, fingerprint, container);
+                }
+            });
+        }
+
         function enhanceContent() {
             var content = document.getElementById('articleContent');
             if (!content) return;
@@ -1188,6 +1375,7 @@
             enhanceCustomQuotes(content);
             enhanceVideos(content);
             setupGalleries(content);
+            initPinSystem(content);
 
             var dividerImg = document.createElement('img');
             dividerImg.src = 'images/divider.webp';
@@ -1291,7 +1479,6 @@
 
         function setupHideToggles(container) {
             var toggles = container.querySelectorAll('[data-toggle]');
-
             toggles.forEach(function(toggle) {
                 toggle.addEventListener('click', function(e) {
                     e.preventDefault();
