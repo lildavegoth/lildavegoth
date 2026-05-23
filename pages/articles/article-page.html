@@ -1049,7 +1049,7 @@
                     .replace(/\n {4}(?![-*+]|\d+\.|\[)/g, '\n> ');
 
                 return '\n<div id="hide-' + key + '" style="display:none;">\n' +
-                    content.trim() +
+                    marked.parse(content.trim()) +
                     '\n</div>\n';
             });
 
@@ -1062,34 +1062,51 @@
 
         function setupHideToggles(container) {
             var toggles = container.querySelectorAll('[data-toggle]');
-
+        
+            window.showMessage('Found toggles: ' + toggles.length);
+        
             toggles.forEach(function(toggle) {
                 toggle.addEventListener('click', function(e) {
                     e.preventDefault();
-
+        
                     var key = toggle.getAttribute('data-toggle');
+        
+                    window.showMessage('Clicked key: ' + key);
+        
+                    var target = document.getElementById('hide-' + key);
+        
+                    if (!target) {
+                        window.showMessage('Target NOT FOUND: hide-' + key);
+                        return;
+                    }
+        
+                    window.showMessage('Target FOUND: hide-' + key);
+        
                     var blocks = container.querySelectorAll('[id^="hide-"]');
-
+        
                     blocks.forEach(function(block) {
                         if (block.id !== 'hide-' + key) {
                             block.style.display = 'none';
                             block.classList.remove('slide-in-active');
                         }
                     });
-
-                    var target = document.getElementById('hide-' + key);
-                    if (!target) return;
-
+        
                     if (target.style.display === 'block') {
                         target.style.display = 'none';
                         target.classList.remove('slide-in-active');
+        
+                        window.showMessage('Hidden: ' + key);
                     } else {
                         target.style.display = 'block';
                         target.classList.remove('slide-in-active');
                         void target.offsetWidth;
                         target.classList.add('slide-in-active');
+        
+                        window.showMessage('Shown: ' + key);
                     }
+        
                     toggle.classList.add('data-toggle-slide');
+        
                     setTimeout(function() {
                         toggle.classList.remove('data-toggle-slide');
                     }, 300);
