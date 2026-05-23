@@ -508,6 +508,129 @@
             margin-right: 6px;
             margin-bottom: 6px;
         }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .category-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: var(--spacing-md);
+            overflow-y: auto;
+        }
+
+        .category-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: var(--radius-small);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: 0.2s;
+        }
+
+        .category-card:hover {
+            border-color: var(--accent-color);
+            background: rgba(193,252,50,0.05);
+        }
+
+        .category-card.active {
+            border-color: var(--accent-color);
+            background: rgba(193,252,50,0.1);
+        }
+
+        .category-card-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .category-card-count {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.05);
+            padding: 2px 10px;
+            border-radius: 20px;
+        }
+
+        .mobile-categories-btn {
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .category-tabs-wrapper {
+                display: none;
+            }
+
+            .mobile-categories-btn {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-shrink: 0;
+            }
+
+            .category-tabs-container {
+                gap: 8px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -551,6 +674,9 @@
                     <div class="category-tabs-wrapper">
                         <div class="category-tabs" id="categoryTabs"></div>
                     </div>
+                    <button class="category-tab mobile-categories-btn" id="mobileCategoriesBtn">
+                        Categories <i class="fas fa-chevron-down"></i>
+                    </button>
                     <div class="sort-button" id="sortButton">Default Sorted</div>
                 </div>
                 <div class="recommended-list" id="recommended-list"></div>
@@ -567,6 +693,18 @@
                 Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
             </p>
         </footer>
+    </div>
+
+    <div id="categoryPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2>Categories</h2>
+                <button class="close-popup" onclick="closeCategoryPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="category-grid" id="categoryPopupContent"></div>
+        </div>
     </div>
 
     <script>
@@ -586,6 +724,9 @@
         const recommendedList = document.getElementById('recommended-list');
         const categoryTabs = document.getElementById('categoryTabs');
         const sortButton = document.getElementById('sortButton');
+        const mobileCategoriesBtn = document.getElementById('mobileCategoriesBtn');
+        const categoryPopup = document.getElementById('categoryPopup');
+        const categoryPopupContent = document.getElementById('categoryPopupContent');
 
         function renderFeatured() {
             featuredContainer.innerHTML = '';
@@ -657,7 +798,7 @@
             }
             return filtered;
         }
-        
+
         function formatDate(dateStr) {
             if (!dateStr) return '';
             var d = new Date(dateStr);
@@ -733,9 +874,79 @@
                     tab.classList.add('active');
                     activeCategory = tab.dataset.category;
                     renderRecommended(filterAndSortArticles());
+                    updateMobileCategoryButton();
+                });
+            });
+
+            buildCategoryPopup(categories);
+        }
+
+        function updateMobileCategoryButton() {
+            if (activeCategory === 'All') {
+                mobileCategoriesBtn.classList.remove('active');
+                mobileCategoriesBtn.innerHTML = 'Categories <i class="fas fa-chevron-down"></i>';
+            } else {
+                mobileCategoriesBtn.classList.add('active');
+                mobileCategoriesBtn.innerHTML = `${activeCategory} <i class="fas fa-chevron-down"></i>`;
+            }
+        }
+
+        function buildCategoryPopup(categories) {
+            const counts = {};
+            allArticlesData.forEach(article => {
+                if (article.categories) {
+                    article.categories.split(/,\s*|•\s*/).map(c => c.trim()).forEach(c => {
+                        counts[c] = (counts[c] || 0) + 1;
+                    });
+                }
+            });
+
+            const allCount = allArticlesData.length;
+            let html = `
+                <div class="category-card ${activeCategory === 'All' ? 'active' : ''}" data-category="All">
+                    <span class="category-card-name">All</span>
+                    <span class="category-card-count">${allCount}</span>
+                </div>
+            `;
+            categories.forEach(cat => {
+                if (cat === 'All') return;
+                const count = counts[cat] || 0;
+                html += `
+                    <div class="category-card ${activeCategory === cat ? 'active' : ''}" data-category="${cat}">
+                        <span class="category-card-name">${cat}</span>
+                        <span class="category-card-count">${count}</span>
+                    </div>
+                `;
+            });
+            categoryPopupContent.innerHTML = html;
+
+            categoryPopupContent.querySelectorAll('.category-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const cat = card.dataset.category;
+                    activeCategory = cat;
+                    closeCategoryPopup();
+                    buildCategoryTabs();
+                    updateMobileCategoryButton();
+                    renderRecommended(filterAndSortArticles());
                 });
             });
         }
+
+        function openCategoryPopup() {
+            categoryPopup.style.display = 'flex';
+        }
+
+        function closeCategoryPopup() {
+            categoryPopup.style.display = 'none';
+        }
+
+        mobileCategoriesBtn.addEventListener('click', openCategoryPopup);
+
+        categoryPopup.addEventListener('click', function(e) {
+            if (e.target === categoryPopup) {
+                closeCategoryPopup();
+            }
+        });
 
         function updateSearchSuggestions() {
             searchableMetadata = [
@@ -869,6 +1080,7 @@
                 buildCategoryTabs();
                 renderRecommended(allArticlesData);
                 updateSearchSuggestions();
+                updateMobileCategoryButton();
             });
     </script>
 </body>
