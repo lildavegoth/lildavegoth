@@ -604,7 +604,7 @@
         }
 
         .more-article-card {
-            flex: 0 0 200px;
+            flex: 0 0 180px;
             border-radius: var(--radius-small);
             background: var(--bg-card);
             border: 1px solid rgba(255,255,255,0.05);
@@ -613,11 +613,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 8px;
-            min-height: 0;
-            height: 80px;
-            overflow: hidden;
-            align-items: flex-start;
+            padding: 6px;
         }
 
         .more-article-card:hover {
@@ -625,10 +621,9 @@
         }
 
         .more-article-img {
-            height: 100%;
-            width: 60px;
-            margin-top: -160px;
-            border-radius: 2px;
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-small);
             object-fit: cover;
             flex-shrink: 0;
         }
@@ -636,7 +631,7 @@
         .more-article-card-title {
             font-size: 0.95rem;
             font-weight: 600;
-            line-height: 1.3;
+            line-height: 1.15;
             color: var(--text-primary);
             word-break: break-word;
         }
@@ -1052,26 +1047,26 @@
         }
 
         function processGalleryBlocks(html) {
-            return html.replace(/:::\s*gallery\s*\n([\s\S]*?)\s*:::/g, function(match, content) {
-                var images = [];
-                var imgRegex = /!\[.*?\]\((.+?)\)/g;
-                var m;
-                while ((m = imgRegex.exec(content)) !== null) {
-                    images.push(m[1]);
-                }
-                if (images.length === 0) return '';
-                var slidesHtml = images.map(function(src, idx) {
+            return html.replace(/:::\s*gallery\s*([\s\S]*?):::/g, function(_, content) {
+                var rendered = marked.parse(content.trim());
+                var temp = document.createElement('div');
+                temp.innerHTML = rendered;
+        
+                var images = Array.from(temp.querySelectorAll('img')).map(function(img) {
+                    return img.getAttribute('src');
+                });
+        
+                if (!images.length) return '';
+        
+                var slides = images.map(function(src) {
                     return '<div class="gallery-slide"><img src="' + src + '" alt=""></div>';
                 }).join('');
-                var dotsHtml = images.map(function(_, idx) {
-                    return '<i class="fas fa-' + (idx === 0 ? 'circle' : 'dot-circle') + ' gallery-dot' + (idx === 0 ? ' active' : '') + '" data-index="' + idx + '"></i>';
+        
+                var dots = images.map(function(_, i) {
+                    return '<i class="fas fa-circle gallery-dot' + (i === 0 ? ' active' : '') + '" data-index="' + i + '"></i>';
                 }).join('');
-                return '\n<div class="gallery-wrapper">' +
-                    '<div class="gallery-viewport">' +
-                        '<div class="gallery-slides">' + slidesHtml + '</div>' +
-                    '</div>' +
-                    '<div class="gallery-dots">' + dotsHtml + '</div>' +
-                '</div>\n';
+        
+                return '<div class="gallery-wrapper"><div class="gallery-viewport"><div class="gallery-slides">' + slides + '</div></div><div class="gallery-dots">' + dots + '</div></div>';
             });
         }
 
