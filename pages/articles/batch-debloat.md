@@ -90,10 +90,14 @@ Some apps that doesn't recommended to be Debloated
 - **Downloads Manager**: com.android.providers.downloads | com.android.providers.downloads.ui [**Causing Media Picker crashed when moving, copying, deleting files to or from Download folder**]
 - **MIUI Find Device**: com.xiaomi.finddevice [**Causing so many popups that telling your device is broken or something**]
 - **Apps Storages** [**Causing crashed to apps that needs important permissions**], Such as:
-	- **Calendar**: com.android.providers.calendar
-	- **Contacts**: com.android.providers.contacts
-	- **Media**: com.google.android.providers.media.module | com.android.providers.media
-	- **Phone & Messaging**: com.android.providers.telephony
+
+| Names             | Package Name                                                            |
+| ----------------- | ----------------------------------------------------------------------- |
+| Calendar          | com.android.providers.calendar                                          |
+| Contacts          | com.android.providers.contacts                                          |
+| Media             | com.google.android.providers.media.module\n com.android.providers.media |
+| Phone & Messaging | com.android.providers.telephony                                         |
+
 # Notes →
 If your device forced rebooted to recovery and got a “rescue_party” message on logs, you've been uninstalled the wrong app that system needed it, uninstall magisk to fix, you can use tools from your custom recovery or, use **Magisk** uninstaller.zip file (This method not always works)
 - Rename your magisk.zip file to uninstaller.zip and then flash it on custom recovery
