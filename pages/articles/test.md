@@ -87,3 +87,9 @@ Text for note 2
 - [ ] Notes 2 checkbox
     - [x] Notes 2 checked and indent
 ^^^notes2hide^^^
+
+:::gallery
+![FFV](images/ffv.webp)
+![UDM](images/udm.webp)
+![Debloat](images/batchdeb.webp)
+:::
