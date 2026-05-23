@@ -651,6 +651,7 @@
             top: 0;
             right: 0;
             z-index: 999;
+            pointer-events: auto;
         }
 
         .context-menu {
@@ -1240,19 +1241,22 @@
 
         function handleDoubleClick(e) {
             var target = e.target;
+            if (target.classList.contains('pin-marker')) {
+                target = target.parentElement;
+            }
+        
             var container = document.getElementById('articleContent');
             if (!container) return;
+        
             var lineEl = getLineElement(target, container);
             if (!lineEl) return;
-
+        
             e.preventDefault();
             currentLineElement = lineEl;
-
+        
             var contextMenu = document.getElementById('contextMenu');
-            var x = e.clientX;
-            var y = e.clientY;
-            contextMenu.style.left = x + 'px';
-            contextMenu.style.top = y + 'px';
+            contextMenu.style.left = e.clientX + 'px';
+            contextMenu.style.top = e.clientY + 'px';
             contextMenu.style.display = 'block';
         }
 
@@ -1314,7 +1318,9 @@
         }
 
         function addPinMarker(lineElement, fingerprint, container) {
-            lineElement.style.position = 'relative';
+            if (getComputedStyle(lineElement).position === 'static') {
+                lineElement.style.position = 'relative';
+            }
             if (lineElement.querySelector('.pin-marker[data-fingerprint="' + fingerprint + '"]')) return;
         
             var img = document.createElement('img');
