@@ -857,10 +857,10 @@
         }
 
         function buildCategoryTabs() {
-            const categorySet = new Set(['All']);
+        const categorySet = new Set(['All']);
             allArticlesData.forEach(article => {
                 if (article.categories) {
-                    article.categories.split(/,\s*|•\s*/).map(c => c.trim()).forEach(c => categorySet.add(c));
+                    article.categories.split(/,\s*|•\s*/).map(c => c.trim()).filter(c => c.length > 0).forEach(c => categorySet.add(c));
                 }
             });
             const categories = Array.from(categorySet);
@@ -948,11 +948,16 @@
 
         mobileCategoriesBtn.addEventListener('click', openCategoryPopup);
 
-        categoryPopup.addEventListener('click', function(e) {
-            if (e.target === categoryPopup) {
-                closeCategoryPopupWithReset();
-            }
-        });
+        categoryPopupContent.querySelectorAll('.category-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const cat = card.dataset.category;
+                    activeCategory = (cat && cat !== 'undefined') ? cat : 'All';
+                    categoryPopup.style.display = 'none';
+                    buildCategoryTabs();
+                    updateMobileCategoryButton();
+                    renderRecommended(filterAndSortArticles());
+                });
+            });
 
         function updateSearchSuggestions() {
             searchableMetadata = [
