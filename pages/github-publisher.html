@@ -473,7 +473,7 @@
         document.getElementById('loadRepoBtn').addEventListener('click', loadRepository);
         fabAddBtn.addEventListener('click', openAddPopup);
         settingsBtn.addEventListener('click', openSettingsPopup);
-        document.addEventListener('click', hideContextMenu);
+        document.addEventListener('click', () => hideContextMenu());
 
         setupContextMenu();
         loadSavedConfig();
@@ -702,43 +702,61 @@
             document.getElementById('ctxAddFolder').style.display = item.type === 'tree' ? 'flex' : 'none';
         }
 
-        function hideContextMenu() {
+        function hideContextMenu(clear = true) {
             contextMenu.style.display = 'none';
-            contextTarget = null;
+            if (clear) contextTarget = null;
         }
 
         function setupContextMenu() {
             document.getElementById('ctxUpload').addEventListener('click', () => {
-                hideContextMenu();
                 if (!contextTarget) return;
+        
+                const target = contextTarget;
+                hideContextMenu(false);
+        
                 const input = document.createElement('input');
                 input.type = 'file';
+        
                 input.onchange = (e) => {
                     const file = e.target.files[0];
                     if (!file) return;
+        
                     const reader = new FileReader();
+        
                     reader.onload = (ev) => {
                         const base64 = ev.target.result.split(',')[1];
-                        const targetPath = contextTarget.type === 'tree' ?
-                            contextTarget.path + '/' + file.name :
-                            contextTarget.path;
+        
+                        const targetPath =
+                            target.type === 'tree'
+                                ? target.path + '/' + file.name
+                                : target.path;
+        
                         uploadDirectly(targetPath, base64, file.name);
+                        contextTarget = null;
                     };
+        
                     reader.readAsDataURL(file);
                 };
+        
                 input.click();
             });
-
+        
             document.getElementById('ctxAddFolder').addEventListener('click', () => {
-                hideContextMenu();
                 if (!contextTarget || contextTarget.type !== 'tree') return;
-                openCreateFolderPopup(contextTarget.path + '/');
-            });
-
-            document.getElementById('ctxDelete').addEventListener('click', () => {
+        
+                const target = contextTarget;
                 hideContextMenu();
+        
+                openCreateFolderPopup(target.path + '/');
+            });
+        
+            document.getElementById('ctxDelete').addEventListener('click', () => {
                 if (!contextTarget) return;
-                deleteItem(contextTarget);
+        
+                const target = contextTarget;
+                hideContextMenu();
+        
+                deleteItem(target);
             });
         }
 
@@ -855,7 +873,7 @@
             const popup = document.getElementById('universalPopup');
             document.getElementById('popupTitle').textContent = 'Add';
             document.getElementById('popupBody').innerHTML = `
-                <button class="btn-accent-block" id="addNewFileBtn" style="margin-bottom:12px;"><i class="fas fa-file"></i> New File</button>
+                <button class="btn-accent-block" id="addNewFileBtn" style="margin-bottom:8px;"><i class="fas fa-file"></i> New File</button>
                 <button class="btn-accent-block" id="addNewFolderBtn"><i class="fas fa-folder-plus"></i> New Folder</button>
             `;
             document.getElementById('popupFooter').innerHTML = '';
