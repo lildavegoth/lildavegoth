@@ -860,52 +860,37 @@
         }
 
         function openCreateFolderPopup(parentPath) {
-            const popup = document.getElementById('universalPopup');
-            document.getElementById('popupTitle').textContent = 'Create Folder';
-            document.getElementById('popupBody').innerHTML = `
-                <input
-                    class="popup-input"
-                    id="folderInputCreate"
-                    name="folderInputCreate"
-                    type="search"
-                    inputmode="search"
-                    autocomplete="new-password"
-                    autocorrect="off"
-                    autocapitalize="none"
-                    spellcheck="false"
-                    data-bwignore="true"
-                    data-lpignore="true"
-                    data-1p-ignore="true"
-                    placeholder="Folder name">
-            `;
-            document.getElementById('popupFooter').innerHTML = `
-                <button class="btn-cancel" onclick="closeUniversalPopup()">Cancel</button>
-                <button class="btn-yes" id="confirmCreateFolder">Create</button>
-            `;
-            popup.style.display = 'flex';
-
-            document.getElementById('confirmCreateFolder').onclick = async () => {
-                const name = document.getElementById('folderInputCreate').value.trim();
-                if (!name) return;
-                const fullPath = parentPath + name + '/.gitkeep';
-                const config = getConfig();
-                const commitMessage = makeCommitMsg('added', name);
-                try {
-                    await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${fullPath}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `token ${config.token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ message: commitMessage, content: btoa('') })
-                    });
-                    window.showMessage('Success', `Folder "${name}" created.`);
-                    closeUniversalPopup();
-                    refreshRepo();
-                } catch (error) {
-                    window.showMessage('Error', error.message);
-                }
-            };
+            const name = prompt('Folder name');
+        
+            if (!name || !name.trim()) return;
+        
+            createFolder(parentPath, name.trim());
+        }
+        
+        async function createFolder(parentPath, name) {
+            const fullPath = parentPath + name + '/.gitkeep';
+            const config = getConfig();
+            const commitMessage = makeCommitMsg('added', name);
+        
+            try {
+                await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${fullPath}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${config.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: commitMessage,
+                        content: btoa('')
+                    })
+                });
+        
+                window.showMessage('Success', `Folder "${name}" created.`);
+                refreshRepo();
+        
+            } catch (error) {
+                window.showMessage('Error', error.message);
+            }
         }
 
         function openAddPopup() {
