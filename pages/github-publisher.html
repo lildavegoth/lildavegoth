@@ -860,11 +860,56 @@
         }
 
         function openCreateFolderPopup(parentPath) {
-            const name = prompt('Folder name');
+            const popup = document.getElementById('universalPopup');
         
-            if (!name || !name.trim()) return;
+            document.getElementById('popupTitle').textContent = 'Create Folder';
         
-            createFolder(parentPath, name.trim());
+            document.getElementById('popupBody').innerHTML = `
+                <div
+                    id="newFolderName"
+                    class="popup-input"
+                    contenteditable="true"
+                    style="min-height:48px;outline:none;"
+                ></div>
+            `;
+        
+            document.getElementById('popupFooter').innerHTML = `
+                <button class="btn-cancel" onclick="closeUniversalPopup()">Cancel</button>
+                <button class="btn-yes" id="confirmCreateFolder">Create</button>
+            `;
+        
+            popup.style.display = 'flex';
+        
+            document.getElementById('confirmCreateFolder').onclick = async () => {
+                const name = document.getElementById('newFolderName').textContent.trim();
+        
+                if (!name) return;
+        
+                const fullPath = parentPath + name + '/.gitkeep';
+                const config = getConfig();
+                const commitMessage = makeCommitMsg('added', name);
+        
+                try {
+                    await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${fullPath}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${config.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: commitMessage,
+                            content: btoa('')
+                        })
+                    });
+        
+                    window.showMessage('Success', `Folder "${name}" created.`);
+                    closeUniversalPopup();
+                    refreshRepo();
+        
+                } catch (error) {
+                    window.showMessage('Error', error.message);
+                }
+            };
         }
         
         async function createFolder(parentPath, name) {
