@@ -760,35 +760,61 @@
             });
         }
 
-        async function uploadDirectly(targetPath, base64Content, displayName) {
+                async function uploadDirectly(targetPath, base64Content, displayName) {
             const config = getConfig();
-            const commitMessage = makeCommitMsg('added', displayName);
+            const existing = fullTree.find(i => i.path === targetPath);
+        
+            const commitMessage = makeCommitMsg(
+                existing ? 'updated' : 'added',
+                displayName
+            );
+        
             const notif = window.createTimerNotification('Uploading', 1);
             const progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
             const timeEl = notif.wrapper.querySelector('.timer-time-notif');
+        
             if (progressBar) progressBar.style.width = '0%';
             if (timeEl) timeEl.textContent = '0%';
-
+        
             setTimeout(() => {
                 if (progressBar) progressBar.style.width = '50%';
                 if (timeEl) timeEl.textContent = '50%';
             }, 300);
-
+        
             try {
-                const response = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${targetPath}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${config.token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ message: commitMessage, content: base64Content })
-                });
-                if (!response.ok) throw new Error('Upload failed: ' + response.statusText);
+                const body = {
+                    message: commitMessage,
+                    content: base64Content
+                };
+        
+                if (existing) body.sha = existing.sha;
+        
+                const response = await fetch(
+                    `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${targetPath}`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${config.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(body)
+                    }
+                );
+        
+                if (!response.ok) throw new Error('Upload failed');
+        
                 if (progressBar) progressBar.style.width = '100%';
                 if (timeEl) timeEl.textContent = '100%';
+        
                 setTimeout(() => notif.close(), 500);
-                window.showMessage('Success', `File uploaded to ${targetPath}`);
+        
+                window.showMessage(
+                    'Success',
+                    existing ? 'File overwritten.' : 'File uploaded.'
+                );
+        
                 refreshRepo();
+        
             } catch (error) {
                 notif.close();
                 window.showMessage('Error', error.message);
