@@ -171,11 +171,6 @@
             user-select: none;
         }
 
-        .file-card.selected {
-            border-color: var(--accent-color);
-            background: rgba(193, 252, 50, 0.05);
-        }
-
         .file-card.folder-item {
             font-weight: 500;
         }
@@ -192,85 +187,6 @@
             font-size: 0.85rem;
             white-space: nowrap;
             margin-left: var(--spacing-sm);
-        }
-
-        .action-panel {
-            background: var(--bg-card);
-            border-radius: var(--radius-large);
-            padding: var(--spacing-lg);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            margin-top: var(--spacing-md);
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-md);
-        }
-
-        .selected-path {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: var(--radius-medium);
-            padding: 12px 16px;
-            color: var(--text-primary);
-            font-size: 0.9rem;
-            word-break: break-all;
-        }
-
-        .file-picker-label {
-            display: block;
-            background: var(--bg-card);
-            border: 1px dashed rgba(255, 255, 255, 0.2);
-            border-radius: var(--radius-medium);
-            padding: 14px;
-            text-align: center;
-            cursor: pointer;
-            transition: border-color 0.2s;
-        }
-
-        .file-picker-label:hover {
-            border-color: var(--accent-color);
-        }
-
-        .file-picker-label input {
-            display: none;
-        }
-
-        .buttons-row {
-            display: flex;
-            gap: var(--spacing-sm);
-        }
-
-        .btn {
-            padding: 12px 20px;
-            border-radius: var(--radius-medium);
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            transition: opacity 0.2s;
-            flex: 1;
-        }
-
-        .btn-publish {
-            background: var(--accent-color);
-            color: #000;
-        }
-
-        .btn-publish:hover {
-            background: var(--accent-dark);
-        }
-
-        .btn-delete {
-            background: #FF3B30;
-            color: #fff;
-        }
-
-        .btn-delete:hover {
-            background: #cc3028;
-        }
-
-        .btn:disabled {
-            opacity: 0.4;
-            pointer-events: none;
         }
 
         .fab {
@@ -438,34 +354,42 @@
             flex: 1;
         }
 
-        .settings-btn-large {
+        .settings-btn {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--text-primary);
             width: 100%;
-            padding: 12px;
-            border-radius: var(--radius-medium);
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            padding: 14px;
+            border-radius: var(--radius-small);
             font-size: 0.95rem;
             cursor: pointer;
             transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .settings-btn-large:hover {
-            background: rgba(193, 252, 50, 0.1);
-        }
-
-        .settings-btn-large i {
+        .settings-btn i {
             width: 20px;
+        }
+
+        .settings-btn.btn-refresh {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+        }
+
+        .settings-btn.btn-logout {
+            background: #C42833;
+            color: white;
+            border: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header-row">
-            <h1>GitHub Publisher | lildavegoth</h1>
+            <h1>GitHub Publisher</h1>
             <button class="btn-icon" id="settingsBtn" title="Settings" style="display: none;"><i class="fas fa-cog"></i></button>
         </div>
 
@@ -482,17 +406,6 @@
         <div id="repoContent" style="display: none;">
             <div class="breadcrumb" id="breadcrumb"></div>
             <div class="files-grid" id="filesContainer"></div>
-            <div class="action-panel">
-                <div class="selected-path" id="selectedPathDisplay">No file selected</div>
-                <label class="file-picker-label" id="filePickerLabel">
-                    <i class="fas fa-cloud-upload-alt" style="margin-right: 8px; color: var(--accent-color);"></i> Choose a local file to replace
-                    <input type="file" id="filePicker">
-                </label>
-                <div class="buttons-row">
-                    <button class="btn btn-publish" id="publishBtn" disabled>Publish</button>
-                    <button class="btn btn-delete" id="deleteBtn" disabled>Delete</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -521,27 +434,18 @@
         let fullTree = [];
         let childrenMap = {};
         let currentPath = '';
-        let selectedItem = null;
-        let localFileContent = null;
         let contextTarget = null;
 
         const loginSection = document.getElementById('loginSection');
         const repoContent = document.getElementById('repoContent');
         const breadcrumbEl = document.getElementById('breadcrumb');
         const filesContainer = document.getElementById('filesContainer');
-        const selectedPathDisplay = document.getElementById('selectedPathDisplay');
-        const filePicker = document.getElementById('filePicker');
-        const publishBtn = document.getElementById('publishBtn');
-        const deleteBtn = document.getElementById('deleteBtn');
         const contextMenu = document.getElementById('contextMenu');
         const fabAddBtn = document.getElementById('fabAddBtn');
         const settingsBtn = document.getElementById('settingsBtn');
 
         document.getElementById('loadRepoBtn').addEventListener('click', loadRepository);
-        filePicker.addEventListener('change', handleFileSelect);
-        publishBtn.addEventListener('click', publishFile);
-        deleteBtn.addEventListener('click', () => deleteItem(selectedItem));
-        fabAddBtn.addEventListener('click', () => openCreateFolderPopup(''));
+        fabAddBtn.addEventListener('click', openAddPopup);
         settingsBtn.addEventListener('click', openSettingsPopup);
         document.addEventListener('click', hideContextMenu);
 
@@ -597,8 +501,6 @@
             loginSection.style.display = 'none';
             repoContent.style.display = 'block';
             currentPath = '';
-            selectedItem = null;
-            updateActionPanel();
             showAppControls();
 
             try {
@@ -682,7 +584,6 @@
                 items.forEach(item => {
                     const card = document.createElement('div');
                     card.className = 'file-card' + (item.type === 'tree' ? ' folder-item' : '');
-                    if (selectedItem && selectedItem.path === item.path) card.classList.add('selected');
                     card.dataset.path = item.path;
                     card.dataset.type = item.type;
                     card.innerHTML = `
@@ -731,142 +632,20 @@
 
         function navigateTo(path) {
             currentPath = path;
-            selectedItem = null;
-            updateActionPanel();
             renderCurrentFolder();
         }
 
         function onItemClick(item) {
             if (item.type === 'tree') {
                 navigateTo(item.path + '/');
-            } else {
-                selectFile(item);
             }
-        }
-
-        function selectFile(item) {
-            document.querySelectorAll('.file-card').forEach(c => c.classList.remove('selected'));
-            const card = document.querySelector(`.file-card[data-path="${CSS.escape(item.path)}"]`);
-            if (card) card.classList.add('selected');
-            selectedItem = item;
-            updateActionPanel();
-        }
-
-        function updateActionPanel() {
-            if (selectedItem) {
-                selectedPathDisplay.textContent = selectedItem.path;
-                publishBtn.disabled = false;
-                deleteBtn.disabled = false;
-            } else {
-                selectedPathDisplay.textContent = 'No file selected';
-                publishBtn.disabled = true;
-                deleteBtn.disabled = true;
-            }
-        }
-
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                localFileContent = e.target.result.split(',')[1];
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function publishFile() {
-            if (!selectedItem || !localFileContent) {
-                window.showMessage('Error', 'Select a file and choose a local file.');
-                return;
-            }
-            const config = getConfig();
-            const fileName = selectedItem.path.split('/').pop();
-            const commitMessage = makeCommitMsg('updated', fileName);
-            const notif = window.createTimerNotification('Uploading', 1);
-            const progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
-            const timeEl = notif.wrapper.querySelector('.timer-time-notif');
-            if (progressBar) progressBar.style.width = '0%';
-            if (timeEl) timeEl.textContent = '0%';
-
-            setTimeout(() => {
-                if (progressBar) progressBar.style.width = '50%';
-                if (timeEl) timeEl.textContent = '50%';
-            }, 300);
-
-            try {
-                const body = { message: commitMessage, content: localFileContent, sha: selectedItem.sha };
-                const response = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${selectedItem.path}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${config.token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(body)
-                });
-                if (!response.ok) throw new Error('Publish failed: ' + response.statusText);
-                if (progressBar) progressBar.style.width = '100%';
-                if (timeEl) timeEl.textContent = '100%';
-                setTimeout(() => notif.close(), 500);
-                window.showMessage('Success', `File published as "${commitMessage}"`);
-                refreshRepo();
-            } catch (error) {
-                notif.close();
-                window.showMessage('Error', error.message);
-            }
-        }
-
-        async function deleteItem(item) {
-            if (!item) return;
-            openConfirmPopup(`Delete "${item.path.split('/').pop()}"?`, async () => {
-                if (item.type === 'tree') await deleteFolder(item.path);
-                else await deleteSingleFile(item.path, item.sha);
-                refreshRepo();
-            });
-        }
-
-        async function deleteSingleFile(path, sha) {
-            const config = getConfig();
-            const fileName = path.split('/').pop();
-            const commitMessage = makeCommitMsg('deleted', fileName);
-            try {
-                const response = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${path}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `token ${config.token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ message: commitMessage, sha: sha })
-                });
-                if (!response.ok) throw new Error('Delete failed: ' + response.statusText);
-                window.showMessage('Success', `File deleted.`);
-            } catch (error) {
-                window.showMessage('Error', error.message);
-            }
-        }
-
-        async function deleteFolder(folderPath) {
-            const folderName = folderPath.split('/').pop();
-            const config = getConfig();
-            const filesToDelete = fullTree.filter(item => item.type === 'blob' && item.path.startsWith(folderPath + '/'));
-            for (const file of filesToDelete) {
-                await deleteSingleFile(file.path, file.sha);
-            }
-            const commitMsg = makeCommitMsg('deleted', folderName);
-            window.showMessage('Success', `Folder "${folderPath}" deleted.`);
         }
 
         async function refreshRepo() {
             const savedPath = currentPath;
-            const savedSelected = selectedItem ? selectedItem.path : null;
             await loadRepository();
             currentPath = savedPath;
-            if (savedSelected) {
-                const stillExists = fullTree.find(item => item.path === savedSelected);
-                if (stillExists) selectedItem = stillExists;
-                else selectedItem = null;
-            }
             renderCurrentFolder();
-            updateActionPanel();
         }
 
         function makeCommitMsg(action, name) {
@@ -972,6 +751,44 @@
             }
         }
 
+        async function deleteItem(item) {
+            if (!item) return;
+            openConfirmPopup(`Delete "${item.path.split('/').pop()}"?`, async () => {
+                if (item.type === 'tree') await deleteFolder(item.path);
+                else await deleteSingleFile(item.path, item.sha);
+                refreshRepo();
+            });
+        }
+
+        async function deleteSingleFile(path, sha) {
+            const config = getConfig();
+            const fileName = path.split('/').pop();
+            const commitMessage = makeCommitMsg('deleted', fileName);
+            try {
+                const response = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${path}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `token ${config.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: commitMessage, sha: sha })
+                });
+                if (!response.ok) throw new Error('Delete failed: ' + response.statusText);
+                window.showMessage('Success', `File deleted.`);
+            } catch (error) {
+                window.showMessage('Error', error.message);
+            }
+        }
+
+        async function deleteFolder(folderPath) {
+            const config = getConfig();
+            const filesToDelete = fullTree.filter(item => item.type === 'blob' && item.path.startsWith(folderPath + '/'));
+            for (const file of filesToDelete) {
+                await deleteSingleFile(file.path, file.sha);
+            }
+            window.showMessage('Success', `Folder "${folderPath}" deleted.`);
+        }
+
         function openCreateFolderPopup(parentPath) {
             const popup = document.getElementById('universalPopup');
             document.getElementById('popupTitle').textContent = 'Create Folder';
@@ -1008,6 +825,41 @@
             };
         }
 
+        function openAddPopup() {
+            const popup = document.getElementById('universalPopup');
+            document.getElementById('popupTitle').textContent = 'Add';
+            document.getElementById('popupBody').innerHTML = '';
+            document.getElementById('popupFooter').innerHTML = `
+                <button class="btn-cancel" onclick="closeUniversalPopup()">Cancel</button>
+                <button class="btn-yes" id="addNewFileBtn"><i class="fas fa-file"></i> New File</button>
+                <button class="btn-yes" id="addNewFolderBtn"><i class="fas fa-folder-plus"></i> New Folder</button>
+            `;
+            popup.style.display = 'flex';
+
+            document.getElementById('addNewFileBtn').onclick = () => {
+                closeUniversalPopup();
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        const base64 = ev.target.result.split(',')[1];
+                        const targetPath = currentPath + file.name;
+                        uploadDirectly(targetPath, base64, file.name);
+                    };
+                    reader.readAsDataURL(file);
+                };
+                input.click();
+            };
+
+            document.getElementById('addNewFolderBtn').onclick = () => {
+                closeUniversalPopup();
+                openCreateFolderPopup(currentPath);
+            };
+        }
+
         function openConfirmPopup(message, onYes) {
             const popup = document.getElementById('universalPopup');
             document.getElementById('popupTitle').textContent = 'Confirm';
@@ -1027,8 +879,8 @@
             const popup = document.getElementById('universalPopup');
             document.getElementById('popupTitle').textContent = 'Settings';
             document.getElementById('popupBody').innerHTML = `
-                <button class="settings-btn-large" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
-                <button class="settings-btn-large" id="logoutBtn" style="color: #FF3B30;"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                <button class="settings-btn btn-refresh" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                <button class="settings-btn btn-logout" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
             `;
             document.getElementById('popupFooter').innerHTML = '';
             popup.style.display = 'flex';
@@ -1047,8 +899,7 @@
             fullTree = [];
             childrenMap = {};
             currentPath = '';
-            selectedItem = null;
-            updateActionPanel();
+            renderCurrentFolder();
             loadRepository();
         }
 
