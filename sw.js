@@ -31,7 +31,8 @@ const urlsToCache = [
     'pages/dice-generator.html',
     'pages/dictionary-manager.html',
     'pages/downloads-task.html',
-    'page/font-previewer.html',
+    'pages/font-previewer.html',
+    'pages/github-publisher.html',
     'pages/heartopia-gcodes.html',
     'pages/hiragana-learner.html',
     'pages/html-cleaner.html',
@@ -40,7 +41,7 @@ const urlsToCache = [
     'pages/icon-list',
     'pages/icon-pack.html',
     'pages/image-to-base64.html',
-    'pagea/inertia.html',
+    'pages/inertia.html',
     'pages/journal.html',
     'pages/kiraku-store.html',
     'pages/links-vault.html',
@@ -112,7 +113,7 @@ const urlsToCache = [
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/hard_story_3.txt',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/hard_story_4.txt',
     // Bundles
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/webfonts/fa-solid-900.woff2',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'
 ];
