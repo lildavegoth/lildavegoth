@@ -11,7 +11,7 @@ Still using Debloater apps and modules? Why bother restarting your device to uni
 
 Restart device after Debloating apps is unnecessary, but when you use a **Magisk** module to Debloat system apps, of course you need to reboot your device to make the module run and activated.
 
-# Methods
+# Methods →
 Choose your own methods for the tutorials
 - `[Method One — Terminal Emulator →](^^^method1show^^^)`
 - `[Method Two — App Manager →](^^^method2show^^^)`
