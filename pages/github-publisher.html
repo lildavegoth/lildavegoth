@@ -716,34 +716,36 @@
         function setupContextMenu() {
             document.getElementById('ctxUpload').addEventListener('click', () => {
                 if (!contextTarget) return;
-        
+            
                 const target = contextTarget;
                 hideContextMenu(false);
-        
+            
                 const input = document.createElement('input');
                 input.type = 'file';
-        
-                input.onchange = (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-        
-                    const reader = new FileReader();
-        
-                    reader.onload = (ev) => {
-                        const base64 = ev.target.result.split(',')[1];
-        
-                        const targetPath =
-                            target.type === 'tree'
-                                ? target.path + '/' + file.name
-                                : target.path;
-        
-                        uploadDirectly(targetPath, base64, file.name);
+            
+                if (target.type === 'tree') {
+                    input.multiple = true;
+                    input.onchange = (e) => {
+                        if (e.target.files.length === 0) return;
+                        const folderPath = target.path + '/';
+                        batchUploadFiles(e.target.files, folderPath);
                         contextTarget = null;
                     };
-        
-                    reader.readAsDataURL(file);
-                };
-        
+                } else {
+                    input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+            
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            const base64 = ev.target.result.split(',')[1];
+                            uploadDirectly(target.path, base64, file.name);
+                            contextTarget = null;
+                        };
+                        reader.readAsDataURL(file);
+                    };
+                }
+            
                 input.click();
             });
         
@@ -820,6 +822,125 @@
         
                 refreshRepo();
         
+            } catch (error) {
+                notif.close();
+                window.showMessage('Error', error.message);
+            }
+        }
+        
+        async function batchUploadFiles(files, folderPath) {
+            const config = getConfig();
+            if (!files.length) return;
+        
+            const notif = window.createTimerNotification('Uploading', 1);
+            const progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
+            const timeEl = notif.wrapper.querySelector('.timer-time-notif');
+            const updateProgress = (pct) => {
+                if (progressBar) progressBar.style.width = pct + '%';
+                if (timeEl) timeEl.textContent = pct + '%';
+            };
+        
+            try {
+                updateProgress(5);
+        
+                const refRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/ref/heads/${config.branch}`, {
+                    headers: { 'Authorization': `token ${config.token}` }
+                });
+                if (!refRes.ok) throw new Error('Branch ref fetch failed');
+                const refData = await refRes.json();
+                const parentCommitSha = refData.object.sha;
+        
+                const commitRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/commits/${parentCommitSha}`, {
+                    headers: { 'Authorization': `token ${config.token}` }
+                });
+                if (!commitRes.ok) throw new Error('Commit fetch failed');
+                const commitData = await commitRes.json();
+                const baseTreeSha = commitData.tree.sha;
+        
+                updateProgress(15);
+        
+                const fileContents = await Promise.all(Array.from(files).map(file => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = ev => resolve({ name: file.name, content: ev.target.result.split(',')[1] });
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                }));
+        
+                updateProgress(25);
+        
+                const blobs = await Promise.all(fileContents.map(async ({ name, content }) => {
+                    const res = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/blobs`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `token ${config.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ content, encoding: 'base64' })
+                    });
+                    if (!res.ok) throw new Error(`Blob creation failed for ${name}`);
+                    const data = await res.json();
+                    return { name, sha: data.sha };
+                }));
+        
+                updateProgress(60);
+        
+                const treeEntries = blobs.map(({ name, sha }) => ({
+                    path: folderPath + name,
+                    mode: '100644',
+                    type: 'blob',
+                    sha
+                }));
+        
+                const treeRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/trees`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `token ${config.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ base_tree: baseTreeSha, tree: treeEntries })
+                });
+                if (!treeRes.ok) throw new Error('Tree creation failed');
+                const newTree = await treeRes.json();
+        
+                updateProgress(80);
+        
+                const fileLabel = files.length > 1 ? `${files.length} files` : files[0].name;
+                const commitMessage = `Added/updated ${fileLabel}`;
+        
+                const commitCreateRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/commits`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `token ${config.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: commitMessage,
+                        tree: newTree.sha,
+                        parents: [parentCommitSha]
+                    })
+                });
+                if (!commitCreateRes.ok) throw new Error('Commit creation failed');
+                const newCommit = await commitCreateRes.json();
+        
+                updateProgress(95);
+        
+                const updateRefRes = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/refs/heads/${config.branch}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${config.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ sha: newCommit.sha, force: false })
+                });
+                if (!updateRefRes.ok) throw new Error('Branch update failed');
+        
+                updateProgress(100);
+        
+                setTimeout(() => notif.close(), 500);
+                window.showMessage('Upload successful');
+                refreshRepo();
             } catch (error) {
                 notif.close();
                 window.showMessage('Error', error.message);
@@ -957,16 +1078,10 @@
                 closeUniversalPopup();
                 const input = document.createElement('input');
                 input.type = 'file';
+                input.multiple = true;
                 input.onchange = (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                        const base64 = ev.target.result.split(',')[1];
-                        const targetPath = currentPath + file.name;
-                        uploadDirectly(targetPath, base64, file.name);
-                    };
-                    reader.readAsDataURL(file);
+                    if (e.target.files.length === 0) return;
+                    batchUploadFiles(e.target.files, currentPath);
                 };
                 input.click();
             };
