@@ -620,6 +620,17 @@
             gap: 12px;
             overflow-y: auto;
             max-height: 50vh;
+            padding-right: 8px;
+            padding-bottom: 16px;
+        }
+
+        .folder-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .folder-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
         }
 
         .folder-card {
@@ -659,7 +670,7 @@
             font-size: 1.2rem;
             color: var(--text-secondary);
         }
-        
+
         .arrow-circle {
             display: flex;
             align-items: center;
@@ -670,7 +681,7 @@
             border-radius: 10px;
             flex-shrink: 0;
         }
-        
+
         .arrow-circle i {
             color: #000;
             font-size: 0.9rem;
@@ -877,8 +888,11 @@
             'dropbox_tokens', 'hideImportNote', 'hideSwipeIndicator', 'hintModeEnabled',
             'hiraganaStars', 'hiraganaStreak', 'moneyTrackerCurrentCardId', 'showAllEntries',
             'userName', 'lastPageState', 'giveaway_admins', 'openrouterAPIKey', 'showHeader',
-            'hideIcons', 'privacy-policy-notice-dismissed', 'loginPop', 'lastCloudBackupDate'
+            'hideIcons', 'privacy-policy-notice-dismissed', 'loginPop', 'lastCloudBackupDate',
+            'backupFileSizes'
         ];
+
+        const BACKUP_META_KEY = 'backupFileSizes';
 
         let currentFolder = 'All';
         let pinnedItems = JSON.parse(localStorage.getItem('pinnedItems') || '[]');
@@ -1035,7 +1049,6 @@
             const container = document.getElementById('storageContainer');
             container.innerHTML = '';
             let totalSize = getTotalStorageSize();
-            let formattedSize = formatSize(totalSize);
             const pill = document.getElementById('folderPill');
             pill.textContent = currentFolder;
             if (filtered.length === 0) {
@@ -1371,32 +1384,43 @@
                 }
             }, 300);
             try {
-                const backup = {};
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (!excludedKeys.includes(key)) backup[key] = localStorage.getItem(key);
+                let meta = {};
+                try {
+                    meta = JSON.parse(localStorage.getItem(BACKUP_META_KEY) || '{}');
+                } catch (e) {}
+                const keys = getFilteredKeys();
+                let uploadedCount = 0;
+                for (let i = 0; i < keys.length; i++) {
+                    const key = keys[i];
+                    const value = localStorage.getItem(key);
+                    if (value === null) continue;
+                    const folder = getFolderForKey(key);
+                    const path = `/${folder}/${key}.json`;
+                    const currentSize = value.length;
+                    if (meta[path] === currentSize) continue;
+                    const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Dropbox-API-Arg': JSON.stringify({ path: path, mode: 'overwrite' }),
+                            'Content-Type': 'application/octet-stream'
+                        },
+                        body: value
+                    });
+                    if (!resp.ok) {
+                        const errText = await resp.text();
+                        throw new Error(`Upload failed for ${key}: ${errText}`);
+                    }
+                    meta[path] = currentSize;
+                    uploadedCount++;
                 }
-                const content = JSON.stringify(backup, null, 2);
-                const fileName = `kakoikiraku_backup_${new Date().toISOString().slice(0,10)}.json`;
-                const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Dropbox-API-Arg': JSON.stringify({ path: '/' + fileName, mode: 'overwrite' }),
-                        'Content-Type': 'application/octet-stream'
-                    },
-                    body: content
-                });
-                if (!resp.ok) {
-                    const errorBody = await resp.text();
-                    throw new Error(`Dropbox API error (${resp.status}): ${errorBody}`);
-                }
+                localStorage.setItem(BACKUP_META_KEY, JSON.stringify(meta));
+                localStorage.setItem('lastCloudBackupDate', new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
                 clearInterval(interval);
                 progressBar.style.width = '100%';
                 timeElement.textContent = '100%';
-                localStorage.setItem('lastCloudBackupDate', new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
                 setTimeout(() => notif.close(), 1500);
-                window.showMessage(`Backup saved as ${fileName}`);
+                window.showMessage(`Backup complete. ${uploadedCount} files updated.`);
             } catch (err) {
                 clearInterval(interval);
                 notif.close();
@@ -1412,68 +1436,74 @@
                 });
                 return;
             }
-            try {
-                const listResp = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ path: '', recursive: false })
-                });
-                if (!listResp.ok) throw new Error('Failed to list files');
-                const list = await listResp.json();
-                const backups = list.entries
-                    .filter(e => e.name.startsWith('kakoikiraku_backup_') && e.name.endsWith('.json'))
-                    .sort((a, b) => b.server_modified.localeCompare(a.server_modified));
-                if (backups.length === 0) {
-                    window.showMessage('No backup files found.', true);
-                    return;
-                }
-                const latest = backups[0].path_lower;
-                showConfirmPopup('Restore', `Restore latest backup (${backups[0].name})? Current data will be overwritten.`, async () => {
-                    const notif = window.createTimerNotification('Cloud Restore', 100);
-                    const progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
-                    const timeElement = notif.wrapper.querySelector('.timer-time-notif');
-                    if (progressBar) progressBar.style.width = '0%';
-                    if (timeElement) timeElement.textContent = '0%';
-                    let progress = 0;
-                    const interval = setInterval(() => {
-                        if (progress < 90) {
-                            progress += Math.random() * 10 + 5;
-                            if (progress > 90) progress = 90;
-                            progressBar.style.width = progress + '%';
-                            timeElement.textContent = Math.floor(progress) + '%';
-                        }
-                    }, 300);
-                    try {
+            showConfirmPopup('Restore', 'Restore all cloud data? Current data will be overwritten.', async () => {
+                const notif = window.createTimerNotification('Cloud Restore', 100);
+                const progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
+                const timeElement = notif.wrapper.querySelector('.timer-time-notif');
+                if (progressBar) progressBar.style.width = '0%';
+                if (timeElement) timeElement.textContent = '0%';
+                let progress = 0;
+                const interval = setInterval(() => {
+                    if (progress < 90) {
+                        progress += Math.random() * 10 + 5;
+                        if (progress > 90) progress = 90;
+                        progressBar.style.width = progress + '%';
+                        timeElement.textContent = Math.floor(progress) + '%';
+                    }
+                }, 300);
+                try {
+                    let allFiles = [];
+                    let hasMore = true;
+                    let cursor = null;
+                    while (hasMore) {
+                        const payload = cursor ? { cursor } : { path: '', recursive: true };
+                        const listResp = await fetch('https://api.dropboxapi.com/2/files/list_folder' + (cursor ? '/continue' : ''), {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        if (!listResp.ok) throw new Error('Failed to list backup files');
+                        const data = await listResp.json();
+                        const entries = data.entries.filter(e => e['.tag'] === 'file' && e.name.endsWith('.json'));
+                        allFiles = allFiles.concat(entries);
+                        hasMore = data.has_more;
+                        cursor = data.cursor;
+                    }
+                    if (allFiles.length === 0) {
+                        clearInterval(interval);
+                        notif.close();
+                        window.showMessage('No backup files found.', true);
+                        return;
+                    }
+                    for (let i = 0; i < allFiles.length; i++) {
+                        const file = allFiles[i];
+                        const key = file.name.replace(/\.json$/, '');
                         const dlResp = await fetch('https://content.dropboxapi.com/2/files/download', {
                             method: 'POST',
                             headers: {
                                 'Authorization': `Bearer ${token}`,
-                                'Dropbox-API-Arg': JSON.stringify({ path: latest })
+                                'Dropbox-API-Arg': JSON.stringify({ path: file.path_lower })
                             }
                         });
-                        if (!dlResp.ok) throw new Error('Download failed');
-                        const backupData = await dlResp.json();
-                        for (const [key, value] of Object.entries(backupData)) {
-                            localStorage.setItem(key, value);
-                        }
-                        clearInterval(interval);
-                        progressBar.style.width = '100%';
-                        timeElement.textContent = '100%';
-                        setTimeout(() => notif.close(), 1500);
-                        window.showMessage('Restore complete!');
-                        initialize();
-                    } catch (err) {
-                        clearInterval(interval);
-                        notif.close();
-                        window.showMessage('Restore error: ' + err.message, true);
+                        if (!dlResp.ok) throw new Error(`Download failed for ${key}`);
+                        const content = await dlResp.text();
+                        localStorage.setItem(key, content);
                     }
-                });
-            } catch (err) {
-                window.showMessage('Restore error: ' + err.message, true);
-            }
+                    clearInterval(interval);
+                    progressBar.style.width = '100%';
+                    timeElement.textContent = '100%';
+                    setTimeout(() => notif.close(), 1500);
+                    window.showMessage(`Restore complete! ${allFiles.length} items restored.`);
+                    initialize();
+                } catch (err) {
+                    clearInterval(interval);
+                    notif.close();
+                    window.showMessage('Restore error: ' + err.message, true);
+                }
+            });
         }
 
         function openFoldersPopup() {
@@ -1584,7 +1614,7 @@
                     let hasMore = true;
                     let cursor = null;
                     while (hasMore) {
-                        const listPayload = cursor ? { cursor } : { path: '', recursive: false };
+                        const listPayload = cursor ? { cursor } : { path: '', recursive: true };
                         const listResp = await fetch('https://api.dropboxapi.com/2/files/list_folder' + (cursor ? '/continue' : ''), {
                             method: 'POST',
                             headers: {
@@ -1609,6 +1639,7 @@
                         hasMore = data.has_more;
                         cursor = data.cursor;
                     }
+                    localStorage.removeItem(BACKUP_META_KEY);
                     progress.complete();
                     window.showMessage('All backups deleted. Creating a fresh backup...');
                     await uploadBackup();
@@ -1809,7 +1840,7 @@
                             }
                         } catch (e) {}
                     }
-                    const snippet = val.length > 50 ? val.substring(0, 50) + '…' : val;
+                    const snippet = val.length > 50 ? val.substring(0, 50) + '\u2026' : val;
                     return `
                         <div class="search-suggestion-item" data-key="${key}">
                             <div class="suggestion-title">${key}</div>
