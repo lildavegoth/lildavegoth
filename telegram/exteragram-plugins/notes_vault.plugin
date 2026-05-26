@@ -7,14 +7,16 @@ from android_utils import run_on_ui_thread
 from client_utils import get_last_fragment
 from hook_utils import find_class
 from org.telegram.messenger import ApplicationLoader
+from ui.bulletin import BulletinHelper
 from ui.settings import Header, Text, Divider, Input
 
 __name__ = "Notes Vault"
-__description__ = "Save and manage your personal notes directly in Telegram app.\nhttps://github.com/lildavegoth/lildavegoth"
-__version__ = "1.1.1"
+__description__ = "Save and manage personal notes.\nCommands: .savenote, .notes, .deletenote, .copynote.\nhttps://github.com/lildavegoth/lildavegoth"
+__version__ = "1.1.4"
 __id__ = "notes_vault"
-__author__ = "@lildavegoth"
+__author__ = "lildavegoth"
 __icon__ = "kirakustickers/1"
+
 
 class NotesVault(BasePlugin):
 
@@ -34,7 +36,7 @@ class NotesVault(BasePlugin):
         except Exception:
             pass
 
-    def _show_telegram_dialog(self, title: str, message: str):
+    def _show_notes_dialog(self, notes: List[str]):
         def show():
             activity = None
             try:
@@ -47,8 +49,12 @@ class NotesVault(BasePlugin):
                 try:
                     AlertDialog = find_class("org.telegram.ui.ActionBar.AlertDialog")
                     builder = AlertDialog.Builder(activity)
-                    builder.setTitle(title)
-                    builder.setMessage(message)
+                    builder.setTitle("My Notes")
+                    if not notes:
+                        builder.setMessage("No notes yet.")
+                    else:
+                        lines = "\n".join([f"{i+1}. {n}" for i, n in enumerate(notes)])
+                        builder.setMessage(lines)
                     builder.setPositiveButton("OK", None)
                     builder.show()
                 except Exception:
@@ -62,8 +68,7 @@ class NotesVault(BasePlugin):
                 clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE)
                 clip = ClipData.newPlainText("note", text)
                 clipboard.setPrimaryClip(clip)
-                from android.widget import Toast
-                Toast.makeText(ctx, "Copied!", Toast.LENGTH_SHORT).show()
+                BulletinHelper.show_success("Copied to clipboard!")
             except Exception:
                 pass
         run_on_ui_thread(copy)
@@ -191,64 +196,60 @@ class NotesVault(BasePlugin):
             rest = msg.split(" ", 1)
             text = rest[1] if len(rest) > 1 else ""
             if not text.strip():
-                self._show_telegram_dialog("Usage", ".savenote <note text>")
+                BulletinHelper.show_info("Usage: .savenote <note text>")
             else:
                 notes = self._load()
                 notes.append(text.strip())
                 self._save_notes(notes)
                 self.set_setting("_v", len(notes), reload_settings=True)
-                self._show_telegram_dialog("Notes Vault", "Note saved!")
+                BulletinHelper.show_success("Note saved!")
             return HookResult(strategy=HookStrategy.CANCEL, params=params)
 
         elif cmd.startswith(".notes") or cmd.startswith("/notes"):
             notes = self._load()
-            if not notes:
-                self._show_telegram_dialog("My Notes", "No notes yet.")
-            else:
-                lines = "\n".join([f"{i+1}. {n}" for i, n in enumerate(notes)])
-                self._show_telegram_dialog("My Notes", lines)
+            self._show_notes_dialog(notes)
             return HookResult(strategy=HookStrategy.CANCEL, params=params)
 
         elif cmd.startswith(".deletenote") or cmd.startswith("/deletenote"):
             rest = msg.split(" ", 1)
             if len(rest) < 2 or not rest[1].strip():
-                self._show_telegram_dialog("Usage", ".deletenote <number>")
+                BulletinHelper.show_info("Usage: .deletenote <number>")
             else:
                 try:
                     num = int(rest[1].strip())
                 except ValueError:
-                    self._show_telegram_dialog("Error", "Invalid note number.")
+                    BulletinHelper.show_error("Invalid note number.")
                     return HookResult(strategy=HookStrategy.CANCEL, params=params)
 
                 notes = self._load()
                 if num < 1 or num > len(notes):
-                    self._show_telegram_dialog("Error", f"Note #{num} not found.")
+                    BulletinHelper.show_error(f"Note #{num} not found.")
                 else:
                     removed = notes.pop(num - 1)
                     self._save_notes(notes)
                     self.set_setting("_v", len(notes), reload_settings=True)
                     preview = removed[:30] + ("..." if len(removed) > 30 else "")
-                    self._show_telegram_dialog("Notes Vault", f"Note #{num} deleted: {preview}")
+                    BulletinHelper.show_success(f"Note #{num} deleted: {preview}")
             return HookResult(strategy=HookStrategy.CANCEL, params=params)
 
         elif cmd.startswith(".copynote") or cmd.startswith("/copynote"):
             rest = msg.split(" ", 1)
             if len(rest) < 2 or not rest[1].strip():
-                self._show_telegram_dialog("Usage", ".copynote <number>")
+                BulletinHelper.show_info("Usage: .copynote <number>")
             else:
                 try:
                     num = int(rest[1].strip())
                 except ValueError:
-                    self._show_telegram_dialog("Error", "Invalid note number.")
+                    BulletinHelper.show_error("Invalid note number.")
                     return HookResult(strategy=HookStrategy.CANCEL, params=params)
 
                 notes = self._load()
                 if num < 1 or num > len(notes):
-                    self._show_telegram_dialog("Error", f"Note #{num} not found.")
+                    BulletinHelper.show_error(f"Note #{num} not found.")
                 else:
                     note_text = notes[num - 1]
                     self._copy_to_clipboard(note_text)
-                    self._show_telegram_dialog("Copied", f"Note #{num} copied to clipboard.")
+                    BulletinHelper.show_success(f"Note #{num} copied to clipboard!")
             return HookResult(strategy=HookStrategy.CANCEL, params=params)
 
         return HookResult(strategy=HookStrategy.PROCEED, params=params)
