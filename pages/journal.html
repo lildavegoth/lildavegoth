@@ -147,11 +147,13 @@
             padding-bottom: var(--spacing-sm);
             scrollbar-width: none;
             -ms-overflow-style: none;
+            align-items: start;
         }
         .journal-cards::-webkit-scrollbar {
             display: none;
         }
-        .journal-card, .placeholder-card {
+        .journal-card,
+        .placeholder-card {
             min-width: 95%;
             background: var(--bg-card);
             border-radius: var(--radius-large);
@@ -467,6 +469,62 @@
             box-shadow: 0 0 20px rgba(193, 252, 50, 0.3);
             opacity: 0.8;
         }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            padding: 16px;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+        .gallery-thumb {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 12px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .gallery-thumb:hover {
+            border-color: var(--accent-color);
+        }
+        .image-fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100000000;
+            flex-direction: column;
+        }
+        .image-fullscreen-overlay img {
+            max-width: 95%;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        .image-fullscreen-buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .fullscreen-btn {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
     </style>
 </head>
 <body>
@@ -592,6 +650,9 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
+                <button class="settings-btn-item" id="galleryBtn">
+                    <i class="fas fa-images"></i> Gallery
+                </button>
                 <button class="settings-btn-item" id="exportBtn" onclick="window.location.href='../storage.html'">
                     <i class="fas fa-database"></i> Data Storage
                 </button>
@@ -617,6 +678,24 @@
                         click on any Journal Descriptions to edit the journal</p>
                 </div>
             </div>
+        </div>
+    </div>
+    <div id="galleryPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content" style="max-width: 600px; max-height: 80vh;">
+            <div class="popup-header">
+                <h2>Gallery</h2>
+                <button class="close-popup" onclick="closeGalleryPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tools-grid" id="galleryContent" style="padding: 0;"></div>
+        </div>
+    </div>
+    <div id="imageFullscreen" class="image-fullscreen-overlay">
+        <img id="fullscreenImage" src="" alt="Full screen image">
+        <div class="image-fullscreen-buttons">
+            <button class="fullscreen-btn" onclick="downloadImage()"><i class="fas fa-download"></i> Download</button>
+            <button class="fullscreen-btn" onclick="closeImageFullscreen()"><i class="fas fa-times"></i> Close</button>
         </div>
     </div>
     <script>
@@ -661,6 +740,7 @@
             let pendingDelete = null;
             let currentTitleEditId = null;
             let showAllEntries = localStorage.getItem('showAllEntries') === 'true';
+            let currentFullscreenSrc = '';
             function renderWeek() {
                 dateCircles.innerHTML = '';
                 for (let i = 0; i < 7; i++) {
@@ -980,6 +1060,75 @@
                     suggestionsDiv.style.display = 'none';
                 }
             });
+            function collectAllImages() {
+                const images = [];
+                const allContents = localStorage.getItem('dailyJournalContents');
+                if (!allContents) return images;
+                const parsed = JSON.parse(allContents);
+                Object.keys(parsed).forEach(date => {
+                    const day = parsed[date];
+                    if (day.additional) {
+                        day.additional.forEach(entry => {
+                            if (entry.content) {
+                                const imgRegex = /<img[^>]+src="(data:image\/[^"]+)"[^>]*>/gi;
+                                let match;
+                                while ((match = imgRegex.exec(entry.content)) !== null) {
+                                    images.push({ src: match[1], date: date, title: entry.title });
+                                }
+                            }
+                        });
+                    }
+                });
+                return images;
+            }
+            function openGallery() {
+                const images = collectAllImages();
+                const contentDiv = document.getElementById('galleryContent');
+                if (images.length === 0) {
+                    contentDiv.innerHTML = '<div style="padding:24px; text-align:center;">No images found in your journals.</div>';
+                } else {
+                    let html = '<div class="gallery-grid">';
+                    images.forEach((img) => {
+                        html += `<img src="${img.src}" class="gallery-thumb" onclick="openImageFullscreen('${img.src}')" alt="Journal image">`;
+                    });
+                    html += '</div>';
+                    contentDiv.innerHTML = html;
+                }
+                document.getElementById('galleryPopup').style.display = 'flex';
+            }
+            window.openImageFullscreen = function(src) {
+                currentFullscreenSrc = src;
+                document.getElementById('fullscreenImage').src = src;
+                document.getElementById('imageFullscreen').style.display = 'flex';
+            };
+            window.closeImageFullscreen = function() {
+                document.getElementById('imageFullscreen').style.display = 'none';
+                currentFullscreenSrc = '';
+            };
+            window.downloadImage = function() {
+                if (!currentFullscreenSrc) return;
+                const base64Data = currentFullscreenSrc;
+                const byteString = atob(base64Data.split(',')[1]);
+                const mimeType = base64Data.split(',')[0].split(':')[1].split(';')[0];
+                const ab = new ArrayBuffer(byteString.length);
+                const ia = new Uint8Array(ab);
+                for (let i = 0; i < byteString.length; i++) {
+                    ia[i] = byteString.charCodeAt(i);
+                }
+                const blob = new Blob([ab], { type: mimeType || 'image/png' });
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = 'journal-image.' + (mimeType.split('/')[1] || 'png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(blobUrl);
+            };
+            window.closeGalleryPopup = function() {
+                document.getElementById('galleryPopup').style.display = 'none';
+            };
+            document.getElementById('galleryBtn').addEventListener('click', openGallery);
             renderWeek();
             if (showAllEntries) renderAllEntries(); else renderMyJournal();
         })();
