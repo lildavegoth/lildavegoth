@@ -10,7 +10,7 @@ from ui.bulletin import BulletinHelper
 
 __name__ = "Batch Forward"
 __description__ = "Forwards any messages without limits, without sender name and supports for Bulk or Batch forwards! (.forward url).\nhttps://github.com/lildavegoth/lildavegoth"
-__version__ = "1.0.9"
+__version__ = "1.1.0"
 __id__ = "batch_forward"
 __author__ = "@lildavegoth"
 __icon__ = "kirakustickers/3"
@@ -39,7 +39,6 @@ class RestrictForward(BasePlugin):
         return ArrayList()
 
     def _process_updates(self, response, account):
-        """Insert updates into the local database / UI so the message appears instantly."""
         try:
             TLRPC = find_class("org.telegram.tgnet.TLRPC")
             if isinstance(response, TLRPC.Updates):
@@ -63,7 +62,6 @@ class RestrictForward(BasePlugin):
             return HookResult(strategy=HookStrategy.CANCEL)
 
         rest = parts[1].strip()
-        # Extract all t.me message links (with or without spaces)
         links = re.findall(r'https?://t\.me/(?:c/)?[^/\s]+/\d+(?:/\d+)?', rest)
         if not links:
             self._show_error("No valid Telegram message link found.")
@@ -73,13 +71,11 @@ class RestrictForward(BasePlugin):
         return HookResult(strategy=HookStrategy.CANCEL)
 
     def _forward_all(self, account, links, params):
-        """Process multiple links sequentially."""
         for url in links:
             self._forward_message(account, url, params, url)
 
     def _forward_message(self, account, url, params, source_url):
         try:
-            # Parse the URL
             pattern = r"https?://t\.me/(c/)?([^/]+)/(\d+)(?:/(\d+))?"
             match = re.search(pattern, url)
             if not match:
@@ -173,7 +169,6 @@ class RestrictForward(BasePlugin):
                                 self.plugin._show_error("Destination chat context missing.")
                                 return
 
-                            # Always clone with source URL appended
                             self._send_cloned_via_helper(message_objects_list, destination_peer, self.source_url)
 
                         except Exception as e:
@@ -186,40 +181,90 @@ class RestrictForward(BasePlugin):
                             self.plugin._show_error("Core classes missing for cloning.")
                             return
 
-                        for msg_obj in msg_list:
-                            msg_text = getattr(msg_obj, 'message', "") or ""
-                            media_obj = getattr(msg_obj, 'media', None)
-                            send_req = None
+                        # Find main text for album caption
+                        main_text = ""
+                        for m in msg_list:
+                            txt = getattr(m, 'message', "") or ""
+                            if txt:
+                                main_text = txt
+                                break
+                        final_text = main_text
+                        if final_text:
+                            final_text += "\n\n" + source_url
+                        else:
+                            final_text = source_url
 
-                            # Append source URL to text
-                            final_text = msg_text
-                            if final_text:
-                                final_text += "\n\n" + source_url
-                            else:
-                                final_text = source_url
+                        # Separate media messages
+                        media_messages = [m for m in msg_list if hasattr(m, 'media') and m.media and not isinstance(m.media, TLRPC.TL_messageMediaEmpty)]
 
-                            if media_obj is not None and not isinstance(media_obj, TLRPC.TL_messageMediaEmpty):
-                                media_class_name = media_obj.getClass().getName()
+                        if len(media_messages) > 1:
+                            # Send as album
+                            multi_req = TLRPC.TL_messages_sendMultiMedia()
+                            multi_req.peer = dest_peer
 
-                                if "TL_messageMediaDocument" in media_class_name and getattr(media_obj, 'document', None) is not None:
+                            single_media_list = self.plugin._create_int_arraylist()
+                            for idx, m in enumerate(media_messages):
+                                media_obj = m.media
+                                single_media = TLRPC.TL_inputSingleMedia()
+                                single_media.random_id = jlong(Random().nextLong() & 0x7FFFFFFFFFFFFFFF)
+
+                                if "TL_messageMediaDocument" in media_obj.getClass().getName() and getattr(media_obj, 'document', None):
                                     input_media = TLRPC.TL_inputMediaDocument()
                                     input_media.id = TLRPC.TL_inputDocument()
                                     input_media.id.id = jlong(media_obj.document.id)
                                     input_media.id.access_hash = jlong(media_obj.document.access_hash)
                                     input_media.id.file_reference = media_obj.document.file_reference
-                                    send_req = TLRPC.TL_messages_sendMedia()
-                                    send_req.media = input_media
-
-                                elif "TL_messageMediaPhoto" in media_class_name and getattr(media_obj, 'photo', None) is not None:
+                                    single_media.media = input_media
+                                elif "TL_messageMediaPhoto" in media_obj.getClass().getName() and getattr(media_obj, 'photo', None):
                                     input_media = TLRPC.TL_inputMediaPhoto()
                                     input_media.id = TLRPC.TL_inputPhoto()
                                     input_media.id.id = jlong(media_obj.photo.id)
                                     input_media.id.access_hash = jlong(media_obj.photo.access_hash)
                                     input_media.id.file_reference = media_obj.photo.file_reference
-                                    send_req = TLRPC.TL_messages_sendMedia()
-                                    send_req.media = input_media
+                                    single_media.media = input_media
+                                else:
+                                    continue
 
-                            if send_req is not None:
+                                single_media.message = final_text if idx == 0 else ""
+                                single_media_list.add(single_media)
+
+                            multi_req.multi_media = single_media_list
+
+                            class MultiMediaDelegate(dynamic_proxy(RequestDelegate)):
+                                def __init__(self, plugin, account):
+                                    super().__init__()
+                                    self.plugin = plugin
+                                    self.account = account
+                                def run(self, resp, err):
+                                    if err is not None:
+                                        self.plugin._show_error(f"Album send failed: {err.text}")
+                                    else:
+                                        self.plugin._process_updates(resp, self.account)
+
+                            ConnectionsManager.getInstance(self.account).sendRequest(multi_req, MultiMediaDelegate(self.plugin, self.account))
+                        elif len(media_messages) == 1:
+                            # Single media
+                            m = media_messages[0]
+                            media_obj = m.media
+                            send_req = None
+                            if "TL_messageMediaDocument" in media_obj.getClass().getName() and getattr(media_obj, 'document', None):
+                                input_media = TLRPC.TL_inputMediaDocument()
+                                input_media.id = TLRPC.TL_inputDocument()
+                                input_media.id.id = jlong(media_obj.document.id)
+                                input_media.id.access_hash = jlong(media_obj.document.access_hash)
+                                input_media.id.file_reference = media_obj.document.file_reference
+                                send_req = TLRPC.TL_messages_sendMedia()
+                                send_req.media = input_media
+                            elif "TL_messageMediaPhoto" in media_obj.getClass().getName() and getattr(media_obj, 'photo', None):
+                                input_media = TLRPC.TL_inputMediaPhoto()
+                                input_media.id = TLRPC.TL_inputPhoto()
+                                input_media.id.id = jlong(media_obj.photo.id)
+                                input_media.id.access_hash = jlong(media_obj.photo.access_hash)
+                                input_media.id.file_reference = media_obj.photo.file_reference
+                                send_req = TLRPC.TL_messages_sendMedia()
+                                send_req.media = input_media
+
+                            if send_req:
                                 send_req.peer = dest_peer
                                 send_req.message = final_text
                                 send_req.random_id = jlong(Random().nextLong() & 0x7FFFFFFFFFFFFFFF)
@@ -229,37 +274,35 @@ class RestrictForward(BasePlugin):
                                         super().__init__()
                                         self.plugin = plugin
                                         self.account = account
-
                                     def run(self, resp, err):
                                         if err is not None:
                                             self.plugin._show_error(f"Cloned media failed: {err.text}")
                                         else:
                                             self.plugin._process_updates(resp, self.account)
 
-                                ConnectionsManager.getInstance(self.account).sendRequest(send_req,
-                                                                                         ClonedMediaDelegate(self.plugin, self.account))
+                                ConnectionsManager.getInstance(self.account).sendRequest(send_req, ClonedMediaDelegate(self.plugin, self.account))
                             else:
-                                # Pure text message (no media)
-                                if final_text.strip():
-                                    msg_req = TLRPC.TL_messages_sendMessage()
-                                    msg_req.peer = dest_peer
-                                    msg_req.message = final_text
-                                    msg_req.random_id = jlong(Random().nextLong() & 0x7FFFFFFFFFFFFFFF)
+                                self.plugin._show_error("Unsupported media type.")
+                        else:
+                            # Pure text
+                            if final_text.strip():
+                                msg_req = TLRPC.TL_messages_sendMessage()
+                                msg_req.peer = dest_peer
+                                msg_req.message = final_text
+                                msg_req.random_id = jlong(Random().nextLong() & 0x7FFFFFFFFFFFFFFF)
 
-                                    class ClonedTextDelegate(dynamic_proxy(RequestDelegate)):
-                                        def __init__(self, plugin, account):
-                                            super().__init__()
-                                            self.plugin = plugin
-                                            self.account = account
+                                class ClonedTextDelegate(dynamic_proxy(RequestDelegate)):
+                                    def __init__(self, plugin, account):
+                                        super().__init__()
+                                        self.plugin = plugin
+                                        self.account = account
+                                    def run(self, resp, err):
+                                        if err is not None:
+                                            self.plugin._show_error(f"Cloned text failed: {err.text}")
+                                        else:
+                                            self.plugin._process_updates(resp, self.account)
 
-                                        def run(self, resp, err):
-                                            if err is not None:
-                                                self.plugin._show_error(f"Cloned text failed: {err.text}")
-                                            else:
-                                                self.plugin._process_updates(resp, self.account)
-
-                                    ConnectionsManager.getInstance(self.account).sendRequest(msg_req,
-                                                                                             ClonedTextDelegate(self.plugin, self.account))
+                                ConnectionsManager.getInstance(self.account).sendRequest(msg_req, ClonedTextDelegate(self.plugin, self.account))
 
                         self.plugin._show_success("Message forwarded with source!")
 
