@@ -10,7 +10,7 @@ from ui.bulletin import BulletinHelper
 
 __name__ = "Batch Forward"
 __description__ = "Forwards any messages without limits, without sender name and supports for Bulk or Batch forwards! (.forward url).\nhttps://github.com/lildavegoth/lildavegoth"
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 __id__ = "batch_forward"
 __author__ = "@lildavegoth"
 __icon__ = "kirakustickers/3"
@@ -72,14 +72,17 @@ class RestrictForward(BasePlugin):
 
     def _forward_all(self, account, links, params):
         for url in links:
-            self._forward_message(account, url, params, url)
+            done = threading.Event()
+            self._forward_message(account, url, params, url, done)
+            done.wait()  # wait until this URL's send is fully complete
 
-    def _forward_message(self, account, url, params, source_url):
+    def _forward_message(self, account, url, params, source_url, done_event=None):
         try:
             pattern = r"https?://t\.me/(c/)?([^/]+)/(\d+)(?:/(\d+))?"
             match = re.search(pattern, url)
             if not match:
                 self._show_error(f"Invalid link: {url}")
+                if done_event: done_event.set()
                 return
 
             is_private = match.group(1) is not None
@@ -96,6 +99,7 @@ class RestrictForward(BasePlugin):
 
             if not MessagesController or not TLRPC or not ConnectionsManager:
                 self._show_error("Failed to load required core classes.")
+                if done_event: done_event.set()
                 return
 
             connections = ConnectionsManager.getInstance(account)
@@ -105,6 +109,7 @@ class RestrictForward(BasePlugin):
             def proceed_with_peer(resolved_peer, chat_object=None):
                 if not resolved_peer:
                     self._show_error("Could not trace link source location.")
+                    if done_event: done_event.set()
                     return
 
                 msg_req = TLRPC.TL_messages_getHistory()
@@ -118,7 +123,7 @@ class RestrictForward(BasePlugin):
                 msg_req.hash = jlong(0)
 
                 class GetHistoryDelegate(dynamic_proxy(RequestDelegate)):
-                    def __init__(self, plugin, current_account, source_peer, target_params, src_chat, src_url):
+                    def __init__(self, plugin, current_account, source_peer, target_params, src_chat, src_url, done_evt):
                         super().__init__()
                         self.plugin = plugin
                         self.account = current_account
@@ -126,15 +131,18 @@ class RestrictForward(BasePlugin):
                         self.target_params = target_params
                         self.src_chat = src_chat
                         self.source_url = src_url
+                        self.done_event = done_evt
 
                     def run(self, response, error):
                         if error is not None:
                             self.plugin._show_error(f"Failed to fetch history: {error.text}")
+                            if self.done_event: self.done_event.set()
                             return
 
                         messages = response.messages
                         if messages is None or messages.size() == 0:
                             self.plugin._show_error("Channel history inaccessible.")
+                            if self.done_event: self.done_event.set()
                             return
 
                         target_msg = None
@@ -146,6 +154,7 @@ class RestrictForward(BasePlugin):
 
                         if target_msg is None:
                             self.plugin._show_error("Target message ID not found.")
+                            if self.done_event: self.done_event.set()
                             return
 
                         messages_to_process = self.plugin._create_int_arraylist()
@@ -167,18 +176,21 @@ class RestrictForward(BasePlugin):
                             destination_peer = self.plugin._get_current_peer_compiled(self.account, self.target_params)
                             if destination_peer is None:
                                 self.plugin._show_error("Destination chat context missing.")
+                                if self.done_event: self.done_event.set()
                                 return
 
                             self._send_cloned_via_helper(message_objects_list, destination_peer, self.source_url)
 
                         except Exception as e:
                             self.plugin._show_error(f"Execution handling failure: {str(e)}")
+                            if self.done_event: self.done_event.set()
 
                     def _send_cloned_via_helper(self, msg_list, dest_peer, source_url):
                         TLRPC = find_class("org.telegram.tgnet.TLRPC")
                         ConnectionsManager = find_class("org.telegram.tgnet.ConnectionsManager")
                         if not TLRPC or not ConnectionsManager:
                             self.plugin._show_error("Core classes missing for cloning.")
+                            if self.done_event: self.done_event.set()
                             return
 
                         # Find main text for album caption
@@ -231,17 +243,19 @@ class RestrictForward(BasePlugin):
                             multi_req.multi_media = single_media_list
 
                             class MultiMediaDelegate(dynamic_proxy(RequestDelegate)):
-                                def __init__(self, plugin, account):
+                                def __init__(self, plugin, account, done_evt):
                                     super().__init__()
                                     self.plugin = plugin
                                     self.account = account
+                                    self.done_event = done_evt
                                 def run(self, resp, err):
                                     if err is not None:
                                         self.plugin._show_error(f"Album send failed: {err.text}")
                                     else:
                                         self.plugin._process_updates(resp, self.account)
+                                    if self.done_event: self.done_event.set()
 
-                            ConnectionsManager.getInstance(self.account).sendRequest(multi_req, MultiMediaDelegate(self.plugin, self.account))
+                            ConnectionsManager.getInstance(self.account).sendRequest(multi_req, MultiMediaDelegate(self.plugin, self.account, self.done_event))
                         elif len(media_messages) == 1:
                             # Single media
                             m = media_messages[0]
@@ -270,19 +284,22 @@ class RestrictForward(BasePlugin):
                                 send_req.random_id = jlong(Random().nextLong() & 0x7FFFFFFFFFFFFFFF)
 
                                 class ClonedMediaDelegate(dynamic_proxy(RequestDelegate)):
-                                    def __init__(self, plugin, account):
+                                    def __init__(self, plugin, account, done_evt):
                                         super().__init__()
                                         self.plugin = plugin
                                         self.account = account
+                                        self.done_event = done_evt
                                     def run(self, resp, err):
                                         if err is not None:
                                             self.plugin._show_error(f"Cloned media failed: {err.text}")
                                         else:
                                             self.plugin._process_updates(resp, self.account)
+                                        if self.done_event: self.done_event.set()
 
-                                ConnectionsManager.getInstance(self.account).sendRequest(send_req, ClonedMediaDelegate(self.plugin, self.account))
+                                ConnectionsManager.getInstance(self.account).sendRequest(send_req, ClonedMediaDelegate(self.plugin, self.account, self.done_event))
                             else:
                                 self.plugin._show_error("Unsupported media type.")
+                                if self.done_event: self.done_event.set()
                         else:
                             # Pure text
                             if final_text.strip():
@@ -292,21 +309,25 @@ class RestrictForward(BasePlugin):
                                 msg_req.random_id = jlong(Random().nextLong() & 0x7FFFFFFFFFFFFFFF)
 
                                 class ClonedTextDelegate(dynamic_proxy(RequestDelegate)):
-                                    def __init__(self, plugin, account):
+                                    def __init__(self, plugin, account, done_evt):
                                         super().__init__()
                                         self.plugin = plugin
                                         self.account = account
+                                        self.done_event = done_evt
                                     def run(self, resp, err):
                                         if err is not None:
                                             self.plugin._show_error(f"Cloned text failed: {err.text}")
                                         else:
                                             self.plugin._process_updates(resp, self.account)
+                                        if self.done_event: self.done_event.set()
 
-                                ConnectionsManager.getInstance(self.account).sendRequest(msg_req, ClonedTextDelegate(self.plugin, self.account))
+                                ConnectionsManager.getInstance(self.account).sendRequest(msg_req, ClonedTextDelegate(self.plugin, self.account, self.done_event))
+                            else:
+                                if self.done_event: self.done_event.set()
 
                         self.plugin._show_success("Message forwarded with source!")
 
-                connections.sendRequest(msg_req, GetHistoryDelegate(self, account, resolved_peer, params, chat_object, source_url))
+                connections.sendRequest(msg_req, GetHistoryDelegate(self, account, resolved_peer, params, chat_object, source_url, done_event))
 
             if is_private:
                 try:
@@ -321,6 +342,7 @@ class RestrictForward(BasePlugin):
                         proceed_with_peer(peer_channel, None)
                 except Exception as ex:
                     self._show_error(f"Private parsing failed: {str(ex)}")
+                    if done_event: done_event.set()
             else:
                 req = TLRPC.TL_contacts_resolveUsername()
                 req.username = peer_identifier
@@ -334,6 +356,7 @@ class RestrictForward(BasePlugin):
                     def run(self, response, error):
                         if error is not None:
                             self.plugin._show_error(f"Username resolution failure: {error.text}")
+                            if done_event: done_event.set()
                             return
                         if response.chats is not None and response.chats.size() > 0:
                             target_chat = response.chats.get(0)
@@ -342,11 +365,13 @@ class RestrictForward(BasePlugin):
                             self.callback(controller.getInputPeer(response.users.get(0)), None)
                         else:
                             self.plugin._show_error("Target reference entity not found.")
+                            if done_event: done_event.set()
 
                 connections.sendRequest(req, UsernameResolveDelegate(self, proceed_with_peer))
 
         except Exception as e:
             self._show_error(f"Critical exception: {str(e)}")
+            if done_event: done_event.set()
 
     def _get_dialog_id_from_peer(self, peer):
         if hasattr(peer, 'chat_id') and peer.chat_id != 0:
