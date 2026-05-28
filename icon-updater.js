@@ -102,8 +102,15 @@
       fetch(FA_PKG).then(r => r.json()),
       fetch(BI_PKG).then(r => r.json())
     ]);
-    const faVer = faMeta.versions[0];
-    const biVer = biMeta.versions[0];
+    let faVer = faMeta.versions[0];
+    if (faVer && typeof faVer === 'object' && faVer.version) {
+      faVer = faVer.version;
+    }
+    
+    let biVer = biMeta.versions[0];
+    if (biVer && typeof biVer === 'object' && biVer.version) {
+      biVer = biVer.version;
+    }
 
     const faUrl = `https://cdnjs.cloudflare.com/ajax/libs/font-awesome/${faVer}/css/all.min.css`;
     const biUrl = `https://cdn.jsdelivr.net/npm/bootstrap-icons@${biVer}/font/bootstrap-icons.min.css`;
