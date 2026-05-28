@@ -16,8 +16,8 @@ As you all may know that AdAway using host file to block ads and else, but the u
 # NextDNS →
 Inside the app, NextDNS is recommended and the most powerful service from this app and it's because the app has exactly the same settings as NextDNS profile. NextDNS is not like another DNS cause we can adjust everything from their Profile set.
 # Guides →
-- `[Installations →](^^^install1show^^^)
-- `[Setup — NextDNS Method](^^^setup1show^^^)`
+- `[Installations →](^^^install1show^^^)`
+- `[Setup — NextDNS Method →](^^^setup1show^^^)`
 - `[Setup — Other Providers Method →](^^^setup2show^^^)`
 - `[Setup — Private DNS Method →](^^^setup3show^^^)`
 
