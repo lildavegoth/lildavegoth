@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOON | lildavegoth</title>
+    <title>Kiraku Store | lildavegoth</title>
     <meta name="color-scheme" content="dark">
     <script src="../protections.js"></script>
-    <script src="../notification.cssjs"></script>
+    <script src="../auth-check.js"></script>
     <link rel="stylesheet" href="../media.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="../ui-icons.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -27,100 +27,1856 @@
             --spacing-lg: 32px;
             --spacing-xl: 48px;
         }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
+
         body {
             background-color: var(--bg-black);
             color: var(--text-primary);
             min-height: 100vh;
-            background-image: 
-                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
-                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
             overflow-x: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: var(--spacing-md);
+            padding-bottom: 10px;
         }
+
         .container {
-            max-width: 500px;
-            width: 100%;
+            max-width: 1200px;
             margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+            min-height: calc(100vh - 90px);
         }
-        .blur-background {
-            backdrop-filter: saturate(180%) blur(20px);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-            background-color: rgba(22, 22, 24, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+
+        .page {
+            opacity: 0;
+            visibility: hidden;
+            height: 0;
+            overflow: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
         }
+
+        .page.active {
+            opacity: 1;
+            visibility: visible;
+            height: auto;
+            overflow: visible;
+            display: block;
+        }
+
         header {
-            text-align: center;
-            margin-bottom: var(--spacing-xl);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-lg) 0;
         }
-        .logo {
+
+        header button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .search-container {
+            padding: var(--spacing-md) 0;
+            position: relative;
+            margin-bottom: -30px;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: var(--radius-medium);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 16px;
+        }
+
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(30, 30, 30, 1);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: -18px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .search-suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .search-suggestion-item:hover {
+            background: rgba(193, 252, 50, 0.1);
+        }
+
+        .search-suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .suggestion-description {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .suggestion-category {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-top: 4px;
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+
+        .search-suggestions::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .search-suggestions::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .search-suggestions::-webkit-scrollbar-thumb {
+            background: rgba(193, 252, 50, 0.3);
+            border-radius: 3px;
+        }
+
+        .search-suggestions::-webkit-scrollbar-thumb:hover {
+            background: rgba(193, 252, 50, 0.5);
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            padding: var(--spacing-lg) 0;
+            min-height: 200px;
+        }
+
+        @media (min-width: 720px) {
+            .products-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .products-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .products-grid:empty {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: var(--spacing-sm);
-            margin-bottom: var(--spacing-sm);
         }
+
+        .product-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .product-card img {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            position: relative;
+        }
+
+        .product-card .info {
+            padding: 12px;
+            text-align: center;
+        }
+
+        .favorite-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+        }
+
+        .favorite-btn i.fas {
+            color: var(--accent-color);
+        }
+
+        .main-img-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: black;
+            min-height: 300px;
+            max-height: 500px;
+            overflow: hidden;
+        }
+
+        .product-main-img {
+            width: 100%;
+            object-fit: contain;
+            position: relative;
+            max-height: 500px;
+        }
+
+        .product-info {
+            padding: 0 20px 20px;
+        }
+
+        .product-info h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .product-info .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 16px;
+        }
+
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .buy-btn {
+            background: var(--accent-color);
+            color: #000;
+            padding: 10px 24px;
+            border-radius: 50px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            min-width: 120px;
+        }
+
+        .buy-btn.owned {
+            background: #333;
+            color: var(--text-secondary);
+            cursor: default;
+            min-width: 100px;
+            padding: 10px 20px;
+            font-size: 15px;
+        }
+
+        .favorite-btn.detail-favorite {
+            position: static;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .favorite-btn.detail-favorite i {
+            font-size: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .favorite-btn.detail-favorite.wishlisted {
+            background: transparent;
+            border: none;
+        }
+
+        .favorite-btn.detail-favorite.wishlisted i {
+            font-size: 32px;
+            color: var(--accent-color);
+        }
+
+        .favorite-btn.detail-favorite:not(.wishlisted):hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: rgba(193, 252, 50, 0.3);
+        }
+
+        .price {
+            font-size: 28px;
+            font-weight: bold;
+            flex: 1;
+        }
+
+        .description {
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            line-height: 1.6;
+        }
+
+        .product-meta {
+            padding: 12px 20px 20px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            margin-top: 8px;
+        }
+
+        .product-meta p {
+            margin: 4px 0;
+        }
+
+        .product-meta .meta-id,
+        .product-meta .meta-date {
+            display: inline-block;
+            background: var(--accent-color);
+            color: black;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-right: 8px;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+            width: 100%;
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(22, 22, 24, 1.0);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            padding: 7px 16px;
+            z-index: 99999;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            width: auto;
+            min-width: 250px;
+        }
+
+        .nav-button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 7px 16px;
+            border-radius: 30px;
+            min-width: 70px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            white-space: nowrap;
+            transition: transform 0.2s ease, padding 0.2s ease, background-color 0.3s ease;
+        }
+
+        .nav-button.active {
+            color: var(--accent-color);
+        }
+
+        .nav-button.active:not(#moreButton) {
+            background: rgba(193, 252, 50, 0.1);
+        }
+
+        .nav-button:active {
+            transform: scale(0.95);
+            transition: transform 0.1s ease;
+        }
+
+        .nav-button:hover {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+
+        .categories-bar {
+            display: flex;
+            gap: 8px;
+            padding: var(--spacing-md) 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .categories-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 20px;
+            white-space: nowrap;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .category-btn.active {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @keyframes fadeOutDown {
+            from {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .share-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            white-space: nowrap;
+            background: black;
+            min-height: 200px;
+            max-height: 200px;
+            position: relative;
+        }
+
+        .product-scroll-img {
+            height: 200px;
+            width: auto;
+            display: inline-block;
+            object-fit: contain;
+        }
+
+        .price-usd {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .price-idr {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .scroll-progress {
+            height: 3px;
+            background: rgba(193, 252, 50, 0.2);
+            width: 100%;
+        }
+
+        .scroll-progress-bar {
+            height: 3px;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .image-scroll-container::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .image-scroll-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .image-scroll-container::-webkit-scrollbar-thumb {
+            background: rgba(193, 252, 50, 0.3);
+            border-radius: 2px;
+        }
+
+        .image-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(193, 252, 50, 0.5);
+        }
+
+        .scroll-progress {
+            height: 3px;
+            background: rgba(193, 252, 50, 0.2);
+            width: 100%;
+            margin-top: -4px;
+        }
+
+        .scroll-progress-bar {
+            height: 3px;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .greeting {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .greeting h1 {
+            font-size: 42px;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -2px;
+        }
+
+        .greeting p {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            letter-spacing: -0.5px;
+        }
+
         .avatar {
-            width: 60px;
-            height: 60px;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
             object-fit: cover;
-            border: 2px solid var(--accent-color);
-            padding: 2px;
+            border: 3px solid var(--accent-color);
         }
-        .username {
-            font-size: 2rem;
-            font-weight: 700;
+
+        .search-input-wrapper {
+            position: relative;
         }
-        .tagline {
-            color: var(--text-secondary);
-            font-size: 1rem;
-            margin-bottom: var(--spacing-md);
+
+        #gallerySearch {
+            width: 100%;
+            padding: 12px 76px 12px 16px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
         }
-        .soon-container {
-            flex: 1;
+
+        #search-icons {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #clear-btn {
+            display: none;
+            width: 28px;
+            height: 28px;
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .categories {
+            display: flex;
+            overflow-x: auto;
+            gap: 16px;
+            padding-bottom: 8px;
+            margin-bottom: 32px;
+            scrollbar-width: none;
+        }
+
+        .categories::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-circle {
+            width: 62px;
+            height: 62px;
+            border-radius: 50%;
+            flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: var(--spacing-xl) 0;
+            transition: all 0.3s ease;
         }
-        .soon-text {
-            font-size: 5rem;
-            font-weight: 800;
+
+        .category-circle.active {
+            background-color: var(--accent-color);
+        }
+
+        .category-circle:not(.active) {
+            background-color: var(--bg-card);
+        }
+
+        .category-circle i {
+            font-size: 26px;
+        }
+
+        .category-circle.active i {
+            color: #000000;
+        }
+
+        .category-circle:not(.active) i {
+            color: #ffffff;
+        }
+
+        .section {
+            margin-bottom: 48px;
+        }
+
+        .section-header {
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 16px;
+            padding-left: 4px;
+        }
+
+        .horizontal-scroll {
+            display: flex;
+            overflow-x: auto;
+            gap: 16px;
+            padding-bottom: 8px;
+            scrollbar-width: none;
+        }
+
+        .horizontal-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .card {
+            width: 208px;
+            height: 248px;
+            background-color: var(--bg-card);
+            border-radius: 20px;
+            position: relative;
+            flex-shrink: 0;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 10px;
+        }
+
+        .card:hover {
+            transform: scale(1.04);
+        }
+
+        .gallery-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .accent-circle {
+            width: 48px;
+            height: 48px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 5;
+            cursor: pointer;
+        }
+
+        .accent-circle i {
+            color: #000000;
+            font-size: 24px;
+        }
+
+        .arts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .arts-card {
+            width: 100%;
+            height: 172px;
+            background-color: var(--bg-card);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .arts-card:hover {
+            transform: scale(1.04);
+        }
+
+        .gallery-image.blurred {
+            filter: blur(8px);
+        }
+
+        .lock-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.75);
             color: var(--accent-color);
-            text-transform: uppercase;
-            letter-spacing: 12px;
-            text-shadow: 0 0 20px rgba(193, 252, 50, 0.3);
-            animation: pulse 2s infinite ease-in-out;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            z-index: 10;
+        }
+
+        #fullscreen-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.95);
+            z-index: 999999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-action-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            padding: 20px 24px;
+            background: rgba(26, 26, 26, 0.95);
+            z-index: 10;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        .modal-title {
+            flex: 1;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .modal-share {
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        #modal-image {
+            max-width: 100%;
+            max-height: calc(100vh - 100px);
+            object-fit: contain;
+        }
+
+        .modal-bottom {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 20;
+        }
+
+        .modal-nav-btn {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: var(--text-primary);
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .modal-nav-btn:hover {
+            background-color: rgba(255, 255, 255, 0.25);
         }
     </style>
 </head>
 <body>
-    <div class="container fade-in">
-        <a href="../index.html" class="back-link fade-in">
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in" onclick="window.location.hash='';">
             <i class="fas fa-arrow-left"></i> Back to Home
         </a>
-        <div class="soon-container">
-            <div class="soon-text">SOON</div>
+
+        <div id="home-page" class="page active">
+            <app-header class="fade-in">
+                <div>
+                    <h1 class="username">Kiraku Store</h1>
+                    <p class="tagline">All in one store for all lildavegoth paid contents</p>
+                </div>
+            </app-header>
+
+            <div class="search-container">
+                <div style="position: relative;">
+                    <input type="text" id="globalSearch" placeholder="Search Products..." style="width: 100%; padding: 12px 44px 12px 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-primary); font-size: 0.95rem; outline: none;">
+                    <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;">
+                        <i class="fas fa-search" style="color: var(--accent-color); margin-right: 5px;"></i>
+                    </div>
+                </div>
+                <div class="search-suggestions" id="searchSuggestions"></div>
+            </div>
+            <div class="categories-bar" id="categoriesBar"></div>
+            <div style="margin-top: -35px;" class="products-grid" id="homeGrid"></div>
         </div>
-        <footer>
+
+        <div id="wishlist-page" class="page">
+            <div class="header fade-in" id="wishlistHeader">
+                <div class="greeting">
+                    <h1 id="wishlistUsername">Kiraku Store</h1>
+                    <p class="tagline">All in one store for all projects for easier downloads & buy paid contents</p>
+                </div>
+                <img id="wishlistAvatar" class="avatar" src="" alt="avatar" style="display:none;">
+            </div>
+            <header>
+                <h1>Wishlist</h1>
+            </header>
+            <p class="empty-message" id="wishlistEmpty">Your wishlist is empty</p>
+            <div class="products-grid" id="wishlistGrid"></div>
+        </div>
+
+        <div id="gallery-page" class="page">
+            <div class="search-container">
+                <div style="position: relative;">
+                    <input type="text" id="gallerySearch" placeholder="Search The Arts..." style="width: 100%; padding: 12px 44px 12px 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-primary); font-size: 0.95rem; outline: none;">
+                    <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;">
+                        <i class="fas fa-search" style="color: var(--accent-color); margin-right: 5px;"></i>
+                    </div>
+                </div>
+                <div class="search-suggestions" id="gallerySuggestions"></div>
+            </div>
+            <div class="categories-bar" id="galleryCategoriesBar"></div>
+            <div class="section" id="pure-section">
+                <h2 class="section-header">The Pure</h2>
+                <div class="horizontal-scroll" id="pure-scroll"></div>
+            </div>
+            <div class="section">
+                <h2 class="section-header">The Arts</h2>
+                <div class="arts-grid" id="arts-grid"></div>
+                <p style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); margin-top: 16px;">All arts are original creations by lildavegoth. No art is stolen from other artists.</p>
+            </div>
+        </div>
+
+        <div id="owned-page" class="page">
+            <div class="header fade-in" id="ownedHeader">
+                <div class="greeting">
+                    <h1 id="ownedUsername">Kiraku Store</h1>
+                    <p class="tagline">All in one store for all lildavegoth paid contents</p>
+                </div>
+                <img id="ownedAvatar" class="avatar" src="" alt="avatar" style="display:none;">
+            </div>
+            <header>
+                <h1>Owned</h1>
+            </header>
+            <p class="empty-message" id="ownedEmpty">No items owned yet</p>
+            <div class="products-grid" id="ownedGrid"></div>
+        </div>
+
+        <div id="product-page" class="page">
+            <header class="product-header">
+                <button id="backBtn" class="nav-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <button id="shareBtn" class="share-btn">
+                    <i class="fas fa-share-alt"></i>
+                </button>
+            </header>
+            <div style="margin-bottom: 20px;" class="image-scroll-container">
+                <img id="productMainImg" class="product-scroll-img">
+                <div class="scroll-progress">
+                    <div id="scrollProgressBar" class="scroll-progress-bar"></div>
+                </div>
+            </div>
+            <div class="product-info">
+                <h1 id="productName"></h1>
+                <p class="subtitle" id="productSubtitle"></p>
+                <div class="price-row">
+                    <div id="productPriceContainer">
+                        <div id="productPriceUSD" class="price-usd"></div>
+                        <div id="productPriceIDR" class="price-idr"></div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="favorite-btn detail-favorite" id="detailFavorite"><i class="far fa-heart"></i></button>
+                        <button class="buy-btn" id="buyBtn">Buy Now</button>
+                    </div>
+                </div>
+            </div>
+            <div class="description" id="productDescription"></div>
+            <div class="product-meta" id="productMeta"></div>
+        </div>
+
+        <div id="fullscreen-modal">
+            <div class="modal-action-bar">
+                <i class="fas fa-arrow-left modal-close" onclick="closeFullscreen()"></i>
+                <div class="modal-title" id="modal-title"></div>
+                <i class="fas fa-share-alt modal-share" onclick="shareImage()"></i>
+            </div>
+            <img id="modal-image" src="" alt="">
+            <div class="modal-bottom">
+                <button onclick="prevImage()" class="modal-nav-btn"><i class="fas fa-chevron-left"></i></button>
+                <button onclick="downloadCurrent()" class="modal-nav-btn"><i class="fas fa-download"></i></button>
+                <button onclick="nextImage()" class="modal-nav-btn"><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+
+        <footer style="margin-bottom: 100px;">
             <div class="social-links">
                 <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
                 <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
             </div>
-            <p>© 2026 lildavegoth | SOON</p>
-            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
-                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
-            </p>
+            <p>© 2026 lildavegoth | Kiraku Store</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">Conveys the Idea of a Protected and Inspiring Space for Creative Expression.</p>
         </footer>
     </div>
+
+    <div class="bottom-nav" id="bottomNav">
+        <button class="nav-button" onclick="switchPage('wishlist')">
+            <i class="icon icon-heart"></i>
+        </button>
+        <button class="nav-button active" onclick="switchPage('home')">
+            <i class="icon icon-home"></i>
+        </button>
+        <button class="nav-button" onclick="switchPage('gallery')">
+            <i class="icon icon-board"></i>
+        </button>
+        <button class="nav-button" onclick="switchPage('owned')">
+            <i class="icon icon-storei"></i>
+        </button>
+    </div>
+
+    <script>
+        window.showMessage = function(msg) {
+            var notif = document.createElement('div');
+            notif.textContent = msg;
+            notif.style.cssText = "position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:var(--accent-color);color:#000;padding:12px 24px;border-radius:50px;z-index:999999;font-weight:600;";
+            document.body.appendChild(notif);
+            setTimeout(function() { notif.remove(); }, 3000);
+        };
+
+        function isUserLoggedIn() {
+            var currentUser = localStorage.getItem('currentUser');
+            return currentUser ? JSON.parse(currentUser) : null;
+        }
+
+        var USD_TO_IDR = 16250;
+
+        function formatPrice(usdPrice) {
+            var numericPrice = parseFloat(usdPrice.replace('$', ''));
+            var idrPrice = Math.round(numericPrice * USD_TO_IDR);
+            return {
+                usd: usdPrice,
+                idr: 'Rp' + idrPrice.toLocaleString('id-ID')
+            };
+        }
+
+        function saveUserData(key, data) {
+            var user = isUserLoggedIn();
+            if (!user) {
+                showSignInNotification();
+                return false;
+            }
+            var userKey = user.id + '_' + key;
+            localStorage.setItem(userKey, JSON.stringify(data));
+            return true;
+        }
+
+        function loadUserData(key) {
+            var user = isUserLoggedIn();
+            if (!user) return [];
+            var userKey = user.id + '_' + key;
+            var data = localStorage.getItem(userKey);
+            return data ? JSON.parse(data) : [];
+        }
+
+        var wishlist = [];
+        var ownedDetails = {};
+        var currentProduct = null;
+        var returnPage = 'home-page';
+        var currentUser = null;
+        var products = [];
+        var galleryItems = [];
+        var currentCategory = 'all';
+        var currentGalleryCategory = 'all';
+        var pageScrollPositions = {};
+
+        function saveScrollPosition(pageId) {
+            pageScrollPositions[pageId] = window.scrollY || document.documentElement.scrollTop;
+        }
+
+        function restoreScrollPosition(pageId) {
+            if (pageScrollPositions[pageId] !== undefined) {
+                window.scrollTo(0, pageScrollPositions[pageId]);
+            } else {
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function switchPage(page) {
+            var currentActivePage = document.querySelector('.page.active');
+            var targetPage = document.getElementById(page + '-page');
+            if (!targetPage || currentActivePage === targetPage) return;
+
+            if ((page === 'wishlist' || page === 'owned') && !currentUser) {
+                showSignInNotification();
+                return;
+            }
+
+            if (currentActivePage) {
+                saveScrollPosition(currentActivePage.id);
+            }
+
+            showBottomNav();
+            window.location.hash = '';
+
+            document.querySelectorAll('.nav-button').forEach(function(button) {
+                button.classList.remove('active');
+                button.style.transform = 'scaleX(1)';
+                button.style.padding = '12px 24px';
+            });
+
+            var buttons = document.querySelectorAll('.nav-button');
+            var clickedButton;
+            switch (page) {
+                case 'wishlist': clickedButton = buttons[0]; break;
+                case 'home': clickedButton = buttons[1]; break;
+                case 'gallery': clickedButton = buttons[2]; break;
+                case 'owned': clickedButton = buttons[3]; break;
+            }
+
+            if (currentActivePage) {
+                currentActivePage.style.opacity = '0';
+                currentActivePage.style.visibility = 'hidden';
+                setTimeout(function() {
+                    currentActivePage.classList.remove('active');
+                    currentActivePage.style.height = '0';
+                    currentActivePage.style.overflow = 'hidden';
+                    targetPage.style.height = 'auto';
+                    targetPage.style.overflow = 'visible';
+                    targetPage.classList.add('active');
+                    setTimeout(function() {
+                        targetPage.style.opacity = '1';
+                        targetPage.style.visibility = 'visible';
+                        if (clickedButton) {
+                            clickedButton.classList.add('active');
+                            clickedButton.style.transform = 'scaleX(1.1)';
+                            clickedButton.style.padding = '12px 30px';
+                        }
+                        switch (page) {
+                            case 'wishlist': renderWishlist(); break;
+                            case 'home': renderHome(); break;
+                            case 'gallery': renderGallery(); break;
+                            case 'owned': renderOwned(); break;
+                        }
+                        restoreScrollPosition(targetPage.id);
+                        window.scrollTo(0, 0);
+                    }, 50);
+                }, 300);
+            } else {
+                targetPage.style.height = 'auto';
+                targetPage.style.overflow = 'visible';
+                targetPage.classList.add('active');
+                setTimeout(function() {
+                    targetPage.style.opacity = '1';
+                    targetPage.style.visibility = 'visible';
+                    if (clickedButton) {
+                        clickedButton.classList.add('active');
+                        clickedButton.style.transform = 'scaleX(1.1)';
+                        clickedButton.style.padding = '12px 30px';
+                    }
+                    restoreScrollPosition(targetPage.id);
+                    window.scrollTo(0, 0);
+                }, 50);
+            }
+        }
+
+        function fadeToPage(targetPageId) {
+            var currentActivePage = document.querySelector('.page.active');
+            var targetPage = document.getElementById(targetPageId);
+            if (!targetPage || currentActivePage === targetPage) return;
+
+            saveScrollPosition(currentActivePage.id);
+            currentActivePage.style.opacity = '0';
+            currentActivePage.style.visibility = 'hidden';
+            setTimeout(function() {
+                currentActivePage.classList.remove('active');
+                currentActivePage.style.height = '0';
+                currentActivePage.style.overflow = 'hidden';
+                targetPage.style.height = 'auto';
+                targetPage.style.overflow = 'visible';
+                targetPage.classList.add('active');
+                setTimeout(function() {
+                    targetPage.style.opacity = '1';
+                    targetPage.style.visibility = 'visible';
+                    if (targetPageId === 'home-page') renderHome();
+                    else if (targetPageId === 'wishlist-page') renderWishlist();
+                    else if (targetPageId === 'gallery-page') renderGallery();
+                    else if (targetPageId === 'owned-page') renderOwned();
+                    restoreScrollPosition(targetPageId);
+                    document.querySelectorAll('.nav-button').forEach(function(btn) { btn.classList.remove('active'); });
+                    if (targetPageId === 'home-page') document.querySelectorAll('.nav-button')[1].classList.add('active');
+                    else if (targetPageId === 'wishlist-page') document.querySelectorAll('.nav-button')[0].classList.add('active');
+                    else if (targetPageId === 'gallery-page') document.querySelectorAll('.nav-button')[2].classList.add('active');
+                    else if (targetPageId === 'owned-page') document.querySelectorAll('.nav-button')[3].classList.add('active');
+                }, 50);
+            }, 300);
+        }
+
+        function hideBottomNav() {
+            document.getElementById('bottomNav').style.display = 'none';
+        }
+
+        function showBottomNav() {
+            document.getElementById('bottomNav').style.display = 'flex';
+        }
+
+        function shareProduct() {
+            var p = products.find(function(pr) { return pr.id === currentProduct; });
+            if (!p) return;
+            var baseUrl = 'https://kakoi-kiraku-home.vercel.app';
+            var shareUrl = baseUrl + '/pages/kiraku-store.html#product-' + p.id;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Kiraku Store - ' + p.name,
+                    text: p.name + ' - ' + p.subtitle + ' - ' + p.price,
+                    url: shareUrl
+                }).catch(function() { fallbackCopyShare(shareUrl); });
+            } else {
+                fallbackCopyShare(shareUrl);
+            }
+        }
+
+        function fallbackCopyShare(url) {
+            navigator.clipboard.writeText(url).then(function() {
+                var notification = document.createElement('div');
+                notification.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--accent-color);color:#000;padding:12px 24px;border-radius:50px;font-weight:600;z-index:999999;box-shadow:0 4px 12px rgba(0,0,0,0.3);animation:fadeInUp 0.3s ease forwards;';
+                notification.textContent = 'Link copied to clipboard!';
+                document.body.appendChild(notification);
+                setTimeout(function() {
+                    notification.style.animation = 'fadeOutDown 0.3s ease forwards';
+                    setTimeout(function() { notification.remove(); }, 300);
+                }, 2000);
+            });
+        }
+
+        function shareImage() {
+            if (!window.currentItem) return;
+            var url = 'https://kakoi-kiraku-home.vercel.app/pages/kiraku-store.html#gallery-' + window.currentItem.id;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Kiraku Store - ' + window.currentItem.name,
+                    text: window.currentItem.name,
+                    url: url
+                }).catch(function() { fallbackCopyShare(url); });
+            } else {
+                fallbackCopyShare(url);
+            }
+        }
+
+        async function loadProducts() {
+            try {
+                var res = await fetch('https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Kiraku%20Store/products.json');
+                if (res.ok) {
+                    var allData = await res.json();
+                    products = allData.filter(function(p) { return !p.isGallery; });
+                    galleryItems = allData.filter(function(p) { return p.isGallery; });
+                }
+            } catch (e) {
+                products = [];
+                galleryItems = [];
+            }
+        }
+
+        async function loadOwnedData() {
+            ownedDetails = {};
+            if (!currentUser) return;
+            try {
+                var res = await fetch('https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Kiraku%20Store/owned.json');
+                if (res.ok) {
+                    var data = await res.json();
+                    var userOwned = data[currentUser.id];
+                    if (Array.isArray(userOwned)) {
+                        userOwned.forEach(function(item) {
+                            if (typeof item === 'string') {
+                                ownedDetails[item] = null;
+                            } else if (item && item.id) {
+                                ownedDetails[item.id] = item.date || null;
+                            }
+                        });
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function generateCategoryButtons() {
+            var bar = document.getElementById('categoriesBar');
+            bar.innerHTML = '';
+            var categories = ['all'].concat(Array.from(new Set(products.map(function(p) { return p.category; }).filter(Boolean))));
+            categories.forEach(function(cat) {
+                var btn = document.createElement('button');
+                btn.className = 'category-btn' + (cat === currentCategory ? ' active' : '');
+                btn.dataset.category = cat;
+                var displayCat = cat;
+                if (cat === 'ui') displayCat = 'UI';
+                else if (cat === 'ux') displayCat = 'UX';
+                else displayCat = cat.charAt(0).toUpperCase() + cat.slice(1);
+                btn.textContent = displayCat;
+                btn.addEventListener('click', function() {
+                    currentCategory = cat;
+                    document.querySelectorAll('.category-btn').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    renderHome();
+                });
+                bar.appendChild(btn);
+            });
+        }
+
+        function generateGalleryCategoryButtons() {
+            var bar = document.getElementById('galleryCategoriesBar');
+            bar.innerHTML = '';
+            var categories = ['all'].concat(Array.from(new Set(galleryItems.map(function(p) { return p.category; }).filter(Boolean))));
+            categories.forEach(function(cat) {
+                var btn = document.createElement('button');
+                btn.className = 'category-btn' + (cat === currentGalleryCategory ? ' active' : '');
+                btn.dataset.category = cat;
+                var displayCat = cat.charAt(0).toUpperCase() + cat.slice(1);
+                btn.textContent = displayCat;
+                btn.addEventListener('click', function() {
+                    currentGalleryCategory = cat;
+                    document.querySelectorAll('#galleryCategoriesBar .category-btn').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    renderGallery();
+                });
+                bar.appendChild(btn);
+            });
+        }
+
+        function createCard(p) {
+            var card = document.createElement('div');
+            card.className = 'product-card';
+            card.onclick = function() {
+                returnPage = document.querySelector('.page.active').id;
+                showProduct(p.id);
+            };
+            card.innerHTML = '<img src="' + p.thumbnailImg + '" alt="' + p.name + '">' +
+                '<div class="info">' +
+                '<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">' +
+                '<div class="name" style="font-weight: 600; font-size: 15px; text-align: left;">' + p.name + '</div>' +
+                '<div style="font-weight: bold; font-size: 15px;">' + p.price + '</div>' +
+                '</div>' +
+                '<div class="type" style="color: var(--text-secondary); font-size: 13px; text-align: left;">' + p.subtitle + '</div>' +
+                '<button class="favorite-btn" data-id="' + p.id + '"><i class="' + (wishlist.includes(p.id) ? 'fas' : 'far') + ' fa-heart"></i></button>' +
+                '</div>';
+            card.querySelector('.favorite-btn').addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleFavorite(p.id);
+            });
+            return card;
+        }
+
+        function renderHome() {
+            var grid = document.getElementById('homeGrid');
+            grid.innerHTML = '';
+            if (products.length === 0) {
+                grid.innerHTML = '<div class="empty-message">Loading products...</div>';
+                return;
+            }
+            var filtered = currentCategory === 'all' ? products : products.filter(function(p) { return p.category === currentCategory; });
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="empty-message">No products in this category</div>';
+                return;
+            }
+            filtered.forEach(function(p) { grid.appendChild(createCard(p)); });
+        }
+
+        function renderWishlist() {
+            var grid = document.getElementById('wishlistGrid');
+            var empty = document.getElementById('wishlistEmpty');
+            if (!currentUser) {
+                empty.textContent = 'Sign in to view your wishlist';
+                empty.style.display = 'block';
+                grid.innerHTML = '';
+                return;
+            }
+            var items = products.filter(function(p) { return wishlist.includes(p.id); });
+            if (items.length === 0) {
+                empty.textContent = 'Your wishlist is empty';
+                empty.style.display = 'block';
+                grid.innerHTML = '';
+            } else {
+                empty.style.display = 'none';
+                grid.innerHTML = '';
+                items.forEach(function(p) { grid.appendChild(createCard(p)); });
+            }
+        }
+
+        function renderOwned() {
+            var grid = document.getElementById('ownedGrid');
+            var empty = document.getElementById('ownedEmpty');
+            if (!currentUser) {
+                empty.textContent = 'Sign in to view owned items';
+                empty.style.display = 'block';
+                grid.innerHTML = '';
+                return;
+            }
+            var ownedIds = Object.keys(ownedDetails);
+            var items = products.filter(function(p) { return ownedIds.includes(p.id); });
+            if (items.length === 0) {
+                empty.textContent = 'No items owned yet';
+                empty.style.display = 'block';
+                grid.innerHTML = '';
+            } else {
+                empty.style.display = 'none';
+                grid.innerHTML = '';
+                items.forEach(function(p) { grid.appendChild(createCard(p)); });
+            }
+        }
+
+        function renderGallery() {
+            var pureSection = document.getElementById('pure-section');
+            var filtered = galleryItems;
+            if (currentGalleryCategory !== 'all') {
+                filtered = galleryItems.filter(function(p) { return p.category === currentGalleryCategory; });
+                if (pureSection) pureSection.style.display = 'none';
+            } else {
+                if (pureSection) pureSection.style.display = 'block';
+            }
+            if (pureSection && currentGalleryCategory === 'all') {
+                renderPure();
+            }
+            renderArts(filtered);
+        }
+
+        function renderPure() {
+            var container = document.getElementById('pure-scroll');
+            if (!container) return;
+            container.innerHTML = '';
+            var pureItems = galleryItems.filter(function(item) { return !item.paid; }).slice(0, 3);
+            pureItems.forEach(function(item) {
+                var firstImg = item.images[0];
+                var cardHTML = '<div class="card">' +
+                    '<img src="' + firstImg + '" class="gallery-image" alt="">' +
+                    '<div class="accent-circle" onclick="openFullscreenForItem(\'' + item.id + '\')">' +
+                    '<i class="fa-solid fa-arrow-right"></i>' +
+                    '</div>' +
+                    '</div>';
+                container.innerHTML += cardHTML;
+            });
+        }
+
+        function renderArts(filteredImages) {
+            var grid = document.getElementById('arts-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            filteredImages.forEach(function(item) {
+                var firstImg = item.images[0];
+                var blurred = item.paid ? ' blurred' : '';
+                var lock = item.paid ? '<div class="lock-overlay"><i class="fa-solid fa-lock"></i></div>' : '';
+                var onclickAction = item.paid ? 'window.showMessage(\'This image are paid contents\')' : 'openFullscreenForItem(\'' + item.id + '\')';
+                var cardHTML = '<div class="arts-card" onclick="' + onclickAction + '">' +
+                    '<img src="' + firstImg + '" class="gallery-image' + blurred + '" alt="' + item.name + '">' +
+                    lock +
+                    '</div>';
+                grid.innerHTML += cardHTML;
+            });
+        }
+
+        function openFullscreenForItem(id) {
+            var item = galleryItems.find(function(i) { return i.id === id; });
+            if (!item) return;
+            window.currentItem = item;
+            window.currentIndex = 0;
+            var modal = document.getElementById('fullscreen-modal');
+            var img = document.getElementById('modal-image');
+            var titleEl = document.getElementById('modal-title');
+            img.src = item.images[window.currentIndex];
+            titleEl.textContent = item.name;
+            modal.style.display = 'flex';
+            window.location.hash = 'gallery-' + id;
+            hideBottomNav();
+        }
+
+        function loadCurrentImage() {
+            if (!window.currentItem) return;
+            var img = document.getElementById('modal-image');
+            img.src = window.currentItem.images[window.currentIndex];
+        }
+
+        function prevImage() {
+            if (!window.currentItem || window.currentItem.images.length <= 1) return;
+            window.currentIndex = (window.currentIndex - 1 + window.currentItem.images.length) % window.currentItem.images.length;
+            loadCurrentImage();
+        }
+
+        function nextImage() {
+            if (!window.currentItem || window.currentItem.images.length <= 1) return;
+            window.currentIndex = (window.currentIndex + 1) % window.currentItem.images.length;
+            loadCurrentImage();
+        }
+
+        function downloadFile(url, filename) {
+            if (window.cordova && cordova.file) {
+                window.resolveLocalFileSystemURL(cordova.file.dataDirectory, function(dirEntry) {
+                    dirEntry.getFile(filename, { create: true, exclusive: false }, function(fileEntry) {
+                        var xhr = new XMLHttpRequest();
+                        xhr.open('GET', url, true);
+                        xhr.responseType = 'blob';
+                        xhr.onload = function() {
+                            if (xhr.status === 200) {
+                                var blob = new Blob([xhr.response], { type: 'image/webp' });
+                                fileEntry.createWriter(function(writer) {
+                                    writer.onwriteend = function() {
+                                        window.showMessage('Downloaded to device');
+                                    };
+                                    writer.write(blob);
+                                });
+                            }
+                        };
+                        xhr.send();
+                    });
+                });
+            } else {
+                var link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        function downloadCurrent() {
+            if (!window.currentItem) return;
+            var url = window.currentItem.images[window.currentIndex];
+            var filename = (window.currentItem.name || 'image') + '.webp';
+            downloadFile(url, filename);
+        }
+
+        function closeFullscreen() {
+            var modal = document.getElementById('fullscreen-modal');
+            modal.style.display = 'none';
+            window.currentItem = null;
+            window.location.hash = '';
+            showBottomNav();
+        }
+
+        function toggleFavorite(id) {
+            if (!currentUser) {
+                showSignInNotification();
+                return;
+            }
+            if (wishlist.includes(id)) {
+                wishlist = wishlist.filter(function(i) { return i !== id; });
+            } else {
+                wishlist.push(id);
+            }
+            saveUserData('wishlist', wishlist);
+            renderHome();
+            renderWishlist();
+            if (currentProduct === id) updateDetailFavorite();
+        }
+
+        function updateDetailFavorite() {
+            var btn = document.getElementById('detailFavorite');
+            var icon = btn.querySelector('i');
+            if (wishlist.includes(currentProduct)) {
+                icon.classList.remove('far');
+                icon.classList.add('fas');
+                btn.classList.add('wishlisted');
+            } else {
+                icon.classList.remove('fas');
+                icon.classList.add('far');
+                btn.classList.remove('wishlisted');
+            }
+        }
+
+        function updateBuyButton() {
+            var btn = document.getElementById('buyBtn');
+            var owned = currentProduct && ownedDetails.hasOwnProperty(currentProduct);
+            btn.textContent = owned ? 'Owned' : 'Buy Now';
+            if (owned) {
+                btn.classList.add('owned');
+            } else {
+                btn.classList.remove('owned');
+            }
+            btn.disabled = owned;
+        }
+
+        function showProduct(id) {
+            currentProduct = id;
+            window.location.hash = 'product-' + id;
+            var p = products.find(function(pr) { return pr.id === id; });
+            if (!p) return;
+            document.getElementById('productName').textContent = p.name;
+            document.getElementById('productSubtitle').textContent = p.subtitle;
+            var prices = formatPrice(p.price);
+            document.getElementById('productPriceUSD').textContent = prices.usd;
+            document.getElementById('productPriceIDR').textContent = prices.idr;
+            document.getElementById('productDescription').innerHTML = p.description;
+            var scrollImg = document.getElementById('productMainImg');
+            scrollImg.src = p.scrollImage || p.mainImg;
+            document.getElementById('backBtn').onclick = function() {
+                window.location.hash = '';
+                fadeToPage(returnPage);
+                showBottomNav();
+            };
+            var shareBtn = document.getElementById('shareBtn');
+            if (shareBtn) {
+                shareBtn.onclick = shareProduct;
+                shareBtn.style.display = 'flex';
+            }
+            var buyBtn = document.getElementById('buyBtn');
+            var owned = ownedDetails.hasOwnProperty(id);
+            if (owned) {
+                buyBtn.onclick = null;
+                buyBtn.disabled = true;
+            } else {
+                buyBtn.disabled = false;
+                buyBtn.onclick = function() {
+                    var key = p.payhipKey;
+                    var url = 'https://payhip.com/buy?s=1&cart_links[]=' + key + '&qty[' + key + ']=1';
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                };
+            }
+            document.getElementById('detailFavorite').onclick = function(e) {
+                e.stopPropagation();
+                toggleFavorite(id);
+            };
+            updateDetailFavorite();
+            updateBuyButton();
+            var metaDiv = document.getElementById('productMeta');
+            metaDiv.innerHTML = '<p><span class="meta-id">ID: ' + (p.payhipKey || '—') + '</span> <span class="meta-date">' + (p.published || 'N/A') + '</span></p>';
+            var currentActivePage = document.querySelector('.page.active');
+            returnPage = currentActivePage ? currentActivePage.id : 'home-page';
+            fadeToPage('product-page');
+            hideBottomNav();
+            setTimeout(function() {
+                var container = document.querySelector('.image-scroll-container');
+                if (container) container.scrollLeft = container.scrollWidth / 4;
+            }, 400);
+        }
+
+        function showSearchSuggestions(searchTerm) {
+            var suggestionsContainer = document.getElementById('searchSuggestions');
+            if (!searchTerm.trim()) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            if (products.length === 0) return;
+            var term = searchTerm.toLowerCase();
+            var matches = products.filter(function(p) {
+                return p.name.toLowerCase().includes(term) || p.subtitle.toLowerCase().includes(term) || p.category.toLowerCase().includes(term);
+            });
+            if (matches.length === 0) {
+                suggestionsContainer.innerHTML = '<div class="search-suggestion-item"><div class="suggestion-title">No results found</div><div class="suggestion-description">Try different keywords</div></div>';
+            } else {
+                suggestionsContainer.innerHTML = matches.slice(0, 5).map(function(p) {
+                    return '<div class="search-suggestion-item" data-product-id="' + p.id + '">' +
+                        '<div class="suggestion-title">' + p.name + '</div>' +
+                        '<div class="suggestion-description">' + p.subtitle + ' • ' + p.price + '</div>' +
+                        '<div class="suggestion-category">' + p.category + '</div>' +
+                        '</div>';
+                }).join('');
+            }
+            suggestionsContainer.style.display = 'block';
+        }
+
+        function setupSearch() {
+            var searchInput = document.getElementById('globalSearch');
+            var suggestionsContainer = document.getElementById('searchSuggestions');
+            var searchTimeout;
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(function() { showSearchSuggestions(searchInput.value); }, 300);
+                });
+                searchInput.addEventListener('keypress', function(event) {
+                    if (event.key === 'Enter') {
+                        var first = suggestionsContainer.querySelector('.search-suggestion-item');
+                        if (first && first.dataset.productId) {
+                            showProduct(first.dataset.productId);
+                            suggestionsContainer.style.display = 'none';
+                        }
+                    }
+                });
+                suggestionsContainer.addEventListener('click', function(event) {
+                    var item = event.target.closest('.search-suggestion-item');
+                    if (item && item.dataset.productId) {
+                        showProduct(item.dataset.productId);
+                        suggestionsContainer.style.display = 'none';
+                    }
+                });
+                document.addEventListener('click', function(event) {
+                    if (!searchInput.contains(event.target) && !suggestionsContainer.contains(event.target)) {
+                        suggestionsContainer.style.display = 'none';
+                    }
+                });
+            }
+        }
+
+        function showGallerySuggestions(searchTerm) {
+            var suggestionsContainer = document.getElementById('gallerySuggestions');
+            if (!searchTerm.trim()) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            if (galleryItems.length === 0) return;
+            var term = searchTerm.toLowerCase();
+            var matches = galleryItems.filter(function(p) {
+                return p.name.toLowerCase().includes(term) || p.category.toLowerCase().includes(term);
+            });
+            if (matches.length === 0) {
+                suggestionsContainer.innerHTML = '<div class="search-suggestion-item"><div class="suggestion-title">No results found</div><div class="suggestion-description">Try different keywords</div></div>';
+            } else {
+                suggestionsContainer.innerHTML = matches.slice(0, 5).map(function(p) {
+                    return '<div class="search-suggestion-item" data-name="' + p.id + '">' +
+                        '<div class="suggestion-title">' + p.name + '</div>' +
+                        '<div class="suggestion-description">' + p.category + ' • ' + (p.paid ? 'Paid' : 'Free') + '</div>' +
+                        '<div class="suggestion-category">' + p.category + '</div>' +
+                        '</div>';
+                }).join('');
+            }
+            suggestionsContainer.style.display = 'block';
+        }
+
+        function setupGallerySearch() {
+            var searchInput = document.getElementById('gallerySearch');
+            var suggestionsContainer = document.getElementById('gallerySuggestions');
+            var searchTimeout;
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(function() { showGallerySuggestions(searchInput.value); }, 300);
+                });
+                searchInput.addEventListener('keypress', function(event) {
+                    if (event.key === 'Enter') {
+                        var first = suggestionsContainer.querySelector('.search-suggestion-item');
+                        if (first && first.dataset.name) {
+                            openFullscreenForItem(first.dataset.name);
+                            suggestionsContainer.style.display = 'none';
+                        }
+                    }
+                });
+                suggestionsContainer.addEventListener('click', function(event) {
+                    var item = event.target.closest('.search-suggestion-item');
+                    if (item && item.dataset.name) {
+                        openFullscreenForItem(item.dataset.name);
+                        suggestionsContainer.style.display = 'none';
+                    }
+                });
+                document.addEventListener('click', function(event) {
+                    if (!searchInput.contains(event.target) && !suggestionsContainer.contains(event.target)) {
+                        suggestionsContainer.style.display = 'none';
+                    }
+                });
+            }
+        }
+
+        function setupScrollProgress() {
+            var container = document.querySelector('.image-scroll-container');
+            var progressBar = document.getElementById('scrollProgressBar');
+            if (container && progressBar) {
+                container.addEventListener('scroll', function() {
+                    var percent = (this.scrollLeft / (this.scrollWidth - this.clientWidth)) * 100;
+                    progressBar.style.width = percent + '%';
+                });
+            }
+        }
+
+        function updateProfileHeaders() {
+            var user = isUserLoggedIn();
+            var username = user && user.username ? user.username : 'Kiraku Store';
+            var avatar = user && user.avatar ? user.avatar : '';
+            var avatarIds = ['storeAvatar', 'wishlistAvatar', 'ownedAvatar'];
+            ids.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = username;
+            });
+            avatarIds.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) {
+                    if (avatar) {
+                        el.src = avatar;
+                        el.style.display = 'block';
+                    } else {
+                        el.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        async function init() {
+            currentUser = isUserLoggedIn();
+            await loadProducts();
+            generateCategoryButtons();
+            generateGalleryCategoryButtons();
+            wishlist = loadUserData('wishlist');
+            await loadOwnedData();
+            updateProfileHeaders();
+            renderHome();
+            renderWishlist();
+            renderOwned();
+            setupSearch();
+            setupGallerySearch();
+            setupScrollProgress();
+            document.getElementById('shareBtn').style.display = 'none';
+            setTimeout(function() {
+                var hash = window.location.hash.substring(1);
+                if (hash.startsWith('product-')) {
+                    var productId = hash.replace('product-', '');
+                    if (products.find(function(p) { return p.id === productId; })) {
+                        showProduct(productId);
+                        hideBottomNav();
+                    }
+                } else if (hash.startsWith('gallery-')) {
+                    var galleryId = hash.replace('gallery-', '');
+                    if (galleryItems.find(function(p) { return p.id === galleryId; })) {
+                        openFullscreenForItem(galleryId);
+                        hideBottomNav();
+                    }
+                }
+            }, 200);
+            window.addEventListener('hashchange', function() {
+                var hash = window.location.hash.substring(1);
+                if (hash.startsWith('product-')) {
+                    var productId = hash.replace('product-', '');
+                    if (products.find(function(p) { return p.id === productId; })) {
+                        showProduct(productId);
+                        hideBottomNav();
+                    }
+                } else if (hash.startsWith('gallery-')) {
+                    var galleryId = hash.replace('gallery-', '');
+                    if (galleryItems.find(function(p) { return p.id === galleryId; })) {
+                        openFullscreenForItem(galleryId);
+                        hideBottomNav();
+                    }
+                } else {
+                    showBottomNav();
+                    var active = document.querySelector('.page.active');
+                    if (active && ['home-page', 'wishlist-page', 'gallery-page', 'owned-page'].indexOf(active.id) === -1) {
+                        fadeToPage('home-page');
+                    }
+                }
+            });
+            document.querySelectorAll('.nav-button').forEach(function(btn, idx) {
+                btn.addEventListener('click', function() {
+                    var pages = ['wishlist', 'home', 'gallery', 'owned'];
+                    window.location.hash = '';
+                    switchPage(pages[idx]);
+                });
+            });
+        }
+
+        init();
+    </script>
 </body>
 </html>

@@ -9,7 +9,7 @@
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="../ui-icons.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -854,7 +854,7 @@
         let currentFolderId = null
         let rowToDeleteIndex = -1
         let filterActive = false
-        let clearProject = null
+        let currentStatusProject = null
                                 
         const body = document.getElementById("tableBody")
         const addRowBtnTop = document.getElementById("addRowBtnTop")
@@ -1204,6 +1204,28 @@
             }
         }
         
+        function openStatusPopup() {
+            const statuses = ["Pending", "In Progress", "Completed", "Deprecated"]
+            const current = currentStatusProject.status
+            let optionsHTML = statuses.map(s => {
+                const isActive = s === current ? 'style="background: var(--accent-color); color: #000;"' : ''
+                return `<button class="btn status-option-btn" ${isActive} onclick="setStatusAndClose('${s}')">${s}</button>`
+            }).join('')
+            const contentHTML = `<div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">${optionsHTML}</div>`
+            openUniversalPopup("Select Status", contentHTML)
+        }
+        
+        function setStatusAndClose(newStatus) {
+            if (currentStatusProject) {
+                currentStatusProject.status = newStatus
+                fixStatus(currentStatusProject)
+                save()
+                render()
+            }
+            closeUniversalPopup()
+            currentStatusProject = null
+        }
+        
         function rowTemplate(project, index) {
             const tr = document.createElement("tr")
             
@@ -1310,20 +1332,13 @@
             
             const actionTd = document.createElement("td")
 
-            const status = document.createElement("select")
+            const status = document.createElement("button")
+            status.type = "button"
             status.className = "status-select"
-            ;["Pending", "In Progress", "Completed", "Deprecated"].forEach(v => {
-                const o = document.createElement("option")
-                o.value = v
-                o.textContent = v
-                if (project.status === v) o.selected = true
-                status.appendChild(o)
-            })
-            status.onchange = e => {
-                project.status = e.target.value
-                fixStatus(project)
-                save()
-                render()
+            status.textContent = project.status
+            status.onclick = () => {
+                currentStatusProject = project
+                openStatusPopup()
             }
             status.style.marginBottom = "8px"
             

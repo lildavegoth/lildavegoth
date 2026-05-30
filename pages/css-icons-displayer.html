@@ -8,6 +8,7 @@
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
+    <script src="../ui-icons.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -385,10 +386,36 @@
         }
 
         .tools-grid {
-            padding: var(--spacing-md);
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md);
+            flex: 1;
+            overflow-y: auto;
+            max-height: none;
+        }
+        
+        .tools-grid::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .tools-grid::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin: 4px 0;
+        }
+        
+        .tools-grid::-webkit-scrollbar-thumb {
+            background: rgba(193, 252, 50, 0.3);
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+        
+        .tools-grid::-webkit-scrollbar-thumb:hover {
+            background: rgba(193, 252, 50, 0.5);
+            border: 2px solid transparent;
+            background-clip: padding-box;
         }
 
         .tool-option {
@@ -476,7 +503,7 @@
         <app-header class="fade-in">
             <div>
                 <h1 class="username">CSS Icons Displayer</h1>
-                <p class="tagline">Font Awesome + Bootstrap Icons displayer with functionality to copy css codes when clicked</p>
+                <p class="tagline">Font Awesome + Bootstrap Icons + RPG Awesome displayer with functionality to copy css codes when clicked</p>
             </div>
         </app-header>
 
@@ -518,25 +545,24 @@
         </div>
     </div>
 
-    <script src="../icon-updater.js"></script>
     <script>
         (function(){
-            const FA_CSS_URL = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css";
-            const BI_CSS_URL = "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css";
-        
             let activeLibrary = 'fa';
             let faIconsData = [];
             let biIconsData = [];
+            let rpgIconsData = [];
             let faCardMap = new Map();
             let biCardMap = new Map();
+            let rpgCardMap = new Map();
             let libraryContainer = document.getElementById('libraryContainer');
             let searchInput = document.getElementById('globalSearchInput');
             let currentLibLabel = document.getElementById('currentLibLabel');
             let currentCategory = null;
-        
+
             const faUsageText = 'fas / far / fab';
             const biUsageText = 'bi bi-*';
-        
+            const rpgUsageText = 'ra ra-*';
+
             function copyTextToClipboard(text) {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(text).then(() => {
@@ -548,7 +574,7 @@
                     fallbackCopy(text);
                 }
             }
-        
+
             function fallbackCopy(text) {
                 const textArea = document.createElement("textarea");
                 textArea.value = text;
@@ -567,7 +593,7 @@
                 }
                 document.body.removeChild(textArea);
             }
-        
+
             function createIconCard(item) {
                 const card = document.createElement('div');
                 card.className = 'icon-card';
@@ -585,7 +611,7 @@
                 });
                 return card;
             }
-        
+
             function getCategoriesFromData(data) {
                 const cats = new Set();
                 data.forEach(item => cats.add(item.category));
@@ -596,7 +622,7 @@
                 });
                 return sorted;
             }
-        
+
             function buildCategoriesPills(categories, onSelect) {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'categories-wrapper';
@@ -627,19 +653,21 @@
                 wrapper.appendChild(pillsDiv);
                 return wrapper;
             }
-        
+
             function renderLibraryUI(library) {
                 libraryContainer.innerHTML = '';
                 if (library === 'fa' && faIconsData.length > 0) {
                     libraryContainer.appendChild(buildLibrarySection('fa', 'Font Awesome', faUsageText, faIconsData, faCardMap));
                 } else if (library === 'bi' && biIconsData.length > 0) {
                     libraryContainer.appendChild(buildLibrarySection('bi', 'Bootstrap Icons', biUsageText, biIconsData, biCardMap));
+                } else if (library === 'rpg' && rpgIconsData.length > 0) {
+                    libraryContainer.appendChild(buildLibrarySection('rpg', 'RPG Awesome', rpgUsageText, rpgIconsData, rpgCardMap));
                 } else {
                     libraryContainer.innerHTML = `<div class="loading-placeholder"><i class="fas fa-spinner fa-pulse"></i> Loading...</div>`;
                 }
                 filterCurrentLibrary();
             }
-        
+
             function buildLibrarySection(libKey, title, usageText, dataArray, cardMap) {
                 const section = document.createElement('div');
                 section.className = 'library-section';
@@ -651,7 +679,13 @@
                 const titleDiv = document.createElement('div');
                 titleDiv.className = 'library-title';
                 const h2 = document.createElement('h2');
-                h2.innerHTML = libKey === 'fa' ? '<i class="fab fa-font-awesome" style="color:#C1FC32;"></i> Font Awesome' : '<i class="bi bi-bootstrap-fill" style="color:#C1FC32;"></i> Bootstrap Icons';
+                if (libKey === 'fa') {
+                    h2.innerHTML = '<i class="fab fa-font-awesome" style="color:#C1FC32;"></i> Font Awesome';
+                } else if (libKey === 'bi') {
+                    h2.innerHTML = '<i class="bi bi-bootstrap-fill" style="color:#C1FC32;"></i> Bootstrap Icons';
+                } else if (libKey === 'rpg') {
+                    h2.innerHTML = '<i class="ra ra-sword" style="color:#C1FC32;"></i> RPG Awesome';
+                }
                 titleDiv.appendChild(h2);
                 
                 const headerRight = document.createElement('div');
@@ -693,12 +727,16 @@
                 
                 return section;
             }
-        
+
             function filterCurrentLibrary() {
                 const term = searchInput.value.trim().toLowerCase();
                 let visibleCount = 0;
-                const activeMap = activeLibrary === 'fa' ? faCardMap : biCardMap;
+                let activeMap;
+                if (activeLibrary === 'fa') activeMap = faCardMap;
+                else if (activeLibrary === 'bi') activeMap = biCardMap;
+                else if (activeLibrary === 'rpg') activeMap = rpgCardMap;
                 const counterSpan = document.querySelector('.library-section .visible-count');
+                if (!activeMap) return;
                 for (let [name, card] of activeMap.entries()) {
                     const matchesSearch = term === '' || name.toLowerCase().includes(term);
                     const matchesCategory = !currentCategory || card.dataset.category === currentCategory;
@@ -711,32 +749,73 @@
                 }
                 if (counterSpan) counterSpan.textContent = visibleCount;
             }
-        
+
             function switchLibrary(lib) {
                 activeLibrary = lib;
-                currentLibLabel.textContent = lib === 'fa' ? 'Font Awesome' : 'Bootstrap Icons';
+                if (lib === 'fa') currentLibLabel.textContent = 'Font Awesome';
+                else if (lib === 'bi') currentLibLabel.textContent = 'Bootstrap Icons';
+                else if (lib === 'rpg') currentLibLabel.textContent = 'RPG Awesome';
                 currentCategory = null;
                 if (lib === 'fa' && faIconsData.length > 0) {
                     renderLibraryUI('fa');
                 } else if (lib === 'bi' && biIconsData.length > 0) {
                     renderLibraryUI('bi');
+                } else if (lib === 'rpg' && rpgIconsData.length > 0) {
+                    renderLibraryUI('rpg');
                 } else {
                     libraryContainer.innerHTML = `<div class="loading-placeholder"><i class="fas fa-spinner fa-pulse"></i> Loading...</div>`;
                 }
                 closeUniversalPopup();
             }
-        
+
             function openPopup(type) {
                 const popup = document.getElementById('universalPopup');
                 const title = document.getElementById('popupTitle');
                 const content = document.getElementById('popupContent');
                 if (type === 'selector') {
                     title.textContent = 'Select Icon Library';
+                    const versions = (window.iconSets && window.iconSets.versions) ? window.iconSets.versions : { fa: '6.7.2', bi: '1.11.3', rpg: '1.0.0' };
+                    const latest = (window.iconSets && window.iconSets.latest) ? window.iconSets.latest : versions;
+
+                    let updatesHTML = '';
+                    const updates = [];
+                    if (latest.fa !== versions.fa) updates.push({ name: 'Font Awesome', version: latest.fa, url: 'https://data.jsdelivr.com/v1/packages/npm/@fortawesome/fontawesome-free' });
+                    if (latest.bi !== versions.bi) updates.push({ name: 'Bootstrap Icons', version: latest.bi, url: 'https://data.jsdelivr.com/v1/packages/npm/bootstrap-icons' });
+                    if (latest.rpg !== versions.rpg) updates.push({ name: 'RPG Awesome', version: latest.rpg, url: 'https://github.com/nagoshiashumari/Rpg-Awesome' });
+
+                    if (updates.length > 0) {
+                        updatesHTML = `
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                <h3 style="font-size: 1rem; color: var(--accent-color); margin-bottom: 8px;">Updates</h3>
+                                ${updates.map(update => `
+                                    <div class="tool-option">
+                                        <div class="tool-option-content">
+                                            <h3>${update.name} ${update.version}</h3>
+                                            <p>New version available</p>
+                                        </div>
+                                        <a href="${update.url}" target="_blank" class="external-link-btn" onclick="event.stopPropagation()">
+                                            <i class="fas fa-arrow-up-right-from-square"></i>
+                                        </a>
+                                    </div>
+                                `).join('')}
+                            </div>`;
+                    } else {
+                        updatesHTML = `
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                <h3 style="font-size: 1rem; color: var(--accent-color); margin-bottom: 8px;">Updates</h3>
+                                <div class="tool-option" style="cursor: default;">
+                                    <div class="tool-option-content">
+                                        <p style="color: var(--text-secondary); font-size: 0.9rem;">No updates available for now.</p>
+                                    </div>
+                                </div>
+                            </div>`;
+                    }
+
                     let itemsHTML = `
                         <div class="tool-option">
                             <div class="tool-option-content" onclick="switchLibrary('fa')">
                                 <h3><i class="fab fa-font-awesome"></i> Font Awesome</h3>
-                                <p>6.4.0 · Solid, Regular, Brands</p>
+                                <p>${versions.fa} · Solid, Regular, Brands</p>
                             </div>
                             <a href="https://fontawesome.com/icons" target="_blank" class="external-link-btn" onclick="event.stopPropagation()">
                                 <i class="fas fa-arrow-up-right-from-square"></i>
@@ -745,35 +824,46 @@
                         <div class="tool-option">
                             <div class="tool-option-content" onclick="switchLibrary('bi')">
                                 <h3><i class="bi bi-bootstrap-fill"></i> Bootstrap Icons</h3>
-                                <p>v1.11.3 · MIT license</p>
+                                <p>v${versions.bi} · MIT license</p>
                             </div>
                             <a href="https://icons.getbootstrap.com/" target="_blank" class="external-link-btn" onclick="event.stopPropagation()">
                                 <i class="fas fa-arrow-up-right-from-square"></i>
                             </a>
                         </div>
+                        <div class="tool-option">
+                            <div class="tool-option-content" onclick="switchLibrary('rpg')">
+                                <h3><i class="ra ra-sword"></i> RPG Awesome</h3>
+                                <p>v${versions.rpg} · Fantasy icons</p>
+                            </div>
+                            <a href="https://github.com/nagoshiashumari/Rpg-Awesome" target="_blank" class="external-link-btn" onclick="event.stopPropagation()">
+                                <i class="fas fa-arrow-up-right-from-square"></i>
+                            </a>
+                        </div>
+                        ${updatesHTML}
                     `;
                     content.innerHTML = itemsHTML;
                 }
                 popup.style.display = 'flex';
             }
-        
+
             window.closeUniversalPopup = function() {
                 document.getElementById('universalPopup').style.display = 'none';
             };
-        
+
             window.switchLibrary = switchLibrary;
-        
+
             document.getElementById('selectorBtn').addEventListener('click', () => openPopup('selector'));
             searchInput.addEventListener('input', filterCurrentLibrary);
-        
+
             function startIconDisplay() {
                 const sets = window.iconSets;
-                if (!sets || (!sets.fa && !sets.bi)) {
+                if (!sets || (!sets.fa && !sets.bi && !sets.rpg)) {
                     libraryContainer.innerHTML = `<div class="error-block"><i class="fas fa-exclamation-triangle"></i> Icon data failed to load.</div>`;
                     return;
                 }
                 faIconsData = sets.fa || [];
                 biIconsData = sets.bi || [];
+                rpgIconsData = sets.rpg || [];
                 renderLibraryUI('fa');
             }
             
@@ -782,7 +872,7 @@
             } else {
                 window.addEventListener('iconsReady', startIconDisplay);
             }
-        
+
             document.addEventListener('click', (e) => {
                 const popup = document.getElementById('universalPopup');
                 if (e.target === popup) closeUniversalPopup();

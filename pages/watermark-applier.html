@@ -8,11 +8,10 @@
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="../ui-icons.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
-            --accent-dark: #9bc726;
             --bg-black: #000000;
             --bg-dark: #1a1a1a;
             --bg-card: rgba(30, 30, 30, 0.7);
@@ -25,6 +24,8 @@
             --spacing-sm: 16px;
             --spacing-md: 24px;
             --spacing-lg: 32px;
+            --clear-bg: #C42833;
+            --clear-bg-hover: #a01f28;
         }
 
         * {
@@ -93,16 +94,6 @@
             gap: 6px;
         }
 
-        .character-count {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            background: rgba(255, 255, 255, 0.05);
-            padding: 4px 10px;
-            border-radius: 20px;
-            min-width: 65px;
-            text-align: center;
-        }
-
         .preview-container {
             background: rgba(0, 0, 0, 0.3);
             border-radius: var(--radius-medium);
@@ -111,15 +102,6 @@
             margin-bottom: var(--spacing-md);
             position: relative;
             overflow: hidden;
-        }
-
-        .preview-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: var(--spacing-xs);
-            color: var(--text-secondary);
-            font-size: 0.9rem;
         }
 
         .preview-content {
@@ -133,30 +115,24 @@
         }
 
         .watermark-canvas {
-            max-width: 100%;
-            max-height: 280px;
-            width: auto;
+            width: 100%;
             height: auto;
             border-radius: var(--radius-small);
             box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            display: block;
+            margin: 0 auto;
         }
 
         .preview-placeholder {
             color: var(--text-secondary);
             text-align: center;
-            padding: var(--spacing-md);
+            padding: var(--spacing-lg);
             font-size: 0.9rem;
-        }
-
-        .preview-error {
-            color: #ff6b6b;
-            text-align: center;
-            padding: var(--spacing-md);
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            justify-content: center;
+            background: var(--bg-card);
+            border-radius: var(--radius-small);
+            border: 1px solid rgba(255,255,255,0.05);
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .hidden {
@@ -183,6 +159,7 @@
             color: var(--text-primary);
             font-size: 0.95rem;
             width: 100%;
+            resize: none;
         }
 
         .watermark-input:focus {
@@ -207,11 +184,11 @@
         }
 
         .apply-btn:hover {
-            background: var(--accent-dark);
+            background: var(--accent-color);
         }
 
         .apply-btn:active {
-            transform: translateY(1px);
+            transform: scale(0.96) translateY(1px);
         }
 
         .button-row {
@@ -247,7 +224,7 @@
         }
 
         .icon-btn:active {
-            transform: translateY(1px);
+            transform: scale(0.96) translateY(1px);
         }
 
         .btn-primary {
@@ -256,7 +233,7 @@
         }
 
         .btn-primary:hover {
-            background: var(--accent-dark);
+            background: var(--accent-color);
         }
 
         .btn-secondary {
@@ -272,28 +249,197 @@
             width: 100%;
         }
 
-        .info-box {
-            text-align: center;
-            padding: var(--spacing-md);
-            background: rgba(0, 0, 0, 0.2);
+        #clearBtn {
+            background-color: var(--clear-bg);
+        }
+
+        #clearBtn:hover {
+            background-color: var(--clear-bg-hover);
+        }
+
+        .watermark-settings {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+
+        .setting-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .setting-group label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .popup-trigger {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            color: var(--text-primary);
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 100px;
+            justify-content: space-between;
+        }
+
+        .popup-trigger.full-width-mode {
+            width: 100%;
+            justify-content: center;
+            padding: 12px;
+            font-size: 1rem;
             border-radius: var(--radius-medium);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .color-icon-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+        .color-icon-btn i {
+            font-size: 24px;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100px;
+            height: 24px;
+            background: transparent;
+            outline: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 24px;
+            border-radius: 50px;
+            background: var(--accent-color);
+            border: 2px solid #000000;
+            box-sizing: border-box;
+            margin-top: -10px;
+            cursor: pointer;
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
             height: 100%;
-            min-height: 200px;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .info-box i {
-            font-size: 2.5rem;
-            color: var(--accent-color);
-            margin-bottom: var(--spacing-sm);
+        .popup-options {
+            padding: var(--spacing-sm);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow-y: auto;
         }
 
-        .info-box p {
-            color: var(--text-secondary);
+        .popup-option-item {
+            padding: 12px 16px;
+            border-radius: var(--radius-small);
+            cursor: pointer;
             font-size: 0.95rem;
+            color: var(--text-primary);
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .popup-option-item:hover {
+            background: rgba(193,252,50,0.1);
+        }
+
+        .popup-option-item.selected {
+            background: var(--accent-color);
+            font-weight: 600;
+            color: black;
+        }
+
+        .popup-option-item i {
+            width: 20px;
+            text-align: center;
         }
 
         @media (max-width: 480px) {
@@ -301,26 +447,25 @@
                 padding: 14px;
                 border-radius: 20px;
             }
-            
             .apply-btn {
                 width: 44px;
             }
-            
             .preview-content {
                 min-height: 200px;
             }
-            
-            .watermark-canvas {
-                max-height: 200px;
-            }
-            
             .icon-btn {
                 padding: 10px 8px;
                 font-size: 0.85rem;
             }
+            .watermark-settings {
+                gap: 8px;
+            }
+            .popup-content {
+                max-width: 320px;
+            }
         }
 
-        .icon-btn, .apply-btn {
+        .icon-btn, .apply-btn, .popup-trigger {
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
@@ -333,69 +478,75 @@
         <a href="../index.html" class="back-link">
             <i class="fas fa-arrow-left"></i> Back To Home
         </a>
-        
+
         <app-header class="fade-in">
             <div>
                 <h1 class="username">Watermark Applier</h1>
-                <p class="tagline">Add a tiled diagonal watermark to your image that covers the entire picture</p>
+                <p class="tagline">Add a Tiled Diagonal or Timestamp with Username watermarks to your images that covers the entire picture</p>
             </div>
         </app-header>
 
-        <div class="tool-card">
-            <div class="io-grid">
-                <div class="io-section">
-                    <div class="section-header">
-                        <div class="section-title">
-                            Your watermark text here
-                        </div>
-                    </div>
-                    
-                    <div class="watermark-wrapper">
-                        <input type="text" class="watermark-input" id="watermarkText" value="lildavegoth" placeholder="Your Watermark" maxlength="17">
-                        <button class="apply-btn" id="applyWatermarkBtn">
-                            <i class="fas fa-check"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="section-header" style="margin-top: 4px;">
-                        <div class="section-title">
-                            Original size
-                        </div>
-                        <div class="character-count" id="fileInfo">No file</div>
-                        <div class="section-title">
-                            Size result
-                        </div>
-                        <div class="character-count" id="outputCount">—</div>
-                    </div>
-                    
-                    <div class="preview-container">
-                        <div class="preview-content" id="previewContent">
-                            <div class="preview-placeholder" id="previewPlaceholder">
-                                <div>Import an image to see preview</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-top: -10px;" class="button-row">
-                        <label class="icon-btn btn-secondary">
-                            <input type="file" id="imageInput" accept="image/*">
-                            <i class="fas fa-cloud-upload-alt"></i> Select Image
-                        </label>
-                        <button class="icon-btn btn-secondary" id="clearBtn">
-                            <i class="fas fa-undo-alt"></i> Clear
-                        </button>
-                    </div>
+        <div class="io-grid">
+            <div class="io-section">
+                <button class="popup-trigger full-width-mode" id="watermarkModeBtn">
+                    <span id="watermarkModeLabel">Tiled Diagonal</span>
+                    <i class="fas fa-caret-down"></i>
+                </button>
 
-                    <div class="button-col">
-                        <button class="icon-btn btn-primary btn-full" id="saveImageBtn">
-                            <i class="fas fa-download"></i> Download
+                <div class="watermark-wrapper">
+                    <input type="text" class="watermark-input" id="watermarkText" value="lildavegoth" placeholder="Your Watermark" maxlength="17">
+                    <button class="apply-btn" id="applyWatermarkBtn">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+
+                <div class="watermark-settings">
+                    <div class="setting-group">
+                        <label>Opacity</label>
+                        <input type="range" id="watermarkOpacity" min="0" max="1" step="0.05" value="0.28">
+                    </div>
+                    <div class="setting-group">
+                        <label>Color</label>
+                        <button class="color-icon-btn" id="colorIconBtn">
+                            <i class="fas fa-circle" id="colorIcon" style="color: #ffffff;"></i>
+                        </button>
+                        <input type="color" id="watermarkColor" value="#ffffff" style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;">
+                    </div>
+                    <div class="setting-group">
+                        <label>Weight</label>
+                        <button class="popup-trigger" id="weightSelectBtn">
+                            <span id="weightLabel">Bold</span>
+                            <i class="fas fa-caret-down"></i>
                         </button>
                     </div>
                 </div>
 
+                <div class="preview-container">
+                    <div class="preview-content" id="previewContent">
+                        <div class="preview-placeholder" id="previewPlaceholder">
+                            <div>Import an image to see preview</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: -10px;" class="button-row">
+                    <label class="icon-btn btn-secondary">
+                        <input type="file" id="imageInput" accept="image/*">
+                        <i class="fas fa-cloud-upload-alt"></i> Select Image
+                    </label>
+                    <button class="icon-btn btn-secondary" id="clearBtn">
+                        <i class="fas fa-undo-alt"></i> Clear
+                    </button>
+                </div>
+
+                <div class="button-col">
+                    <button class="icon-btn btn-primary btn-full" id="saveImageBtn">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                </div>
             </div>
         </div>
-        
+
         <footer>
             <div class="social-links">
                 <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
@@ -408,20 +559,122 @@
         </footer>
     </div>
 
+    <div id="universalPopup" class="popup-overlay hidden">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" id="closePopupBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="popup-options" id="popupOptions"></div>
+        </div>
+    </div>
+
     <script>
         const imageInput = document.getElementById('imageInput');
         const watermarkInput = document.getElementById('watermarkText');
         const applyWatermarkBtn = document.getElementById('applyWatermarkBtn');
         const previewContent = document.getElementById('previewContent');
         const previewPlaceholder = document.getElementById('previewPlaceholder');
-        const fileInfo = document.getElementById('fileInfo');
-        const outputCount = document.getElementById('outputCount');
         const clearBtn = document.getElementById('clearBtn');
         const saveImageBtn = document.getElementById('saveImageBtn');
+        const opacitySlider = document.getElementById('watermarkOpacity');
+        const colorPicker = document.getElementById('watermarkColor');
+        const colorIcon = document.getElementById('colorIcon');
+        const colorIconBtn = document.getElementById('colorIconBtn');
+        const weightSelectBtn = document.getElementById('weightSelectBtn');
+        const weightLabel = document.getElementById('weightLabel');
+        const watermarkModeBtn = document.getElementById('watermarkModeBtn');
+        const watermarkModeLabel = document.getElementById('watermarkModeLabel');
+        const universalPopup = document.getElementById('universalPopup');
+        const popupTitle = document.getElementById('popupTitle');
+        const popupOptions = document.getElementById('popupOptions');
+        const closePopupBtn = document.getElementById('closePopupBtn');
 
         let currentBase64 = '';
         let currentFileName = 'watermarked.png';
         let currentImage = null;
+        let currentWeight = 'bold';
+        let watermarkMode = 'default';
+        const randomID = Math.floor(10000 + Math.random() * 90000);
+
+        function getFormattedDate() {
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const month = months[now.getMonth()];
+            const year = now.getFullYear();
+            return `${day}${month}${year} — ${randomID}`;
+        }
+
+        function openUniversalPopup(title, options, currentValue, onSelect) {
+            popupTitle.textContent = title;
+            popupOptions.innerHTML = '';
+            options.forEach(option => {
+                const item = document.createElement('div');
+                item.className = 'popup-option-item';
+                if (option.value === currentValue) {
+                    item.classList.add('selected');
+                }
+                item.innerHTML = `<i class="fas ${option.icon}"></i>${option.label}`;
+                item.addEventListener('click', () => {
+                    onSelect(option.value);
+                    closeUniversalPopup();
+                });
+                popupOptions.appendChild(item);
+            });
+            universalPopup.classList.remove('hidden');
+        }
+
+        function closeUniversalPopup() {
+            universalPopup.classList.add('hidden');
+        }
+
+        closePopupBtn.addEventListener('click', closeUniversalPopup);
+        universalPopup.addEventListener('click', function(e) {
+            if (e.target === universalPopup) {
+                closeUniversalPopup();
+            }
+        });
+
+        opacitySlider.addEventListener('input', function() {
+            applyWatermark();
+        });
+
+        colorIconBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            colorPicker.click();
+        });
+
+        colorPicker.addEventListener('input', function() {
+            colorIcon.style.color = colorPicker.value;
+            applyWatermark();
+        });
+
+        weightSelectBtn.addEventListener('click', function() {
+            const options = [
+                { value: 'normal', label: 'Normal', icon: 'fa-font' },
+                { value: 'bold', label: 'Bold', icon: 'fa-bold' }
+            ];
+            openUniversalPopup('Font Weight', options, currentWeight, function(weight) {
+                currentWeight = weight;
+                weightLabel.textContent = weight.charAt(0).toUpperCase() + weight.slice(1);
+                applyWatermark();
+            });
+        });
+
+        watermarkModeBtn.addEventListener('click', function() {
+            const options = [
+                { value: 'default', label: 'Tiled Diagonal', icon: 'fa-th-large' },
+                { value: 'timestamp', label: 'Timestamp Watermark', icon: 'fa-clock' }
+            ];
+            openUniversalPopup('Watermark Style', options, watermarkMode, function(mode) {
+                watermarkMode = mode;
+                watermarkModeLabel.textContent = mode === 'default' ? 'Tiled Diagonal' : 'Timestamp Watermark';
+                applyWatermark();
+            });
+        });
 
         imageInput.addEventListener('change', handleImageUpload);
         applyWatermarkBtn.addEventListener('click', applyWatermark);
@@ -431,21 +684,20 @@
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
-        
+
             if (file.size > 5 * 1024 * 1024) {
-                showError('Image Too Large (Max 5MB)');
+                window.showError('Image Too Large (Max 5MB)');
                 return;
             }
-        
-            fileInfo.textContent = `${(file.size / 1024).toFixed(1)} Kb`;
+
             currentFileName = file.name.replace(/\.[^/.]+$/, '') + '.png';
-            
+
             let text = watermarkInput.value || 'lildavegoth';
             if (text.length > 17) {
                 text = text.substring(0, 17);
                 watermarkInput.value = text;
             }
-            
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
@@ -462,21 +714,20 @@
 
         function applyWatermark() {
             if (!currentImage) return;
-            
+
             let text = watermarkInput.value || 'lildavegoth';
             if (text.length > 17) {
                 text = text.substring(0, 17);
                 watermarkInput.value = text;
             }
-            
+
             previewContent.innerHTML = '';
             previewPlaceholder.classList.remove('hidden');
             currentBase64 = '';
-            
+
             setTimeout(() => {
                 drawWatermarkOnCanvas(currentImage, text);
             }, 10);
-            window.showMessage('Watermark updated');
         }
 
         function drawWatermarkOnCanvas(img, text) {
@@ -487,32 +738,71 @@
 
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+            const opacity = parseFloat(opacitySlider.value);
+            const color = colorPicker.value;
+
+            const hexToRgb = (hex) => {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : {r:255,g:255,b:255};
+            };
+
+            const rgb = hexToRgb(color);
+            const fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+            const strokeStyle = `rgba(0, 0, 0, ${opacity * 0.7})`;
+
+            const fontString = `${currentWeight} 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+            ctx.font = fontString;
+            ctx.fillStyle = fillStyle;
+            ctx.strokeStyle = strokeStyle;
             ctx.lineWidth = 2;
 
             const txt = text || 'lildavegoth';
-            const diagonal = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
-            const stepX = 280;
-            const stepY = 180;
 
-            ctx.save();
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate(45 * Math.PI / 180);
-            ctx.translate(-canvas.width / 2, -canvas.height / 2);
+            if (watermarkMode === 'default') {
+                const diagonal = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
+                const stepX = 280;
+                const stepY = 180;
 
-            for (let y = -diagonal; y < diagonal; y += stepY) {
-                for (let x = -diagonal; x < diagonal; x += stepX) {
-                    ctx.save();
-                    ctx.translate(x, y);
-                    ctx.strokeText(txt, 0, 0);
-                    ctx.fillText(txt, 0, 0);
-                    ctx.restore();
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate(45 * Math.PI / 180);
+                ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+                for (let y = -diagonal; y < diagonal; y += stepY) {
+                    for (let x = -diagonal; x < diagonal; x += stepX) {
+                        ctx.save();
+                        ctx.translate(x, y);
+                        ctx.strokeText(txt, 0, 0);
+                        ctx.fillText(txt, 0, 0);
+                        ctx.restore();
+                    }
                 }
-            }
 
-            ctx.restore();
+                ctx.restore();
+            } else if (watermarkMode === 'timestamp') {
+                const timestamp = getFormattedDate();
+                const smallFont = `${currentWeight} 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+                ctx.font = smallFont;
+                ctx.fillStyle = fillStyle;
+                ctx.strokeStyle = strokeStyle;
+                ctx.lineWidth = 1.5;
+
+                const padding = 20;
+                const usernameY = canvas.height - padding;
+                const timestampY = canvas.height - padding;
+
+                ctx.textAlign = 'left';
+                ctx.strokeText(txt, padding, usernameY);
+                ctx.fillText(txt, padding, usernameY);
+
+                ctx.textAlign = 'right';
+                ctx.strokeText(timestamp, canvas.width - padding, timestampY);
+                ctx.fillText(timestamp, canvas.width - padding, timestampY);
+            }
 
             currentBase64 = canvas.toDataURL('image/png');
             updatePreview(currentBase64);
@@ -527,20 +817,54 @@
             imgEl.className = 'watermark-canvas';
             imgEl.alt = 'Watermarked';
             previewContent.appendChild(imgEl);
-
-            const sizeInKb = Math.round((dataURL.length * 0.75) / 1024);
-            outputCount.textContent = sizeInKb + ' Kb';
         }
 
         function downloadWatermarked() {
             if (!currentBase64) return;
-            const a = document.createElement('a');
-            a.href = currentBase64;
-            a.download = currentFileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.showMessage('Watermarked image has been successfully downloaded');
+
+            if (window.cordova && window.cordova.file) {
+                cordovaDownload(currentBase64, currentFileName);
+            } else {
+                const a = document.createElement('a');
+                a.href = currentBase64;
+                a.download = currentFileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.showMessage('Watermarked image has been successfully downloaded');
+            }
+        }
+
+        function cordovaDownload(dataURL, filename) {
+            const base64Data = dataURL.replace(/^data:image\/png;base64,/, '');
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], {type: 'image/png'});
+
+            const directory = cordova.file.externalDataDirectory || cordova.file.dataDirectory;
+            window.resolveLocalFileSystemURL(directory, function(dirEntry) {
+                dirEntry.getFile(filename, {create: true, exclusive: false}, function(fileEntry) {
+                    fileEntry.createWriter(function(fileWriter) {
+                        fileWriter.onwriteend = function() {
+                            window.showMessage('Watermarked image saved to device');
+                        };
+                        fileWriter.onerror = function(e) {
+                            window.showError('Download failed: ' + e.toString());
+                        };
+                        fileWriter.write(blob);
+                    }, function(e) {
+                        window.showError('File writer error: ' + e.toString());
+                    });
+                }, function(e) {
+                    window.showError('Get file error: ' + e.toString());
+                });
+            }, function(e) {
+                window.showError('Directory access error: ' + e.toString());
+            });
         }
 
         function clearAll() {
@@ -549,11 +873,8 @@
             currentImage = null;
             previewContent.innerHTML = '';
             previewPlaceholder.classList.remove('hidden');
-            fileInfo.textContent = 'No File';
-            outputCount.textContent = '—';
             window.showMessage('Cleared. Import new image to start watermarking');
         }
-
     </script>
 </body>
 </html>

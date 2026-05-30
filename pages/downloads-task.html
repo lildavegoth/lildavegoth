@@ -10,7 +10,7 @@
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="../ui-icons.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -170,7 +170,7 @@
             cursor: pointer;
         }
 
-        .form-input, .form-select, .form-textarea {
+        .form-input, .form-textarea {
             width: 100%;
             background: #2a2a2a;
             border: 1px solid #444;
@@ -184,11 +184,6 @@
         .form-textarea {
             resize: none;
             min-height: 80px;
-        }
-
-        .form-select {
-            appearance: none;
-            -webkit-appearance: none;
         }
 
         .search-container {
@@ -358,10 +353,6 @@
             color: #C1FC32;
         }
 
-        .hidden-file-input {
-            display: none;
-        }
-
         .scroll-top-btn {
             position: fixed;
             bottom: 24px;
@@ -391,33 +382,6 @@
             transform: scale(0.97);
         }
 
-        .import-note {
-            background: rgba(193,252,50,0.1);
-            border: 1px solid rgba(193,252,50,0.2);
-            border-radius: 25px;
-            padding: 8px 16px 8px 20px;
-            margin: 12px 0 16px 0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.9rem;
-            color: #d1d5db;
-        }
-
-        .import-note button {
-            background: none;
-            border: none;
-            color: #9ca3af;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 0 8px;
-            line-height: 1;
-        }
-
-        .import-note button:hover {
-            color: #f3f4f6;
-        }
-
         .task-counter {
             font-size: 1rem;
             font-weight: 600;
@@ -444,6 +408,36 @@
 
         .task-card.checked {
             opacity: 0.7;
+        }
+
+        .folder-selection-btn {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            padding: 14px 16px;
+            border-radius: 16px;
+            font-size: 15.5px;
+            width: 100%;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .folder-list-popup .popup-content {
+            max-width: 340px;
+        }
+
+        .folder-list-item {
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+
+        .folder-list-item:hover {
+            background: rgba(193,252,50,0.1);
         }
 
         .flex { display: flex; }
@@ -550,18 +544,9 @@
             <p class="tagline">Manage and organize your downloads task for better downloads list and histories</p>
         </app-header>
 
-        <div id="importNoteBar" class="import-note">
-            <span>Import supports .md files. Parsing may not be perfect due to different users markdown styles and usage.</span>
-            <button onclick="hideImportNoteForever()">×</button>
-        </div>
-
         <div class="flex gap-3 mt-5">
             <button onclick="showTaskPopup(false)" class="pill-btn flex-1 bg-[#C1FC32] text-black font-semibold">New Task</button>
             <button onclick="showFolderPopup()" class="pill-btn flex-1 bg-zinc-800 text-white font-semibold">New Folder</button>
-        </div>
-        <div class="flex gap-3 mt-3">
-            <button onclick="showImportPopup()" class="pill-btn flex-1 bg-zinc-800 text-white font-semibold">Import</button>
-            <button onclick="window.location.href='../storage.html'" class="pill-btn flex-1 bg-zinc-800 text-white font-semibold">Data Storage</button>
         </div>
         <div class="mt-3">
             <button onclick="showClearAllPopup()" class="pill-btn w-full clear-btn font-semibold">Clear All</button>
@@ -603,18 +588,22 @@
                 <div class="p-6">
                     <input type="text" id="taskTitle" class="form-input" placeholder="Task title">
                     <input type="text" id="taskDownloadUrl" class="form-input" placeholder="Download URL">
-                    <select id="taskCategory" class="form-select"></select>
+                    <div class="mb-4">
+                        <button id="folderSelectBtn" onclick="openFolderSelectPopup()" class="folder-selection-btn">
+                            <span id="folderSelectBtnText">Select Folder</span>
+                            <i class="fas fa-chevron-right text-zinc-500"></i>
+                        </button>
+                        <input type="hidden" id="taskCategoryValue" value="">
+                    </div>
                     <input type="text" id="taskStatus" class="form-input" placeholder="Status">
                     <input type="text" id="taskSourceUrl" class="form-input" placeholder="Source URL">
                     <textarea id="taskNotes" class="form-textarea" placeholder="Notes or description"></textarea>
 
                     <div id="newActions" class="flex gap-3 mt-8">
-                        <button onclick="closeUniversalPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-white font-medium" style="border: 0px;">Cancel</button>
                         <button onclick="saveTask()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold" style="border: 0px;">Create Task</button>
                     </div>
                     <div id="editActions" class="hidden flex gap-3 mt-8">
                         <button onclick="showDeletePopup()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium" style="border: 0px;">Delete</button>
-                        <button onclick="closeUniversalPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-white font-medium" style="border: 0px;">Cancel</button>
                         <button onclick="saveTask()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold" style="border: 0px;">Update</button>
                     </div>
                 </div>
@@ -630,7 +619,6 @@
                 <div class="p-6">
                     <input type="text" id="folderName" class="form-input" placeholder="Folder name">
                     <div class="flex gap-3 mt-8">
-                        <button onclick="closeFolderPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-white font-medium" style="border: 0px;">Cancel</button>
                         <button onclick="createFolder()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold" style="border: 0px;">Create Folder</button>
                     </div>
                 </div>
@@ -647,7 +635,6 @@
                     <input type="text" id="editFolderName" class="form-input" placeholder="Folder name">
                     <div class="flex gap-3 mt-8">
                         <button onclick="showDeleteFolderPopup()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium" style="border: 0px;">Delete</button>
-                        <button onclick="closeEditFolderPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-white font-medium" style="border: 0px;">Cancel</button>
                         <button onclick="renameFolder()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold" style="border: 0px;">Rename</button>
                     </div>
                 </div>
@@ -663,7 +650,6 @@
                 <div class="p-8 text-center">
                     <p class="text-zinc-400 mb-8">Delete this task permanently?</p>
                     <div class="flex gap-3">
-                        <button onclick="closeDeletePopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-white font-medium" style="border: 0px;">Cancel</button>
                         <button onclick="confirmDelete()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium" style="border: 0px;">Delete</button>
                     </div>
                 </div>
@@ -679,7 +665,6 @@
                 <div class="p-8 text-center">
                     <p class="text-zinc-400 mb-8">Delete this folder and all its tasks?</p>
                     <div class="flex gap-3">
-                        <button onclick="closeDeleteFolderPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-white font-medium" style="border: 0px;">Cancel</button>
                         <button onclick="confirmDeleteFolder()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium" style="border: 0px;">Delete</button>
                     </div>
                 </div>
@@ -695,28 +680,19 @@
                 <div class="p-8 text-center">
                     <p class="text-zinc-400 mb-8">Delete all tasks from all folders?</p>
                     <div class="flex gap-3">
-                        <button onclick="closeClearAllPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-white font-medium" style="border: 0px;">Cancel</button>
                         <button onclick="confirmClearAll()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium" style="border: 0px;">Clear All</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="importPopup" class="popup-overlay">
+        <div id="folderSelectPopup" class="popup-overlay folder-list-popup">
             <div class="popup-content">
                 <div class="popup-header">
-                    <h2 class="text-xl font-semibold">Import Tasks</h2>
-                    <button class="close-popup" onclick="closeImportPopup()">×</button>
+                    <h2 class="text-xl font-semibold">Select Folder</h2>
+                    <button class="close-popup" onclick="closeFolderSelectPopup()">×</button>
                 </div>
-                <div class="p-6">
-                    <p class="text-zinc-300 mb-6 text-sm leading-relaxed">
-                        This app only reads the Markdown (.md) files only, and the results might not be accurate due to different formats. The app will detect the embedded url in a text as a download task.
-                    </p>
-                    <div class="flex gap-3 mt-8">
-                        <button onclick="closeImportPopup()" class="flex-1 py-4 rounded-3xl border border-zinc-700 text-white font-medium" style="border: 0px;">Cancel</button>
-                        <button onclick="triggerImportFile()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold" style="border: 0px;">Import</button>
-                    </div>
-                </div>
+                <div class="p-4" id="folderSelectList"></div>
             </div>
         </div>
 
@@ -731,8 +707,6 @@
             </p>
         </footer>
 
-        <input type="file" id="importFile" class="hidden-file-input" onchange="handleImportFile(this)">
-
         <button id="scrollTopBtn" class="scroll-top-btn">
             <i class="fas fa-arrow-up"></i>
         </button>
@@ -746,6 +720,7 @@
         let editingId = null
         let editingFolder = null
         let filterActive = false
+        let selectedCategoryForTask = ""
 
         function saveData() {
             localStorage.setItem('tasks', JSON.stringify(tasks))
@@ -852,8 +827,8 @@
                         if (task && task.url) {
                             if (window.plugins && window.plugins.socialsharing) {
                                 window.plugins.socialsharing.share(
-                                    task.title,
-                                    task.title,
+                                    null,
+                                    null,
                                     null,
                                     task.url,
                                     function() {
@@ -869,8 +844,6 @@
                                 );
                             } else if (navigator.share) {
                                 navigator.share({
-                                    title: task.title,
-                                    text: task.title,
                                     url: task.url
                                 }).then(() => {
                                     card.dataset.longPressed = 'true';
@@ -977,33 +950,31 @@
             renderTasks()
         }
 
+        function updateFolderSelectBtn(category) {
+            selectedCategoryForTask = category
+            document.getElementById("taskCategoryValue").value = category
+            document.getElementById("folderSelectBtnText").textContent = category || "Select Folder"
+        }
+
         function showTaskPopup(isEdit, id = null) {
             editingId = isEdit ? id : null
             document.getElementById("popupTitle").textContent = isEdit ? "Edit Task" : "New Task"
             document.getElementById("editActions").classList.toggle("hidden", !isEdit)
             document.getElementById("newActions").classList.toggle("hidden", isEdit)
 
-            const select = document.getElementById("taskCategory")
-            select.innerHTML = ""
-            categories.filter(c => c !== "All").forEach(cat => {
-                const opt = document.createElement("option")
-                opt.value = cat
-                opt.textContent = cat
-                select.appendChild(opt)
-            })
-
             if(isEdit) {
                 const task = tasks.find(t => t.id === id)
                 document.getElementById("taskTitle").value = task.title
                 document.getElementById("taskDownloadUrl").value = task.url || ""
-                document.getElementById("taskCategory").value = task.category
+                updateFolderSelectBtn(task.category)
                 document.getElementById("taskStatus").value = task.status || ""
                 document.getElementById("taskSourceUrl").value = task.sourceUrl || ""
                 document.getElementById("taskNotes").value = task.notes || ""
             } else {
                 document.getElementById("taskTitle").value = ""
                 document.getElementById("taskDownloadUrl").value = ""
-                document.getElementById("taskCategory").value = categories.length > 1 ? categories[1] : "Anime"
+                const defaultCat = categories.length > 1 ? categories[1] : "Anime"
+                updateFolderSelectBtn(defaultCat)
                 document.getElementById("taskStatus").value = ""
                 document.getElementById("taskSourceUrl").value = ""
                 document.getElementById("taskNotes").value = ""
@@ -1015,7 +986,7 @@
             const title = document.getElementById("taskTitle").value.trim()
             if(!title) return
             const downloadUrl = document.getElementById("taskDownloadUrl").value.trim()
-            const category = document.getElementById("taskCategory").value
+            const category = document.getElementById("taskCategoryValue").value
             const status = document.getElementById("taskStatus").value.trim()
             const sourceUrl = document.getElementById("taskSourceUrl").value.trim()
             const notes = document.getElementById("taskNotes").value.trim()
@@ -1161,6 +1132,30 @@
             } else {
                 btn.classList.remove('active')
             }
+        }
+
+        function openFolderSelectPopup() {
+            const listDiv = document.getElementById("folderSelectList")
+            const folders = categories.filter(c => c !== "All").sort((a,b) => a.localeCompare(b))
+            if (folders.length === 0) {
+                listDiv.innerHTML = `<div class="p-4 text-center text-zinc-500">No folders available</div>`
+            } else {
+                let html = ""
+                folders.forEach(folder => {
+                    html += `<div class="folder-list-item" onclick="selectFolder('${folder}')">${folder}</div>`
+                })
+                listDiv.innerHTML = html
+            }
+            document.getElementById("folderSelectPopup").classList.add("popup-visible")
+        }
+
+        function closeFolderSelectPopup() {
+            document.getElementById("folderSelectPopup").classList.remove("popup-visible")
+        }
+
+        function selectFolder(category) {
+            updateFolderSelectBtn(category)
+            closeFolderSelectPopup()
         }
 
         let searchTimeout
@@ -1323,250 +1318,6 @@
             highlightTaskCard(firstTask.id)
         }
 
-        function showImportPopup() {
-            document.getElementById("importPopup").classList.add("popup-visible")
-        }
-
-        function closeImportPopup() {
-            document.getElementById("importPopup").classList.remove("popup-visible")
-        }
-
-        function triggerImportFile() {
-            closeImportPopup()
-            document.getElementById('importFile').click()
-        }
-
-        function capitalizeFolderName(name) {
-            return name.split(/[.\-_]/).map(part =>
-                part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
-            ).join(' ')
-        }
-
-        function handleImportFile(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const isZip = file.name.toLowerCase().endsWith('.zip');
-
-            if (isZip) {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    const arrayBuffer = e.target.result;
-                    const zip = await JSZip.loadAsync(arrayBuffer);
-                    const newTasks = [];
-                    const newFolders = [];
-
-                    const promises = [];
-                    zip.forEach((relativePath, zipEntry) => {
-                        if (!zipEntry.dir && relativePath.toLowerCase().endsWith('.md')) {
-                            const pathParts = relativePath.split('/');
-                            const fileName = pathParts[pathParts.length - 1];
-                            const folderName = capitalizeFolderName(fileName.replace(/\.[^/.]+$/, ""));
-
-                            if (!categories.includes(folderName) && folderName !== "All" && !newFolders.includes(folderName)) {
-                                newFolders.push(folderName);
-                            }
-
-                            const promise = zipEntry.async('string').then(content => {
-                                const lines = content.split('\n');
-                                lines.forEach(line => {
-                                    const trimmed = line.trim();
-                                    if (!trimmed) return;
-                                    const isChecked = trimmed.startsWith('- [x]');
-                                    const isUnchecked = trimmed.startsWith('- [ ]');
-                                    if (!isChecked && !isUnchecked) return;
-
-                                    const priority = trimmed.includes('Priority');
-                                    let rest = trimmed.substring(5).trim();
-
-                                    let title = '';
-                                    let downloadUrl = '';
-                                    let sourceUrl = '';
-                                    let status = '';
-
-                                    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-                                    let matches = [];
-                                    let match;
-                                    while ((match = linkRegex.exec(rest)) !== null) {
-                                        matches.push({ text: match[1], url: match[2], full: match[0] });
-                                    }
-
-                                    let remaining = rest;
-
-                                    matches.forEach(link => {
-                                        if (link.text.toLowerCase() === 'source') {
-                                            sourceUrl = link.url;
-                                            remaining = remaining.replace(link.full, '');
-                                        }
-                                    });
-
-                                    matches.forEach(link => {
-                                        if (link.text.toLowerCase() !== 'source' && !downloadUrl) {
-                                            downloadUrl = link.url;
-                                            title = link.text;
-                                            remaining = remaining.replace(link.full, '');
-                                        }
-                                    });
-
-                                    remaining = remaining.replace(/\s+/g, ' ').trim();
-
-                                    if (!title) {
-                                        const pipeIndex = remaining.indexOf('|');
-                                        if (pipeIndex !== -1) {
-                                            title = remaining.substring(0, pipeIndex).trim();
-                                            remaining = remaining.substring(pipeIndex + 1).trim();
-                                        } else {
-                                            title = remaining;
-                                            remaining = '';
-                                        }
-                                    }
-
-                                    const statusWords = ['Ongoing', 'Not Released', 'Unreleased', 'NSFW', 'New', 'PlayStation 1', 'PlayStation 2', 'PlayStation Portable', 'Paid', 'Not Supported'];
-                                    for (let word of statusWords) {
-                                        if (remaining.includes(word)) {
-                                            status = word;
-                                            break;
-                                        }
-                                    }
-
-                                    if (title) {
-                                        newTasks.push({
-                                            id: Date.now() + Math.random() + newTasks.length,
-                                            title: title,
-                                            url: downloadUrl,
-                                            category: folderName,
-                                            status: status,
-                                            sourceUrl: sourceUrl,
-                                            notes: '',
-                                            checked: isChecked,
-                                            priority: priority
-                                        });
-                                    }
-                                });
-                            });
-                            promises.push(promise);
-                        }
-                    });
-
-                    await Promise.all(promises);
-
-                    if (newFolders.length > 0) {
-                        newFolders.forEach(f => {
-                            if (!categories.includes(f)) categories.push(f);
-                        });
-                        sortCategories();
-                    }
-
-                    if (newTasks.length > 0) {
-                        tasks = [...newTasks, ...tasks];
-                        saveData();
-                        renderTabs();
-                        renderTasks();
-                        window.showMessage(`Imported ${newTasks.length} tasks from ${promises.length} file(s)`);
-                    }
-                    input.value = '';
-                };
-                reader.readAsArrayBuffer(file);
-            } else {
-                const folderName = capitalizeFolderName(file.name.replace(/\.[^/.]+$/, ""));
-                if (!categories.includes(folderName) && folderName !== "All") {
-                    categories.push(folderName);
-                    sortCategories();
-                }
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const content = e.target.result;
-                    const lines = content.split('\n');
-                    const newTasks = [];
-
-                    lines.forEach(line => {
-                        const trimmed = line.trim();
-                        if (!trimmed) return;
-                        const isChecked = trimmed.startsWith('- [x]');
-                        const isUnchecked = trimmed.startsWith('- [ ]');
-                        if (!isChecked && !isUnchecked) return;
-                        const priority = trimmed.includes('Priority');
-                        let rest = trimmed.substring(5).trim();
-
-                        let title = '';
-                        let downloadUrl = '';
-                        let sourceUrl = '';
-                        let status = '';
-
-                        const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-                        let matches = [];
-                        let match;
-                        while ((match = linkRegex.exec(rest)) !== null) {
-                            matches.push({ text: match[1], url: match[2], full: match[0] });
-                        }
-
-                        let remaining = rest;
-
-                        matches.forEach(link => {
-                            if (link.text.toLowerCase() === 'source') {
-                                sourceUrl = link.url;
-                                remaining = remaining.replace(link.full, '');
-                            }
-                        });
-
-                        matches.forEach(link => {
-                            if (link.text.toLowerCase() !== 'source' && !downloadUrl) {
-                                downloadUrl = link.url;
-                                title = link.text;
-                                remaining = remaining.replace(link.full, '');
-                            }
-                        });
-
-                        remaining = remaining.replace(/\s+/g, ' ').trim();
-
-                        if (!title) {
-                            const pipeIndex = remaining.indexOf('|');
-                            if (pipeIndex !== -1) {
-                                title = remaining.substring(0, pipeIndex).trim();
-                                remaining = remaining.substring(pipeIndex + 1).trim();
-                            } else {
-                                title = remaining;
-                                remaining = '';
-                            }
-                        }
-
-                        const statusWords = ['Ongoing', 'Not Released', 'Unreleased', 'NSFW', 'New', 'PlayStation 1', 'PlayStation 2', 'PlayStation Portable', 'Paid', 'Not Supported'];
-                        for (let word of statusWords) {
-                            if (remaining.includes(word)) {
-                                status = word;
-                                break;
-                            }
-                        }
-
-                        if (title) {
-                            newTasks.push({
-                                id: Date.now() + Math.random(),
-                                title: title,
-                                url: downloadUrl,
-                                category: folderName,
-                                status: status,
-                                sourceUrl: sourceUrl,
-                                notes: '',
-                                checked: isChecked,
-                                priority: priority
-                            });
-                        }
-                    });
-
-                    if (newTasks.length > 0) {
-                        tasks = [...newTasks, ...tasks];
-                        saveData();
-                        renderTabs();
-                        renderTasks();
-                        window.showMessage(`Imported ${newTasks.length} tasks into "${folderName}"`);
-                    }
-                    input.value = '';
-                };
-                reader.readAsText(file);
-            }
-        }
-
         function showClearAllPopup() {
             document.getElementById("clearAllPopup").classList.add("popup-visible")
         }
@@ -1581,11 +1332,6 @@
             renderTasks()
             closeClearAllPopup()
             window.showMessage('All tasks cleared')
-        }
-
-        function hideImportNoteForever() {
-            localStorage.setItem('hideImportNote', 'true')
-            document.getElementById('importNoteBar').style.display = 'none'
         }
 
         const scrollBtn = document.getElementById('scrollTopBtn');
@@ -1611,10 +1357,8 @@
             renderTabs()
             renderTasks()
             setupSearchDebounce()
-            if(localStorage.getItem('hideImportNote') === 'true') {
-                document.getElementById('importNoteBar').style.display = 'none'
-            }
             updateFilterButtonState()
+            updateFolderSelectBtn(categories.length > 1 ? categories[1] : "Anime")
         }
 
         window.onload = initUI
