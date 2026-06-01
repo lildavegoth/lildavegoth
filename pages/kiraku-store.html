@@ -9,6 +9,9 @@
     <script src="../auth-check.js"></script>
     <link rel="stylesheet" href="../media.css">
     <script src="../ui-icons.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/beercss@4.0.21/dist/cdn/beer.min.css" rel="stylesheet">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/beercss@4.0.21/dist/cdn/beer.min.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/material-dynamic-colors@1.1.4/dist/cdn/material-dynamic-colors.min.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -1406,51 +1409,40 @@
         }
 
         async function loadProducts() {
-            if (window.__PRODUCTS_DATA__) {
-                var allData = window.__PRODUCTS_DATA__;
-                products = allData.filter(function(p) { return !p.isGallery; });
-                galleryItems = allData.filter(function(p) { return p.isGallery; });
-            } else {
-                // Fallback for local testing – you can keep a local products.json
-                try {
-                    var res = await fetch('../files/fetch/kiraku-store/products.json');
-                    if (res.ok) {
-                        var allData = await res.json();
-                        products = allData.filter(function(p) { return !p.isGallery; });
-                        galleryItems = allData.filter(function(p) { return p.isGallery; });
-                    }
-                } catch (e) {
-                    products = [];
-                    galleryItems = [];
+            var grid = document.getElementById('homeGrid');
+            showLoading(grid);
+            try {
+                var res = await fetch('../files/fetch/kiraku-store/products.json');
+                if (res.ok) {
+                    var allData = await res.json();
+                    products = allData.filter(function(p) { return !p.isGallery; });
+                    galleryItems = allData.filter(function(p) { return p.isGallery; });
                 }
+            } catch (e) {
+                products = [];
+                galleryItems = [];
             }
         }
-        
+
         async function loadOwnedData() {
             ownedDetails = {};
             if (!currentUser) return;
-            var data;
-            if (window.__OWNED_DATA__) {
-                data = window.__OWNED_DATA__;
-            } else {
-                try {
-                    var res = await fetch('../files/fetch/kiraku-store/owned.json');
-                    if (res.ok) data = await res.json();
-                    else return;
-                } catch (e) {
-                    return;
-                }
-            }
-            var userOwned = data[currentUser.id];
-            if (Array.isArray(userOwned)) {
-                userOwned.forEach(function(item) {
-                    if (typeof item === 'string') {
-                        ownedDetails[item] = null;
-                    } else if (item && item.id) {
-                        ownedDetails[item.id] = item.date || null;
+            try {
+                var res = await fetch('../files/fetch/kiraku-store/owned.json');
+                if (res.ok) {
+                    var data = await res.json();
+                    var userOwned = data[currentUser.id];
+                    if (Array.isArray(userOwned)) {
+                        userOwned.forEach(function(item) {
+                            if (typeof item === 'string') {
+                                ownedDetails[item] = null;
+                            } else if (item && item.id) {
+                                ownedDetails[item.id] = item.date || null;
+                            }
+                        });
                     }
-                });
-            }
+                }
+            } catch (e) {}
         }
 
         function generateCategoryButtons() {
@@ -1778,16 +1770,11 @@
         function showProduct(id) {
             currentProduct = id;
             window.location.hash = 'product-' + id;
-        
             var p = products.find(function(pr) { return pr.id === id; });
-            var fromGallery = false;
-            var tempGalleryProduct = null;
-        
             if (!p) {
                 var gItem = galleryItems.find(function(gi) { return gi.id === id; });
                 if (gItem) {
-                    fromGallery = true;
-                    tempGalleryProduct = {
+                    p = {
                         id: gItem.id,
                         name: gItem.name,
                         subtitle: gItem.subtitle || 'Gallery Item',
@@ -1800,21 +1787,11 @@
                         published: gItem.published || 'N/A',
                         category: gItem.category
                     };
-                    p = tempGalleryProduct;
+                    products.push(p);
                 } else {
                     return;
                 }
-            } else {
-                fromGallery = galleryItems.some(function(gi) { return gi.id === id; });
             }
-        
-            var currentActivePage = document.querySelector('.page.active');
-            returnPage = currentActivePage ? currentActivePage.id : 'home-page';
-            if (fromGallery) {
-                returnPage = 'gallery-page';
-                galleryScrollPosition = window.scrollY || document.documentElement.scrollTop;
-            }
-        
             document.getElementById('productName').textContent = p.name;
             document.getElementById('productSubtitle').textContent = p.subtitle;
             var prices = formatPrice(p.price);
@@ -1823,19 +1800,16 @@
             document.getElementById('productDescription').innerHTML = p.description;
             var scrollImg = document.getElementById('productMainImg');
             scrollImg.src = p.scrollImage || p.mainImg;
-        
             document.getElementById('backBtn').onclick = function() {
                 window.location.hash = '';
                 fadeToPage(returnPage);
                 showBottomNav();
             };
-        
             var shareBtn = document.getElementById('shareBtn');
             if (shareBtn) {
                 shareBtn.onclick = shareProduct;
                 shareBtn.style.display = 'flex';
             }
-        
             var buyBtn = document.getElementById('buyBtn');
             var owned = ownedDetails.hasOwnProperty(id);
             if (owned) {
@@ -1845,21 +1819,18 @@
                 buyBtn.disabled = false;
                 buyBtn.onclick = openBuyPopup;
             }
-        
             document.getElementById('detailFavorite').onclick = function(e) {
                 e.stopPropagation();
                 toggleFavorite(id);
             };
-        
             updateDetailFavorite();
             updateBuyButton();
-        
             var metaDiv = document.getElementById('productMeta');
             metaDiv.innerHTML = '<p><span class="meta-id">ID: ' + (p.storeId || '—') + '</span> <span class="meta-date">' + formatPublishedDate(p.published) + '</span></p>';
-        
+            var currentActivePage = document.querySelector('.page.active');
+            returnPage = currentActivePage ? currentActivePage.id : 'home-page';
             fadeToPage('product-page');
             hideBottomNav();
-        
             setTimeout(function() {
                 var container = document.querySelector('.image-scroll-container');
                 if (container) container.scrollLeft = container.scrollWidth / 4;
