@@ -1406,40 +1406,51 @@
         }
 
         async function loadProducts() {
-            var grid = document.getElementById('homeGrid');
-            showLoading(grid);
-            try {
-                var res = await fetch('../files/fetch/kiraku-store/products.json');
-                if (res.ok) {
-                    var allData = await res.json();
-                    products = allData.filter(function(p) { return !p.isGallery; });
-                    galleryItems = allData.filter(function(p) { return p.isGallery; });
+            if (window.__PRODUCTS_DATA__) {
+                var allData = window.__PRODUCTS_DATA__;
+                products = allData.filter(function(p) { return !p.isGallery; });
+                galleryItems = allData.filter(function(p) { return p.isGallery; });
+            } else {
+                // Fallback for local testing – you can keep a local products.json
+                try {
+                    var res = await fetch('../files/fetch/kiraku-store/products.json');
+                    if (res.ok) {
+                        var allData = await res.json();
+                        products = allData.filter(function(p) { return !p.isGallery; });
+                        galleryItems = allData.filter(function(p) { return p.isGallery; });
+                    }
+                } catch (e) {
+                    products = [];
+                    galleryItems = [];
                 }
-            } catch (e) {
-                products = [];
-                galleryItems = [];
             }
         }
-
+        
         async function loadOwnedData() {
             ownedDetails = {};
             if (!currentUser) return;
-            try {
-                var res = await fetch('../files/fetch/kiraku-store/owned.json');
-                if (res.ok) {
-                    var data = await res.json();
-                    var userOwned = data[currentUser.id];
-                    if (Array.isArray(userOwned)) {
-                        userOwned.forEach(function(item) {
-                            if (typeof item === 'string') {
-                                ownedDetails[item] = null;
-                            } else if (item && item.id) {
-                                ownedDetails[item.id] = item.date || null;
-                            }
-                        });
-                    }
+            var data;
+            if (window.__OWNED_DATA__) {
+                data = window.__OWNED_DATA__;
+            } else {
+                try {
+                    var res = await fetch('../files/fetch/kiraku-store/owned.json');
+                    if (res.ok) data = await res.json();
+                    else return;
+                } catch (e) {
+                    return;
                 }
-            } catch (e) {}
+            }
+            var userOwned = data[currentUser.id];
+            if (Array.isArray(userOwned)) {
+                userOwned.forEach(function(item) {
+                    if (typeof item === 'string') {
+                        ownedDetails[item] = null;
+                    } else if (item && item.id) {
+                        ownedDetails[item.id] = item.date || null;
+                    }
+                });
+            }
         }
 
         function generateCategoryButtons() {
