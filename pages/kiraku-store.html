@@ -1778,41 +1778,8 @@
         function showProduct(id) {
             currentProduct = id;
             window.location.hash = 'product-' + id;
-        
             var p = products.find(function(pr) { return pr.id === id; });
-            var fromGallery = false;
-            if (!p) {
-                var gItem = galleryItems.find(function(gi) { return gi.id === id; });
-                if (gItem) {
-                    fromGallery = true;
-                    p = {
-                        id: gItem.id,
-                        name: gItem.name,
-                        subtitle: gItem.subtitle || 'Gallery Item',
-                        price: gItem.price || '$0.00',
-                        description: gItem.description || '',
-                        thumbnailImg: gItem.thumbnailImg,
-                        mainImg: gItem.images[0],
-                        scrollImage: gItem.images[0],
-                        storeId: gItem.storeId || '',
-                        published: gItem.published || 'N/A',
-                        category: gItem.category
-                    };
-                    products.push(p);
-                } else {
-                    return;
-                }
-            } else {
-                fromGallery = galleryItems.some(function(gi) { return gi.id === id; });
-            }
-        
-            var currentActivePage = document.querySelector('.page.active');
-            returnPage = currentActivePage ? currentActivePage.id : 'home-page';
-            if (fromGallery) {
-                returnPage = 'gallery-page';
-                galleryScrollPosition = window.scrollY || document.documentElement.scrollTop;
-            }
-        
+            if (!p) return;
             document.getElementById('productName').textContent = p.name;
             document.getElementById('productSubtitle').textContent = p.subtitle;
             var prices = formatPrice(p.price);
@@ -1821,19 +1788,16 @@
             document.getElementById('productDescription').innerHTML = p.description;
             var scrollImg = document.getElementById('productMainImg');
             scrollImg.src = p.scrollImage || p.mainImg;
-        
             document.getElementById('backBtn').onclick = function() {
                 window.location.hash = '';
                 fadeToPage(returnPage);
                 showBottomNav();
             };
-        
             var shareBtn = document.getElementById('shareBtn');
             if (shareBtn) {
                 shareBtn.onclick = shareProduct;
                 shareBtn.style.display = 'flex';
             }
-        
             var buyBtn = document.getElementById('buyBtn');
             var owned = ownedDetails.hasOwnProperty(id);
             if (owned) {
@@ -1841,23 +1805,30 @@
                 buyBtn.disabled = true;
             } else {
                 buyBtn.disabled = false;
-                buyBtn.onclick = openBuyPopup;
+                buyBtn.onclick = function() {
+                    var key = p.payhipKey;
+                    var url = 'https://payhip.com/buy?s=1&cart_links[]=' + key + '&qty[' + key + ']=1';
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                };
             }
-        
             document.getElementById('detailFavorite').onclick = function(e) {
                 e.stopPropagation();
                 toggleFavorite(id);
             };
-        
             updateDetailFavorite();
             updateBuyButton();
-        
             var metaDiv = document.getElementById('productMeta');
-            metaDiv.innerHTML = '<p><span class="meta-id">ID: ' + (p.storeId || '—') + '</span> <span class="meta-date">' + formatPublishedDate(p.published) + '</span></p>';
-        
+            metaDiv.innerHTML = '<p><span class="meta-id">ID: ' + (p.payhipKey || '—') + '</span> <span class="meta-date">' + (p.published || 'N/A') + '</span></p>';
+            var currentActivePage = document.querySelector('.page.active');
+            returnPage = currentActivePage ? currentActivePage.id : 'home-page';
             fadeToPage('product-page');
             hideBottomNav();
-        
             setTimeout(function() {
                 var container = document.querySelector('.image-scroll-container');
                 if (container) container.scrollLeft = container.scrollWidth / 4;
