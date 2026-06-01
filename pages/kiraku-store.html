@@ -1458,7 +1458,17 @@
         function generateGalleryCategoryButtons() {
             var bar = document.getElementById('galleryCategoriesBar');
             bar.innerHTML = '';
-            var categories = ['all'].concat(Array.from(new Set(galleryItems.map(function(p) { return p.category; }).filter(Boolean))));
+            var allCats = new Set();
+            galleryItems.forEach(function(p) {
+                var cat = p.category;
+                if (!cat) return;
+                if (Array.isArray(cat)) {
+                    cat.forEach(function(c) { if (c) allCats.add(c); });
+                } else {
+                    allCats.add(cat);
+                }
+            });
+            var categories = ['all'].concat(Array.from(allCats));
             categories.forEach(function(cat) {
                 var btn = document.createElement('button');
                 btn.className = 'category-btn' + (cat === currentGalleryCategory ? ' active' : '');
@@ -1561,7 +1571,14 @@
             var pureSection = document.getElementById('pure-section');
             var filtered = galleryItems;
             if (currentGalleryCategory !== 'all') {
-                filtered = galleryItems.filter(function(p) { return p.category === currentGalleryCategory; });
+                filtered = galleryItems.filter(function(p) {
+                    var cat = p.category;
+                    if (!cat) return false;
+                    if (Array.isArray(cat)) {
+                        return cat.indexOf(currentGalleryCategory) !== -1;
+                    }
+                    return cat === currentGalleryCategory;
+                });
                 if (pureSection) pureSection.style.display = 'none';
             } else {
                 if (pureSection) pureSection.style.display = 'block';
@@ -1769,15 +1786,13 @@
                         price: gItem.price || '$0.00',
                         description: gItem.description || '',
                         thumbnailImg: gItem.thumbnailImg,
-                        mainImg: gItem.images[0],
-                        scrollImage: gItem.images[0],
+                        mainImg: gItem.mainImg || gItem.images[0],
+                        scrollImage: gItem.mainImg || gItem.images[0],
                         storeId: gItem.storeId || '',
                         published: gItem.published || 'N/A',
-                        category: gItem.category
+                        category: Array.isArray(gItem.category) ? gItem.category.join(', ') : (gItem.category || '')
                     };
                     products.push(p);
-                } else {
-                    return;
                 }
             }
             document.getElementById('productName').textContent = p.name;
