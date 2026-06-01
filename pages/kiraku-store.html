@@ -582,20 +582,6 @@
             background: rgba(193, 252, 50, 0.5);
         }
 
-        .scroll-progress {
-            height: 3px;
-            background: rgba(193, 252, 50, 0.2);
-            width: 100%;
-            margin-top: -4px;
-        }
-
-        .scroll-progress-bar {
-            height: 3px;
-            background: var(--accent-color);
-            width: 0%;
-            transition: width 0.1s ease;
-        }
-
         .header {
             display: flex;
             justify-content: space-between;
@@ -824,7 +810,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: rgba(0, 0, 0, 0.95);
+            background-color: #000000;
             z-index: 999999;
             align-items: center;
             justify-content: center;
@@ -895,19 +881,142 @@
         .modal-nav-btn:hover {
             background-color: rgba(255, 255, 255, 0.25);
         }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tool-option {
+            padding: var(--spacing-sm);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .tool-option:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .tool-option h3 {
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .tool-option p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .loading-indicator {
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .circle-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(193, 252, 50, 0.2);
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .btn-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: var(--text-primary);
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .btn-icon.accent {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .btn-icon.accent:hover {
+            background: var(--accent-dark);
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="../index.html" class="back-link fade-in" onclick="window.location.hash='';">
-            <i class="fas fa-arrow-left"></i> Back to Home
-        </a>
-
         <div id="home-page" class="page active">
             <app-header class="fade-in">
                 <div>
                     <h1 class="username">Kiraku Store</h1>
-                    <p class="tagline">All in one store for all lildavegoth paid contents</p>
+                    <p class="tagline">Creative and well designed products by lildavegoth. Including all paid contents for your personal use and free stuff to downloads!</p>
                 </div>
             </app-header>
 
@@ -1018,8 +1127,23 @@
             <img id="modal-image" src="" alt="">
             <div class="modal-bottom">
                 <button onclick="prevImage()" class="modal-nav-btn"><i class="fas fa-chevron-left"></i></button>
-                <button onclick="downloadCurrent()" class="modal-nav-btn"><i class="fas fa-download"></i></button>
+                <button onclick="downloadCurrent()" class="btn-icon">
+                    <i class="fas fa-download"></i>
+                    <span>Download</span>
+                </button>
                 <button onclick="nextImage()" class="modal-nav-btn"><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+
+        <div id="universalPopup" class="popup-overlay" style="display: none;">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h2 id="popupTitle"></h2>
+                    <button class="close-popup" onclick="closeUniversalPopup()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="tools-grid" id="popupContent"></div>
             </div>
         </div>
 
@@ -1102,6 +1226,7 @@
         var currentCategory = 'all';
         var currentGalleryCategory = 'all';
         var pageScrollPositions = {};
+        var galleryScrollPosition = 0;
 
         function saveScrollPosition(pageId) {
             pageScrollPositions[pageId] = window.scrollY || document.documentElement.scrollTop;
@@ -1276,9 +1401,15 @@
             }
         }
 
+        function showLoading(container) {
+            container.innerHTML = '<div class="loading-indicator"><div class="circle-spinner"></div></div>';
+        }
+
         async function loadProducts() {
+            var grid = document.getElementById('homeGrid');
+            showLoading(grid);
             try {
-                var res = await fetch('https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Kiraku%20Store/products.json');
+                var res = await fetch('../files/fetch/kiraku-store/products.json');
                 if (res.ok) {
                     var allData = await res.json();
                     products = allData.filter(function(p) { return !p.isGallery; });
@@ -1294,7 +1425,7 @@
             ownedDetails = {};
             if (!currentUser) return;
             try {
-                var res = await fetch('https://j1x1ajaevaygfyxv.public.blob.vercel-storage.com/Kiraku%20Store/owned.json');
+                var res = await fetch('../files/fetch/kiraku-store/owned.json');
                 if (res.ok) {
                     var data = await res.json();
                     var userOwned = data[currentUser.id];
@@ -1381,7 +1512,7 @@
             var grid = document.getElementById('homeGrid');
             grid.innerHTML = '';
             if (products.length === 0) {
-                grid.innerHTML = '<div class="empty-message">Loading products...</div>';
+                grid.innerHTML = '<div class="empty-message">No products available</div>';
                 return;
             }
             var filtered = currentCategory === 'all' ? products : products.filter(function(p) { return p.category === currentCategory; });
@@ -1448,6 +1579,7 @@
                 renderPure();
             }
             renderArts(filtered);
+            window.scrollTo(0, galleryScrollPosition);
         }
 
         function renderPure() {
@@ -1473,9 +1605,15 @@
             grid.innerHTML = '';
             filteredImages.forEach(function(item) {
                 var firstImg = item.images[0];
-                var blurred = item.paid ? ' blurred' : '';
-                var lock = item.paid ? '<div class="lock-overlay"><i class="fa-solid fa-lock"></i></div>' : '';
-                var onclickAction = item.paid ? 'window.showMessage(\'This image are paid contents\')' : 'openFullscreenForItem(\'' + item.id + '\')';
+                if (item.paid) {
+                    var onclickAction = 'showProduct(\'' + item.id + '\')';
+                    var blurred = ' blurred';
+                    var lock = '<div class="lock-overlay"><i class="fa-solid fa-lock"></i></div>';
+                } else {
+                    var onclickAction = 'openFullscreenForItem(\'' + item.id + '\')';
+                    var blurred = '';
+                    var lock = '';
+                }
                 var cardHTML = '<div class="arts-card" onclick="' + onclickAction + '">' +
                     '<img src="' + firstImg + '" class="gallery-image' + blurred + '" alt="' + item.name + '">' +
                     lock +
@@ -1487,6 +1625,7 @@
         function openFullscreenForItem(id) {
             var item = galleryItems.find(function(i) { return i.id === id; });
             if (!item) return;
+            galleryScrollPosition = window.scrollY || document.documentElement.scrollTop;
             window.currentItem = item;
             window.currentIndex = 0;
             var modal = document.getElementById('fullscreen-modal');
@@ -1518,34 +1657,12 @@
         }
 
         function downloadFile(url, filename) {
-            if (window.cordova && cordova.file) {
-                window.resolveLocalFileSystemURL(cordova.file.dataDirectory, function(dirEntry) {
-                    dirEntry.getFile(filename, { create: true, exclusive: false }, function(fileEntry) {
-                        var xhr = new XMLHttpRequest();
-                        xhr.open('GET', url, true);
-                        xhr.responseType = 'blob';
-                        xhr.onload = function() {
-                            if (xhr.status === 200) {
-                                var blob = new Blob([xhr.response], { type: 'image/webp' });
-                                fileEntry.createWriter(function(writer) {
-                                    writer.onwriteend = function() {
-                                        window.showMessage('Downloaded to device');
-                                    };
-                                    writer.write(blob);
-                                });
-                            }
-                        };
-                        xhr.send();
-                    });
-                });
-            } else {
-                var link = document.createElement('a');
-                link.href = url;
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function downloadCurrent() {
@@ -1561,6 +1678,7 @@
             window.currentItem = null;
             window.location.hash = '';
             showBottomNav();
+            window.scrollTo(0, galleryScrollPosition);
         }
 
         function toggleFavorite(id) {
@@ -1605,11 +1723,72 @@
             btn.disabled = owned;
         }
 
+        function openBuyPopup() {
+            var p = products.find(function(pr) { return pr.id === currentProduct; });
+            if (!p) return;
+            var now = new Date();
+            var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            var dateStr = now.getDate() + ' ' + months[now.getMonth()] + ', ' + now.getFullYear();
+            var template = 'I would like to buy ' + p.name + '\n- Your name: (your name)\n- Payment via: (PayPal / other)\n- Quantity: 1\n- Date: ' + dateStr;
+            var encoded = encodeURIComponent(template);
+            var emailUrl = 'mailto:lildavegoth@example.com?subject=Purchase%20Request%20-%20' + encodeURIComponent(p.name) + '&body=' + encoded;
+            var telegramUrl = 'https://t.me/lildavegoth?text=' + encoded;
+            document.getElementById('popupTitle').textContent = 'Contact to Buy';
+            var content = document.getElementById('popupContent');
+            content.innerHTML = '';
+            var emailOption = document.createElement('div');
+            emailOption.className = 'tool-option';
+            emailOption.innerHTML = '<h3>Email</h3><p>Send purchase request via email</p>';
+            emailOption.onclick = function() { window.location.href = emailUrl; closeUniversalPopup(); };
+            var telegramOption = document.createElement('div');
+            telegramOption.className = 'tool-option';
+            telegramOption.innerHTML = '<h3>Telegram</h3><p>Message directly on Telegram</p>';
+            telegramOption.onclick = function() { window.open(telegramUrl, '_blank'); closeUniversalPopup(); };
+            content.appendChild(emailOption);
+            content.appendChild(telegramOption);
+            document.getElementById('universalPopup').style.display = 'flex';
+        }
+
+        function closeUniversalPopup() {
+            document.getElementById('universalPopup').style.display = 'none';
+        }
+
+        function formatPublishedDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            var parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            var day = parseInt(parts[2], 10);
+            var monthIndex = parseInt(parts[1], 10) - 1;
+            var year = parts[0];
+            return day + ' ' + months[monthIndex] + ', ' + year;
+        }
+
         function showProduct(id) {
             currentProduct = id;
             window.location.hash = 'product-' + id;
             var p = products.find(function(pr) { return pr.id === id; });
-            if (!p) return;
+            if (!p) {
+                var gItem = galleryItems.find(function(gi) { return gi.id === id; });
+                if (gItem) {
+                    p = {
+                        id: gItem.id,
+                        name: gItem.name,
+                        subtitle: gItem.subtitle || 'Gallery Item',
+                        price: gItem.price || '$0.00',
+                        description: gItem.description || '',
+                        thumbnailImg: gItem.thumbnailImg,
+                        mainImg: gItem.images[0],
+                        scrollImage: gItem.images[0],
+                        storeId: gItem.storeId || '',
+                        published: gItem.published || 'N/A',
+                        category: gItem.category
+                    };
+                    products.push(p);
+                } else {
+                    return;
+                }
+            }
             document.getElementById('productName').textContent = p.name;
             document.getElementById('productSubtitle').textContent = p.subtitle;
             var prices = formatPrice(p.price);
@@ -1635,17 +1814,7 @@
                 buyBtn.disabled = true;
             } else {
                 buyBtn.disabled = false;
-                buyBtn.onclick = function() {
-                    var key = p.payhipKey;
-                    var url = 'https://payhip.com/buy?s=1&cart_links[]=' + key + '&qty[' + key + ']=1';
-                    var a = document.createElement('a');
-                    a.href = url;
-                    a.target = '_blank';
-                    a.rel = 'noopener noreferrer';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                };
+                buyBtn.onclick = openBuyPopup;
             }
             document.getElementById('detailFavorite').onclick = function(e) {
                 e.stopPropagation();
@@ -1654,7 +1823,7 @@
             updateDetailFavorite();
             updateBuyButton();
             var metaDiv = document.getElementById('productMeta');
-            metaDiv.innerHTML = '<p><span class="meta-id">ID: ' + (p.payhipKey || '—') + '</span> <span class="meta-date">' + (p.published || 'N/A') + '</span></p>';
+            metaDiv.innerHTML = '<p><span class="meta-id">ID: ' + (p.storeId || '—') + '</span> <span class="meta-date">' + formatPublishedDate(p.published) + '</span></p>';
             var currentActivePage = document.querySelector('.page.active');
             returnPage = currentActivePage ? currentActivePage.id : 'home-page';
             fadeToPage('product-page');
@@ -1796,20 +1965,17 @@
             var user = isUserLoggedIn();
             var username = user && user.username ? user.username : 'Kiraku Store';
             var avatar = user && user.avatar ? user.avatar : '';
-            var avatarIds = ['storeAvatar', 'wishlistAvatar', 'ownedAvatar'];
-            ids.forEach(function(id) {
-                var el = document.getElementById(id);
-                if (el) el.textContent = username;
+            var nameElements = document.querySelectorAll('#wishlistUsername, #ownedUsername, .username');
+            nameElements.forEach(function(el) {
+                el.textContent = username;
             });
-            avatarIds.forEach(function(id) {
-                var el = document.getElementById(id);
-                if (el) {
-                    if (avatar) {
-                        el.src = avatar;
-                        el.style.display = 'block';
-                    } else {
-                        el.style.display = 'none';
-                    }
+            var avatarElements = document.querySelectorAll('#wishlistAvatar, #ownedAvatar');
+            avatarElements.forEach(function(el) {
+                if (avatar) {
+                    el.src = avatar;
+                    el.style.display = 'block';
+                } else {
+                    el.style.display = 'none';
                 }
             });
         }
@@ -1833,7 +1999,7 @@
                 var hash = window.location.hash.substring(1);
                 if (hash.startsWith('product-')) {
                     var productId = hash.replace('product-', '');
-                    if (products.find(function(p) { return p.id === productId; })) {
+                    if (products.find(function(p) { return p.id === productId; }) || galleryItems.find(function(p) { return p.id === productId; })) {
                         showProduct(productId);
                         hideBottomNav();
                     }
@@ -1849,7 +2015,7 @@
                 var hash = window.location.hash.substring(1);
                 if (hash.startsWith('product-')) {
                     var productId = hash.replace('product-', '');
-                    if (products.find(function(p) { return p.id === productId; })) {
+                    if (products.find(function(p) { return p.id === productId; }) || galleryItems.find(function(p) { return p.id === productId; })) {
                         showProduct(productId);
                         hideBottomNav();
                     }
