@@ -524,21 +524,22 @@
 
         .image-scroll-container {
             width: 100%;
-            overflow-x: auto;
-            overflow-y: hidden;
-            -webkit-overflow-scrolling: touch;
-            white-space: nowrap;
+            overflow: hidden;
             background: black;
             min-height: 200px;
             max-height: 200px;
-            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-
+        
         .product-scroll-img {
-            height: 200px;
+            max-width: 100%;
+            max-height: 200px;
             width: auto;
-            display: inline-block;
+            height: auto;
             object-fit: contain;
+            display: block;
         }
 
         .price-usd {
@@ -550,19 +551,6 @@
             font-size: 14px;
             color: var(--text-secondary);
             margin-top: 2px;
-        }
-
-        .scroll-progress {
-            height: 3px;
-            background: rgba(193, 252, 50, 0.2);
-            width: 100%;
-        }
-
-        .scroll-progress-bar {
-            height: 3px;
-            background: var(--accent-color);
-            width: 0%;
-            transition: width 0.1s ease;
         }
 
         .image-scroll-container::-webkit-scrollbar {
@@ -778,20 +766,19 @@
             filter: blur(8px);
         }
 
-        .lock-overlay {
+        .paid-badge {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.75);
-            color: var(--accent-color);
+            top: 8px;
+            right: 8px;
+            background-color: var(--accent-color);
+            color: #000;
             border-radius: 50%;
-            width: 48px;
-            height: 48px;
+            width: 28px;
+            height: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 14px;
             z-index: 10;
         }
 
@@ -880,7 +867,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.95);
+            background: black;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1086,9 +1073,6 @@
             </header>
             <div style="margin-bottom: 20px;" class="image-scroll-container">
                 <img id="productMainImg" class="product-scroll-img">
-                <div class="scroll-progress">
-                    <div id="scrollProgressBar" class="scroll-progress-bar"></div>
-                </div>
             </div>
             <div class="product-info">
                 <h1 id="productName"></h1>
@@ -1615,16 +1599,14 @@
                 var firstImg = item.images[0];
                 if (item.paid) {
                     var onclickAction = 'showProduct(\'' + item.id + '\')';
-                    var blurred = ' blurred';
-                    var lock = '<div class="lock-overlay"><i class="fa-solid fa-lock"></i></div>';
+                    var badge = '<div class="paid-badge"><i class="fa-solid fa-dollar-sign"></i></div>';
                 } else {
                     var onclickAction = 'openFullscreenForItem(\'' + item.id + '\')';
-                    var blurred = '';
-                    var lock = '';
+                    var badge = '';
                 }
                 var cardHTML = '<div class="arts-card" onclick="' + onclickAction + '">' +
-                    '<img src="' + firstImg + '" class="gallery-image' + blurred + '" alt="' + item.name + '">' +
-                    lock +
+                    '<img src="' + firstImg + '" class="gallery-image" alt="' + item.name + '">' +
+                    badge +
                     '</div>';
                 grid.innerHTML += cardHTML;
             });
@@ -1834,10 +1816,6 @@
             returnPage = currentActivePage ? currentActivePage.id : 'home-page';
             fadeToPage('product-page');
             hideBottomNav();
-            setTimeout(function() {
-                var container = document.querySelector('.image-scroll-container');
-                if (container) container.scrollLeft = container.scrollWidth / 4;
-            }, 400);
         }
 
         function showSearchSuggestions(searchTerm) {
@@ -1956,17 +1934,6 @@
             }
         }
 
-        function setupScrollProgress() {
-            var container = document.querySelector('.image-scroll-container');
-            var progressBar = document.getElementById('scrollProgressBar');
-            if (container && progressBar) {
-                container.addEventListener('scroll', function() {
-                    var percent = (this.scrollLeft / (this.scrollWidth - this.clientWidth)) * 100;
-                    progressBar.style.width = percent + '%';
-                });
-            }
-        }
-
         async function init() {
             currentUser = isUserLoggedIn();
             await loadProducts();
@@ -1979,7 +1946,6 @@
             renderOwned();
             setupSearch();
             setupGallerySearch();
-            setupScrollProgress();
             document.getElementById('shareBtn').style.display = 'none';
             setTimeout(function() {
                 var hash = window.location.hash.substring(1);
