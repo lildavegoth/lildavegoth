@@ -1439,7 +1439,17 @@
         function generateCategoryButtons() {
             var bar = document.getElementById('categoriesBar');
             bar.innerHTML = '';
-            var categories = ['all'].concat(Array.from(new Set(products.map(function(p) { return p.category; }).filter(Boolean))));
+            var allCats = new Set();
+            products.forEach(function(p) {
+                var cat = p.category;
+                if (!cat) return;
+                if (Array.isArray(cat)) {
+                    cat.forEach(function(c) { if (c) allCats.add(c); });
+                } else {
+                    allCats.add(cat);
+                }
+            });
+            var categories = ['all'].concat(Array.from(allCats));
             categories.forEach(function(cat) {
                 var btn = document.createElement('button');
                 btn.className = 'category-btn' + (cat === currentCategory ? ' active' : '');
@@ -1524,11 +1534,14 @@
                 grid.innerHTML = '<div class="empty-message">No products available</div>';
                 return;
             }
-            var filtered = currentCategory === 'all' ? products : products.filter(function(p) { return p.category === currentCategory; });
-            if (filtered.length === 0) {
-                grid.innerHTML = '<div class="empty-message">No products in this category</div>';
-                return;
-            }
+            var filtered = currentCategory === 'all' ? products : products.filter(function(p) {
+                var cat = p.category;
+                if (!cat) return false;
+                if (Array.isArray(cat)) {
+                    return cat.indexOf(currentCategory) !== -1;
+                }
+                return cat === currentCategory;
+            });
             filtered.forEach(function(p) { grid.appendChild(createCard(p)); });
         }
 
@@ -1860,7 +1873,7 @@
                     return '<div class="search-suggestion-item" data-product-id="' + p.id + '">' +
                         '<div class="suggestion-title">' + p.name + '</div>' +
                         '<div class="suggestion-description">' + p.subtitle + ' • ' + p.price + '</div>' +
-                        '<div class="suggestion-category">' + p.category + '</div>' +
+                        '<div class="suggestion-category">' + (Array.isArray(p.category) ? p.category.join(', ') : p.category) + '</div>' +
                         '</div>';
                 }).join('');
             }
