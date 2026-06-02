@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encryptor | lildavegoth</title>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../auth-check.js"></script>
+    <link rel="stylesheet" href="../media.css">
+    <script src="../ui-icons.js"></script>
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 90px;
+        }
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+        }
+        textarea, input, button {
+            width: 100%;
+            box-sizing: border-box;
+            margin: 8px 0;
+            padding: 10px;
+            background: #222;
+            border: 1px
+            solid #444;
+            color: #eee;
+            border-radius: 20px;
+            font-size: 14px;
+            resize: none;
+        }
+        button {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+        }
+        .file-picker-btn {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 24px;
+            margin: 8px 0;
+            background: var(--bg-card);
+            border: 1px solid #444;
+            border-radius: 50px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            transition: background 0.2s;
+        }
+        #file-name {
+            display: block;
+            margin-top: 4px;
+            margin-bottom: 8px;
+        }
+        .note {
+            font-size: 12px;
+            color: #888;
+        }
+        app {
+            display: block;
+            margin-top: var(--spacing-lg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <app-header class="fade-in">
+            <div>
+                <h1>Encryptor</h1>
+                <p class="tagline">A browser‑based AES‑256‑CBC encryption tool with local engine to improve privacy of your files</p>
+            </div>
+        </app-header>
+        
+        <app>
+            <input type="text" id="keyInput" placeholder="Paste your secret key here (32 random characters)" autocomplete="off">
+            <label for="fileInput" class="file-picker-btn">Choose a file</label>
+            <input type="file" id="fileInput" style="display: none;">
+            <span id="file-name" class="note"></span>
+            <button id="encryptBtn" onclick="encryptData()">Encrypt & Download</button>
+            <textarea id="output" rows="4" readonly></textarea>
+        
+            <p class="note">The encrypted file will be downloaded automatically. You can also copy the text above if needed.</p>
+        </app>
+        
+        <footer>
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | Encryptor</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">Conveys the Idea of a Protected and Inspiring Space for Creative Expression.</p>
+        </footer>
+    </div>
+    <script>
+        async function encryptData() {
+            const btn = document.getElementById('encryptBtn');
+            btn.classList.remove('btnMDYE');
+            void btn.offsetWidth;
+            btn.classList.add('btnMDYE');
+        
+            const keyStr = document.getElementById('keyInput').value.trim();
+            const fileInput = document.getElementById('fileInput');
+            const outputEl = document.getElementById('output');
+
+            if (!keyStr) {
+                window.showMessage('Please enter the secret key.');
+                return;
+            }
+            if (!fileInput.files || fileInput.files.length === 0) {
+                window.showMessage('Please select a file to encrypt.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const plainText = await file.text();
+
+            let keyBytes = new TextEncoder().encode(keyStr);
+            if (keyBytes.length < 32) {
+                let padded = new Uint8Array(32);
+                for (let i = 0; i < 32; i++) {
+                    padded[i] = keyBytes[i % keyBytes.length];
+                }
+                keyBytes = padded;
+            } else if (keyBytes.length > 32) {
+                keyBytes = keyBytes.slice(0, 32);
+            }
+
+            const cryptoKey = await crypto.subtle.importKey(
+                'raw', keyBytes, { name: 'AES-CBC' }, false, ['encrypt']
+            );
+            const iv = crypto.getRandomValues(new Uint8Array(16));
+            const encodedText = new TextEncoder().encode(plainText);
+            const encrypted = await crypto.subtle.encrypt(
+                { name: 'AES-CBC', iv: iv },
+                cryptoKey,
+                encodedText
+            );
+
+            const ivHex = Array.from(iv).map(b => b.toString(16).padStart(2, '0')).join('');
+            const cipherHex = Array.from(new Uint8Array(encrypted)).map(b => b.toString(16).padStart(2, '0')).join('');
+            const output = ivHex + ':' + cipherHex;
+
+            outputEl.value = output;
+
+            const blob = new Blob([output], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (file.name || 'encrypted') + '.enc';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        document.getElementById('fileInput').addEventListener('change', function() {
+            const fileNameSpan = document.getElementById('file-name');
+            if (this.files.length > 0) {
+                fileNameSpan.textContent = this.files[0].name;
+            } else {
+                fileNameSpan.textContent = '';
+            }
+        });
+        
+        document.querySelector('.file-picker-btn').addEventListener('click', function() {
+            this.classList.remove('btnMDYE');
+            void this.offsetWidth;
+            this.classList.add('btnMDYE');
+        });
+    </script>
+</body>
+</html>
