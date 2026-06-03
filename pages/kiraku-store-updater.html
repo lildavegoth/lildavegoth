@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiraku Store Updater | lildavegoth</title>
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <meta name="color-scheme" content="dark">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 90px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        h2 {
+            color: var(--text-primary);
+            font-size: 1.8rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .hidden { display: none; }
+
+        #loginContainer {
+            max-width: 400px;
+            margin: 6rem auto;
+            padding: var(--spacing-md);
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        #loginContainer input {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: var(--spacing-sm);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        #loginContainer button {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        #loginContainer button:active { transform: scale(0.96); }
+        #loginContainer button:hover { opacity: 0.85; }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .product-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            border: 1px solid rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .product-card:hover { background: rgba(40, 40, 40, 0.8); }
+
+        .product-card .card-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .product-card .card-meta {
+            font-size: 0.85rem;
+            color: var(--accent-color);
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            color: #000;
+            font-size: 1.6rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            z-index: 20;
+        }
+
+        .fab:active { transform: scale(0.92); }
+        .fab:hover { opacity: 0.9; }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--accent-color);
+            text-decoration: none;
+            margin-bottom: var(--spacing-md);
+            font-weight: 500;
+        }
+
+        .editor-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: -4px;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 1rem;
+            resize: none;
+        }
+
+        textarea { min-height: 80px; }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 8px 0;
+            border-radius: var(--radius-small);
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-align: center;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .toggle-btn.active {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+        }
+
+        .button-group {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+
+        #deleteBtn {
+            padding: 12px 24px;
+            background: #C42833;
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        #deleteBtn:active { transform: scale(0.96); }
+        #deleteBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        #publishBtn {
+            padding: 12px 24px;
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        #publishBtn:active { transform: scale(0.96); }
+        #publishBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .popup-header h2 { font-size: 1.5rem; margin: 0; }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .popup-body { padding: var(--spacing-md); }
+
+        .popup-footer {
+            padding: var(--spacing-md);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-sm);
+        }
+
+        .popup-footer button {
+            padding: 10px 20px;
+            border-radius: var(--radius-small);
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-yes { background: #C42833; color: #fff; }
+        .btn-cancel { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+        .images-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .images-list input {
+            margin-bottom: 0;
+        }
+
+        .add-image-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            font-size: 0.9rem;
+            align-self: flex-start;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loginContainer">
+            <h2>Admin Login</h2>
+            <input type="password" id="passwordInput" placeholder="Enter admin password">
+            <button id="loginBtn">Login</button>
+        </div>
+
+        <div id="homeContainer" class="hidden">
+            <h2>Kiraku Store Updater</h2>
+            <div class="products-grid" id="productList"></div>
+            <button class="fab" id="fabAdd">+</button>
+        </div>
+
+        <div id="editorContainer" class="hidden">
+            <a href="#" id="backToHome" class="back-link"><i class="fas fa-arrow-left"></i> Back to products</a>
+            <h2>Product Editor</h2>
+            <div class="editor-form">
+                <label for="idInput">ID</label>
+                <input type="text" id="idInput" placeholder="kakoiicon">
+
+                <label for="nameInput">Name</label>
+                <input type="text" id="nameInput" placeholder="Kakoi Kiraku">
+
+                <label for="subtitleInput">Subtitle</label>
+                <input type="text" id="subtitleInput" placeholder="Black Gradient Icon Pack">
+
+                <label for="priceInput">Price</label>
+                <input type="text" id="priceInput" placeholder="$5.00">
+
+                <label for="categoryInput">Category (comma separated)</label>
+                <input type="text" id="categoryInput" placeholder="icons">
+
+                <label for="descriptionInput">Description (HTML)</label>
+                <textarea id="descriptionInput" rows="4" placeholder="<h3>Description</h3>..."></textarea>
+
+                <label for="thumbnailInput">Thumbnail Image URL</label>
+                <input type="text" id="thumbnailInput" placeholder="../files/fetch/kiraku-store/images/thumb.webp">
+
+                <label for="mainImgInput">Main Image URL</label>
+                <input type="text" id="mainImgInput" placeholder="../files/fetch/kiraku-store/images/preview.webp">
+
+                <label for="publishedInput">Published Date</label>
+                <input type="date" id="publishedInput">
+
+                <div class="toggle-group">
+                    <button class="toggle-btn" id="btnGallery">Gallery Item</button>
+                    <button class="toggle-btn" id="btnPaid">Paid</button>
+                </div>
+
+                <div id="galleryFields" class="hidden">
+                    <label>Images (one per line)</label>
+                    <textarea id="imagesInput" rows="4" placeholder="../files/fetch/kiraku-store/images/1.webp"></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button id="deleteBtn">Delete</button>
+                    <button id="publishBtn">Publish</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="confirmDeletePopup" class="popup-overlay" style="display: none;">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h2>Confirm Delete</h2>
+                    <button class="close-popup" onclick="closeConfirmPopup()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="popup-body">
+                    <p>Delete this product? This action cannot be undone!</p>
+                </div>
+                <div class="popup-footer">
+                    <button class="btn-cancel" onclick="closeConfirmPopup()">Cancel</button>
+                    <button class="btn-yes" id="confirmDeleteBtn">Yes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var token = localStorage.getItem('adminToken');
+        var allProducts = [];
+        var editingId = null;
+        var publishCooldown = false;
+        var deleteCooldown = false;
+
+        if (token) showHome();
+
+        document.getElementById('loginBtn').addEventListener('click', async function() {
+            var password = document.getElementById('passwordInput').value;
+            var res = await fetch('/api/verify-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: password })
+            });
+            if (res.ok) {
+                var data = await res.json();
+                token = data.token;
+                localStorage.setItem('adminToken', token);
+                showHome();
+            } else {
+                window.showMessage('Wrong password');
+            }
+        });
+
+        function showHome() {
+            document.getElementById('loginContainer').classList.add('hidden');
+            document.getElementById('homeContainer').classList.remove('hidden');
+            document.getElementById('editorContainer').classList.add('hidden');
+            loadProducts();
+        }
+
+        function goToEditor(id) {
+            document.getElementById('homeContainer').classList.add('hidden');
+            document.getElementById('editorContainer').classList.remove('hidden');
+            if (id) {
+                editingId = id;
+                var p = allProducts.find(function(pr) { return pr.id === id; });
+                if (!p) return;
+                document.getElementById('idInput').value = p.id || '';
+                document.getElementById('nameInput').value = p.name || '';
+                document.getElementById('subtitleInput').value = p.subtitle || '';
+                document.getElementById('priceInput').value = p.price || '';
+                document.getElementById('categoryInput').value = Array.isArray(p.category) ? p.category.join(', ') : (p.category || '');
+                document.getElementById('descriptionInput').value = p.description || '';
+                document.getElementById('thumbnailInput').value = p.thumbnailImg || '';
+                document.getElementById('mainImgInput').value = p.mainImg || '';
+                document.getElementById('publishedInput').value = p.published || '';
+                document.getElementById('imagesInput').value = (p.images || []).join('\n');
+                if (p.isGallery) {
+                    document.getElementById('btnGallery').classList.add('active');
+                    document.getElementById('galleryFields').classList.remove('hidden');
+                } else {
+                    document.getElementById('btnGallery').classList.remove('active');
+                    document.getElementById('galleryFields').classList.add('hidden');
+                }
+                document.getElementById('btnPaid').classList.toggle('active', p.paid);
+            } else {
+                editingId = null;
+                clearForm();
+            }
+        }
+
+        document.getElementById('fabAdd').addEventListener('click', function() { goToEditor(null); });
+        document.getElementById('backToHome').addEventListener('click', function(e) { e.preventDefault(); showHome(); });
+
+        function clearForm() {
+            document.getElementById('idInput').value = '';
+            document.getElementById('nameInput').value = '';
+            document.getElementById('subtitleInput').value = '';
+            document.getElementById('priceInput').value = '';
+            document.getElementById('categoryInput').value = '';
+            document.getElementById('descriptionInput').value = '';
+            document.getElementById('thumbnailInput').value = '';
+            document.getElementById('mainImgInput').value = '';
+            document.getElementById('publishedInput').value = new Date().toISOString().slice(0,10);
+            document.getElementById('imagesInput').value = '';
+            document.getElementById('btnGallery').classList.remove('active');
+            document.getElementById('btnPaid').classList.remove('active');
+            document.getElementById('galleryFields').classList.add('hidden');
+        }
+
+        document.getElementById('btnGallery').addEventListener('click', function() {
+            this.classList.toggle('active');
+            document.getElementById('galleryFields').classList.toggle('hidden', !this.classList.contains('active'));
+            if (!this.classList.contains('active')) {
+                document.getElementById('imagesInput').value = '';
+            }
+        });
+
+        document.getElementById('btnPaid').addEventListener('click', function() {
+            this.classList.toggle('active');
+        });
+
+        async function loadProducts() {
+            try {
+                var res = await fetch('/api/products');
+                if (res.ok) {
+                    allProducts = await res.json();
+                    renderProductList();
+                }
+            } catch (e) {
+                window.showMessage('Failed to load products');
+            }
+        }
+
+        function renderProductList() {
+            var list = document.getElementById('productList');
+            list.innerHTML = '';
+            allProducts.forEach(function(p) {
+                var card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = '<div class="card-title">' + p.name + '</div><div class="card-meta">' + (p.price || 'Free') + ' – ' + (p.category || '') + '</div>';
+                card.addEventListener('click', function() { goToEditor(p.id); });
+                list.appendChild(card);
+            });
+        }
+
+        document.getElementById('publishBtn').addEventListener('click', async function() {
+            if (publishCooldown) {
+                window.showMessage('Please wait 15 seconds before publishing again.');
+                return;
+            }
+
+            var id = document.getElementById('idInput').value.trim();
+            if (!id) return window.showMessage('ID required');
+
+            var isGallery = document.getElementById('btnGallery').classList.contains('active');
+            var paid = document.getElementById('btnPaid').classList.contains('active');
+
+            var product = {
+                id: id,
+                name: document.getElementById('nameInput').value,
+                subtitle: document.getElementById('subtitleInput').value,
+                price: document.getElementById('priceInput').value,
+                category: document.getElementById('categoryInput').value.split(',').map(function(c) { return c.trim(); }).filter(Boolean),
+                description: document.getElementById('descriptionInput').value,
+                thumbnailImg: document.getElementById('thumbnailInput').value,
+                mainImg: document.getElementById('mainImgInput').value,
+                published: document.getElementById('publishedInput').value,
+                isGallery: isGallery,
+                paid: paid,
+                images: []
+            };
+
+            if (isGallery) {
+                var imagesText = document.getElementById('imagesInput').value.trim();
+                if (imagesText) {
+                    product.images = imagesText.split('\n').map(function(line) { return line.trim(); }).filter(Boolean);
+                }
+            }
+
+            var newProducts = allProducts.filter(function(p) { return p.id !== editingId; });
+            newProducts.push(product);
+            allProducts = newProducts;
+
+            publishCooldown = true;
+            var publishBtn = document.getElementById('publishBtn');
+            publishBtn.disabled = true;
+
+            var notif = window.createTimerNotification('Updating Products', 100);
+            var progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
+            var timeElement = notif.wrapper.querySelector('.timer-time-notif');
+            if (progressBar) progressBar.style.width = '0%';
+            if (timeElement) timeElement.textContent = '0%';
+
+            try {
+                for (var i = 0; i <= 100; i += 25) {
+                    await sleep(300);
+                    if (progressBar) progressBar.style.width = i + '%';
+                    if (timeElement) timeElement.textContent = i + '%';
+                }
+
+                var res = await fetch('/api/update-products', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ products: allProducts })
+                });
+
+                if (res.ok) {
+                    notif.close();
+                    window.showMessage('Products updated!');
+                    showHome();
+                } else {
+                    var err = await res.json();
+                    window.showMessage('Error: ' + (err.error || 'Unknown'));
+                }
+            } catch (e) {
+                window.showMessage('Network error');
+            } finally {
+                publishBtn.disabled = false;
+                setTimeout(function() { publishCooldown = false; }, 15000);
+            }
+        });
+
+        function sleep(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); }
+
+        document.getElementById('deleteBtn').addEventListener('click', function() {
+            if (!editingId) return;
+            openConfirmPopup(editingId);
+        });
+
+        function openConfirmPopup(id) {
+            document.getElementById('confirmDeletePopup').style.display = 'flex';
+            document.getElementById('confirmDeleteBtn').onclick = function() { performDelete(id); };
+        }
+
+        function closeConfirmPopup() {
+            document.getElementById('confirmDeletePopup').style.display = 'none';
+        }
+
+        async function performDelete(id) {
+            if (deleteCooldown) return;
+            deleteCooldown = true;
+            var deleteBtn = document.getElementById('deleteBtn');
+            deleteBtn.disabled = true;
+
+            allProducts = allProducts.filter(function(p) { return p.id !== id; });
+
+            try {
+                var res = await fetch('/api/update-products', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ products: allProducts })
+                });
+                if (res.ok) {
+                    window.showMessage('Product deleted.');
+                    closeConfirmPopup();
+                    showHome();
+                } else {
+                    var err = await res.json();
+                    window.showMessage('Error: ' + (err.error || 'Unknown'));
+                }
+            } catch (e) {
+                window.showMessage('Network error');
+            } finally {
+                deleteCooldown = false;
+                deleteBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
