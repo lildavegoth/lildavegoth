@@ -1102,9 +1102,10 @@
             </app-header>
             <div class="search-container">
                 <div style="position: relative;">
-                    <input type="text" id="gallerySearch" placeholder="Search The Arts..." style="width: 100%; padding: 12px 44px 12px 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-primary); font-size: 0.95rem; outline: none;">
+                    <input type="text" id="gallerySearch" placeholder="Search The Arts..." style="width: 100%; padding: 12px 90px 12px 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-primary); font-size: 0.95rem; outline: none;">
+                    <button class="sort-btn" id="gallerySortBtn"><i class="fas fa-long-arrow-alt-up"></i> N</button>
                     <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;">
-                        <i class="fas fa-search" style="color: var(--accent-color); margin-right: 5px;"></i>
+                        <i class="fas fa-search" style="color: var(--accent-color);"></i>
                     </div>
                 </div>
                 <div class="search-suggestions" id="gallerySuggestions"></div>
@@ -1272,6 +1273,7 @@
         var pageScrollPositions = {};
         var galleryScrollPosition = 0;
         var currentSort = 'newest';
+        var currentGallerySort = 'newest';
 
         function saveScrollPosition(pageId) {
             pageScrollPositions[pageId] = window.scrollY || document.documentElement.scrollTop;
@@ -1466,6 +1468,18 @@
                 });
             }
         }
+        
+        function sortGalleryItems() {
+            if (currentGallerySort === 'az') {
+                galleryItems.sort(function(a, b) {
+                    return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
+                });
+            } else {
+                galleryItems.sort(function(a, b) {
+                    return (b.published || '').localeCompare(a.published || '');
+                });
+            }
+        }
 
         async function loadProducts() {
             var grid = document.getElementById('homeGrid');
@@ -1498,6 +1512,7 @@
                 galleryItems = [];
             }
             sortProducts();
+            sortGalleryItems();
             document.getElementById('homeGrid').style.display = '';
             document.getElementById('homeLoading').style.display = 'none';
         }
@@ -2140,6 +2155,19 @@
                 }
                 sortProducts();
                 renderHome();
+            });
+            
+            document.getElementById('gallerySortBtn').addEventListener('click', function() {
+                var btn = this;
+                if (currentGallerySort === 'newest') {
+                    currentGallerySort = 'az';
+                    btn.innerHTML = 'A-Z';
+                } else {
+                    currentGallerySort = 'newest';
+                    btn.innerHTML = '<i class="fas fa-long-arrow-alt-up"></i> N';
+                }
+                sortGalleryItems();
+                renderGallery();
             });
         }
 
