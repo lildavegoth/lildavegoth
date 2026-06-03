@@ -133,6 +133,30 @@
         .search-suggestion-item:last-child {
             border-bottom: none;
         }
+        
+        .sort-btn {
+            position: absolute;
+            right: 44px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: 50px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+        
+        .sort-btn i {
+            font-size: 12px;
+        }
 
         .suggestion-title {
             font-weight: 500;
@@ -1043,9 +1067,10 @@
 
             <div class="search-container">
                 <div style="position: relative;">
-                    <input type="text" id="globalSearch" placeholder="Search Products..." style="width: 100%; padding: 12px 44px 12px 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-primary); font-size: 0.95rem; outline: none;">
+                    <input type="text" id="globalSearch" placeholder="Search Products..." style="width: 100%; padding: 12px 90px 12px 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-primary); font-size: 0.95rem; outline: none;">
+                    <button class="sort-btn" id="sortBtn"><i class="fas fa-long-arrow-alt-up"></i> N</button>
                     <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;">
-                        <i class="fas fa-search" style="color: var(--accent-color); margin-right: 5px;"></i>
+                        <i class="fas fa-search" style="color: var(--accent-color);"></i>
                     </div>
                 </div>
                 <div class="search-suggestions" id="searchSuggestions"></div>
@@ -1246,6 +1271,7 @@
         var currentGalleryCategory = 'all';
         var pageScrollPositions = {};
         var galleryScrollPosition = 0;
+        var currentSort = 'newest';
 
         function saveScrollPosition(pageId) {
             pageScrollPositions[pageId] = window.scrollY || document.documentElement.scrollTop;
@@ -1428,6 +1454,18 @@
                 homeLoading.style.display = 'flex';
             }
         }
+        
+        function sortProducts() {
+            if (currentSort === 'az') {
+                products.sort(function(a, b) {
+                    return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
+                });
+            } else {
+                products.sort(function(a, b) {
+                    return (b.published || '').localeCompare(a.published || '');
+                });
+            }
+        }
 
         async function loadProducts() {
             var grid = document.getElementById('homeGrid');
@@ -1461,6 +1499,10 @@
             }
             document.getElementById('homeGrid').style.display = '';
             document.getElementById('homeLoading').style.display = 'none';
+                sortProducts();
+            document.getElementById('homeGrid').style.display = '';
+            document.getElementById('homeLoading').style.display = 'none';
+}
         }
 
         async function loadOwnedData() {
@@ -2089,9 +2131,22 @@
                     switchPage(pages[idx]);
                 });
             });
+            
+            document.getElementById('sortBtn').addEventListener('click', function() {
+                var btn = this;
+                if (currentSort === 'newest') {
+                    currentSort = 'az';
+                    btn.innerHTML = 'A-Z';
+                } else {
+                    currentSort = 'newest';
+                    btn.innerHTML = '<i class="fas fa-long-arrow-alt-up"></i> N';
+                }
+                sortProducts();
+                renderHome();
+            });
         }
 
         init();
     </script>
 </body>
-</html>
+    </html>
