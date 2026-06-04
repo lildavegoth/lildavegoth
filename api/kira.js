@@ -16,33 +16,38 @@ const supabase = createClient(
 const bot = new Bot(process.env.KIRA_TOKEN);
 await bot.init();
 
-const MAX_DIRECT_MB = 10;
+const MAX_DIRECT_MB = 0;
 
 async function isUnderMaintenance() {
-    const { data, error } = await supabase
-        .from("bot_config")
-        .select("value")
-        .eq("key", "maintenance")
-        .single();
-    if (error || !data) return false;
-    return data.value === "true";
+    try {
+        const { data, error } = await supabase
+            .from("bot_config")
+            .select("value")
+            .eq("key", "maintenance")
+            .single();
+        if (error || !data) return false;
+        return data.value === "true";
+    } catch {
+        return false;
+    }
 }
 
 async function setMaintenance(value) {
-    await supabase
-        .from("bot_config")
-        .update({ value: value ? "true" : "false" })
-        .eq("key", "maintenance");
+    try {
+        await supabase
+            .from("bot_config")
+            .update({ value: value ? "true" : "false" })
+            .eq("key", "maintenance");
+    } catch {}
 }
 
 bot.use(async (ctx, next) => {
-    if (ctx.message?.text?.startsWith("/revive") || ctx.message?.text?.startsWith("/shutdown") || ctx.message?.text?.startsWith("/restart")) {
+    const text = ctx.message?.text;
+    if (text && (text.startsWith("/revive") || text.startsWith("/shutdown") || text.startsWith("/restart"))) {
         return next();
     }
     const maintenance = await isUnderMaintenance();
-    if (maintenance) {
-        return;
-    }
+    if (maintenance) return;
     return next();
 });
 
@@ -126,6 +131,7 @@ bot.on(":video", async (ctx) => {
         const sizeMB = fileSize / (1024 * 1024);
 
         if (sizeMB > MAX_DIRECT_MB) {
+            await ctx.reply("Queuing your video…");
             const file = await ctx.api.getFile(fileId);
             const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
             const response = await fetch(fileUrl);
@@ -167,15 +173,13 @@ bot.on(":video", async (ctx) => {
                 }
             );
 
-            return ctx.reply("Your video has been queued. I’ll send the compressed version here once it’s ready.");
+            return ctx.reply("I’ll send the compressed video here when it’s ready.");
         }
 
-        if (!ffmpegPath) return ctx.reply("Video compression is not available right now.");
+        if (!ffmpegPath) return ctx.reply("Video compression unavailable.");
 
         const file = await ctx.api.getFile(fileId);
         const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
-
-        await ctx.reply("Compressing…");
 
         const inputPath = `/tmp/input_${Date.now()}.mp4`;
         const outputPath = `/tmp/output_${Date.now()}.mp4`;
