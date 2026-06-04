@@ -1,7 +1,7 @@
 import { marked } from 'marked';
 import matter from 'gray-matter';
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
