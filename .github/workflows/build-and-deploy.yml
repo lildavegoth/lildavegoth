@@ -1,4 +1,4 @@
-name: Build, Deploy, and AI Commit
+name: Build and Deploy Jekyll
 
 on:
     push:
@@ -6,10 +6,9 @@ on:
     workflow_dispatch:
 
 permissions:
-    contents: write
+    contents: read
     pages: write
     id-token: write
-    models: read.
 
 jobs:
     build-jekyll:
@@ -17,16 +16,6 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@v4
-
-            - name: Get changed files
-              id: changed-files
-              uses: tj-actions/changed-files@v35
-
-            - name: List all changed files
-              run: |
-                for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-                  echo "$file was changed"
-                done
 
             - name: Setup Pages
               uses: actions/configure-pages@v5
@@ -40,57 +29,8 @@ jobs:
             - name: Upload artifact
               uses: actions/upload-pages-artifact@v3
 
-    # New Job: Generate and create an AI commit
-    ai-commit-job:
-        needs: build-jekyll
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
-            models: read
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-
-            - name: Get the diff for commit generation
-              id: get-diff
-              run: |
-                git diff HEAD~1 > changes.diff
-                echo "diff_content<<EOF" >> $GITHUB_OUTPUT
-                cat changes.diff >> $GITHUB_OUTPUT
-                echo "EOF" >> $GITHUB_OUTPUT
-
-            - name: Generate Commit Message with GitHub Models
-              id: generate-message
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  RESPONSE=$(curl -s -X POST "https://models.github.ai/inference/chat/completions" \
-                    -H "Content-Type: application/json" \
-                    -H "Authorization: Bearer $GITHUB_TOKEN" \
-                    -d '{
-                      "model": "openai/gpt-4o-mini",
-                      "messages": [
-                        {"role": "system", "content": "You are an expert developer writing clear, concise, conventional commit messages (feat, fix, docs, style, refactor, test, chore)."},
-                        {"role": "user", "content": "Write a commit message for the following git diff. Only output the commit message, no explanation:\n\n${{ steps.get-diff.outputs.diff_content }}"}
-                      ],
-                      "max_tokens": 100
-                    }')
-                  
-                  COMMIT_MSG=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
-                  echo "message=$COMMIT_MSG" >> $GITHUB_OUTPUT
-
-            - name: Create commit with AI message
-              run: |
-                git config user.name "github-actions[bot]"
-                git config user.email "github-actions[bot]@users.noreply.github.com"
-                git add -A
-                git commit -m "${{ steps.generate-message.outputs.message }}" || echo "No changes to commit"
-                git push
-
     deploy-jekyll:
-        needs: ai-commit-job
+        needs: build-jekyll
         runs-on: ubuntu-latest
         environment:
             name: github-pages
