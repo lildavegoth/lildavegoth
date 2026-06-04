@@ -86,6 +86,7 @@ bot.command("start", async (ctx) => {
 bot.command("ping", (ctx) => ctx.reply("pong"));
 
 bot.on(":photo", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
     const photos = ctx.message.photo;
     const fileId = photos[photos.length - 1].file_id;
     const file = await ctx.api.getFile(fileId);
@@ -124,6 +125,7 @@ bot.on(":photo", async (ctx) => {
 });
 
 bot.on(":video", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
     try {
         const video = ctx.message.video;
         const fileId = video.file_id;
