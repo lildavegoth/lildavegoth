@@ -1,7 +1,7 @@
 import { Bot } from "grammy";
 import { createClient } from "@supabase/supabase-js";
 import { pipeline } from "stream/promises";
-import { createWriteStream } from "fs";
+import { createWriteStream, statSync, unlinkSync } from "fs";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import ffmpegPath from "ffmpeg-static";
@@ -71,12 +71,17 @@ bot.on(":video", async (ctx) => {
     try {
         const video = ctx.message.video;
         const fileId = video.file_id;
-        const file = await ctx.api.getFile(fileId);
-        const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+
+        if (video.file_size && video.file_size > 5 * 1024 * 1024) {
+            return ctx.reply("Video is too large. Please send a file under 5 MB.");
+        }
 
         if (!ffmpegPath) return ctx.reply("Video compression is not available right now.");
 
-        await ctx.reply("Compressing video, please wait…");
+        const file = await ctx.api.getFile(fileId);
+        const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+
+        await ctx.reply("Compressing…");
 
         const inputPath = `/tmp/input_${Date.now()}.mp4`;
         const outputPath = `/tmp/output_${Date.now()}.mp4`;
@@ -90,12 +95,19 @@ bot.on(":video", async (ctx) => {
             "-vf", "scale=854:480",
             "-c:v", "libx264",
             "-crf", "28",
-            "-preset", "fast",
+            "-preset", "ultrafast",
             "-c:a", "aac",
             "-b:a", "64k",
             "-movflags", "faststart",
             outputPath
         ]);
+
+        const outputSize = statSync(outputPath).size;
+        if (outputSize < 100) {
+            unlinkSync(inputPath);
+            unlinkSync(outputPath);
+            return ctx.reply("Compression failed. Try a different video.");
+        }
 
         const { error } = await supabase.storage
             .from("images")
@@ -103,6 +115,9 @@ bot.on(":video", async (ctx) => {
                 contentType: "video/mp4",
                 upsert: true,
             });
+
+        unlinkSync(inputPath);
+        unlinkSync(outputPath);
 
         if (error) return ctx.reply("Failed to upload compressed video.");
 
@@ -114,7 +129,7 @@ bot.on(":video", async (ctx) => {
             caption: "Here’s your compressed video.",
         });
     } catch {
-        return ctx.reply("Video compression failed. The file might be too large.");
+        return ctx.reply("Video processing error. The file might be too large or unsupported.");
     }
 });
 
