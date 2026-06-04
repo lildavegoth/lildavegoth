@@ -68,13 +68,12 @@ bot.on(":photo", async (ctx) => {
 });
 
 bot.on(":video", async (ctx) => {
-    const MAX_SIZE_MB = 20;
     try {
         const video = ctx.message.video;
         const fileId = video.file_id;
 
-        if (video.file_size && video.file_size > MAX_SIZE_MB * 1024 * 1024) {
-            return ctx.reply(`Video too large. Max allowed is ${MAX_SIZE_MB} MB.`);
+        if (video.file_size && video.file_size > 5 * 1024 * 1024) {
+            return ctx.reply("Video is too large. Please send a file under 5 MB.");
         }
 
         if (!ffmpegPath) return ctx.reply("Video compression is not available right now.");
@@ -92,16 +91,13 @@ bot.on(":video", async (ctx) => {
         await pipeline(res.body, writeStream);
 
         await execFileAsync(ffmpegPath, [
-            "-y",
             "-i", inputPath,
-            "-s", "1280x720",
+            "-vf", "scale=854:480",
             "-c:v", "libx264",
             "-crf", "28",
-            "-filter:v", "fps=fps=60",
-            "-c:a", "aac",
-            "-b:a", "128k",
-            "-ar", "48000",
             "-preset", "ultrafast",
+            "-c:a", "aac",
+            "-b:a", "64k",
             "-movflags", "faststart",
             outputPath
         ]);
