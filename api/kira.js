@@ -1,74 +1,163 @@
 import { Bot } from "grammy";
 import { createClient } from "@supabase/supabase-js";
+import { createWriteStream } from "fs";
+import { pipeline } from "stream/promises";
+import { execFile } from "child_process";
+import { promisify } from "util";
+import { join } from "path";
+import { existsSync, chmodSync } from "fs";
+import { mkdir } from "fs/promises";
+import { XzReadableStream } from "xz-decompress";
+
+const execFileAsync = promisify(execFile);
 
 const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 const bot = new Bot(process.env.KIRA_TOKEN);
 await bot.init();
 
 bot.command("start", async (ctx) => {
-  const user = ctx.from;
-  await supabase.from("users").upsert({
-    telegram_id: user.id,
-    first_name: user.first_name,
-    username: user.username,
-    language: user.language_code,
-  });
-  return ctx.reply(`Hey ${user.first_name}! I'm alive and I remember you.`);
+    const user = ctx.from;
+    await supabase.from("users").upsert({
+        telegram_id: user.id,
+        first_name: user.first_name,
+        username: user.username,
+        language: user.language_code,
+    });
+    return ctx.reply(`Hey ${user.first_name}! I'm alive and I remember you.`);
 });
 
 bot.command("ping", (ctx) => ctx.reply("pong"));
 
 bot.on(":photo", async (ctx) => {
-  const photos = ctx.message.photo;
-  const fileId = photos[photos.length - 1].file_id;
-  const file = await ctx.api.getFile(fileId);
-  const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+    const photos = ctx.message.photo;
+    const fileId = photos[photos.length - 1].file_id;
+    const file = await ctx.api.getFile(fileId);
+    const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
 
-  const response = await fetch(fileUrl);
-  const buffer = await response.arrayBuffer();
-  const fileName = `${Date.now()}.jpg`;
+    const response = await fetch(fileUrl);
+    const buffer = await response.arrayBuffer();
+    const fileName = `${Date.now()}.jpg`;
 
-  const { error } = await supabase.storage
-    .from("images")
-    .upload(fileName, buffer, {
-      contentType: "image/jpeg",
-      upsert: true,
+    const { error } = await supabase.storage
+        .from("images")
+        .upload(fileName, buffer, {
+            contentType: "image/jpeg",
+            upsert: true,
+        });
+
+    if (error) return ctx.reply("Failed to upload image.");
+
+    const { data: publicUrlData } = supabase.storage
+        .from("images")
+        .getPublicUrl(fileName);
+    const imageUrl = publicUrlData.publicUrl;
+    const encodedUrl = encodeURIComponent(imageUrl);
+
+    const googleLensUrl = `https://lens.google.com/uploadbyurl?url=${encodedUrl}`;
+    const yandexUrl = `https://yandex.com/images/search?rpt=imageview&url=${encodedUrl}`;
+
+    return ctx.reply("🔍 Search this image:", {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "Google Lens", url: googleLensUrl }],
+                [{ text: "Yandex", url: yandexUrl }],
+            ],
+        },
     });
+});
 
-  if (error) {
-    return ctx.reply("Failed to upload image.");
-  }
+bot.on(":video", async (ctx) => {
+    try {
+        const video = ctx.message.video;
+        const fileId = video.file_id;
+        const file = await ctx.api.getFile(fileId);
+        const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
 
-  const { data: publicUrlData } = supabase.storage
-    .from("images")
-    .getPublicUrl(fileName);
+        const ffmpegPath = await getFFmpeg();
+        if (!ffmpegPath) return ctx.reply("Video compression is not available right now.");
 
-  const imageUrl = publicUrlData.publicUrl;
-  const encodedUrl = encodeURIComponent(imageUrl);
+        await ctx.reply("Compressing video, please wait…");
 
-  const googleLensUrl = `https://lens.google.com/uploadbyurl?url=${encodedUrl}`;
-  const yandexUrl = `https://yandex.com/images/search?rpt=imageview&url=${encodedUrl}`;
-  const startpageUrl = `https://www.startpage.com/do/dsearch?query=${encodedUrl}&cat=images`;
+        const inputPath = `/tmp/input_${Date.now()}.mp4`;
+        const outputPath = `/tmp/output_${Date.now()}.mp4`;
 
-  return ctx.reply("🔍 Search this image:", {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: "Google Lens", url: googleLensUrl }],
-        [{ text: "Yandex", url: yandexUrl }],
-        [{ text: "Startpage", url: startpageUrl }],
-      ],
-    },
-  });
+        const res = await fetch(fileUrl);
+        const writeStream = createWriteStream(inputPath);
+        await pipeline(res.body, writeStream);
+
+        await execFileAsync(ffmpegPath, [
+            "-i", inputPath,
+            "-vf", "scale=854:480",
+            "-c:v", "libx264",
+            "-crf", "28",
+            "-preset", "fast",
+            "-c:a", "aac",
+            "-b:a", "64k",
+            "-movflags", "faststart",
+            outputPath
+        ]);
+
+        const { error } = await supabase.storage
+            .from("images")
+            .upload(`compressed_${Date.now()}.mp4`, outputPath, {
+                contentType: "video/mp4",
+                upsert: true,
+            });
+
+        if (error) return ctx.reply("Failed to upload compressed video.");
+
+        const { data: publicUrlData } = supabase.storage
+            .from("images")
+            .getPublicUrl(`compressed_${Date.now()}.mp4`);
+
+        return ctx.replyWithVideo(publicUrlData.publicUrl, {
+            caption: "Here’s your compressed video.",
+        });
+    } catch {
+        return ctx.reply("Video compression failed. The file might be too large.");
+    }
 });
 
 bot.on("message:text", (ctx) => ctx.reply("You said: " + ctx.message.text));
 
 export async function POST(request) {
-  const body = await request.json();
-  await bot.handleUpdate(body);
-  return new Response("ok");
+    const body = await request.json();
+    await bot.handleUpdate(body);
+    return new Response("ok");
+}
+
+async function getFFmpeg() {
+    const binDir = "/tmp/ffbin";
+    const ffmpegBin = join(binDir, "ffmpeg");
+
+    if (existsSync(ffmpegBin)) return ffmpegBin;
+
+    await mkdir(binDir, { recursive: true });
+
+    const response = await fetch(
+        "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
+    );
+    if (!response.ok) throw new Error("Failed to download ffmpeg");
+
+    const xzStream = new XzReadableStream(response.body);
+    const tarBuffer = await new Promise((resolve, reject) => {
+        const chunks = [];
+        xzStream.on("data", (chunk) => chunks.push(chunk));
+        xzStream.on("end", () => resolve(Buffer.concat(chunks)));
+        xzStream.on("error", reject);
+    });
+
+    const { extract } = await import("tar");
+    await extract({
+        cwd: binDir,
+        file: tarBuffer,
+        strip: 2,
+    });
+
+    chmodSync(ffmpegBin, 0o755);
+    return ffmpegBin;
 }
