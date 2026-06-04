@@ -1,5 +1,5 @@
-const { marked } = require('marked');
-const matter = require('gray-matter');
+import { marked } from 'marked';
+import matter from 'gray-matter';
 
 module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
