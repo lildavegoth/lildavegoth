@@ -23,4 +23,4 @@ bot.command("ping", (ctx) => ctx.reply("pong"));
 
 bot.on("message:text", (ctx) => ctx.reply("You said: " + ctx.message.text));
 
-export const POST = webhookCallback(bot, "http");
+export const POST = webhookCallback(bot, "cloudflare");
