@@ -16,6 +16,8 @@ const supabase = createClient(
 const bot = new Bot(process.env.KIRA_TOKEN);
 await bot.init();
 
+const MAX_DIRECT_MB = 10;
+
 async function isUnderMaintenance() {
     const { data, error } = await supabase
         .from("bot_config")
@@ -117,13 +119,55 @@ bot.on(":photo", async (ctx) => {
 });
 
 bot.on(":video", async (ctx) => {
-    const MAX_SIZE_MB = 20;
     try {
         const video = ctx.message.video;
         const fileId = video.file_id;
+        const fileSize = video.file_size || 0;
+        const sizeMB = fileSize / (1024 * 1024);
 
-        if (video.file_size && video.file_size > MAX_SIZE_MB * 1024 * 1024) {
-            return ctx.reply(`Video too large. Max allowed is ${MAX_SIZE_MB} MB.`);
+        if (sizeMB > MAX_DIRECT_MB) {
+            const file = await ctx.api.getFile(fileId);
+            const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+            const response = await fetch(fileUrl);
+            const buffer = await response.arrayBuffer();
+            const fileName = `raw_${Date.now()}.mp4`;
+
+            const { error } = await supabase.storage
+                .from("videos")
+                .upload(fileName, buffer, {
+                    contentType: "video/mp4",
+                    upsert: true,
+                });
+
+            if (error) return ctx.reply("Failed to queue video.");
+
+            const { data: publicUrlData } = supabase.storage
+                .from("videos")
+                .getPublicUrl(fileName);
+            const publicUrl = publicUrlData.publicUrl;
+
+            const dispatchBody = {
+                event_type: "compress-video",
+                client_payload: {
+                    chat_id: ctx.chat.id,
+                    video_url: publicUrl,
+                    original_name: fileName,
+                },
+            };
+
+            await fetch(
+                `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `token ${process.env.GITHUB_PAT}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(dispatchBody),
+                }
+            );
+
+            return ctx.reply("Your video has been queued. I’ll send the compressed version here once it’s ready.");
         }
 
         if (!ffmpegPath) return ctx.reply("Video compression is not available right now.");
@@ -182,7 +226,7 @@ bot.on(":video", async (ctx) => {
             caption: "Here’s your compressed video.",
         });
     } catch {
-        return ctx.reply("Video processing error. The file might be too large or unsupported.");
+        return ctx.reply("Video processing error.");
     }
 });
 
