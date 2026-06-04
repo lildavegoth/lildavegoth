@@ -1,13 +1,10 @@
 import { Bot } from "grammy";
 import { createClient } from "@supabase/supabase-js";
-import { createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
+import { createWriteStream } from "fs";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { join } from "path";
-import { existsSync, chmodSync } from "fs";
-import { mkdir } from "fs/promises";
-import { XzReadableStream } from "xz-decompress";
+import ffmpegPath from "ffmpeg-static";
 
 const execFileAsync = promisify(execFile);
 
@@ -77,7 +74,6 @@ bot.on(":video", async (ctx) => {
         const file = await ctx.api.getFile(fileId);
         const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
 
-        const ffmpegPath = await getFFmpeg();
         if (!ffmpegPath) return ctx.reply("Video compression is not available right now.");
 
         await ctx.reply("Compressing video, please wait…");
@@ -128,36 +124,4 @@ export async function POST(request) {
     const body = await request.json();
     await bot.handleUpdate(body);
     return new Response("ok");
-}
-
-async function getFFmpeg() {
-    const binDir = "/tmp/ffbin";
-    const ffmpegBin = join(binDir, "ffmpeg");
-
-    if (existsSync(ffmpegBin)) return ffmpegBin;
-
-    await mkdir(binDir, { recursive: true });
-
-    const response = await fetch(
-        "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
-    );
-    if (!response.ok) throw new Error("Failed to download ffmpeg");
-
-    const xzStream = new XzReadableStream(response.body);
-    const tarBuffer = await new Promise((resolve, reject) => {
-        const chunks = [];
-        xzStream.on("data", (chunk) => chunks.push(chunk));
-        xzStream.on("end", () => resolve(Buffer.concat(chunks)));
-        xzStream.on("error", reject);
-    });
-
-    const { extract } = await import("tar");
-    await extract({
-        cwd: binDir,
-        file: tarBuffer,
-        strip: 2,
-    });
-
-    chmodSync(ffmpegBin, 0o755);
-    return ffmpegBin;
 }
