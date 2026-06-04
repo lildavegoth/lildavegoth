@@ -16,6 +16,55 @@ const supabase = createClient(
 const bot = new Bot(process.env.KIRA_TOKEN);
 await bot.init();
 
+async function isUnderMaintenance() {
+    const { data, error } = await supabase
+        .from("bot_config")
+        .select("value")
+        .eq("key", "maintenance")
+        .single();
+    if (error || !data) return false;
+    return data.value === "true";
+}
+
+async function setMaintenance(value) {
+    await supabase
+        .from("bot_config")
+        .update({ value: value ? "true" : "false" })
+        .eq("key", "maintenance");
+}
+
+bot.use(async (ctx, next) => {
+    if (ctx.message?.text?.startsWith("/revive") || ctx.message?.text?.startsWith("/shutdown") || ctx.message?.text?.startsWith("/restart")) {
+        return next();
+    }
+    const maintenance = await isUnderMaintenance();
+    if (maintenance) {
+        return;
+    }
+    return next();
+});
+
+bot.command("shutdown", async (ctx) => {
+    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
+    await setMaintenance(true);
+    return ctx.reply("Bot is now in maintenance mode.");
+});
+
+bot.command("revive", async (ctx) => {
+    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
+    await setMaintenance(false);
+    return ctx.reply("Bot is back online.");
+});
+
+bot.command("restart", async (ctx) => {
+    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
+    if (!process.env.VERCEL_DEPLOY_HOOK) {
+        return ctx.reply("Deploy hook not configured.");
+    }
+    await fetch(process.env.VERCEL_DEPLOY_HOOK, { method: "POST" });
+    return ctx.reply("Redeploying…");
+});
+
 bot.command("start", async (ctx) => {
     const user = ctx.from;
     await supabase.from("users").upsert({
@@ -68,12 +117,13 @@ bot.on(":photo", async (ctx) => {
 });
 
 bot.on(":video", async (ctx) => {
+    const MAX_SIZE_MB = 20;
     try {
         const video = ctx.message.video;
         const fileId = video.file_id;
 
-        if (video.file_size && video.file_size > 5 * 1024 * 1024) {
-            return ctx.reply("Video is too large. Please send a file under 5 MB.");
+        if (video.file_size && video.file_size > MAX_SIZE_MB * 1024 * 1024) {
+            return ctx.reply(`Video too large. Max allowed is ${MAX_SIZE_MB} MB.`);
         }
 
         if (!ffmpegPath) return ctx.reply("Video compression is not available right now.");
@@ -91,13 +141,16 @@ bot.on(":video", async (ctx) => {
         await pipeline(res.body, writeStream);
 
         await execFileAsync(ffmpegPath, [
+            "-y",
             "-i", inputPath,
-            "-vf", "scale=854:480",
+            "-s", "1280x720",
             "-c:v", "libx264",
             "-crf", "28",
-            "-preset", "ultrafast",
+            "-filter:v", "fps=fps=60",
             "-c:a", "aac",
-            "-b:a", "64k",
+            "-b:a", "128k",
+            "-ar", "48000",
+            "-preset", "ultrafast",
             "-movflags", "faststart",
             outputPath
         ]);
