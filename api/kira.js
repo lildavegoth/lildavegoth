@@ -7,6 +7,7 @@ const supabase = createClient(
 );
 
 const bot = new Bot(process.env.KIRA_TOKEN);
+await bot.init();
 
 bot.command("start", async (ctx) => {
   const user = ctx.from;
