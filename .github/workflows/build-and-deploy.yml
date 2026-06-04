@@ -1,9 +1,11 @@
-name: Build and Deploy Jekyll
+name: Build and Deploy Jekyll and Compress Videos
 
 on:
     push:
         branches: [homepage]
     workflow_dispatch:
+    repository_dispatch:
+        types: [compress-video]
 
 permissions:
     contents: read
@@ -12,6 +14,7 @@ permissions:
 
 jobs:
     build-jekyll:
+        if: github.event_name != 'repository_dispatch'
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
@@ -31,6 +34,7 @@ jobs:
 
     deploy-jekyll:
         needs: build-jekyll
+        if: github.event_name != 'repository_dispatch'
         runs-on: ubuntu-latest
         environment:
             name: github-pages
@@ -42,3 +46,44 @@ jobs:
             - name: Deploy to GitHub Pages
               id: deployment
               uses: actions/deploy-pages@v4
+
+    compress:
+        if: github.event_name == 'repository_dispatch'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Install ffmpeg
+              run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+            - name: Download original video
+              run: |
+                  mkdir -p videos
+                  wget -O "videos/original.mp4" "${{ github.event.client_payload.video_url }}"
+
+            - name: Compress video
+              run: |
+                  ffmpeg -y -i videos/original.mp4 \
+                    -s 1280x720 \
+                    -c:v libx264 \
+                    -crf 28 \
+                    -filter:v fps=fps=60 \
+                    -c:a aac \
+                    -b:a 128k \
+                    -ar 48000 \
+                    -preset medium \
+                    -movflags faststart \
+                    videos/compressed.mp4
+
+            - name: Upload result to Supabase
+              run: |
+                  curl -X POST \
+                    "https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/storage/v1/object/videos/compressed_${{ github.event.client_payload.original_name }}" \
+                    -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+                    -F "file=@videos/compressed.mp4"
+
+            - name: Send compressed video to Telegram
+              run: |
+                  PUBLIC_URL="https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/storage/v1/object/public/videos/compressed_${{ github.event.client_payload.original_name }}"
+                  curl -X POST "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/sendVideo" \
+                    -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+                    -d "video=$PUBLIC_URL" \
+                    -d "caption=Here's your compressed video."
