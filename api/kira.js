@@ -1,4 +1,4 @@
-import { Bot, webhookCallback } from "grammy";
+import { Bot } from "grammy";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -23,4 +23,8 @@ bot.command("ping", (ctx) => ctx.reply("pong"));
 
 bot.on("message:text", (ctx) => ctx.reply("You said: " + ctx.message.text));
 
-export const POST = webhookCallback(bot, "cloudflare");
+export async function POST(request) {
+  const body = await request.json();
+  await bot.handleUpdate(body);
+  return new Response("ok");
+}
