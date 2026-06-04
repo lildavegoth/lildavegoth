@@ -234,7 +234,13 @@ bot.on(":video", async (ctx) => {
     }
 });
 
-bot.on("message:text", (ctx) => ctx.reply("You said: " + ctx.message.text));
+bot.on(":pinned_message", async (ctx) => {
+    try {
+        await ctx.deleteMessage();
+    } catch {}
+});
+
+bot.on("message:text", (ctx) => ctx.reply("No commands for: " + ctx.message.text));
 
 export async function POST(request) {
     const body = await request.json();
