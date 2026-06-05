@@ -6,6 +6,15 @@ author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
 description: "The biggest projects that i ever made in my life, this articles is even one part of the projects."
 categories: "Home, Biggest, Creative"
+---
+---
+title: "Kakoi Kiraku"
+date: "2024-12-20"
+image: "images/kakoikiraku.webp"
+author: "lildavegoth"
+profile: "https://t.me/lildavegoth"
+description: "The biggest projects that i ever made in my life, this articles is even one part of the projects."
+categories: "Home, Biggest, Creative"
 badge: "featured"
 ---
 
@@ -31,3 +40,4 @@ Both community has **Kira** bot as your assistant inside the communities!
 
 # Soon →
 See you soon in the next updates of new stuff coming based on **Kakoi Kiraku** projects and stay tuned on **[Kakoi Kiraku Home](https://kakoi-kiraku-home.vercel.app/)** page!
+![Kakoi Kiraku Home Screenshots](images/kakoikirakuhome-ss.webp)
