@@ -241,6 +241,17 @@ bot.on(":pinned_message", async (ctx) => {
         await ctx.deleteMessage();
     } catch {}
 });
+bot.on(":new_chat_members", async (ctx) => {
+    try {
+        await ctx.deleteMessage();
+    } catch {}
+});
+
+bot.on(":left_chat_member", async (ctx) => {
+    try {
+        await ctx.deleteMessage();
+    } catch {}
+});
 
 bot.on("message:text", (ctx) => ctx.reply("No commands for: " + ctx.message.text));
 
