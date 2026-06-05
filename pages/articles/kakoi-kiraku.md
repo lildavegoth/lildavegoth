@@ -4,9 +4,11 @@ date: "2024-12-20"
 image: "images/kakoikiraku.webp"
 author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
-description: "The biggest projects that i ever made in my life, this articles is even one part of the projects."
+description: "This is the biggest projects that i ever made in my life, this Articles app is also a part of the Kakoi Kiraku project."
 categories: "Home, Biggest, Creative"
+badge: "featured"
 ---
+
 This is the biggest projects that i ever made in my life, this **Articles** app is also a part of the **Kakoi Kiraku** project.
 
 Once again, **Kakoi Kiraku** has been moved to a new web page that i created in [**GitHub**](https://github.com/lildavegoth/lildavegoth) and deployed to **Vercel** for better features, but not only that, in this new **Homepage**, everything is feels brand new, cause it's built by myself and that means i can do anything to the website. In here you'll see so many new stuff that you never seen or used before, and of course it's **Open Source**!
