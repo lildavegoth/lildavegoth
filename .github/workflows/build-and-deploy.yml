@@ -114,14 +114,27 @@ jobs:
               run: |
                   URL="${{ github.event.client_payload.download_url }}"
                   mkdir -p downloads
-                  wget \
-                    --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" \
-                    -O "downloads/file" \
-                    "$URL" || \
-                  curl -L \
-                    --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" \
-                    -o "downloads/file" \
-                    "$URL"
+                  UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+
+                  if echo "$URL" | grep -qE "(drive\.google\.com|usercontent\.google\.com)"; then
+                      wget --quiet --save-cookies cookies.txt --keep-session-cookies \
+                        --user-agent="$UA" \
+                        -O "downloads/temp" "$URL"
+
+                      CONFIRM=$(grep -Po 'confirm=\K[^"&]+' downloads/temp | head -1)
+                      if [ -n "$CONFIRM" ]; then
+                          wget --load-cookies cookies.txt \
+                            --user-agent="$UA" \
+                            -O "downloads/file" \
+                            "${URL}&confirm=${CONFIRM}"
+                      else
+                          mv downloads/temp downloads/file
+                      fi
+                      rm -f cookies.txt downloads/temp
+                  else
+                      wget --user-agent="$UA" -O "downloads/file" "$URL" || \
+                      curl -L --user-agent "$UA" -o "downloads/file" "$URL"
+                  fi
 
             - name: Rename to original filename if provided
               run: |
