@@ -309,6 +309,10 @@ bot.command("mirror", async (ctx) => {
         return ctx.reply("Usage: /mirror <direct-download-url>");
     }
     const url = parts[1];
+    if (!url.startsWith("http")) {
+        return ctx.reply("Please provide a valid direct download URL.");
+    }
+    
     let finalUrl = url;
     if (finalUrl.includes("mediafire.com") && finalUrl.includes("/download")) {
         const parts = finalUrl.split("/");
