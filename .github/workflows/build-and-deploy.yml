@@ -130,28 +130,33 @@ jobs:
               run: |
                   URL="${{ github.event.client_payload.download_url }}"
                   mkdir -p downloads
-                  if echo "$URL" | grep -q "mediafire.com"; then
+                  if echo "$URL" | grep -Eiq "mediafire\.com|download[0-9]+\.mediafire\.com"; then
                       wget -qO /usr/local/bin/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux
                       chmod +x /usr/local/bin/yt-dlp
-                      yt-dlp -P downloads --no-playlist "$URL"
+                      if echo "$URL" | grep -q "download[0-9]"; then
+                          wget \
+                            --content-disposition \
+                            -P downloads \
+                            "$URL"
+                      else
+                          yt-dlp \
+                            --no-playlist \
+                            -P downloads \
+                            "$URL"
+                      fi
                   else
-                      wget --header="Referer: https://www.mediafire.com" \
-                           --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-                           --keep-session-cookies \
-                           --save-cookies cookies.txt \
-                           --load-cookies cookies.txt \
-                           --content-disposition \
-                           --max-redirect=10 \
-                           -P downloads \
-                           "$URL" || \
+                      wget \
+                        --content-disposition \
+                        -P downloads \
+                        "$URL" || \
                       curl -L \
-                           --referer "https://www.mediafire.com" \
-                           --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-                           -c cookies.txt \
-                           -b cookies.txt \
-                           --output "downloads/file" \
-                           "$URL"
+                        -o downloads/file \
+                        "$URL"
                   fi
+                  
+            - name: Verify download
+              run: |
+                  ls -lah downloads
 
             - name: Update progress - uploading
               run: |
@@ -164,7 +169,8 @@ jobs:
               run: |
                   cd downloads
                   rm -f cookies.txt
-                  FILE=$(ls -1 | head -1)
+                  FILE=$(find . -type f | head -1)
+                  FILE=$(basename "$FILE")
                   if [ -z "$FILE" ]; then
                       echo "No file found to upload"
                       exit 1
