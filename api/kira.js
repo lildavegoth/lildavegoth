@@ -309,8 +309,16 @@ bot.command("mirror", async (ctx) => {
         return ctx.reply("Usage: /mirror <direct-download-url>");
     }
     const url = parts[1];
-    if (!url.startsWith("http")) {
-        return ctx.reply("Please provide a valid direct download URL.");
+    let finalUrl = url;
+    if (finalUrl.includes("mediafire.com") && finalUrl.includes("/download")) {
+        const parts = finalUrl.split("/");
+        const fileIndex = parts.findIndex((p) => p.length === 15 && !p.includes("."));
+        const nameIndex = parts.findIndex((p) => p.includes(".") && !p.startsWith("download"));
+        if (fileIndex !== -1 && nameIndex !== -1) {
+            const fileId = parts[fileIndex];
+            const fileName = parts[nameIndex];
+            finalUrl = `https://www.mediafire.com/file/${fileId}/${fileName}/file`;
+        }
     }
 
     const { data: activeJob } = await supabase
