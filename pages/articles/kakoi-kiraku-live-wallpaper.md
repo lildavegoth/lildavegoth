@@ -4,7 +4,7 @@ date: "2024-11-01"
 image: "images/kklw.webp"
 author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
-description: "**Kakoi Kiraku** as a **Live Wallpaper**, vibes of a home screen setup, easy to use, customizeable icons and characters, has a gallery widget, 2 screen setups, modern and dark display. Since..."
+description: "Kakoi Kiraku as a Live Wallpaper, vibes of a home screen setup, easy to use, customizeable icons and characters, has a gallery widget, 2 screen setups, modern and dark display. Since..."
 categories: "Home Screen, Creative"
 ---
 **Kakoi Kiraku** as a **Live Wallpaper**, vibes of a home screen setup, easy to use, customizeable icons and characters, has a gallery widget, 2 screen setups, modern and dark display.
