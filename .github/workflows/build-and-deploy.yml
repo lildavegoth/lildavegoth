@@ -86,15 +86,25 @@ jobs:
                     -d "chat_id=${{ github.event.client_payload.chat_id }}" \
                     -d "video=$PUBLIC_URL" \
                     -d "caption=Here's your compressed video."
-                    
+
     mirror:
         if: github.event_name == 'repository_dispatch' && github.event.action == 'mirror'
         runs-on: ubuntu-latest
         env:
-            RCLONE_CONFIG_MIRROR_DRIVE_TOKEN: ${{ secrets.GDRIVE_TOKEN }}
+            KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
+            SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+            SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         steps:
             - name: Install rclone
               run: sudo apt-get update && sudo apt-get install -y rclone
+
+            - name: Mark job as processing
+              run: |
+                  curl -X PATCH "https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/rest/v1/mirror_jobs?id=eq.${{ github.event.client_payload.job_id }}" \
+                    -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+                    -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+                    -H "Content-Type: application/json" \
+                    -d '{"status":"processing"}'
 
             - name: Configure rclone
               run: |
@@ -110,7 +120,14 @@ jobs:
                   rclone config show mirror_drive
                   rclone lsd mirror_drive:
 
-            - name: Download file (handles MediaFire)
+            - name: Update progress - downloading
+              run: |
+                  curl -X POST "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/editMessageText" \
+                    -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+                    -d "message_id=${{ github.event.client_payload.message_id }}" \
+                    -d "text=Downloading..."
+
+            - name: Download file
               run: |
                   URL="${{ github.event.client_payload.download_url }}"
                   mkdir -p downloads
@@ -137,6 +154,13 @@ jobs:
                            "$URL"
                   fi
 
+            - name: Update progress - uploading
+              run: |
+                  curl -X POST "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/editMessageText" \
+                    -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+                    -d "message_id=${{ github.event.client_payload.message_id }}" \
+                    -d "text=Uploading to Google Drive..."
+
             - name: Upload and get link
               run: |
                   cd downloads
@@ -150,12 +174,18 @@ jobs:
                   LINK=$(rclone link "mirror_drive:$FILE")
                   echo "DRIVE_LINK=$LINK" >> $GITHUB_ENV
 
-            - name: Notify Telegram
+            - name: Notify and mark completed
               run: |
                   LINK="${{ env.DRIVE_LINK }}"
                   if [ -z "$LINK" ]; then
                     LINK="https://drive.google.com/drive/folders/${{ secrets.GDRIVE_FOLDER_ID }}"
                   fi
-                  curl -X POST "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/sendMessage" \
+                  curl -X PATCH "https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/rest/v1/mirror_jobs?id=eq.${{ github.event.client_payload.job_id }}" \
+                    -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+                    -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"status\":\"completed\",\"drive_link\":\"$LINK\"}"
+                  curl -X POST "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/editMessageText" \
                     -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+                    -d "message_id=${{ github.event.client_payload.message_id }}" \
                     -d "text=Mirror completed: $LINK"
