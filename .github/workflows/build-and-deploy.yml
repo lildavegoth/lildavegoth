@@ -115,14 +115,15 @@ jobs:
                   URL="${{ github.event.client_payload.download_url }}"
                   mkdir -p downloads
                   UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-
-                  if echo "$URL" | grep -q "drive\.google\.com"; then
-                      FILE_ID=$(echo "$URL" | grep -Po '/d/([^/]+)' | grep -Po '[^/]+$')
-                      if [ -z "$FILE_ID" ]; then
-                          FILE_ID=$(echo "$URL" | grep -Po 'id=([^&]+)' | sed 's/id=//')
-                      fi
+                  if echo "$URL" | grep -qE "(drive\.google\.com|usercontent\.google\.com)"; then
                       pip install -q gdown
-                      gdown "$FILE_ID" -O downloads/file
+                      if gdown --fuzzy "$URL" -O downloads/file; then
+                          echo "Downloaded with gdown"
+                      else
+                          echo "gdown failed, trying wget..."
+                          wget --user-agent="$UA" -O "downloads/file" "$URL" || \
+                          curl -L --user-agent "$UA" -o "downloads/file" "$URL"
+                      fi
                   else
                       wget --user-agent="$UA" -O "downloads/file" "$URL" || \
                       curl -L --user-agent "$UA" -o "downloads/file" "$URL"
