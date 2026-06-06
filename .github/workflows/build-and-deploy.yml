@@ -175,6 +175,17 @@ jobs:
                   LINK=$(rclone link "mirror_drive:$FILE")
                   echo "DRIVE_LINK=$LINK" >> $GITHUB_ENV
 
+            - name: Check if cancelled
+              run: |
+                  STATUS=$(curl -s "https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/rest/v1/mirror_jobs?id=eq.${{ github.event.client_payload.job_id }}&select=status" \
+                    -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+                    -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+                    | jq -r '.[0].status')
+                  if [ "$STATUS" = "cancelled" ]; then
+                    echo "Job cancelled by user."
+                    exit 0
+                  fi
+
             - name: Notify and mark completed
               run: |
                   LINK="${{ env.DRIVE_LINK }}"
