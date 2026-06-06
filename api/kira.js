@@ -291,10 +291,17 @@ bot.command("mirror", async (ctx) => {
             originalFilename = `sticker_${fileId}.webp`;
         }
 
-        if (fileId) {
-            const file = await ctx.api.getFile(fileId);
-            if (file.file_path) {
-                url = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+        iif (fileId) {
+            try {
+                const file = await ctx.api.getFile(fileId);
+                if (file.file_path) {
+                    url = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+                }
+            } catch (e) {
+                if (e.error_code === 400 && e.description && e.description.includes("file is too big")) {
+                    return ctx.reply("This file is too large to be mirrored via Telegram.");
+                }
+                return ctx.reply("Failed to get file info.");
             }
         }
     }
