@@ -110,26 +110,32 @@ jobs:
                   rclone config show mirror_drive
                   rclone lsd mirror_drive:
 
-            - name: Download file
+            - name: Download file (handles MediaFire)
               run: |
                   URL="${{ github.event.client_payload.download_url }}"
                   mkdir -p downloads
-                  wget --header="Referer: https://www.mediafire.com" \
-                       --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-                       --keep-session-cookies \
-                       --save-cookies cookies.txt \
-                       --load-cookies cookies.txt \
-                       --content-disposition \
-                       --max-redirect=10 \
-                       -P downloads \
-                       "$URL" || \
-                  curl -L \
-                       --referer "https://www.mediafire.com" \
-                       --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-                       -c cookies.txt \
-                       -b cookies.txt \
-                       --output "downloads/file" \
-                       "$URL"
+                  if echo "$URL" | grep -q "mediafire.com"; then
+                      wget -qO /usr/local/bin/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux
+                      chmod +x /usr/local/bin/yt-dlp
+                      yt-dlp -P downloads --no-playlist "$URL"
+                  else
+                      wget --header="Referer: https://www.mediafire.com" \
+                           --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+                           --keep-session-cookies \
+                           --save-cookies cookies.txt \
+                           --load-cookies cookies.txt \
+                           --content-disposition \
+                           --max-redirect=10 \
+                           -P downloads \
+                           "$URL" || \
+                      curl -L \
+                           --referer "https://www.mediafire.com" \
+                           --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+                           -c cookies.txt \
+                           -b cookies.txt \
+                           --output "downloads/file" \
+                           "$URL"
+                  fi
 
             - name: Upload and get link
               run: |
