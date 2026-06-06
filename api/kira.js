@@ -291,7 +291,7 @@ bot.command("mirror", async (ctx) => {
             originalFilename = `sticker_${fileId}.webp`;
         }
 
-        iif (fileId) {
+        if (fileId) {
             try {
                 const file = await ctx.api.getFile(fileId);
                 if (file.file_path) {
