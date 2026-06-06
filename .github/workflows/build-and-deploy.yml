@@ -92,50 +92,35 @@ jobs:
         runs-on: ubuntu-latest
         env:
             KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
-            SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-            SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-            RCLONE_CONFIG_MIRROR_DRIVE_TOKEN: ${{ secrets.GDRIVE_TOKEN }}
         steps:
             - name: Install rclone
               run: sudo apt-get update && sudo apt-get install -y rclone
 
             - name: Configure rclone
               run: |
+                  export TOKEN='${{ secrets.GDRIVE_TOKEN }}'
                   mkdir -p ~/.config/rclone
-                  cat > ~/.config/rclone/rclone.conf << 'EOF'
+                  cat > ~/.config/rclone/rclone.conf << EOF
                   [mirror_drive]
                   type = drive
                   scope = drive
                   client_id = ${{ secrets.GDRIVE_CLIENT_ID }}
                   client_secret = ${{ secrets.GDRIVE_CLIENT_SECRET }}
+                  token = $TOKEN
                   root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
                   EOF
 
-            - name: Download file (handles MediaFire)
+            - name: Download file
               run: |
                   URL="${{ github.event.client_payload.download_url }}"
                   mkdir -p downloads
-                  if echo "$URL" | grep -q "mediafire.com"; then
+                  if echo "$URL" | grep -q "^https://www\.mediafire\.com/file/"; then
                       wget -qO /usr/local/bin/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux
                       chmod +x /usr/local/bin/yt-dlp
                       yt-dlp -P downloads --no-playlist "$URL"
                   else
-                      wget --header="Referer: https://www.mediafire.com" \
-                           --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-                           --keep-session-cookies \
-                           --save-cookies cookies.txt \
-                           --load-cookies cookies.txt \
-                           --content-disposition \
-                           --max-redirect=10 \
-                           -P downloads \
-                           "$URL" || \
-                      curl -L \
-                           --referer "https://www.mediafire.com" \
-                           --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-                           -c cookies.txt \
-                           -b cookies.txt \
-                           --output "downloads/file" \
-                           "$URL"
+                      wget --content-disposition -P downloads "$URL" || \
+                      curl -L -o "downloads/file" "$URL"
                   fi
 
             - name: Upload and get link
