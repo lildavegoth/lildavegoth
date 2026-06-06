@@ -366,6 +366,28 @@ bot.command("mirror", async (ctx) => {
     }
 });
 
+bot.command("cancel", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+    const { data: jobs } = await supabase
+        .from("mirror_jobs")
+        .select("id, message_id")
+        .eq("status", "processing")
+        .limit(1);
+    if (!jobs || jobs.length === 0) {
+        return ctx.reply("No active mirror to cancel.");
+    }
+    const job = jobs[0];
+    await supabase.from("mirror_jobs").update({ status: "cancelled" }).eq("id", job.id);
+    try {
+        await ctx.api.editMessageText(
+            ctx.chat.id,
+            job.message_id,
+            "Mirror cancelled."
+        );
+    } catch {}
+    return ctx.reply("Mirror cancelled.");
+});
+
 bot.command("files", async (ctx) => {
     if (ctx.chat.type !== "private") return;
     if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
