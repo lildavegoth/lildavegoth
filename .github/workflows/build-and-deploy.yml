@@ -114,21 +114,24 @@ jobs:
               run: |
                   URL="${{ github.event.client_payload.download_url }}"
                   mkdir -p downloads
-                  if echo "$URL" | grep -q "^https://www\.mediafire\.com/file/"; then
-                      CLEAN_URL="${URL%%\?*}"
-                      CLEAN_URL="${CLEAN_URL%/file}"
-                      pip install -q gallery-dl
-                      gallery-dl -d downloads --no-part "$CLEAN_URL"
+            
+                  pip install -q yt-dlp
+            
+                  if echo "$URL" | grep -q "mediafire.com"; then
+                      yt-dlp \
+                        --no-playlist \
+                        -P downloads \
+                        "$URL"
                   else
                       wget --content-disposition -P downloads "$URL" || \
-                      curl -L -o "downloads/file" "$URL"
+                      curl -L -o downloads/file "$URL"
                   fi
 
             - name: Upload and get link
               run: |
                   cd downloads
                   rm -f cookies.txt
-                  FILE=$(ls -1 | head -1)
+                  FILE=$(find . -maxdepth 1 -type f ! -name "*.txt" | head -n 1)
                   if [ -z "$FILE" ]; then
                       echo "No file found to upload"
                       exit 1
