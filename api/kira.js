@@ -5,7 +5,6 @@ import { createWriteStream, statSync, unlinkSync } from "fs";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import ffmpegPath from "ffmpeg-static";
-import { randomUUID } from "crypto";
 
 const execFileAsync = promisify(execFile);
 
@@ -40,22 +39,6 @@ async function setMaintenance(value) {
             .update({ value: value ? "true" : "false" })
             .eq("key", "maintenance");
     } catch {}
-}
-
-async function getGoogleAccessToken() {
-    const tokenJson = JSON.parse(process.env.GDRIVE_REFRESH_TOKEN);
-    const res = await fetch("https://oauth2.googleapis.com/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-            client_id: process.env.GDRIVE_CLIENT_ID,
-            client_secret: process.env.GDRIVE_CLIENT_SECRET,
-            refresh_token: tokenJson.refresh_token,
-            grant_type: "refresh_token",
-        }),
-    });
-    const data = await res.json();
-    return data.access_token;
 }
 
 bot.use(async (ctx, next) => {
