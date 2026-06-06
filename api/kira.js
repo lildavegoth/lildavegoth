@@ -253,6 +253,50 @@ bot.on(":left_chat_member", async (ctx) => {
     } catch {}
 });
 
+bot.command("mirror", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+    const text = ctx.message.text;
+    const parts = text.split(" ");
+    if (parts.length < 2) {
+        return ctx.reply("Usage: /mirror <direct-download-url>");
+    }
+    const url = parts[1];
+    if (!url.startsWith("http")) {
+        return ctx.reply("Please provide a valid direct download URL.");
+    }
+
+    await ctx.reply("Mirroring… File will be uploaded to Google Drive. This may take a while for large files.");
+
+    const dispatchBody = {
+        event_type: "mirror",
+        client_payload: {
+            chat_id: ctx.chat.id,
+            download_url: url,
+            message: "Mirror request from Telegram",
+        },
+    };
+
+    try {
+        const res = await fetch(
+            `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `token ${process.env.GITHUB_PAT}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(dispatchBody),
+            }
+        );
+        if (!res.ok) {
+            const err = await res.text();
+            return ctx.reply("Failed to start mirror: " + err);
+        }
+    } catch (e) {
+        return ctx.reply("Error: " + e.message);
+    }
+});
+
 bot.on("message:text", (ctx) => ctx.reply("No commands for: " + ctx.message.text));
 
 export async function POST(request) {
