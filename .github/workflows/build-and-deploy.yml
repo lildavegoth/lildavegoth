@@ -96,9 +96,15 @@ jobs:
 
             - name: Configure rclone
               run: |
-                  echo '${{ secrets.GDRIVE_REFRESH_TOKEN }}' > /tmp/gdrive_token.json
+                  cat > /tmp/gdrive_token.json << TOKENEOF
+                  ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+                  TOKENEOF
+                  if [ ! -s /tmp/gdrive_token.json ]; then
+                    echo "Token file is empty – check GDRIVE_REFRESH_TOKEN secret"
+                    exit 1
+                  fi
                   mkdir -p ~/.config/rclone
-                  cat > ~/.config/rclone/rclone.conf << EOF
+                  cat > ~/.config/rclone/rclone.conf << CONFEOF
                   [mirror_drive]
                   type = drive
                   scope = drive
@@ -106,7 +112,7 @@ jobs:
                   client_secret = ${{ secrets.GDRIVE_CLIENT_SECRET }}
                   token_file = /tmp/gdrive_token.json
                   root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
-                  EOF
+                  CONFEOF
 
             - name: Download file
               run: |
