@@ -119,27 +119,26 @@ jobs:
                        --content-disposition \
                        --max-redirect=10 \
                        -P downloads \
+                       "$URL" || \
+                  curl -L \
+                       --referer "https://www.mediafire.com" \
+                       --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+                       -c cookies.txt \
+                       -b cookies.txt \
+                       --output "downloads/file" \
                        "$URL"
-
-                  if [ $? -ne 0 ]; then
-                      curl -L \
-                           --referer "https://www.mediafire.com" \
-                           --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-                           -c cookies.txt \
-                           -b cookies.txt \
-                           --output "downloads/file" \
-                           "$URL"
-                  else
-                      mv downloads/*.webp downloads/file 2>/dev/null || mv downloads/*.png downloads/file 2>/dev/null || mv downloads/* downloads/file 2>/dev/null || true
-                  fi
 
             - name: Upload and get link
               run: |
-                  FILENAME=$(basename "${{ github.event.client_payload.download_url }}" | sed 's/[?].*//')
-                  if [ -z "$FILENAME" ]; then FILENAME="mirror_file"; fi
-                  mv downloads/file "downloads/$FILENAME"
-                  rclone copy "downloads/$FILENAME" mirror_drive: -P
-                  LINK=$(rclone link "mirror_drive:$FILENAME")
+                  cd downloads
+                  rm -f cookies.txt
+                  FILE=$(ls -1 | head -1)
+                  if [ -z "$FILE" ]; then
+                      echo "No file found to upload"
+                      exit 1
+                  fi
+                  rclone copy "$FILE" mirror_drive: -P
+                  LINK=$(rclone link "mirror_drive:$FILE")
                   echo "DRIVE_LINK=$LINK" >> $GITHUB_ENV
 
             - name: Notify Telegram
