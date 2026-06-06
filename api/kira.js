@@ -259,19 +259,37 @@ bot.command("mirror", async (ctx) => {
     const parts = text.split(" ");
 
     let url = "";
+    let originalFilename = null;
 
     if (parts.length >= 2) {
         url = parts[1];
     } else if (ctx.message.reply_to_message) {
         const reply = ctx.message.reply_to_message;
         let fileId = null;
-        if (reply.document) fileId = reply.document.file_id;
-        else if (reply.video) fileId = reply.video.file_id;
-        else if (reply.audio) fileId = reply.audio.file_id;
-        else if (reply.photo) fileId = reply.photo[reply.photo.length - 1].file_id;
-        else if (reply.voice) fileId = reply.voice.file_id;
-        else if (reply.video_note) fileId = reply.video_note.file_id;
-        else if (reply.sticker) fileId = reply.sticker.file_id;
+
+        if (reply.document) {
+            fileId = reply.document.file_id;
+            originalFilename = reply.document.file_name;
+        } else if (reply.video) {
+            fileId = reply.video.file_id;
+            originalFilename = reply.video.file_name;
+        } else if (reply.audio) {
+            fileId = reply.audio.file_id;
+            originalFilename = reply.audio.file_name;
+        } else if (reply.photo) {
+            const largest = reply.photo[reply.photo.length - 1];
+            fileId = largest.file_id;
+            originalFilename = `photo_${fileId}.jpg`;
+        } else if (reply.voice) {
+            fileId = reply.voice.file_id;
+            originalFilename = `voice_${fileId}.ogg`;
+        } else if (reply.video_note) {
+            fileId = reply.video_note.file_id;
+            originalFilename = `video_note_${fileId}.mp4`;
+        } else if (reply.sticker) {
+            fileId = reply.sticker.file_id;
+            originalFilename = `sticker_${fileId}.webp`;
+        }
 
         if (fileId) {
             const file = await ctx.api.getFile(fileId);
@@ -293,6 +311,7 @@ bot.command("mirror", async (ctx) => {
             chat_id: ctx.chat.id,
             download_url: url,
             message: "Mirror request from Telegram",
+            filename: originalFilename || "",
         },
     };
 
