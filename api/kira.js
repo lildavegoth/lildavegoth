@@ -314,7 +314,10 @@ bot.command("mirror", async (ctx) => {
     }
     
     let finalUrl = url;
-    if (finalUrl.includes("mediafire.com") && finalUrl.includes("/download")) {
+    if (
+        finalUrl.includes("mediafire.com") ||
+        finalUrl.includes(".mediafire.com")
+    ) {
         const parts = finalUrl.split("/");
         const fileIndex = parts.findIndex((p) => p.length === 15 && !p.includes("."));
         const nameIndex = parts.findIndex((p) => p.includes(".") && !p.startsWith("download"));
@@ -340,7 +343,7 @@ bot.command("mirror", async (ctx) => {
     await supabase.from("mirror_jobs").insert({
         id: jobId,
         chat_id: ctx.chat.id,
-        download_url: finalUrl,
+        download_url: finalUrl,.
         message_id: msg.message_id,
         status: "processing",
     });
