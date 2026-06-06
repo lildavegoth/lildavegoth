@@ -257,15 +257,35 @@ bot.command("mirror", async (ctx) => {
     if (ctx.chat.type !== "private") return;
     const text = ctx.message.text;
     const parts = text.split(" ");
-    if (parts.length < 2) {
-        return ctx.reply("Usage: /mirror <direct-download-url>");
-    }
-    const url = parts[1];
-    if (!url.startsWith("http")) {
-        return ctx.reply("Please provide a valid direct download URL.");
+
+    let url = "";
+
+    if (parts.length >= 2) {
+        url = parts[1];
+    } else if (ctx.message.reply_to_message) {
+        const reply = ctx.message.reply_to_message;
+        let fileId = null;
+        if (reply.document) fileId = reply.document.file_id;
+        else if (reply.video) fileId = reply.video.file_id;
+        else if (reply.audio) fileId = reply.audio.file_id;
+        else if (reply.photo) fileId = reply.photo[reply.photo.length - 1].file_id;
+        else if (reply.voice) fileId = reply.voice.file_id;
+        else if (reply.video_note) fileId = reply.video_note.file_id;
+        else if (reply.sticker) fileId = reply.sticker.file_id;
+
+        if (fileId) {
+            const file = await ctx.api.getFile(fileId);
+            if (file.file_path) {
+                url = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+            }
+        }
     }
 
-    await ctx.reply("Mirroring… File will be uploaded to Google Drive. This may take a while for large files.");
+    if (!url || !url.startsWith("http")) {
+        return ctx.reply("Usage: /mirror <url> or reply to a file with /mirror");
+    }
+
+    await ctx.reply("Mirroring…");
 
     const dispatchBody = {
         event_type: "mirror",
