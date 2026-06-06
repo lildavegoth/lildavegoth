@@ -1,15 +1,12 @@
 ---
 title: "Kakoi Kiraku Live Wallpaper"
 date: "2024-11-01"
-image: "images/kirakulivewall.webp"
+image: "images/kklw.webp"
 author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
 description: "**Kakoi Kiraku** as a **Live Wallpaper**, vibes of a home screen setup, easy to use, customizeable icons and characters, has a gallery widget, 2 screen setups, modern and dark display. Since..."
 categories: "Home Screen, Creative"
-badge: "highlight"
-number: 1
 ---
-
 **Kakoi Kiraku** as a **Live Wallpaper**, vibes of a home screen setup, easy to use, customizeable icons and characters, has a gallery widget, 2 screen setups, modern and dark display.
 
 Since there are so few of people made a **KLWP** with landscape display, i will made my own. I know i need learning how to use **KLWP** formula more than ever. So, for this version it will be more simple and easy to use and may be only a few of features.
