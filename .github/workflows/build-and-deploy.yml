@@ -117,6 +117,17 @@ jobs:
                   wget --content-disposition -P downloads "$URL" || \
                   curl -L -o "downloads/file" "$URL"
 
+            - name: Rename to original filename if provided
+              run: |
+                  FILENAME="${{ github.event.client_payload.filename }}"
+                  if [ -n "$FILENAME" ]; then
+                      cd downloads
+                      OLD_FILE=$(ls -1 | head -1)
+                      if [ -f "$OLD_FILE" ] && [ "$OLD_FILE" != "$FILENAME" ]; then
+                          mv "$OLD_FILE" "$FILENAME"
+                      fi
+                  fi
+
             - name: Upload and get link
               run: |
                   cd downloads
