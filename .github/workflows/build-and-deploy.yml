@@ -115,18 +115,25 @@ jobs:
                   URL="${{ github.event.client_payload.download_url }}"
                   mkdir -p downloads
                   UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-
                   if echo "$URL" | grep -qE "(drive\.google\.com|usercontent\.google\.com)"; then
                       wget --quiet --save-cookies cookies.txt --keep-session-cookies \
                         --user-agent="$UA" \
                         -O "downloads/temp" "$URL"
-
-                      CONFIRM=$(grep -Po 'confirm=\K[^"&]+' downloads/temp | head -1)
-                      if [ -n "$CONFIRM" ]; then
-                          wget --load-cookies cookies.txt \
-                            --user-agent="$UA" \
-                            -O "downloads/file" \
-                            "${URL}&confirm=${CONFIRM}"
+                      if grep -q "Google Drive - Virus scan warning" downloads/temp; then
+                          ACTION=$(grep -Po 'action="\K[^"]*' downloads/temp)
+                          ID=$(grep -Po 'name="id"\s+value="\K[^"]*' downloads/temp)
+                          EXPORT=$(grep -Po 'name="export"\s+value="\K[^"]*' downloads/temp)
+                          CONFIRM=$(grep -Po 'name="confirm"\s+value="\K[^"]*' downloads/temp)
+                          UUID=$(grep -Po 'name="uuid"\s+value="\K[^"]*' downloads/temp)
+                          if [ -n "$ACTION" ] && [ -n "$ID" ] && [ -n "$CONFIRM" ]; then
+                              REAL_URL="${ACTION}?id=${ID}&export=${EXPORT}&confirm=${CONFIRM}&uuid=${UUID}"
+                              wget --load-cookies cookies.txt \
+                                --user-agent="$UA" \
+                                -O "downloads/file" "$REAL_URL"
+                          else
+                              echo "Could not extract confirmation details"
+                              exit 1
+                          fi
                       else
                           mv downloads/temp downloads/file
                       fi
