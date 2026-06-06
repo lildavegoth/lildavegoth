@@ -258,7 +258,6 @@ bot.on(":pinned_message", async (ctx) => {
         await ctx.deleteMessage();
     } catch {}
 });
-
 bot.on(":new_chat_members", async (ctx) => {
     try {
         await ctx.deleteMessage();
@@ -269,36 +268,6 @@ bot.on(":left_chat_member", async (ctx) => {
     try {
         await ctx.deleteMessage();
     } catch {}
-});
-
-bot.callbackQuery(/^delete_file_(.+)$/, async (ctx) => {
-    const fileId = ctx.match[1];
-    try {
-        const accessToken = await getGoogleAccessToken();
-        await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        return ctx.answerCallbackQuery("Deleted");
-    } catch {
-        return ctx.answerCallbackQuery("Delete failed");
-    }
-});
-
-bot.callbackQuery(/^copy_link_(.+)$/, async (ctx) => {
-    const fileId = ctx.match[1];
-    try {
-        const accessToken = await getGoogleAccessToken();
-        const res = await fetch(
-            `https://www.googleapis.com/drive/v3/files/${fileId}?fields=webViewLink`,
-            { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        const { webViewLink } = await res.json();
-        await ctx.answerCallbackQuery({ text: "Link copied!" });
-        await ctx.reply(webViewLink);
-    } catch {
-        return ctx.answerCallbackQuery("Failed to get link");
-    }
 });
 
 bot.command("mirror", async (ctx) => {
@@ -312,49 +281,15 @@ bot.command("mirror", async (ctx) => {
     if (!url.startsWith("http")) {
         return ctx.reply("Please provide a valid direct download URL.");
     }
-    
-    let finalUrl = url;
-    if (
-        finalUrl.includes("mediafire.com") ||
-        finalUrl.includes(".mediafire.com")
-    ) {
-        const parts = finalUrl.split("/");
-        const fileIndex = parts.findIndex((p) => p.length === 15 && !p.includes("."));
-        const nameIndex = parts.findIndex((p) => p.includes(".") && !p.startsWith("download"));
-        if (fileIndex !== -1 && nameIndex !== -1) {
-            const fileId = parts[fileIndex];
-            const fileName = parts[nameIndex];
-            finalUrl = `https://www.mediafire.com/file/${fileId}/${fileName}/file`;
-        }
-    }
 
-    const { data: activeJob } = await supabase
-        .from("mirror_jobs")
-        .select("id")
-        .not("status", "in", '("completed","failed","cancelled")')
-        .limit(1);
-    if (activeJob && activeJob.length > 0) {
-        return ctx.reply("Another mirror is already in progress. Please wait.");
-    }
-
-    const msg = await ctx.reply("Mirroring…");
-    const jobId = randomUUID();
-
-    await supabase.from("mirror_jobs").insert({
-        id: jobId,
-        chat_id: ctx.chat.id,
-        download_url: finalUrl,
-        message_id: msg.message_id,
-        status: "processing",
-    });
+    await ctx.reply("Mirroring… File will be uploaded to Google Drive. This may take a while for large files.");
 
     const dispatchBody = {
         event_type: "mirror",
         client_payload: {
             chat_id: ctx.chat.id,
-            download_url: finalUrl,
-            job_id: jobId,
-            message_id: msg.message_id,
+            download_url: url,
+            message: "Mirror request from Telegram",
         },
     };
 
@@ -371,61 +306,11 @@ bot.command("mirror", async (ctx) => {
             }
         );
         if (!res.ok) {
-            await supabase.from("mirror_jobs").update({ status: "failed" }).eq("id", jobId);
             const err = await res.text();
             return ctx.reply("Failed to start mirror: " + err);
         }
     } catch (e) {
-        await supabase.from("mirror_jobs").update({ status: "failed" }).eq("id", jobId);
         return ctx.reply("Error: " + e.message);
-    }
-});
-
-bot.command("cancel", async (ctx) => {
-    if (ctx.chat.type !== "private") return;
-    const { data: jobs } = await supabase
-        .from("mirror_jobs")
-        .select("id, message_id")
-        .eq("status", "processing")
-        .limit(1);
-    if (!jobs || jobs.length === 0) {
-        return ctx.reply("No active mirror to cancel.");
-    }
-    const job = jobs[0];
-    await supabase.from("mirror_jobs").update({ status: "cancelled" }).eq("id", job.id);
-    try {
-        await ctx.api.editMessageText(
-            ctx.chat.id,
-            job.message_id,
-            "Mirror cancelled."
-        );
-    } catch {}
-    return ctx.reply("Mirror cancelled.");
-});
-
-bot.command("files", async (ctx) => {
-    if (ctx.chat.type !== "private") return;
-    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
-    const folderId = process.env.GDRIVE_FOLDER_ID;
-    try {
-        const accessToken = await getGoogleAccessToken();
-        const res = await fetch(
-            `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&fields=files(id,name,mimeType,webViewLink)&pageSize=10`,
-            { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        const { files } = await res.json();
-        if (!files || files.length === 0) {
-            return ctx.reply("No files found.");
-        }
-        const buttons = files.map((f) => [
-            { text: "Delete", callback_data: `delete_file_${f.id}` },
-            { text: "Copy Link", callback_data: `copy_link_${f.id}` },
-        ]);
-        return ctx.reply("Files in your mirror folder:", {
-            reply_markup: { inline_keyboard: buttons },
-        });
-    } catch {
-        return ctx.reply("Failed to list files.");
     }
 });
 
