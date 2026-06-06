@@ -126,7 +126,7 @@ jobs:
                   echo "Download URL:"
                   echo "$URL"
     
-                  if echo "$URL" | grep -qE '(drive\.google\.com|googleusercontent\.com)'; then
+                  if echo "$URL" | grep -qE '(drive\.google\.com|drive\.usercontent\.google\.com|googleusercontent\.com)'; then
                       echo "Google Drive detected"
     
                       gdown --fuzzy "$URL" -O downloads/file
@@ -141,12 +141,22 @@ jobs:
                         "$URL"
                   fi
     
+                  if [ ! -s downloads/file ]; then
+                      echo "ERROR_MESSAGE=Download failed or file is empty." >> $GITHUB_ENV
+                      exit 1
+                  fi
+    
                   echo "Downloaded file info:"
                   file downloads/file
                   ls -lh downloads/file
     
+                  if grep -qiE "Quota exceeded|can't view or download this file" downloads/file; then
+                      echo "ERROR_MESSAGE=Google Drive quota exceeded for this file. Please try again later." >> $GITHUB_ENV
+                      exit 1
+                  fi
+    
                   if file downloads/file | grep -qiE 'HTML|XML'; then
-                      echo "ERROR: Downloaded content appears to be a webpage."
+                      echo "ERROR_MESSAGE=Downloaded a webpage instead of a file." >> $GITHUB_ENV
                       head -50 downloads/file || true
                       exit 1
                   fi
@@ -157,14 +167,16 @@ jobs:
     
             - name: Determine filename
               run: |
-                  cd downloads
+                  set -e
     
-                  FILE=$(ls -1 | head -1)
+                  FILE=$(find downloads -maxdepth 1 -type f | head -1)
     
                   if [ -z "$FILE" ]; then
                       echo "No file downloaded"
                       exit 1
                   fi
+    
+                  FILE=$(basename "$FILE")
     
                   echo "FILE_NAME=$FILE" >> $GITHUB_ENV
     
@@ -180,7 +192,7 @@ jobs:
     
                   echo "DRIVE_LINK=$LINK" >> $GITHUB_ENV
     
-            - name: Notify Telegram
+            - name: Notify Telegram success
               run: |
                   LINK="${{ env.DRIVE_LINK }}"
     
@@ -192,3 +204,17 @@ jobs:
                     "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/sendMessage" \
                     -d "chat_id=${{ github.event.client_payload.chat_id }}" \
                     -d "text=Mirror completed: $LINK"
+    
+            - name: Notify Telegram failure
+              if: failure()
+              run: |
+                  MSG="${{ env.ERROR_MESSAGE }}"
+    
+                  if [ -z "$MSG" ]; then
+                      MSG="Mirror failed."
+                  fi
+    
+                  curl -s -X POST \
+                    "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/sendMessage" \
+                    -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+                    -d "text=$MSG"
