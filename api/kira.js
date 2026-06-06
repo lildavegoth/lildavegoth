@@ -316,7 +316,7 @@ bot.command("mirror", async (ctx) => {
     const { data: activeJob } = await supabase
         .from("mirror_jobs")
         .select("id")
-        .not("status", "in", '("completed","failed")')
+        .not("status", "in", '("completed","failed","cancelled")')
         .limit(1);
     if (activeJob && activeJob.length > 0) {
         return ctx.reply("Another mirror is already in progress. Please wait.");
