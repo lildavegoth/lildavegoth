@@ -128,11 +128,16 @@ jobs:
     
                   if echo "$URL" | grep -qE '(drive\.google\.com|drive\.usercontent\.google\.com|googleusercontent\.com)'; then
                       echo "Google Drive detected"
-    
-                      gdown --fuzzy "$URL" -O downloads/file
+                  
+                      FILE_ID=$(echo "$URL" | sed -n 's/.*id=\([^&]*\).*/\1/p')
+                  
+                      if [ -n "$FILE_ID" ]; then
+                          gdown "https://drive.google.com/uc?id=$FILE_ID" \
+                                -O downloads/file
+                      else
+                          gdown --fuzzy "$URL" -O downloads/file
+                      fi
                   else
-                      echo "Direct download"
-    
                       curl \
                         --location \
                         --fail \
