@@ -340,7 +340,7 @@ bot.command("mirror", async (ctx) => {
     await supabase.from("mirror_jobs").insert({
         id: jobId,
         chat_id: ctx.chat.id,
-        download_url: url,
+        download_url: finalUrl,
         message_id: msg.message_id,
         status: "processing",
     });
@@ -349,7 +349,7 @@ bot.command("mirror", async (ctx) => {
         event_type: "mirror",
         client_payload: {
             chat_id: ctx.chat.id,
-            download_url: url,
+            download_url: finalUrl,
             job_id: jobId,
             message_id: msg.message_id,
         },
