@@ -1,154 +1,383 @@
-name: Kakoi Kiraku
+import { Bot } from "grammy";
+import { createClient } from "@supabase/supabase-js";
+import { pipeline } from "stream/promises";
+import { createWriteStream, statSync, unlinkSync } from "fs";
+import { execFile } from "child_process";
+import { promisify } from "util";
+import ffmpegPath from "ffmpeg-static";
 
-on:
-    push:
-        branches: [homepage]
-    workflow_dispatch:
-    repository_dispatch:
-        types: [compress-video, mirror]
+const execFileAsync = promisify(execFile);
 
-permissions:
-    contents: read
-    pages: write
-    id-token: write
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
-jobs:
-    build-jekyll:
-        if: github.event_name != 'repository_dispatch'
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+const bot = new Bot(process.env.KIRA_TOKEN);
+await bot.init();
 
-            - name: Setup Pages
-              uses: actions/configure-pages@v5
+const MAX_DIRECT_MB = 0;
 
-            - name: Build with Jekyll
-              uses: actions/jekyll-build-pages@v1
-              with:
-                  source: ./
-                  destination: ./_site
+async function isUnderMaintenance() {
+    try {
+        const { data, error } = await supabase
+            .from("bot_config")
+            .select("value")
+            .eq("key", "maintenance")
+            .single();
+        if (error || !data) return false;
+        return data.value === "true";
+    } catch {
+        return false;
+    }
+}
 
-            - name: Upload artifact
-              uses: actions/upload-pages-artifact@v3
+async function setMaintenance(value) {
+    try {
+        await supabase
+            .from("bot_config")
+            .update({ value: value ? "true" : "false" })
+            .eq("key", "maintenance");
+    } catch {}
+}
 
-    deploy-jekyll:
-        needs: build-jekyll
-        if: github.event_name != 'repository_dispatch'
-        runs-on: ubuntu-latest
-        environment:
-            name: github-pages
-            url: ${{ steps.deployment.outputs.page_url }}
-        concurrency:
-            group: pages
-            cancel-in-progress: false
-        steps:
-            - name: Deploy to GitHub Pages
-              id: deployment
-              uses: actions/deploy-pages@v4
+bot.use(async (ctx, next) => {
+    const text = ctx.message?.text;
+    if (text && (text.startsWith("/revive") || text.startsWith("/shutdown") || text.startsWith("/restart"))) {
+        return next();
+    }
+    const maintenance = await isUnderMaintenance();
+    if (maintenance) return;
+    return next();
+});
 
-    compress:
-        if: github.event_name == 'repository_dispatch' && github.event.action == 'compress-video'
-        runs-on: ubuntu-latest
-        steps:
-            - name: Install ffmpeg
-              run: sudo apt-get update && sudo apt-get install -y ffmpeg
+bot.command("shutdown", async (ctx) => {
+    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
+    await setMaintenance(true);
+    return ctx.reply("Bot is now in maintenance mode.");
+});
 
-            - name: Download original video
-              run: |
-                  mkdir -p videos
-                  wget -O "videos/original.mp4" "${{ github.event.client_payload.video_url }}"
+bot.command("revive", async (ctx) => {
+    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
+    await setMaintenance(false);
+    return ctx.reply("Bot is back online.");
+});
 
-            - name: Compress video
-              run: |
-                  ffmpeg -y -i videos/original.mp4 \
-                    -vf "scale='min(1280,iw)':'min(720,ih)':force_original_aspect_ratio=decrease,fps=60" \
-                    -c:v libx264 \
-                    -crf 28 \
-                    -preset medium \
-                    -c:a aac \
-                    -b:a 128k \
-                    -ar 48000 \
-                    -movflags faststart \
-                    videos/compressed.mp4
+bot.command("restart", async (ctx) => {
+    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
+    if (!process.env.VERCEL_DEPLOY_HOOK) {
+        return ctx.reply("Deploy hook not configured.");
+    }
+    await fetch(process.env.VERCEL_DEPLOY_HOOK, { method: "POST" });
+    return ctx.reply("Redeploying…");
+});
 
-            - name: Upload result to Supabase
-              run: |
-                  curl -X POST \
-                    "https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/storage/v1/object/videos/compressed_${{ github.event.client_payload.original_name }}" \
-                    -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-                    -F "file=@videos/compressed.mp4"
+bot.command("start", async (ctx) => {
+    const user = ctx.from;
+    await supabase.from("users").upsert({
+        telegram_id: user.id,
+        first_name: user.first_name,
+        username: user.username,
+        language: user.language_code,
+    });
+    return ctx.reply(`Hey ${user.first_name}! I'm alive and I remember you.`);
+});
 
-            - name: Send compressed video to Telegram
-              run: |
-                  PUBLIC_URL="https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/storage/v1/object/public/videos/compressed_${{ github.event.client_payload.original_name }}"
-                  curl -X POST "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/sendVideo" \
-                    -d "chat_id=${{ github.event.client_payload.chat_id }}" \
-                    -d "video=$PUBLIC_URL" \
-                    -d "caption=Here's your compressed video."
+bot.command("ping", (ctx) => ctx.reply("pong"));
 
-    mirror:
-        if: github.event_name == 'repository_dispatch' && github.event.action == 'mirror'
-        runs-on: ubuntu-latest
-        name: ${{ github.event.client_payload.job_label || 'mirror' }}
-        env:
-            KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
-        steps:
-            - name: Install rclone
-              run: sudo apt-get update && sudo apt-get install -y rclone
+bot.on(":pinned_message", async (ctx) => {
+    try {
+        await ctx.deleteMessage();
+    } catch {}
+});
 
-            - name: Configure rclone
-              run: |
-                  export TOKEN='${{ secrets.GDRIVE_TOKEN }}'
-                  mkdir -p ~/.config/rclone
-                  cat > ~/.config/rclone/rclone.conf << EOF
-                  [mirror_drive]
-                  type = drive
-                  scope = drive
-                  client_id = ${{ secrets.GDRIVE_CLIENT_ID }}
-                  client_secret = ${{ secrets.GDRIVE_CLIENT_SECRET }}
-                  token = $TOKEN
-                  root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
-                  EOF
+bot.on(":new_chat_members", async (ctx) => {
+    try {
+        await ctx.deleteMessage();
+    } catch {}
+});
 
-            - name: Download file
-              run: |
-                  URL="${{ github.event.client_payload.download_url }}"
-                  mkdir -p downloads
-                  wget --content-disposition -P downloads "$URL" || \
-                  curl -L -o "downloads/file" "$URL"
+bot.on(":left_chat_member", async (ctx) => {
+    try {
+        await ctx.deleteMessage();
+    } catch {}
+});
 
-            - name: Rename to original filename if provided
-              run: |
-                  FILENAME="${{ github.event.client_payload.filename }}"
-                  if [ -n "$FILENAME" ]; then
-                      cd downloads
-                      OLD_FILE=$(ls -1 | head -1)
-                      if [ -f "$OLD_FILE" ] && [ "$OLD_FILE" != "$FILENAME" ]; then
-                          mv "$OLD_FILE" "$FILENAME"
-                      fi
-                  fi
+bot.command("mirror", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+    const text = ctx.message.text;
+    const parts = text.split(" ");
 
-            - name: Upload and get link
-              run: |
-                  cd downloads
-                  rm -f cookies.txt
-                  FILE=$(ls -1 | head -1)
-                  if [ -z "$FILE" ]; then
-                      echo "No file found to upload"
-                      exit 1
-                  fi
-                  rclone copy "$FILE" mirror_drive: -P
-                  LINK=$(rclone link "mirror_drive:$FILE")
-                  echo "DRIVE_LINK=$LINK" >> $GITHUB_ENV
+    let url = "";
+    let originalFilename = null;
 
-            - name: Edit Mirroring message
-              run: |
-                  LINK="${{ env.DRIVE_LINK }}"
-                  if [ -z "$LINK" ]; then
-                    LINK="https://drive.google.com/drive/folders/${{ secrets.GDRIVE_FOLDER_ID }}"
-                  fi
-                  curl -X POST "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/editMessageText" \
-                    -d "chat_id=${{ github.event.client_payload.chat_id }}" \
-                    -d "message_id=${{ github.event.client_payload.message_id }}" \
-                    -d "text=Mirror completed: $LINK"
+    if (parts.length >= 2) {
+        url = parts[1];
+    } else if (ctx.message.reply_to_message) {
+        const reply = ctx.message.reply_to_message;
+        let fileId = null;
+
+        if (reply.document) {
+            fileId = reply.document.file_id;
+            originalFilename = reply.document.file_name;
+        } else if (reply.video) {
+            fileId = reply.video.file_id;
+            originalFilename = reply.video.file_name;
+        } else if (reply.audio) {
+            fileId = reply.audio.file_id;
+            originalFilename = reply.audio.file_name;
+        } else if (reply.photo) {
+            const largest = reply.photo[reply.photo.length - 1];
+            fileId = largest.file_id;
+            originalFilename = `photo_${fileId}.jpg`;
+        } else if (reply.voice) {
+            fileId = reply.voice.file_id;
+            originalFilename = `voice_${fileId}.ogg`;
+        } else if (reply.video_note) {
+            fileId = reply.video_note.file_id;
+            originalFilename = `video_note_${fileId}.mp4`;
+        } else if (reply.sticker) {
+            fileId = reply.sticker.file_id;
+            originalFilename = `sticker_${fileId}.webp`;
+        }
+
+        if (fileId) {
+            try {
+                const file = await ctx.api.getFile(fileId);
+                if (file.file_path) {
+                    url = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+                }
+            } catch (e) {
+                if (e.error_code === 400 && e.description && e.description.includes("file is too big")) {
+                    return ctx.reply("This file is too large to be mirrored via Telegram.");
+                }
+                return ctx.reply("Failed to get file info.");
+            }
+        }
+    }
+
+    if (!url || !url.startsWith("http")) {
+        return ctx.reply("Usage: /mirror <url> or reply to a file with /mirror");
+    }
+
+    const sentMsg = await ctx.reply("Mirroring…");
+
+    let jobLabel = "mirror";
+    if (originalFilename) {
+        jobLabel = originalFilename.replace(/\.[^/.]+$/, "");
+        if (jobLabel.length > 50) jobLabel = jobLabel.substring(0, 50);
+    }
+
+    const dispatchBody = {
+        event_type: "mirror",
+        client_payload: {
+            chat_id: ctx.chat.id,
+            message_id: sentMsg.message_id,
+            download_url: url,
+            filename: originalFilename || "",
+            job_label: jobLabel,
+        },
+    };
+
+    try {
+        const res = await fetch(
+            `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `token ${process.env.GITHUB_PAT}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(dispatchBody),
+            }
+        );
+        if (!res.ok) {
+            const err = await res.text();
+            return ctx.reply("Failed to start mirror: " + err);
+        }
+    } catch (e) {
+        return ctx.reply("Error: " + e.message);
+    }
+});
+
+bot.command("imagesearch", async (ctx) => {
+    const reply = ctx.message?.reply_to_message;
+    if (!reply || (!reply.photo && !reply.sticker)) {
+        return ctx.reply("Reply to a photo or sticker with /imagesearch to search it.");
+    }
+
+    let fileId, fileExt, contentType;
+
+    if (reply.photo) {
+        const photos = reply.photo;
+        fileId = photos[photos.length - 1].file_id;
+        fileExt = "jpg";
+        contentType = "image/jpeg";
+    } else {
+        fileId = reply.sticker.file_id;
+        fileExt = "webp";
+        contentType = "image/webp";
+    }
+
+    const file = await ctx.api.getFile(fileId);
+    const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+
+    const response = await fetch(fileUrl);
+    const buffer = await response.arrayBuffer();
+    const fileName = `${Date.now()}.${fileExt}`;
+
+    const { error } = await supabase.storage
+        .from("images")
+        .upload(fileName, buffer, {
+            contentType: contentType,
+            upsert: true,
+        });
+
+    if (error) return ctx.reply("Failed to upload image.");
+
+    const { data: publicUrlData } = supabase.storage
+        .from("images")
+        .getPublicUrl(fileName);
+    const imageUrl = publicUrlData.publicUrl;
+    const encodedUrl = encodeURIComponent(imageUrl);
+
+    const googleLensUrl = `https://lens.google.com/uploadbyurl?url=${encodedUrl}`;
+    const yandexUrl = `https://yandex.com/images/search?rpt=imageview&url=${encodedUrl}`;
+
+    return ctx.reply("🔍 Search this image:", {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "Google Lens", url: googleLensUrl }],
+                [{ text: "Yandex", url: yandexUrl }],
+            ],
+        },
+    });
+});
+
+bot.command("videoreduce", async (ctx) => {
+    const reply = ctx.message?.reply_to_message;
+    if (!reply || !reply.video) {
+        return ctx.reply("Reply to a video with /videoreduce to compress it.");
+    }
+
+    try {
+        const video = reply.video;
+        const fileId = video.file_id;
+        const fileSize = video.file_size || 0;
+        const sizeMB = fileSize / (1024 * 1024);
+
+        if (sizeMB > MAX_DIRECT_MB) {
+            await ctx.reply("Queuing your video…");
+            const file = await ctx.api.getFile(fileId);
+            const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+            const response = await fetch(fileUrl);
+            const buffer = await response.arrayBuffer();
+            const fileName = `raw_${Date.now()}.mp4`;
+
+            const { error } = await supabase.storage
+                .from("videos")
+                .upload(fileName, buffer, {
+                    contentType: "video/mp4",
+                    upsert: true,
+                });
+
+            if (error) return ctx.reply("Failed to queue video.");
+
+            const { data: publicUrlData } = supabase.storage
+                .from("videos")
+                .getPublicUrl(fileName);
+            const publicUrl = publicUrlData.publicUrl;
+
+            const dispatchBody = {
+                event_type: "compress-video",
+                client_payload: {
+                    chat_id: ctx.chat.id,
+                    video_url: publicUrl,
+                    original_name: fileName,
+                },
+            };
+
+            await fetch(
+                `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `token ${process.env.GITHUB_PAT}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(dispatchBody),
+                }
+            );
+
+            return ctx.reply("I’ll send the compressed video here when it’s ready.");
+        }
+
+        if (!ffmpegPath) return ctx.reply("Video compression unavailable.");
+
+        const file = await ctx.api.getFile(fileId);
+        const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+
+        const inputPath = `/tmp/input_${Date.now()}.mp4`;
+        const outputPath = `/tmp/output_${Date.now()}.mp4`;
+
+        const res = await fetch(fileUrl);
+        const writeStream = createWriteStream(inputPath);
+        await pipeline(res.body, writeStream);
+
+        await execFileAsync(ffmpegPath, [
+            "-y",
+            "-i", inputPath,
+            "-s", "1280x720",
+            "-c:v", "libx264",
+            "-crf", "28",
+            "-filter:v", "fps=fps=60",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-ar", "48000",
+            "-preset", "ultrafast",
+            "-movflags", "faststart",
+            outputPath
+        ]);
+
+        const outputSize = statSync(outputPath).size;
+        if (outputSize < 100) {
+            unlinkSync(inputPath);
+            unlinkSync(outputPath);
+            return ctx.reply("Compression failed. Try a different video.");
+        }
+
+        const { error } = await supabase.storage
+            .from("images")
+            .upload(`compressed_${Date.now()}.mp4`, outputPath, {
+                contentType: "video/mp4",
+                upsert: true,
+            });
+
+        unlinkSync(inputPath);
+        unlinkSync(outputPath);
+
+        if (error) return ctx.reply("Failed to upload compressed video.");
+
+        const { data: publicUrlData } = supabase.storage
+            .from("images")
+            .getPublicUrl(`compressed_${Date.now()}.mp4`);
+
+        return ctx.replyWithVideo(publicUrlData.publicUrl, {
+            caption: "Here’s your compressed video.",
+        });
+    } catch {
+        return ctx.reply("Video processing error.");
+    }
+});
+
+bot.on("message:text", (ctx) => {
+    if (ctx.message.text.startsWith("/")) {
+        return ctx.reply("No command for: " + ctx.message.text);
+    }
+});
+
+export async function POST(request) {
+    const body = await request.json();
+    await bot.handleUpdate(body);
+    return new Response("ok");
+}
