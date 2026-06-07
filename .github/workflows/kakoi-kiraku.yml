@@ -85,6 +85,7 @@ jobs:
   mirror:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'mirror'
     runs-on: ubuntu-latest
+    name: ${{ github.event.client_payload.job_label || 'mirror' }}
     env:
       KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
     steps:
@@ -131,14 +132,15 @@ jobs:
           rclone copy "$FILE" mirror_drive: -P
           LINK=$(rclone link "mirror_drive:$FILE")
           echo "DRIVE_LINK=$LINK" >> $GITHUB_ENV
-      - name: Notify Telegram
+      - name: Edit Mirroring message
         run: |
           LINK="${{ env.DRIVE_LINK }}"
           if [ -z "$LINK" ]; then
             LINK="https://drive.google.com/drive/folders/${{ secrets.GDRIVE_FOLDER_ID }}"
           fi
-          curl -X POST "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/sendMessage" \
+          curl -X POST "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/editMessageText" \
             -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+            -d "message_id=${{ github.event.client_payload.message_id }}" \
             -d "text=Mirror completed: $LINK"
 
   cleanup-history:
