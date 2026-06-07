@@ -18,6 +18,13 @@ await bot.init();
 
 const MAX_DIRECT_MB = 0;
 
+const mirrorJobs = new Map();
+const pendingRenames = new Map();
+
+function pendingKey(chatId, userId) {
+    return `${chatId}:${userId}`;
+}
+
 async function isUnderMaintenance() {
     try {
         const { data, error } = await supabase
@@ -160,13 +167,76 @@ bot.command("mirror", async (ctx) => {
         return ctx.reply("Usage: /mirror <url> or reply to a file with /mirror");
     }
 
+    const jobKey = Math.random().toString(36).slice(2, 10);
+    mirrorJobs.set(jobKey, {
+        url,
+        originalFilename,
+        promptMessageId: null,
+        chatId: ctx.chat.id,
+        userId: ctx.from.id,
+    });
+
+    const keyboard = {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: "Yes", callback_data: `rename_yes_${jobKey}` },
+                    { text: "No", callback_data: `rename_no_${jobKey}` },
+                ],
+            ],
+        },
+    };
+
+    const promptMsg = await ctx.reply("Do you want to rename the file before mirroring?", keyboard);
+    mirrorJobs.get(jobKey).promptMessageId = promptMsg.message_id;
+});
+
+bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
+    const choice = ctx.match[1];
+    const jobKey = ctx.match[2];
+    const job = mirrorJobs.get(jobKey);
+
+    if (!job || job.chatId !== ctx.chat.id || job.userId !== ctx.from.id) {
+        await ctx.answerCallbackQuery("This action has expired. Please /mirror again.");
+        return;
+    }
+
+    await ctx.answerCallbackQuery();
+
+    if (choice === "no") {
+        mirrorJobs.delete(jobKey);
+        await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
+        await startMirror(ctx, job.url, job.originalFilename || "file");
+    } else {
+        await ctx.editMessageText("Send the new file name:");
+        pendingRenames.set(pendingKey(ctx.chat.id, ctx.from.id), jobKey);
+    }
+});
+
+bot.on("message:text", async (ctx, next) => {
+    const pk = pendingKey(ctx.chat.id, ctx.from.id);
+    const jobKey = pendingRenames.get(pk);
+    if (jobKey) {
+        pendingRenames.delete(pk);
+        const job = mirrorJobs.get(jobKey);
+        if (!job) return next();
+        mirrorJobs.delete(jobKey);
+        const newName = ctx.message.text.trim();
+        await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
+        await startMirror(ctx, job.url, newName);
+        return;
+    }
+    if (ctx.message.text.startsWith("/")) {
+        return ctx.reply("No command for: " + ctx.message.text);
+    }
+    return next();
+});
+
+async function startMirror(ctx, url, filename) {
     const sentMsg = await ctx.reply("Mirroring…");
 
-    let jobLabel = "mirror";
-    if (originalFilename) {
-        jobLabel = originalFilename.replace(/\.[^/.]+$/, "");
-        if (jobLabel.length > 50) jobLabel = jobLabel.substring(0, 50);
-    }
+    let jobLabel = filename.replace(/\.[^/.]+$/, "");
+    if (jobLabel.length > 50) jobLabel = jobLabel.substring(0, 50);
 
     const dispatchBody = {
         event_type: "mirror",
@@ -174,7 +244,7 @@ bot.command("mirror", async (ctx) => {
             chat_id: ctx.chat.id,
             message_id: sentMsg.message_id,
             download_url: url,
-            filename: originalFilename || "",
+            filename: filename,
             job_label: jobLabel,
         },
     };
@@ -193,12 +263,12 @@ bot.command("mirror", async (ctx) => {
         );
         if (!res.ok) {
             const err = await res.text();
-            return ctx.reply("Failed to start mirror: " + err);
+            await ctx.api.editMessageText(ctx.chat.id, sentMsg.message_id, "Mirror failed: " + err);
         }
     } catch (e) {
-        return ctx.reply("Error: " + e.message);
+        await ctx.api.editMessageText(ctx.chat.id, sentMsg.message_id, "Mirror error: " + e.message);
     }
-});
+}
 
 bot.command("imagesearch", async (ctx) => {
     const reply = ctx.message?.reply_to_message;
@@ -367,12 +437,6 @@ bot.command("videoreduce", async (ctx) => {
         });
     } catch {
         return ctx.reply("Video processing error.");
-    }
-});
-
-bot.on("message:text", (ctx) => {
-    if (ctx.message.text.startsWith("/")) {
-        return ctx.reply("No command for: " + ctx.message.text);
     }
 });
 
