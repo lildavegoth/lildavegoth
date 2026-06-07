@@ -236,7 +236,22 @@ bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
     if (choice === "no") {
         mirrorJobs.delete(jobKey);
         await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
-        await startMirror(ctx, job.url, job.originalFilename || "file");
+        let filename = job.originalFilename;
+        if (!filename) {
+            try {
+                const urlPath = new URL(job.url).pathname;
+                const segments = urlPath.split('/');
+                const lastSegment = segments[segments.length - 1];
+                if (lastSegment && lastSegment.includes('.')) {
+                    filename = decodeURIComponent(lastSegment);
+                } else {
+                    filename = "file";
+                }
+            } catch {
+                filename = "file";
+            }
+        }
+        await startMirror(ctx, job.url, filename);
     } else {
         await ctx.editMessageText("Send the new file name:");
         pendingRenames.set(pendingKey(ctx.chat.id, ctx.from.id), jobKey);
