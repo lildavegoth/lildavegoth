@@ -343,7 +343,11 @@ bot.command("mirror", async (ctx) => {
     }
 });
 
-bot.on("message:text", (ctx) => ctx.reply("No commands for: " + ctx.message.text));
+bot.on("message:text", (ctx) => {
+    if (ctx.message.text.startsWith("/")) {
+        return ctx.reply("No command for: " + ctx.message.text);
+    }
+});
 
 export async function POST(request) {
     const body = await request.json();
