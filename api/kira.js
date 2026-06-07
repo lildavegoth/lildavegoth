@@ -110,6 +110,36 @@ bot.on(":left_chat_member", async (ctx) => {
     } catch {}
 });
 
+bot.command("cancel", async (ctx) => {
+    const pk = pendingKey(ctx.chat.id, ctx.from.id);
+    const renameJobKey = pendingRenames.get(pk);
+    let cancelled = false;
+
+    if (renameJobKey) {
+        pendingRenames.delete(pk);
+        const job = mirrorJobs.get(renameJobKey);
+        if (job) {
+            mirrorJobs.delete(renameJobKey);
+            try { await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId); } catch {}
+        }
+        cancelled = true;
+    }
+
+    for (const [jobKey, job] of mirrorJobs) {
+        if (job.chatId === ctx.chat.id && job.userId === ctx.from.id) {
+            mirrorJobs.delete(jobKey);
+            try { await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId); } catch {}
+            cancelled = true;
+            break;
+        }
+    }
+
+    if (cancelled) {
+        return ctx.reply("Mirror operation cancelled.");
+    }
+    return ctx.reply("No active mirror operation to cancel.");
+});
+
 bot.command("mirror", async (ctx) => {
     if (ctx.chat.type !== "private") return;
     const text = ctx.message.text;
@@ -213,23 +243,23 @@ bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
     }
 });
 
-bot.on("message:text", async (ctx, next) => {
+bot.on("message:text", async (ctx) => {
     const pk = pendingKey(ctx.chat.id, ctx.from.id);
     const jobKey = pendingRenames.get(pk);
     if (jobKey) {
         pendingRenames.delete(pk);
         const job = mirrorJobs.get(jobKey);
-        if (!job) return next();
-        mirrorJobs.delete(jobKey);
-        const newName = ctx.message.text.trim();
-        await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
-        await startMirror(ctx, job.url, newName);
-        return;
+        if (job) {
+            mirrorJobs.delete(jobKey);
+            const newName = ctx.message.text.trim();
+            await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
+            await startMirror(ctx, job.url, newName);
+            return;
+        }
     }
     if (ctx.message.text.startsWith("/")) {
         return ctx.reply("No command for: " + ctx.message.text);
     }
-    return next();
 });
 
 async function startMirror(ctx, url, filename) {
