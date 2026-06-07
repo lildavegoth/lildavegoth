@@ -121,27 +121,55 @@ jobs:
               fi
           fi
       - name: Upload and get link
+        id: upload
         run: |
           cd downloads
           rm -f cookies.txt
           FILE=$(ls -1 | head -1)
           if [ -z "$FILE" ]; then
-              echo "No file found to upload"
-              exit 1
+            echo "UPLOAD_SUCCESS=false" >> $GITHUB_ENV
+            echo "UPLOAD_ERROR=No file found to upload" >> $GITHUB_ENV
+            exit 1
           fi
-          rclone copy "$FILE" mirror_drive: -P
-          LINK=$(rclone link "mirror_drive:$FILE")
-          echo "DRIVE_LINK=$LINK" >> $GITHUB_ENV
+          if rclone copy "$FILE" mirror_drive: -P 2> upload_error.log; then
+            LINK=$(rclone link "mirror_drive:$FILE")
+            echo "UPLOAD_SUCCESS=true" >> $GITHUB_ENV
+            echo "DRIVE_LINK=$LINK" >> $GITHUB_ENV
+          else
+            ERROR_MSG=$(cat upload_error.log)
+            echo "UPLOAD_SUCCESS=false" >> $GITHUB_ENV
+            echo "UPLOAD_ERROR=$ERROR_MSG" >> $GITHUB_ENV
+          fi
       - name: Edit Mirroring message
         run: |
-          LINK="${{ env.DRIVE_LINK }}"
-          if [ -z "$LINK" ]; then
-            LINK="https://drive.google.com/drive/folders/${{ secrets.GDRIVE_FOLDER_ID }}"
+          if [ "$UPLOAD_SUCCESS" = "true" ]; then
+            LINK="$DRIVE_LINK"
+            if [ -z "$LINK" ]; then
+              LINK="https://drive.google.com/drive/folders/${{ secrets.GDRIVE_FOLDER_ID }}"
+            fi
+            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+              -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+              -d "message_id=${{ github.event.client_payload.message_id }}" \
+              -d "text=Mirror completed: $LINK"
+          else
+            RAW_ERROR="$UPLOAD_ERROR"
+            # Check if it's a storage quota exceeded error
+            if echo "$RAW_ERROR" | grep -qi "storage quota exceeded"; then
+              MSG="Mirror failed: Google Drive storage quota exceeded. Please free up space."
+            else
+              # Truncate error to avoid message too long
+              TRUNCATED=$(echo "$RAW_ERROR" | head -c 800)
+              MSG="Mirror failed: $TRUNCATED"
+            fi
+            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+              -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+              -d "message_id=${{ github.event.client_payload.message_id }}" \
+              -d "text=$MSG"
           fi
-          curl -X POST "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/editMessageText" \
-            -d "chat_id=${{ github.event.client_payload.chat_id }}" \
-            -d "message_id=${{ github.event.client_payload.message_id }}" \
-            -d "text=Mirror completed: $LINK"
+        env:
+          UPLOAD_SUCCESS: ${{ env.UPLOAD_SUCCESS }}
+          DRIVE_LINK: ${{ env.DRIVE_LINK }}
+          UPLOAD_ERROR: ${{ env.UPLOAD_ERROR }}
 
   cleanup-history:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
