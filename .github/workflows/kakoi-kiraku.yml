@@ -102,8 +102,11 @@ jobs:
           sudo apt-get install -f -y
 
       - name: Configure rclone remotes
+        env:
+          FILEN_PASSWORD_PLAIN: ${{ secrets.FILEN_PASSWORD }}
         run: |
           mkdir -p ~/.config/rclone
+          OBSCURED=$(rclone obscure "$FILEN_PASSWORD_PLAIN")
           cat > ~/.config/rclone/rclone.conf << EOF
           [mirror_drive]
           type = drive
@@ -116,7 +119,7 @@ jobs:
           [mirror_filen]
           type = filen
           email = ${{ secrets.FILEN_EMAIL }}
-          password = ${{ secrets.FILEN_PASSWORD }}
+          password = $OBSCURED
           EOF
 
       - name: Download file
