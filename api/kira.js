@@ -94,24 +94,6 @@ bot.command("start", async (ctx) => {
 
 bot.command("ping", (ctx) => ctx.reply("pong"));
 
-bot.on(":pinned_message", async (ctx) => {
-    try {
-        await ctx.deleteMessage();
-    } catch {}
-});
-
-bot.on(":new_chat_members", async (ctx) => {
-    try {
-        await ctx.deleteMessage();
-    } catch {}
-});
-
-bot.on(":left_chat_member", async (ctx) => {
-    try {
-        await ctx.deleteMessage();
-    } catch {}
-});
-
 bot.command("cancel", async (ctx) => {
     const pk = pendingKey(ctx.chat.id, ctx.from.id);
     const renameJobKey = pendingRenames.get(pk);
@@ -257,25 +239,6 @@ bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
     } else {
         await ctx.editMessageText("Send the new file name:");
         pendingRenames.set(pendingKey(ctx.chat.id, ctx.from.id), jobKey);
-    }
-});
-
-bot.on("message:text", async (ctx) => {
-    const pk = pendingKey(ctx.chat.id, ctx.from.id);
-    const jobKey = pendingRenames.get(pk);
-    if (jobKey) {
-        pendingRenames.delete(pk);
-        const job = mirrorJobs.get(jobKey);
-        if (job) {
-            mirrorJobs.delete(jobKey);
-            const newName = ctx.message.text.trim();
-            await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
-            await startMirror(ctx, job.url, newName);
-            return;
-        }
-    }
-    if (ctx.message.text.startsWith("/")) {
-        return ctx.reply("No command for: " + ctx.message.text);
     }
 });
 
@@ -523,6 +486,43 @@ bot.command("videoreduce", async (ctx) => {
         });
     } catch {
         return ctx.reply("Video processing error.");
+    }
+});
+
+bot.on(":pinned_message", async (ctx) => {
+    try {
+        await ctx.deleteMessage();
+    } catch {}
+});
+
+bot.on(":new_chat_members", async (ctx) => {
+    try {
+        await ctx.deleteMessage();
+    } catch {}
+});
+
+bot.on(":left_chat_member", async (ctx) => {
+    try {
+        await ctx.deleteMessage();
+    } catch {}
+});
+
+bot.on("message:text", async (ctx) => {
+    const pk = pendingKey(ctx.chat.id, ctx.from.id);
+    const jobKey = pendingRenames.get(pk);
+    if (jobKey) {
+        pendingRenames.delete(pk);
+        const job = mirrorJobs.get(jobKey);
+        if (job) {
+            mirrorJobs.delete(jobKey);
+            const newName = ctx.message.text.trim();
+            await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
+            await startMirror(ctx, job.url, newName);
+            return;
+        }
+    }
+    if (ctx.message.text.startsWith("/")) {
+        return ctx.reply("No command for: " + ctx.message.text);
     }
 });
 
