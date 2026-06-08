@@ -281,17 +281,13 @@ async function startMirror(ctx, url, filename) {
 }
 
 bot.command("qr", async (ctx) => {
-    let targetPhoto;
-
-    if (ctx.message.reply_to_message && ctx.message.reply_to_message.photo) {
-        targetPhoto = ctx.message.reply_to_message.photo;
-    } else if (ctx.message.photo) {
-        targetPhoto = ctx.message.photo;
-    } else {
-        return ctx.reply("Reply to a QR code image with /qr, or send a photo with /qr caption.");
+    const reply = ctx.message?.reply_to_message;
+    if (!reply || !reply.photo) {
+        return ctx.reply("Reply to a photo with /qr to scan it.");
     }
 
-    const fileId = targetPhoto[targetPhoto.length - 1].file_id;
+    const photos = reply.photo;
+    const fileId = photos[photos.length - 1].file_id;
     try {
         const file = await ctx.api.getFile(fileId);
         const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
