@@ -370,7 +370,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip
-          pip install gdown
 
       - name: Download Real-ESRGAN
         run: |
@@ -387,23 +386,33 @@ jobs:
           wget -O "images/input.jpg" "${{ github.event.client_payload.image_url }}"
 
       - name: Restore image
+        id: restore
         run: |
           ./Real-ESRGAN/realesrgan-ncnn-vulkan \
             -i images/input.jpg \
             -o images/restored.jpg \
             -s 4 \
             -n realesrgan-x4plus
+        continue-on-error: true
 
-      - name: Upload restored image and send
+      - name: Send result or error
         run: |
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
-          curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendPhoto" \
-            -F "chat_id=$CHAT_ID" \
-            -F "photo=@images/restored.jpg" \
-            -F "caption=Restored image"
-          curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
-            -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
+
+          if [ -f images/restored.jpg ]; then
+            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
+              -F "chat_id=$CHAT_ID" \
+              -F "document=@images/restored.jpg" \
+              -F "caption=Restored image"
+            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+              -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
+          else
+            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+              -d "chat_id=$CHAT_ID" \
+              -d "message_id=$PROGRESS_MSG_ID" \
+              -d "text=Restoration failed. The image may be too large or unsupported."
+          fi
 
   enhance-image:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'enhance-image'
@@ -420,21 +429,31 @@ jobs:
           wget -O "images/input.jpg" "${{ github.event.client_payload.image_url }}"
 
       - name: Enhance image
+        id: enhance
         run: |
           ffmpeg -y -i images/input.jpg \
             -vf "unsharp=5:5:1.0:5:5:0.0,eq=contrast=1.1:brightness=0.05" \
             images/enhanced.jpg
+        continue-on-error: true
 
-      - name: Send enhanced image
+      - name: Send result or error
         run: |
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
-          curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendPhoto" \
-            -F "chat_id=$CHAT_ID" \
-            -F "photo=@images/enhanced.jpg" \
-            -F "caption=Enhanced image"
-          curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
-            -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
+
+          if [ -f images/enhanced.jpg ]; then
+            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
+              -F "chat_id=$CHAT_ID" \
+              -F "document=@images/enhanced.jpg" \
+              -F "caption=Enhanced image"
+            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+              -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
+          else
+            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+              -d "chat_id=$CHAT_ID" \
+              -d "message_id=$PROGRESS_MSG_ID" \
+              -d "text=Enhancement failed. The image may be too large or unsupported."
+          fi
 
   cleanup-history:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
