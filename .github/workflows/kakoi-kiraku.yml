@@ -204,7 +204,7 @@ jobs:
             exit 1
           fi
 
-          # Build a media group request
+          # Build media JSON array
           MEDIA="["
           for i in "${!FRAMES[@]}"; do
             if [ $i -gt 0 ]; then MEDIA+=","; fi
@@ -212,17 +212,16 @@ jobs:
           done
           MEDIA+="]"
 
-          # Build file attachments
-          ATTACH=""
+          # Build curl arguments in an array (safe quoting)
+          CURL_ARGS=(-X POST "https://api.telegram.org/bot${KIRA_TOKEN}/sendMediaGroup")
+          CURL_ARGS+=(-F "chat_id=${{ github.event.client_payload.chat_id }}")
+          CURL_ARGS+=(-F "media=${MEDIA}")
+
           for i in "${!FRAMES[@]}"; do
-            ATTACH+=" -F \"frame$i=@${FRAMES[$i]}\""
+            CURL_ARGS+=(-F "frame${i}=@${FRAMES[$i]}")
           done
 
-          # Send using curl
-          eval "curl -X POST \"https://api.telegram.org/bot$KIRA_TOKEN/sendMediaGroup\" \
-            -F \"chat_id=${{ github.event.client_payload.chat_id }}\" \
-            -F \"media=$MEDIA\" \
-            $ATTACH"
+          curl "${CURL_ARGS[@]}"
 
   cleanup-history:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
