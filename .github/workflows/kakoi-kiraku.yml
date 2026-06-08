@@ -259,33 +259,18 @@ jobs:
           TITLE=$(echo "$INFO" | jq -r '.title // "Unknown"')
           DURATION=$(echo "$INFO" | jq -r '.duration_string // "?"')
 
-          FORMATS=$(echo "$INFO" | jq -r '
+          # Build the correct inline keyboard JSON using jq
+          KEYBOARD=$(echo "$INFO" | jq -r '
             [.formats[] |
               select(.height != null and .filesize != null) |
               {
-                fmt: .format_id,
-                res: "\(.height)p",
-                size_mb: ((.filesize / 1048576) | round),
-                ext: .ext
+                text: "\(.height)p (\((.filesize / 1048576) | round)MB .\(.ext))",
+                callback_data: "dl_fmt_\(.format_id)_" + $ENV.URL
               }
-            ] | unique_by(.res) | sort_by(.height)
-          ')
+            ] | unique_by(.text) | sort_by(.text) | [.[]]
+          ' --arg URL "$URL")
 
-          KEYBOARD="inline_keyboard: ["
-          first=true
-          while IFS= read -r row; do
-            FMT_ID=$(echo "$row" | jq -r '.fmt')
-            RES=$(echo "$row" | jq -r '.res')
-            SIZE=$(echo "$row" | jq -r '.size_mb')
-            EXT=$(echo "$row" | jq -r '.ext')
-            LABEL="${RES} (${SIZE}MB .${EXT})"
-            CALLBACK="dl_fmt_${FMT_ID}_${URL}"
-            if $first; then first=false; else KEYBOARD+=","; fi
-            KEYBOARD+="[{text: \"$LABEL\", callback_data: \"$CALLBACK\"}]"
-          done < <(echo "$FORMATS" | jq -c '.[]')
-
-          KEYBOARD+="]"
-          REPLY_MARKUP="{\"inline_keyboard\": $KEYBOARD}"
+          REPLY_MARKUP=$(jq -n --argjson keyboard "$KEYBOARD" '{inline_keyboard: [$keyboard]}')
 
           curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
             -d "chat_id=$CHAT_ID" -d "message_id=$FETCH_MSG_ID"
