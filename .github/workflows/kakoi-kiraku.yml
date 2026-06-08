@@ -97,9 +97,9 @@ jobs:
     steps:
       - name: Install rclone
         run: sudo apt-get update && sudo apt-get install -y rclone
-      - name: Configure rclone
+
+      - name: Configure rclone remotes
         run: |
-          export TOKEN='${{ secrets.GDRIVE_TOKEN }}'
           mkdir -p ~/.config/rclone
           cat > ~/.config/rclone/rclone.conf << EOF
           [mirror_drive]
@@ -107,15 +107,24 @@ jobs:
           scope = drive
           client_id = ${{ secrets.GDRIVE_CLIENT_ID }}
           client_secret = ${{ secrets.GDRIVE_CLIENT_SECRET }}
-          token = $TOKEN
+          token = ${{ secrets.GDRIVE_TOKEN }}
           root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
+
+          [mirror_filen]
+          type = filen
+          email = ${{ secrets.FILEN_EMAIL }}
+          password = ${{ secrets.FILEN_PASSWORD }}
           EOF
+          # Add 2FA if needed (uncomment next line and add secret FILEN_TOTP)
+          # sed -i "s/password = .*/password = ${{ secrets.FILEN_PASSWORD }}\n  totp = ${{ secrets.FILEN_TOTP }}/" ~/.config/rclone/rclone.conf
+
       - name: Download file
         run: |
           URL="${{ github.event.client_payload.download_url }}"
           mkdir -p downloads
           wget --content-disposition -P downloads "$URL" || \
           curl -L -o "downloads/file" "$URL"
+
       - name: Rename to original filename if provided
         run: |
           FILENAME="${{ github.event.client_payload.filename }}"
@@ -126,9 +135,17 @@ jobs:
                   mv "$OLD_FILE" "$FILENAME"
               fi
           fi
+
       - name: Upload and get link
         id: upload
         run: |
+          STORAGE="${{ github.event.client_payload.storage }}"
+          if [ "$STORAGE" = "filen" ]; then
+            REMOTE="mirror_filen"
+          else
+            REMOTE="mirror_drive"
+          fi
+
           cd downloads
           rm -f cookies.txt
           FILE=$(ls -1 | head -1)
@@ -137,8 +154,9 @@ jobs:
             echo "UPLOAD_ERROR=No file found to upload" >> $GITHUB_ENV
             exit 1
           fi
-          if rclone copy "$FILE" mirror_drive: -P 2> upload_error.log; then
-            LINK=$(rclone link "mirror_drive:$FILE")
+
+          if rclone copy "$FILE" "$REMOTE:" -P 2> upload_error.log; then
+            LINK=$(rclone link "$REMOTE:$FILE")
             echo "UPLOAD_SUCCESS=true" >> $GITHUB_ENV
             echo "DRIVE_LINK=$LINK" >> $GITHUB_ENV
           else
@@ -146,12 +164,18 @@ jobs:
             echo "UPLOAD_SUCCESS=false" >> $GITHUB_ENV
             echo "UPLOAD_ERROR=$ERROR_MSG" >> $GITHUB_ENV
           fi
+
       - name: Edit Mirroring message
         run: |
           if [ "$UPLOAD_SUCCESS" = "true" ]; then
             LINK="$DRIVE_LINK"
             if [ -z "$LINK" ]; then
-              LINK="https://drive.google.com/drive/folders/${{ secrets.GDRIVE_FOLDER_ID }}"
+              STORAGE="${{ github.event.client_payload.storage }}"
+              if [ "$STORAGE" = "filen" ]; then
+                LINK="https://drive.filen.io/d/"
+              else
+                LINK="https://drive.google.com/drive/folders/${{ secrets.GDRIVE_FOLDER_ID }}"
+              fi
             fi
             curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
               -d "chat_id=${{ github.event.client_payload.chat_id }}" \
@@ -159,11 +183,9 @@ jobs:
               -d "text=Mirror completed: $LINK"
           else
             RAW_ERROR="$UPLOAD_ERROR"
-            # Check if it's a storage quota exceeded error
             if echo "$RAW_ERROR" | grep -qi "storage quota exceeded"; then
-              MSG="Mirror failed: Google Drive storage quota exceeded. Please free up space."
+              MSG="Mirror failed: Storage quota exceeded. Please free up space."
             else
-              # Truncate error to avoid message too long
               TRUNCATED=$(echo "$RAW_ERROR" | head -c 800)
               MSG="Mirror failed: $TRUNCATED"
             fi
@@ -192,7 +214,6 @@ jobs:
       - name: Extract 10 frames
         run: |
           DURATION=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 capture/input.mp4)
-          # Calculate fps to get exactly 10 frames over the whole video
           FPS=$(echo "scale=6; 10 / $DURATION" | bc)
           ffmpeg -y -i capture/input.mp4 \
             -vf "fps=$FPS,scale=1280:trunc(ow/a/2)*2" \
@@ -206,7 +227,6 @@ jobs:
             echo "No frames extracted"
             exit 1
           fi
-          # Build media JSON array
           MEDIA="["
           for i in "${!FRAMES[@]}"; do
             if [ $i -gt 0 ]; then MEDIA+=","; fi
@@ -214,7 +234,6 @@ jobs:
           done
           MEDIA+="]"
 
-          # Build curl arguments in an array (safe quoting)
           CURL_ARGS=(-X POST "https://api.telegram.org/bot${KIRA_TOKEN}/sendMediaGroup")
           CURL_ARGS+=(-F "chat_id=${{ github.event.client_payload.chat_id }}")
           CURL_ARGS+=(-F "media=${MEDIA}")
