@@ -242,8 +242,10 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install yt-dlp
-        run: pip install yt-dlp
+      - name: Install yt-dlp and ffmpeg
+        run: |
+          pip install yt-dlp
+          sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Fetch media info and send format buttons
         run: |
@@ -258,11 +260,11 @@ jobs:
           DURATION=$(echo "$INFO" | jq -r '.duration_string // "?"')
 
           FORMATS=$(echo "$INFO" | jq -r '
-            [.formats[] | 
+            [.formats[] |
               select(.height != null and .filesize != null) |
               {
                 fmt: .format_id,
-                res: (.height|tostring) + "p",
+                res: "\(.height)p",
                 size_mb: ((.filesize / 1048576) | round),
                 ext: .ext
               }
@@ -304,10 +306,10 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install yt-dlp and rclone
+      - name: Install yt-dlp, ffmpeg and rclone
         run: |
           pip install yt-dlp
-          sudo apt-get update && sudo apt-get install -y rclone
+          sudo apt-get update && sudo apt-get install -y ffmpeg rclone
 
       - name: Configure rclone
         run: |
