@@ -274,30 +274,28 @@ jobs:
           FORMAT_LIST=$(echo "$FORMATS" | jq -r '.[] | "\(.res) (\(.size_mb)MB)"' 2>/dev/null || echo "")
 
           if [ -z "$FORMATS" ] || [ "$FORMATS" == "[]" ]; then
-            KEYBOARD='[{"text":"Best quality","callback_data":"dl_fmt_best_'"$URL"'"}]'
+            KEYBOARD='[[{"text":"Best quality","callback_data":"dl_fmt_best_'"$URL"'"}]]'
             FORMAT_LIST="Best quality available"
           else
             KEYBOARD=$(echo "$FORMATS" | jq -r '
               [.[] | {
                 text: "\(.res) (\(.size_mb)MB)",
                 callback_data: "dl_fmt_\(.format_id)_\($URL)"
-              }] | unique_by(.text) | [.[]]
+              }] | unique_by(.text) |
+              reduce .[] as $item ([]; if length == 0 or (.[-1] | length) == 2 then . + [[$item]] else .[-1] += [$item] end)
             ' --arg URL "$URL")
           fi
 
-          REPLY_MARKUP=$(jq -n --argjson keyboard "$KEYBOARD" '{inline_keyboard: [$keyboard]}')
+          REPLY_MARKUP=$(jq -n --argjson keyboard "$KEYBOARD" '{inline_keyboard: $keyboard}')
 
-          TEXT="Choose format for: $TITLE ($DURATION)"
-          if [ -n "$FORMAT_LIST" ]; then
-            TEXT="$TEXT\n$FORMAT_LIST"
-          fi
+          printf -v TEXT "Choose format for: %s (%s)\n%s" "$TITLE" "$DURATION" "$FORMAT_LIST"
 
           curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
             -d "chat_id=$CHAT_ID" -d "message_id=$FETCH_MSG_ID"
 
           curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendMessage" \
             -d "chat_id=$CHAT_ID" \
-            -d "text=$TEXT" \
+            --data-urlencode "text=$TEXT" \
             -d "reply_markup=$REPLY_MARKUP"
 
   download-media:
