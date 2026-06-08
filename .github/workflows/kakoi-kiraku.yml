@@ -259,13 +259,12 @@ jobs:
           TITLE=$(echo "$INFO" | jq -r '.title // "Unknown"')
           DURATION=$(echo "$INFO" | jq -r '.duration_string // "?"')
 
-          # Build the correct inline keyboard JSON using jq
           KEYBOARD=$(echo "$INFO" | jq -r '
             [.formats[] |
               select(.height != null and .filesize != null) |
               {
                 text: "\(.height)p (\((.filesize / 1048576) | round)MB .\(.ext))",
-                callback_data: "dl_fmt_\(.format_id)_" + $ENV.URL
+                callback_data: "dl_fmt_\(.format_id)_\($URL)"
               }
             ] | unique_by(.text) | sort_by(.text) | [.[]]
           ' --arg URL "$URL")
