@@ -371,44 +371,39 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y wget unzip
 
-      - name: Download Real-ESRGAN
+      - name: Download and run Real-ESRGAN, then send result
         run: |
-          mkdir -p Real-ESRGAN
-          cd Real-ESRGAN
-          wget -O realesrgan-ncnn-vulkan-20220424-ubuntu.zip \
-            "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-ubuntu.zip"
-          unzip realesrgan-ncnn-vulkan-20220424-ubuntu.zip
-          chmod +x realesrgan-ncnn-vulkan
-
-      - name: Download image
-        run: |
-          mkdir -p images
-          wget -O "images/input.jpg" "${{ github.event.client_payload.image_url }}"
-
-      - name: Restore image
-        id: restore
-        run: |
-          ./Real-ESRGAN/realesrgan-ncnn-vulkan \
-            -i images/input.jpg \
-            -o images/restored.jpg \
-            -s 4 \
-            -n realesrgan-x4plus
-        continue-on-error: true
-
-      - name: Send result or error
-        run: |
+          set -e
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
+          IMAGE_URL="${{ github.event.client_payload.image_url }}"
 
-          if [ -f images/restored.jpg ]; then
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
+          # Download Real-ESRGAN
+          mkdir -p Real-ESRGAN
+          cd Real-ESRGAN
+          wget -q -O realesrgan-ncnn-vulkan-20220424-ubuntu.zip \
+            "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-ubuntu.zip"
+          unzip -q realesrgan-ncnn-vulkan-20220424-ubuntu.zip
+          chmod +x realesrgan-ncnn-vulkan
+
+          # Download input image
+          mkdir -p ../images
+          cd ../images
+          wget -q -O input.jpg "$IMAGE_URL"
+
+          # Run restoration
+          ../Real-ESRGAN/realesrgan-ncnn-vulkan -i input.jpg -o restored.jpg -s 4 -n realesrgan-x4plus || true
+
+          # Send result
+          if [ -f restored.jpg ]; then
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
               -F "chat_id=$CHAT_ID" \
-              -F "document=@images/restored.jpg" \
+              -F "document=@restored.jpg" \
               -F "caption=Restored image"
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
               -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
           else
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
               -d "chat_id=$CHAT_ID" \
               -d "message_id=$PROGRESS_MSG_ID" \
               -d "text=Restoration failed. The image may be too large or unsupported."
@@ -423,33 +418,30 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Download image
+      - name: Enhance and send result
         run: |
-          mkdir -p images
-          wget -O "images/input.jpg" "${{ github.event.client_payload.image_url }}"
-
-      - name: Enhance image
-        id: enhance
-        run: |
-          ffmpeg -y -i images/input.jpg \
-            -vf "unsharp=5:5:1.0:5:5:0.0,eq=contrast=1.1:brightness=0.05" \
-            images/enhanced.jpg
-        continue-on-error: true
-
-      - name: Send result or error
-        run: |
+          set -e
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
+          IMAGE_URL="${{ github.event.client_payload.image_url }}"
 
-          if [ -f images/enhanced.jpg ]; then
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
+          mkdir -p images
+          cd images
+          wget -q -O input.jpg "$IMAGE_URL"
+
+          ffmpeg -y -i input.jpg \
+            -vf "unsharp=5:5:1.0:5:5:0.0,eq=contrast=1.1:brightness=0.05" \
+            enhanced.jpg || true
+
+          if [ -f enhanced.jpg ]; then
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
               -F "chat_id=$CHAT_ID" \
-              -F "document=@images/enhanced.jpg" \
+              -F "document=@enhanced.jpg" \
               -F "caption=Enhanced image"
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
               -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
           else
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
               -d "chat_id=$CHAT_ID" \
               -d "message_id=$PROGRESS_MSG_ID" \
               -d "text=Enhancement failed. The image may be too large or unsupported."
