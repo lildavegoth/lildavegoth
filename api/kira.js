@@ -96,10 +96,10 @@ bot.command("start", async (ctx) => {
 bot.command("ping", (ctx) => ctx.reply("pong"));
 
 bot.command("cancel", async (ctx) => {
-    const pk = pendingKey(ctx.chat.id, ctx.from.id);
-    const renameJobKey = pendingRenames.get(pk);
     let cancelled = false;
 
+    const pk = pendingKey(ctx.chat.id, ctx.from.id);
+    const renameJobKey = pendingRenames.get(pk);
     if (renameJobKey) {
         pendingRenames.delete(pk);
         const job = mirrorJobs.get(renameJobKey);
@@ -115,14 +115,21 @@ bot.command("cancel", async (ctx) => {
             mirrorJobs.delete(jobKey);
             try { await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId); } catch {}
             cancelled = true;
-            break;
+        }
+    }
+
+    for (const [key, msgId] of fetchMessages) {
+        if (key.startsWith(`${ctx.chat.id}_`)) {
+            fetchMessages.delete(key);
+            try { await ctx.api.deleteMessage(ctx.chat.id, msgId); } catch {}
+            cancelled = true;
         }
     }
 
     if (cancelled) {
-        return ctx.reply("Mirror operation cancelled.");
+        return ctx.reply("All pending operations cancelled.");
     }
-    return ctx.reply("No active mirror operation to cancel.");
+    return ctx.reply("No active operations to cancel.");
 });
 
 bot.command("mirror", async (ctx) => {
