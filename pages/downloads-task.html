@@ -144,6 +144,9 @@
             border-radius: var(--radius-large);
             width: 90%;
             max-width: 420px;
+            max-height: 75vh;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
             transform: scale(0.95);
             transition: transform 0.2s ease;
@@ -154,11 +157,29 @@
         }
 
         .popup-header {
-            padding: 20px 24px;
+            padding: 16px 20px;
             border-bottom: 1px solid rgba(255,255,255,0.08);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
+        }
+
+        .popup-body {
+            padding: 1rem 1.25rem 0 1.25rem;
+            overflow-y: auto;
+            flex: 1 1 auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .popup-body::-webkit-scrollbar {
+            display: none;
+        }
+
+        .popup-footer {
+            padding: 1.25rem 1.25rem;
+            flex-shrink: 0;
         }
 
         .close-popup {
@@ -175,15 +196,15 @@
             background: #2a2a2a;
             border: 1px solid #444;
             color: white;
-            padding: 14px 16px;
+            padding: 12px 14px;
             border-radius: 16px;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             font-size: 15.5px;
         }
 
         .form-textarea {
             resize: none;
-            min-height: 80px;
+            min-height: 70px;
         }
 
         .search-container {
@@ -414,7 +435,7 @@
             background: #2a2a2a;
             border: 1px solid #444;
             color: white;
-            padding: 14px 16px;
+            padding: 12px 14px;
             border-radius: 16px;
             font-size: 15.5px;
             width: 100%;
@@ -531,6 +552,99 @@
         .transition {
             transition: all 0.2s ease;
         }
+
+        .series-toggle-container {
+            margin-bottom: 12px;
+        }
+
+        .series-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .series-controls-left {
+            font-size: 15.5px;
+            color: var(--text-primary);
+        }
+
+        .series-controls-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .series-toggle-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            border: none;
+            background-color: #7E50B5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .series-toggle-btn.active {
+            background-color: var(--accent-color);
+        }
+
+        .series-plus-btn,
+        .series-minus-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            border: none;
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .series-plus-btn {
+            background-color: var(--accent-color);
+            color: #000000;
+        }
+
+        .series-minus-btn {
+            background-color: #C42833;
+            color: #ffffff;
+        }
+
+        .series-inputs-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .series-input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .series-input-row label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            min-width: 48px;
+        }
+
+        .series-input-row input {
+            flex: 1;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            padding: 10px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -585,7 +699,7 @@
                     <h2 id="popupTitle" class="text-xl font-semibold">New Task</h2>
                     <button class="close-popup" onclick="closeUniversalPopup()">×</button>
                 </div>
-                <div class="p-6">
+                <div class="popup-body">
                     <input type="text" id="taskTitle" class="form-input" placeholder="Task title">
                     <input type="text" id="taskDownloadUrl" class="form-input" placeholder="Download URL">
                     <div class="mb-4">
@@ -595,14 +709,30 @@
                         </button>
                         <input type="hidden" id="taskCategoryValue" value="">
                     </div>
+
+                    <div class="series-toggle-container">
+                        <div class="series-controls">
+                            <span class="series-controls-left">Series</span>
+                            <div class="series-controls-right">
+                                <button id="seriesMinusBtn" class="series-minus-btn hidden" onclick="removeSeriesInput()">-</button>
+                                <button id="seriesPlusBtn" class="series-plus-btn hidden" onclick="addSeriesInput()">+</button>
+                                <button id="seriesToggleBtn" class="series-toggle-btn" onclick="toggleSeries()">
+                                    <i class="fas fa-close" style="color: white;"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="seriesInputsContainer" class="series-inputs-list hidden"></div>
+                    </div>
+
                     <input type="text" id="taskStatus" class="form-input" placeholder="Status">
                     <input type="text" id="taskSourceUrl" class="form-input" placeholder="Source URL">
                     <textarea id="taskNotes" class="form-textarea" placeholder="Notes or description"></textarea>
-
-                    <div id="newActions" class="flex gap-3 mt-8">
+                </div>
+                <div class="popup-footer">
+                    <div id="newActions" class="flex gap-3">
                         <button onclick="saveTask()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold" style="border: 0px;">Create Task</button>
                     </div>
-                    <div id="editActions" class="hidden flex gap-3 mt-8">
+                    <div id="editActions" class="hidden flex gap-3">
                         <button onclick="showDeletePopup()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium" style="border: 0px;">Delete</button>
                         <button onclick="saveTask()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold" style="border: 0px;">Update</button>
                     </div>
@@ -721,6 +851,9 @@
         let editingFolder = null
         let filterActive = false
         let selectedCategoryForTask = ""
+        let seriesEnabled = false
+        let seriesCount = 0
+        let currentSeriesValues = []
 
         function saveData() {
             localStorage.setItem('tasks', JSON.stringify(tasks))
@@ -956,6 +1089,94 @@
             document.getElementById("folderSelectBtnText").textContent = category || "Select Folder"
         }
 
+        function toggleSeries() {
+            seriesEnabled = !seriesEnabled
+            updateSeriesUI()
+        }
+
+        function addSeriesInput() {
+            if (seriesCount >= 10) return
+            seriesCount++
+            if (!currentSeriesValues) currentSeriesValues = []
+            currentSeriesValues.push("")
+            renderSeriesInputs()
+            updateSeriesButtonsVisibility()
+        }
+
+        function removeSeriesInput() {
+            if (seriesCount <= 0) return
+            seriesCount--
+            currentSeriesValues.pop()
+            renderSeriesInputs()
+            updateSeriesButtonsVisibility()
+        }
+
+        function updateSeriesUI() {
+            const toggleBtn = document.getElementById("seriesToggleBtn")
+            const minusBtn = document.getElementById("seriesMinusBtn")
+            const plusBtn = document.getElementById("seriesPlusBtn")
+            const inputsContainer = document.getElementById("seriesInputsContainer")
+
+            if (seriesEnabled) {
+                toggleBtn.innerHTML = '<i class="fas fa-check" style="color: #000000;"></i>'
+                toggleBtn.classList.add("active")
+                minusBtn.classList.remove("hidden")
+                plusBtn.classList.remove("hidden")
+                inputsContainer.classList.remove("hidden")
+                renderSeriesInputs()
+            } else {
+                toggleBtn.innerHTML = '<i class="fas fa-close" style="color: #ffffff;"></i>'
+                toggleBtn.classList.remove("active")
+                minusBtn.classList.add("hidden")
+                plusBtn.classList.add("hidden")
+                inputsContainer.classList.add("hidden")
+                inputsContainer.innerHTML = ""
+                seriesCount = 0
+                currentSeriesValues = []
+            }
+        }
+
+        function updateSeriesButtonsVisibility() {
+            const minusBtn = document.getElementById("seriesMinusBtn")
+            const plusBtn = document.getElementById("seriesPlusBtn")
+            if (!seriesEnabled) {
+                minusBtn.classList.add("hidden")
+                plusBtn.classList.add("hidden")
+                return
+            }
+            minusBtn.classList.remove("hidden")
+            plusBtn.classList.remove("hidden")
+            if (seriesCount >= 10) {
+                plusBtn.classList.add("hidden")
+            }
+        }
+
+        function renderSeriesInputs() {
+            const container = document.getElementById("seriesInputsContainer")
+            if (!seriesEnabled) {
+                container.innerHTML = ""
+                return
+            }
+            let html = ""
+            for (let i = 0; i < seriesCount; i++) {
+                const val = currentSeriesValues[i] || ""
+                html += `
+                    <div class="series-input-row">
+                        <label>Eps ${i + 1}:</label>
+                        <input type="text" placeholder="Link" value="${val.replace(/"/g, '&quot;')}" oninput="updateSeriesValue(${i}, this.value)">
+                    </div>`
+            }
+            container.innerHTML = html
+        }
+
+        function updateSeriesValue(index, value) {
+            if (!currentSeriesValues) currentSeriesValues = []
+            while (currentSeriesValues.length <= index) {
+                currentSeriesValues.push("")
+            }
+            currentSeriesValues[index] = value
+        }
+
         function showTaskPopup(isEdit, id = null) {
             editingId = isEdit ? id : null
             document.getElementById("popupTitle").textContent = isEdit ? "Edit Task" : "New Task"
@@ -970,6 +1191,15 @@
                 document.getElementById("taskStatus").value = task.status || ""
                 document.getElementById("taskSourceUrl").value = task.sourceUrl || ""
                 document.getElementById("taskNotes").value = task.notes || ""
+
+                seriesEnabled = task.seriesEnabled || false
+                if (task.seriesInputs && Array.isArray(task.seriesInputs)) {
+                    currentSeriesValues = [...task.seriesInputs]
+                    seriesCount = currentSeriesValues.length
+                } else {
+                    currentSeriesValues = []
+                    seriesCount = 0
+                }
             } else {
                 document.getElementById("taskTitle").value = ""
                 document.getElementById("taskDownloadUrl").value = ""
@@ -978,7 +1208,11 @@
                 document.getElementById("taskStatus").value = ""
                 document.getElementById("taskSourceUrl").value = ""
                 document.getElementById("taskNotes").value = ""
+                seriesEnabled = false
+                seriesCount = 0
+                currentSeriesValues = []
             }
+            updateSeriesUI()
             document.getElementById("universalPopup").classList.add("popup-visible")
         }
 
@@ -991,6 +1225,12 @@
             const sourceUrl = document.getElementById("taskSourceUrl").value.trim()
             const notes = document.getElementById("taskNotes").value.trim()
 
+            const seriesValues = []
+            if (seriesEnabled && seriesCount > 0) {
+                const inputs = document.querySelectorAll('#seriesInputsContainer input')
+                inputs.forEach(inp => seriesValues.push(inp.value.trim()))
+            }
+
             if(editingId) {
                 const task = tasks.find(t => t.id === editingId)
                 task.title = title
@@ -999,6 +1239,8 @@
                 task.status = status
                 task.sourceUrl = sourceUrl
                 task.notes = notes
+                task.seriesEnabled = seriesEnabled
+                task.seriesInputs = seriesEnabled ? seriesValues : []
                 window.showMessage('Task updated successfully')
             } else {
                 tasks.unshift({
@@ -1010,7 +1252,9 @@
                     sourceUrl: sourceUrl,
                     notes: notes,
                     checked: false,
-                    priority: false
+                    priority: false,
+                    seriesEnabled: seriesEnabled,
+                    seriesInputs: seriesEnabled ? seriesValues : []
                 })
                 window.showMessage('Task created successfully')
             }
