@@ -22,6 +22,7 @@ const MAX_DIRECT_MB = 0;
 
 const mirrorJobs = new Map();
 const pendingRenames = new Map();
+const fetchMessages = new Map();
 
 function pendingKey(chatId, userId) {
     return `${chatId}:${userId}`;
@@ -279,6 +280,93 @@ async function startMirror(ctx, url, filename) {
         await ctx.api.editMessageText(ctx.chat.id, sentMsg.message_id, "Mirror error: " + e.message);
     }
 }
+
+bot.command("download", async (ctx) => {
+    const text = ctx.message.text;
+    const parts = text.split(" ");
+    if (parts.length < 2) {
+        return ctx.reply("Usage: /download <url>");
+    }
+    const url = parts[1];
+    if (!url.startsWith("http")) {
+        return ctx.reply("Invalid URL.");
+    }
+
+    const fetchingMsg = await ctx.reply("Let me fetch the media first.");
+    const jobKey = `${ctx.chat.id}_${Date.now()}`;
+    fetchMessages.set(jobKey, fetchingMsg.message_id);
+
+    const dispatchBody = {
+        event_type: "fetch-media-info",
+        client_payload: {
+            chat_id: ctx.chat.id,
+            url: url,
+            job_key: jobKey,
+            fetching_message_id: fetchingMsg.message_id,
+        },
+    };
+
+    try {
+        const res = await fetch(
+            `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `token ${process.env.GITHUB_PAT}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(dispatchBody),
+            }
+        );
+        if (!res.ok) {
+            await ctx.api.deleteMessage(ctx.chat.id, fetchingMsg.message_id);
+            return ctx.reply("Failed to start media fetch.");
+        }
+    } catch (e) {
+        await ctx.api.deleteMessage(ctx.chat.id, fetchingMsg.message_id);
+        return ctx.reply("Dispatch error: " + e.message);
+    }
+});
+
+bot.callbackQuery(/^dl_fmt_(.+)_(.+)$/, async (ctx) => {
+    const formatId = ctx.match[1];
+    const url = ctx.match[2];
+    await ctx.answerCallbackQuery();
+    try {
+        await ctx.deleteMessage();
+    } catch {}
+
+    const progressMsg = await ctx.reply("Downloading…");
+
+    const dispatchBody = {
+        event_type: "download-media",
+        client_payload: {
+            chat_id: ctx.chat.id,
+            url: url,
+            format_id: formatId,
+            progress_message_id: progressMsg.message_id,
+        },
+    };
+
+    try {
+        const res = await fetch(
+            `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `token ${process.env.GITHUB_PAT}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(dispatchBody),
+            }
+        );
+        if (!res.ok) {
+            await ctx.api.editMessageText(ctx.chat.id, progressMsg.message_id, "Download failed: dispatch error.");
+        }
+    } catch (e) {
+        await ctx.api.editMessageText(ctx.chat.id, progressMsg.message_id, "Download error: " + e.message);
+    }
+});
 
 bot.command("qr", async (ctx) => {
     const reply = ctx.message?.reply_to_message;
