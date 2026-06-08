@@ -376,7 +376,21 @@ bot.callbackQuery(/^dl_fmt_(.+)_(.+)$/, async (ctx) => {
 
 bot.callbackQuery(/^imgbuf_(enhance|restore)_(.+)$/, async (ctx) => {
     const action = ctx.match[1];
-    const fileId = ctx.match[2];
+    const shortKey = ctx.match[2];
+
+    const { data: row, error: fetchErr } = await supabase
+        .from("temp_file_ids")
+        .select("file_id")
+        .eq("key", shortKey)
+        .single();
+
+    if (fetchErr || !row) {
+        await ctx.answerCallbackQuery("This action has expired. Please use /imagebuff again.");
+        return;
+    }
+
+    const fileId = row.file_id;
+    await supabase.from("temp_file_ids").delete().eq("key", shortKey);
     await ctx.answerCallbackQuery();
     await ctx.editMessageReplyMarkup(undefined);
 
@@ -502,12 +516,15 @@ bot.command("imagebuff", async (ctx) => {
     const photos = reply.photo;
     const fileId = photos[photos.length - 1].file_id;
 
+    const shortKey = Math.random().toString(36).slice(2, 8);
+    await supabase.from("temp_file_ids").insert({ key: shortKey, file_id: fileId });
+
     return ctx.reply("What do you want to do with this image?", {
         reply_markup: {
             inline_keyboard: [
                 [
-                    { text: "Enhance", callback_data: `imgbuf_enhance_${fileId}` },
-                    { text: "Restore", callback_data: `imgbuf_restore_${fileId}` },
+                    { text: "Enhance", callback_data: `imgbuf_enhance_${shortKey}` },
+                    { text: "Restore", callback_data: `imgbuf_restore_${shortKey}` },
                 ],
             ],
         },
