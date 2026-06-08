@@ -4,8 +4,8 @@ on:
   push:
     branches: [homepage]
   workflow_dispatch:
-  repository_dispatch:
-    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media]
+    repository_dispatch:
+    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image]
   schedule:
     - cron: '0 0 * * *'
 
@@ -359,6 +359,82 @@ jobs:
               -d "message_id=$PROGRESS_MSG_ID" \
               -d "text=Download complete: $LINK"
           fi
+
+  restore-image:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'restore-image'
+    runs-on: ubuntu-latest
+    env:
+      KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+          pip install gdown
+
+      - name: Download Real-ESRGAN
+        run: |
+          mkdir -p Real-ESRGAN
+          cd Real-ESRGAN
+          wget -O realesrgan-ncnn-vulkan-20220424-ubuntu.zip \
+            "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-ubuntu.zip"
+          unzip realesrgan-ncnn-vulkan-20220424-ubuntu.zip
+          chmod +x realesrgan-ncnn-vulkan
+
+      - name: Download image
+        run: |
+          mkdir -p images
+          wget -O "images/input.jpg" "${{ github.event.client_payload.image_url }}"
+
+      - name: Restore image
+        run: |
+          ./Real-ESRGAN/realesrgan-ncnn-vulkan \
+            -i images/input.jpg \
+            -o images/restored.jpg \
+            -s 4 \
+            -n realesrgan-x4plus
+
+      - name: Upload restored image and send
+        run: |
+          CHAT_ID="${{ github.event.client_payload.chat_id }}"
+          PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
+          curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendPhoto" \
+            -F "chat_id=$CHAT_ID" \
+            -F "photo=@images/restored.jpg" \
+            -F "caption=Restored image"
+          curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+            -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
+
+  enhance-image:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'enhance-image'
+    runs-on: ubuntu-latest
+    env:
+      KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
+    steps:
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Download image
+        run: |
+          mkdir -p images
+          wget -O "images/input.jpg" "${{ github.event.client_payload.image_url }}"
+
+      - name: Enhance image
+        run: |
+          ffmpeg -y -i images/input.jpg \
+            -vf "unsharp=5:5:1.0:5:5:0.0,eq=contrast=1.1:brightness=0.05" \
+            images/enhanced.jpg
+
+      - name: Send enhanced image
+        run: |
+          CHAT_ID="${{ github.event.client_payload.chat_id }}"
+          PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
+          curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendPhoto" \
+            -F "chat_id=$CHAT_ID" \
+            -F "photo=@images/enhanced.jpg" \
+            -F "caption=Enhanced image"
+          curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+            -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
 
   cleanup-history:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
