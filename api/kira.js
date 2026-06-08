@@ -396,7 +396,7 @@ bot.command("videoreduce", async (ctx) => {
                     upsert: true,
                 });
 
-            if (error) return ctx.reply("Failed to queue video.");
+            if (error) return ctx.reply("Failed to queue video: " + error.message);
 
             const { data: publicUrlData } = supabase.storage
                 .from("videos")
@@ -412,7 +412,7 @@ bot.command("videoreduce", async (ctx) => {
                 },
             };
 
-            await fetch(
+            const dispatchRes = await fetch(
                 `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
                 {
                     method: "POST",
@@ -423,6 +423,11 @@ bot.command("videoreduce", async (ctx) => {
                     body: JSON.stringify(dispatchBody),
                 }
             );
+
+            if (!dispatchRes.ok) {
+                const errText = await dispatchRes.text();
+                return ctx.reply("Dispatch failed: " + errText);
+            }
 
             return ctx.reply("I’ll send the compressed video here when it’s ready.");
         }
@@ -480,8 +485,8 @@ bot.command("videoreduce", async (ctx) => {
         return ctx.replyWithVideo(publicUrlData.publicUrl, {
             caption: "Here’s your compressed video.",
         });
-    } catch {
-        return ctx.reply("Video processing error.");
+    } catch (e) {
+        return ctx.reply("Video processing error: " + (e.message || "unknown"));
     }
 });
 
@@ -493,8 +498,6 @@ bot.command("videocapture", async (ctx) => {
 
     const video = reply.video;
     const fileId = video.file_id;
-    const fileSize = video.file_size || 0;
-    const sizeMB = fileSize / (1024 * 1024);
 
     await ctx.reply("Capturing frames…");
 
@@ -513,7 +516,7 @@ bot.command("videocapture", async (ctx) => {
                 upsert: true,
             });
 
-        if (error) return ctx.reply("Failed to queue video capture.");
+        if (error) return ctx.reply("Failed to queue video capture: " + error.message);
 
         const { data: publicUrlData } = supabase.storage
             .from("videos")
@@ -529,7 +532,7 @@ bot.command("videocapture", async (ctx) => {
             },
         };
 
-        await fetch(
+        const dispatchRes = await fetch(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -541,9 +544,14 @@ bot.command("videocapture", async (ctx) => {
             }
         );
 
+        if (!dispatchRes.ok) {
+            const errText = await dispatchRes.text();
+            return ctx.reply("Dispatch failed: " + errText);
+        }
+
         return ctx.reply("I’ll send the 10 frames here once they’re ready.");
     } catch (e) {
-        return ctx.reply("Failed to start frame capture.");
+        return ctx.reply("Failed to start frame capture: " + (e.message || "unknown"));
     }
 });
 
