@@ -6,7 +6,6 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
-import jsQR from "jsqr";
 
 const execFileAsync = promisify(execFile);
 
@@ -375,38 +374,68 @@ bot.callbackQuery(/^dl_fmt_(.+)_(.+)$/, async (ctx) => {
     }
 });
 
-bot.command("qr", async (ctx) => {
-    const reply = ctx.message?.reply_to_message;
-    if (!reply || !reply.photo) {
-        return ctx.reply("Reply to a photo with /qr to scan it.");
-    }
+bot.callbackQuery(/^imgbuf_(enhance|restore)_(.+)$/, async (ctx) => {
+    const action = ctx.match[1];
+    const fileId = ctx.match[2];
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageReplyMarkup(undefined);
 
-    const photos = reply.photo;
-    const fileId = photos[photos.length - 1].file_id;
     try {
         const file = await ctx.api.getFile(fileId);
         const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
         const response = await fetch(fileUrl);
-        const buffer = Buffer.from(await response.arrayBuffer());
+        const buffer = await response.arrayBuffer();
+        const fileName = `${action}_${Date.now()}.jpg`;
 
-        const { data, info } = await sharp(buffer)
-            .ensureAlpha()
-            .raw()
-            .toBuffer({ resolveWithObject: true });
+        const { error } = await supabase.storage
+            .from("images")
+            .upload(fileName, buffer, {
+                contentType: "image/jpeg",
+                upsert: true,
+            });
 
-        const qrResult = jsQR(
-            new Uint8ClampedArray(data.buffer),
-            info.width,
-            info.height
+        if (error) {
+            await ctx.editMessageText("Failed to upload image.");
+            return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+            .from("images")
+            .getPublicUrl(fileName);
+        const imageUrl = publicUrlData.publicUrl;
+
+        const eventType = action === "enhance" ? "enhance-image" : "restore-image";
+
+        const dispatchBody = {
+            event_type: eventType,
+            client_payload: {
+                chat_id: ctx.chat.id,
+                image_url: imageUrl,
+                original_name: fileName,
+                progress_message_id: ctx.callbackQuery.message.message_id,
+            },
+        };
+
+        const dispatchRes = await fetch(
+            `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `token ${process.env.GITHUB_PAT}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(dispatchBody),
+            }
         );
 
-        if (qrResult && qrResult.data) {
-            return ctx.reply(`QR Code content:\n${qrResult.data}`);
-        } else {
-            return ctx.reply("No QR code found in the image, try to make the QR code look clearer.");
+        if (!dispatchRes.ok) {
+            await ctx.editMessageText("Dispatch failed: " + (await dispatchRes.text()));
+            return;
         }
-    } catch {
-        return ctx.reply("Failed to process the image.");
+
+        await ctx.editMessageText("Processing image, please wait…");
+    } catch (e) {
+        await ctx.editMessageText("Error: " + e.message);
     }
 });
 
@@ -459,6 +488,27 @@ bot.command("imagesearch", async (ctx) => {
             inline_keyboard: [
                 [{ text: "Google Lens", url: googleLensUrl }],
                 [{ text: "Yandex", url: yandexUrl }],
+            ],
+        },
+    });
+});
+
+bot.command("imagebuff", async (ctx) => {
+    const reply = ctx.message?.reply_to_message;
+    if (!reply || !reply.photo) {
+        return ctx.reply("Reply to a photo with /imagebuff to enhance or restore it.");
+    }
+
+    const photos = reply.photo;
+    const fileId = photos[photos.length - 1].file_id;
+
+    return ctx.reply("What do you want to do with this image?", {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: "Enhance", callback_data: `imgbuf_enhance_${fileId}` },
+                    { text: "Restore", callback_data: `imgbuf_restore_${fileId}` },
+                ],
             ],
         },
     });
