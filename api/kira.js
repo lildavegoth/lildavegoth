@@ -308,7 +308,7 @@ bot.command("qr", async (ctx) => {
         if (qrResult && qrResult.data) {
             return ctx.reply(`QR Code content:\n${qrResult.data}`);
         } else {
-            return ctx.reply("No QR code found in the image.");
+            return ctx.reply("No QR code found in the image, try to make the QR code look clearer.");
         }
     } catch {
         return ctx.reply("Failed to process the image.");
@@ -482,6 +482,68 @@ bot.command("videoreduce", async (ctx) => {
         });
     } catch {
         return ctx.reply("Video processing error.");
+    }
+});
+
+bot.command("videocapture", async (ctx) => {
+    const reply = ctx.message?.reply_to_message;
+    if (!reply || !reply.video) {
+        return ctx.reply("Reply to a video with /videocapture to extract frames.");
+    }
+
+    const video = reply.video;
+    const fileId = video.file_id;
+    const fileSize = video.file_size || 0;
+    const sizeMB = fileSize / (1024 * 1024);
+
+    await ctx.reply("Capturing frames…");
+
+    try {
+        const file = await ctx.api.getFile(fileId);
+        const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+
+        const response = await fetch(fileUrl);
+        const buffer = await response.arrayBuffer();
+        const fileName = `capture_${Date.now()}.mp4`;
+
+        const { error } = await supabase.storage
+            .from("videos")
+            .upload(fileName, buffer, {
+                contentType: "video/mp4",
+                upsert: true,
+            });
+
+        if (error) return ctx.reply("Failed to queue video capture.");
+
+        const { data: publicUrlData } = supabase.storage
+            .from("videos")
+            .getPublicUrl(fileName);
+        const publicUrl = publicUrlData.publicUrl;
+
+        const dispatchBody = {
+            event_type: "capture-frames",
+            client_payload: {
+                chat_id: ctx.chat.id,
+                video_url: publicUrl,
+                original_name: fileName,
+            },
+        };
+
+        await fetch(
+            `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `token ${process.env.GITHUB_PAT}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(dispatchBody),
+            }
+        );
+
+        return ctx.reply("I’ll send the 10 frames here once they’re ready.");
+    } catch (e) {
+        return ctx.reply("Failed to start frame capture.");
     }
 });
 
