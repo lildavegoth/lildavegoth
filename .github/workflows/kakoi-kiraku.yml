@@ -81,6 +81,12 @@ jobs:
             -d "chat_id=${{ github.event.client_payload.chat_id }}" \
             -d "video=$PUBLIC_URL" \
             -d "caption=Here's your compressed video."
+      - name: Delete progress message
+        if: github.event.client_payload.progress_message_id != ''
+        run: |
+          curl -X POST "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/deleteMessage" \
+            -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+            -d "message_id=${{ github.event.client_payload.progress_message_id }}"
 
   mirror:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'mirror'
@@ -179,12 +185,10 @@ jobs:
     steps:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
-
       - name: Download video
         run: |
           mkdir -p capture
           wget -O "capture/input.mp4" "${{ github.event.client_payload.video_url }}"
-
       - name: Extract 10 frames
         run: |
           DURATION=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 capture/input.mp4)
@@ -194,7 +198,6 @@ jobs:
             -vf "fps=$FPS,scale=1280:trunc(ow/a/2)*2" \
             -q:v 2 \
             capture/frame_%02d.jpg
-
       - name: Send frames as media group
         run: |
           cd capture
@@ -203,7 +206,6 @@ jobs:
             echo "No frames extracted"
             exit 1
           fi
-
           # Build media JSON array
           MEDIA="["
           for i in "${!FRAMES[@]}"; do
@@ -222,6 +224,12 @@ jobs:
           done
 
           curl "${CURL_ARGS[@]}"
+      - name: Delete progress message
+        if: github.event.client_payload.progress_message_id != ''
+        run: |
+          curl -X POST "https://api.telegram.org/bot${{ secrets.KIRA_TOKEN }}/deleteMessage" \
+            -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+            -d "message_id=${{ github.event.client_payload.progress_message_id }}"
 
   cleanup-history:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
