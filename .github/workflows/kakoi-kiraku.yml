@@ -237,6 +237,25 @@ jobs:
     env:
       KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
     steps:
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          
+      - name: Install yt-dlp
+        run: pip install yt-dlp
+
+  fetch-media-info:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'fetch-media-info'
+    runs-on: ubuntu-latest
+    env:
+      KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
+    steps:
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Install yt-dlp
         run: pip install yt-dlp
 
@@ -246,13 +265,11 @@ jobs:
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           FETCH_MSG_ID="${{ github.event.client_payload.fetching_message_id }}"
 
-          # Dump JSON info
-          INFO=$(yt-dlp --dump-json "$URL")
+          INFO=$(yt-dlp --js-runtimes node --dump-json "$URL")
 
           TITLE=$(echo "$INFO" | jq -r '.title // "Unknown"')
           DURATION=$(echo "$INFO" | jq -r '.duration_string // "?"')
 
-          # Collect formats with resolution and filesize
           FORMATS=$(echo "$INFO" | jq -r '
             [.formats[] | 
               select(.height != null and .filesize != null) |
@@ -265,7 +282,6 @@ jobs:
             ] | unique_by(.res) | sort_by(.height)
           ')
 
-          # Build inline keyboard
           KEYBOARD="inline_keyboard: ["
           first=true
           while IFS= read -r row; do
@@ -280,15 +296,11 @@ jobs:
           done < <(echo "$FORMATS" | jq -c '.[]')
 
           KEYBOARD+="]"
-
-          # Build reply_markup JSON
           REPLY_MARKUP="{\"inline_keyboard\": $KEYBOARD}"
 
-          # Delete fetching message
           curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
             -d "chat_id=$CHAT_ID" -d "message_id=$FETCH_MSG_ID"
 
-          # Send format selection message
           curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendMessage" \
             -d "chat_id=$CHAT_ID" \
             -d "text=Choose format for: $TITLE ($DURATION)" \
@@ -300,6 +312,11 @@ jobs:
     env:
       KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
     steps:
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Install yt-dlp and rclone
         run: |
           pip install yt-dlp
@@ -324,7 +341,7 @@ jobs:
           URL="${{ github.event.client_payload.url }}"
           FMT="${{ github.event.client_payload.format_id }}"
           mkdir -p downloads
-          yt-dlp -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL"
+          yt-dlp --js-runtimes node -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL"
           echo "FILE=$(ls downloads)" >> $GITHUB_ENV
 
       - name: Check file size and deliver
@@ -335,16 +352,13 @@ jobs:
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
 
           if [ "$SIZE" -lt 50000000 ]; then
-            # File under 50MB -> send directly as document
             curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
               -F "chat_id=$CHAT_ID" \
               -F "document=@$FILE" \
               -F "caption=Downloaded: ${{ env.FILE }}"
-            # Delete progress message
             curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
               -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
           else
-            # Upload to Drive and edit progress message
             rclone copy "$FILE" mirror_drive: -P
             LINK=$(rclone link "mirror_drive:${{ env.FILE }}")
             curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
