@@ -5,6 +5,8 @@ import { createWriteStream, statSync, unlinkSync } from "fs";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import ffmpegPath from "ffmpeg-static";
+import sharp from "sharp";
+import jsQR from "jsqr";
 
 const execFileAsync = promisify(execFile);
 
@@ -314,6 +316,45 @@ async function startMirror(ctx, url, filename) {
         await ctx.api.editMessageText(ctx.chat.id, sentMsg.message_id, "Mirror error: " + e.message);
     }
 }
+
+bot.command("qr", async (ctx) => {
+    let targetPhoto;
+
+    if (ctx.message.reply_to_message && ctx.message.reply_to_message.photo) {
+        targetPhoto = ctx.message.reply_to_message.photo;
+    } else if (ctx.message.photo) {
+        targetPhoto = ctx.message.photo;
+    } else {
+        return ctx.reply("Reply to a QR code image with /qr, or send a photo with /qr caption.");
+    }
+
+    const fileId = targetPhoto[targetPhoto.length - 1].file_id;
+    try {
+        const file = await ctx.api.getFile(fileId);
+        const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+        const response = await fetch(fileUrl);
+        const buffer = Buffer.from(await response.arrayBuffer());
+
+        const { data, info } = await sharp(buffer)
+            .ensureAlpha()
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+
+        const qrResult = jsQR(
+            new Uint8ClampedArray(data.buffer),
+            info.width,
+            info.height
+        );
+
+        if (qrResult && qrResult.data) {
+            return ctx.reply(`QR Code content:\n${qrResult.data}`);
+        } else {
+            return ctx.reply("No QR code found in the image.");
+        }
+    } catch {
+        return ctx.reply("Failed to process the image.");
+    }
+});
 
 bot.command("imagesearch", async (ctx) => {
     const reply = ctx.message?.reply_to_message;
