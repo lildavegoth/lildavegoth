@@ -259,24 +259,45 @@ jobs:
           TITLE=$(echo "$INFO" | jq -r '.title // "Unknown"')
           DURATION=$(echo "$INFO" | jq -r '.duration_string // "?"')
 
-          KEYBOARD=$(echo "$INFO" | jq -r '
+          FORMATS=$(echo "$INFO" | jq -r '
             [.formats[] |
-              select(.height != null and .filesize != null) |
+              select(.ext == "mp4" and .height != null and .filesize != null) |
               {
-                text: "\(.height)p (\((.filesize / 1048576) | round)MB .\(.ext))",
-                callback_data: "dl_fmt_\(.format_id)_\($URL)"
+                format_id: .format_id,
+                res: "\(.height)p",
+                size_mb: ((.filesize / 1048576) | round),
+                ext: .ext
               }
-            ] | unique_by(.text) | sort_by(.text) | [.[]]
-          ' --arg URL "$URL")
+            ] | unique_by(.res) | sort_by(.height)
+          ')
+
+          FORMAT_LIST=$(echo "$FORMATS" | jq -r '.[] | "\(.res) (\(.size_mb)MB)"' 2>/dev/null || echo "")
+
+          if [ -z "$FORMATS" ] || [ "$FORMATS" == "[]" ]; then
+            KEYBOARD='[{"text":"Best quality","callback_data":"dl_fmt_best_'"$URL"'"}]'
+            FORMAT_LIST="Best quality available"
+          else
+            KEYBOARD=$(echo "$FORMATS" | jq -r '
+              [.[] | {
+                text: "\(.res) (\(.size_mb)MB)",
+                callback_data: "dl_fmt_\(.format_id)_\($URL)"
+              }] | unique_by(.text) | [.[]]
+            ' --arg URL "$URL")
+          fi
 
           REPLY_MARKUP=$(jq -n --argjson keyboard "$KEYBOARD" '{inline_keyboard: [$keyboard]}')
+
+          TEXT="Choose format for: $TITLE ($DURATION)"
+          if [ -n "$FORMAT_LIST" ]; then
+            TEXT="$TEXT\n$FORMAT_LIST"
+          fi
 
           curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
             -d "chat_id=$CHAT_ID" -d "message_id=$FETCH_MSG_ID"
 
           curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendMessage" \
             -d "chat_id=$CHAT_ID" \
-            -d "text=Choose format for: $TITLE ($DURATION)" \
+            -d "text=$TEXT" \
             -d "reply_markup=$REPLY_MARKUP"
 
   download-media:
