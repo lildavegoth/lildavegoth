@@ -185,12 +185,43 @@ bot.command("mirror", async (ctx) => {
     mirrorJobs.set(jobKey, {
         url,
         originalFilename,
+        storage: null,
         promptMessageId: null,
         chatId: ctx.chat.id,
         userId: ctx.from.id,
     });
 
     const keyboard = {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: "Drive", callback_data: `storage_drive_${jobKey}` },
+                    { text: "Filen", callback_data: `storage_filen_${jobKey}` },
+                ],
+            ],
+        },
+    };
+
+    const promptMsg = await ctx.reply("Which storage do you prefer?", keyboard);
+    mirrorJobs.get(jobKey).promptMessageId = promptMsg.message_id;
+});
+
+bot.callbackQuery(/^storage_(drive|filen)_(.+)$/, async (ctx) => {
+    const storage = ctx.match[1];
+    const jobKey = ctx.match[2];
+    const job = mirrorJobs.get(jobKey);
+
+    if (!job || job.chatId !== ctx.chat.id || job.userId !== ctx.from.id) {
+        await ctx.answerCallbackQuery("This action has expired. Please /mirror again.");
+        return;
+    }
+
+    await ctx.answerCallbackQuery();
+    job.storage = storage;
+
+    await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
+
+    const renameKeyboard = {
         reply_markup: {
             inline_keyboard: [
                 [
@@ -201,8 +232,8 @@ bot.command("mirror", async (ctx) => {
         },
     };
 
-    const promptMsg = await ctx.reply("Do you want to rename the file before mirroring?", keyboard);
-    mirrorJobs.get(jobKey).promptMessageId = promptMsg.message_id;
+    const renameMsg = await ctx.reply("Do you want to rename the file before mirroring?", renameKeyboard);
+    job.promptMessageId = renameMsg.message_id;
 });
 
 bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
@@ -235,14 +266,14 @@ bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
                 filename = "file";
             }
         }
-        await startMirror(ctx, job.url, filename);
+        await startMirror(ctx, job.url, filename, job.storage);
     } else {
         await ctx.editMessageText("Send the new file name:");
         pendingRenames.set(pendingKey(ctx.chat.id, ctx.from.id), jobKey);
     }
 });
 
-async function startMirror(ctx, url, filename) {
+async function startMirror(ctx, url, filename, storage) {
     const sentMsg = await ctx.reply("Mirroring…");
 
     let jobLabel = filename.replace(/\.[^/.]+$/, "");
@@ -256,6 +287,7 @@ async function startMirror(ctx, url, filename) {
             download_url: url,
             filename: filename,
             job_label: jobLabel,
+            storage: storage,
         },
     };
 
@@ -595,7 +627,7 @@ bot.on("message:text", async (ctx) => {
             mirrorJobs.delete(jobKey);
             const newName = ctx.message.text.trim();
             await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
-            await startMirror(ctx, job.url, newName);
+            await startMirror(ctx, job.url, newName, job.storage);
             return;
         }
     }
