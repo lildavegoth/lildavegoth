@@ -4,8 +4,8 @@ on:
   push:
     branches: [homepage]
   workflow_dispatch:
-  repository_dispatch:
-    types: [compress-video, mirror]
+    repository_dispatch:
+    types: [compress-video, mirror, capture-frames]
   schedule:
     - cron: '0 0 * * *'
 
@@ -170,6 +170,59 @@ jobs:
           UPLOAD_SUCCESS: ${{ env.UPLOAD_SUCCESS }}
           DRIVE_LINK: ${{ env.DRIVE_LINK }}
           UPLOAD_ERROR: ${{ env.UPLOAD_ERROR }}
+
+  capture-frames:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'capture-frames'
+    runs-on: ubuntu-latest
+    env:
+      KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
+    steps:
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Download video
+        run: |
+          mkdir -p capture
+          wget -O "capture/input.mp4" "${{ github.event.client_payload.video_url }}"
+
+      - name: Extract 10 frames
+        run: |
+          DURATION=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 capture/input.mp4)
+          # Calculate fps to get exactly 10 frames over the whole video
+          FPS=$(echo "scale=6; 10 / $DURATION" | bc)
+          ffmpeg -y -i capture/input.mp4 \
+            -vf "fps=$FPS,scale=1280:trunc(ow/a/2)*2" \
+            -q:v 2 \
+            capture/frame_%02d.jpg
+
+      - name: Send frames as media group
+        run: |
+          cd capture
+          FRAMES=(frame_*.jpg)
+          if [ ${#FRAMES[@]} -eq 0 ]; then
+            echo "No frames extracted"
+            exit 1
+          fi
+
+          # Build a media group request
+          MEDIA="["
+          for i in "${!FRAMES[@]}"; do
+            if [ $i -gt 0 ]; then MEDIA+=","; fi
+            MEDIA+="{\"type\":\"photo\",\"media\":\"attach://frame$i\"}"
+          done
+          MEDIA+="]"
+
+          # Build file attachments
+          ATTACH=""
+          for i in "${!FRAMES[@]}"; do
+            ATTACH+=" -F \"frame$i=@${FRAMES[$i]}\""
+          done
+
+          # Send using curl
+          eval "curl -X POST \"https://api.telegram.org/bot$KIRA_TOKEN/sendMediaGroup\" \
+            -F \"chat_id=${{ github.event.client_payload.chat_id }}\" \
+            -F \"media=$MEDIA\" \
+            $ATTACH"
 
   cleanup-history:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
