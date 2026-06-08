@@ -1,6 +1,6 @@
 const CACHE_NAME = 'kakoi-kiraku-app-v1.7.1';
-const META_CACHE = 'kakoi-kiraku-meta-v1';
 const urlsToCache = [
+    // Root
     '/',
     'account.html',
     'auth-check.js',
@@ -14,6 +14,7 @@ const urlsToCache = [
     'protections.js',
     'storage.html',
     'sw.js',
+    // Pages
     'pages/2048.html',
     'pages/appflowy-json-converter.html',
     'pages/adblock-checker.html',
@@ -78,16 +79,19 @@ const urlsToCache = [
     'pages/weather.html',
     'pages/yaml-validator.html',
     'pages/youtube-thumbnail-grabber.html',
+    // Articles
     'pages/articles/articles-home.html',
     'pages/articles/article-page.html',
     'pages/articles/articles-publisher.html',
+    // Voidgarden
     'pages/voidgarden/adventure.html',
     'pages/voidgarden/character.html',
     'pages/voidgarden/credits.html',
     'pages/voidgarden/shared-data.js',
     'pages/voidgarden/shop.html',
     'pages/voidgarden/voidgarden.html',
-    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/articles.json',
+    // Fetches
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/articles/articles.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/pages.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/popup-pages.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/gift-codes.json',
@@ -95,6 +99,7 @@ const urlsToCache = [
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/o-css-snippets.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/userscripts.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/world-events.json',
+    // Stories
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/easy_story_1.txt',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/easy_story_2.txt',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/easy_story_3.txt',
@@ -107,26 +112,32 @@ const urlsToCache = [
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/hard_story_2.txt',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/hard_story_3.txt',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/hard_story_4.txt',
+    // Bundles
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/webfonts/fa-solid-900.woff2',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'
 ];
 
-const monitoredUrls = new Set(urlsToCache.map(url => {
-    if (url.startsWith('http')) return url;
-    return new URL(url, self.location.origin).href;
-}));
-
-function resolveUrl(url) {
-    if (url.startsWith('http')) return url;
-    return new URL(url, self.location.origin).href;
-}
+const STALE_WHILE_REVALIDATE_URLS = [
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/articles.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/pages.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/popup-pages.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/gift-codes.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/javascript.js',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/o-css-snippets.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/userscripts.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/world-events.json'
+];
 
 self.addEventListener('install', event => {
     self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            return Promise.allSettled(urlsToCache.map(url => cache.add(url).catch(() => {})));
+            return Promise.all(
+                urlsToCache.map(url => {
+                    return cache.add(url).catch(() => {});
+                })
+            );
         })
     );
 });
@@ -134,11 +145,13 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
-            return Promise.all(cacheNames.map(cacheName => {
-                if (cacheName !== CACHE_NAME && cacheName !== META_CACHE) {
-                    return caches.delete(cacheName);
-                }
-            }));
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
         })
     );
     self.clients.claim();
@@ -148,40 +161,28 @@ self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
 
     const url = new URL(event.request.url);
+
     if (url.pathname.startsWith('/pages/articles/images/')) {
         event.respondWith(fetch(event.request));
         return;
     }
 
-    const requestUrl = event.request.url;
-    const isMonitored = monitoredUrls.has(requestUrl);
+    const requestPath = url.origin + url.pathname;
 
-    if (isMonitored) {
+    if (STALE_WHILE_REVALIDATE_URLS.includes(requestPath)) {
         event.respondWith(
-            caches.match(event.request).then(cached => {
-                const fetchAndUpdate = async () => {
-                    try {
-                        const headResp = await fetch(requestUrl, { method: 'HEAD', cache: 'no-store' });
-                        const newSize = headResp.headers.get('Content-Length');
-                        if (!newSize) return;
-
-                        const metaCache = await caches.open(META_CACHE);
-                        const sizeRecord = await metaCache.match(requestUrl);
-                        let oldSize = null;
-                        if (sizeRecord) oldSize = await sizeRecord.text();
-
-                        if (oldSize !== newSize) {
-                            const freshResp = await fetch(requestUrl, { cache: 'no-store' });
-                            if (freshResp.ok) {
-                                const cache = await caches.open(CACHE_NAME);
-                                await cache.put(event.request, freshResp.clone());
-                                await metaCache.put(requestUrl, new Response(newSize));
-                            }
+            caches.open(CACHE_NAME).then(async cache => {
+                const cachedResponse = await cache.match(event.request);
+                const fetchUrl = event.request.url + '?t=' + Date.now();
+                const fetchPromise = fetch(fetchUrl, { cache: 'no-cache' })
+                    .then(networkResponse => {
+                        if (networkResponse && networkResponse.status === 200) {
+                            cache.put(event.request, networkResponse.clone());
                         }
-                    } catch (e) {}
-                };
-                fetchAndUpdate();
-                return cached;
+                        return networkResponse;
+                    })
+                    .catch(() => {});
+                return cachedResponse || fetchPromise;
             })
         );
         return;
@@ -189,18 +190,37 @@ self.addEventListener('fetch', event => {
 
     if (event.request.mode === 'navigate') {
         event.respondWith(
-            fetch(event.request).catch(() => caches.match(event.request).then(cached => cached || caches.match('/index.html')))
+            fetch(event.request)
+                .then(response => {
+                    if (response && response.status === 200) {
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME).then(cache => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    }
+                    return response;
+                })
+                .catch(() => caches.match(event.request).then(cached => cached || caches.match('index.html')))
         );
         return;
     }
 
     event.respondWith(
-        caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
-            if (response && response.status === 200) {
-                const responseClone = response.clone();
-                caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
-            }
-            return response;
-        }))
+        caches.match(event.request)
+            .then(cached => cached || fetch(event.request).then(response => {
+                if (response && response.status === 200) {
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, responseToCache);
+                    });
+                }
+                return response;
+            }))
     );
+});
+
+self.addEventListener('message', event => {
+    if (event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
