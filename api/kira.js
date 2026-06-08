@@ -382,7 +382,7 @@ bot.command("videoreduce", async (ctx) => {
         const sizeMB = fileSize / (1024 * 1024);
 
         if (sizeMB > MAX_DIRECT_MB) {
-            await ctx.reply("Queuing your video…");
+            const queuingMsg = await ctx.reply("Queuing your video…");
             const file = await ctx.api.getFile(fileId);
             const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
             const response = await fetch(fileUrl);
@@ -396,12 +396,18 @@ bot.command("videoreduce", async (ctx) => {
                     upsert: true,
                 });
 
-            if (error) return ctx.reply("Failed to queue video: " + error.message);
+            if (error) {
+                await ctx.api.deleteMessage(ctx.chat.id, queuingMsg.message_id);
+                return ctx.reply("Failed to queue video: " + error.message);
+            }
 
             const { data: publicUrlData } = supabase.storage
                 .from("videos")
                 .getPublicUrl(fileName);
             const publicUrl = publicUrlData.publicUrl;
+
+            const progressMsg = await ctx.reply("I’ll send the compressed video here when it’s ready.");
+            await ctx.api.deleteMessage(ctx.chat.id, queuingMsg.message_id);
 
             const dispatchBody = {
                 event_type: "compress-video",
@@ -409,6 +415,7 @@ bot.command("videoreduce", async (ctx) => {
                     chat_id: ctx.chat.id,
                     video_url: publicUrl,
                     original_name: fileName,
+                    progress_message_id: progressMsg.message_id,
                 },
             };
 
@@ -426,10 +433,9 @@ bot.command("videoreduce", async (ctx) => {
 
             if (!dispatchRes.ok) {
                 const errText = await dispatchRes.text();
-                return ctx.reply("Dispatch failed: " + errText);
+                await ctx.api.editMessageText(ctx.chat.id, progressMsg.message_id, "Dispatch failed: " + errText);
             }
-
-            return ctx.reply("I’ll send the compressed video here when it’s ready.");
+            return;
         }
 
         if (!ffmpegPath) return ctx.reply("Video compression unavailable.");
@@ -499,8 +505,7 @@ bot.command("videocapture", async (ctx) => {
     const video = reply.video;
     const fileId = video.file_id;
 
-    await ctx.reply("Capturing frames…");
-
+    const captureMsg = await ctx.reply("Capturing frames…");
     try {
         const file = await ctx.api.getFile(fileId);
         const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
@@ -516,12 +521,18 @@ bot.command("videocapture", async (ctx) => {
                 upsert: true,
             });
 
-        if (error) return ctx.reply("Failed to queue video capture: " + error.message);
+        if (error) {
+            await ctx.api.deleteMessage(ctx.chat.id, captureMsg.message_id);
+            return ctx.reply("Failed to queue video capture: " + error.message);
+        }
 
         const { data: publicUrlData } = supabase.storage
             .from("videos")
             .getPublicUrl(fileName);
         const publicUrl = publicUrlData.publicUrl;
+
+        const progressMsg = await ctx.reply("I’ll send the 10 frames here once they’re ready.");
+        await ctx.api.deleteMessage(ctx.chat.id, captureMsg.message_id);
 
         const dispatchBody = {
             event_type: "capture-frames",
@@ -529,6 +540,7 @@ bot.command("videocapture", async (ctx) => {
                 chat_id: ctx.chat.id,
                 video_url: publicUrl,
                 original_name: fileName,
+                progress_message_id: progressMsg.message_id,
             },
         };
 
@@ -546,11 +558,11 @@ bot.command("videocapture", async (ctx) => {
 
         if (!dispatchRes.ok) {
             const errText = await dispatchRes.text();
-            return ctx.reply("Dispatch failed: " + errText);
+            await ctx.api.editMessageText(ctx.chat.id, progressMsg.message_id, "Dispatch failed: " + errText);
         }
-
-        return ctx.reply("I’ll send the 10 frames here once they’re ready.");
+        return;
     } catch (e) {
+        await ctx.api.deleteMessage(ctx.chat.id, captureMsg.message_id);
         return ctx.reply("Failed to start frame capture: " + (e.message || "unknown"));
     }
 });
