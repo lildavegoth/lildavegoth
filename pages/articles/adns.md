@@ -83,8 +83,8 @@ Why is it not powerful? It's only use a public DNS from providers own profile an
 # Setup — Private DNS Method →
 This method is also simple but still needs to sign up for NextDNS account to create the profile
 1. Open [NextDNS](https://my.nextdns.io/) site
-2. Inside **Setup** menu, you'll see **DNS-over-HTTPS** with URL below it
-3. Copy the URL and go to your device settings
+2. Inside **Setup** menu, you'll see *DNS-over-TLS/QUIC**
+3. Copy the DNS below it and go to your device settings
 4. Find Private DNS and paste the copied URL there, done
 
 # Details →
