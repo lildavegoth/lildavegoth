@@ -71,7 +71,6 @@
             white-space: nowrap;
             transition: all 0.3s ease;
             border: 0px;
-            cursor: pointer;
         }
 
         .tab-pill {
@@ -83,8 +82,6 @@
             transition: all 0.3s ease;
             cursor: pointer;
             border: 0px;
-            background-color: #18181b;
-            color: #a1a1aa;
         }
 
         .tab-active {
@@ -109,14 +106,6 @@
             font-size: 11px;
             font-weight: 600;
             border-radius: 9999px;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .badge:hover {
-            opacity: 0.85;
         }
 
         .scroll-tabs {
@@ -249,7 +238,6 @@
 
         .search-icon {
             color: var(--accent-color);
-            cursor: pointer;
         }
 
         .filter-btn {
@@ -337,6 +325,20 @@
             white-space: nowrap;
         }
 
+        .suggestion-category {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-top: 4px;
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+        }
+
+        .search-suggestions::-webkit-scrollbar {
+            display: none;
+        }
+
         .alpha-header {
             font-size: 1.25rem;
             font-weight: 700;
@@ -356,7 +358,6 @@
             background: rgba(239, 68, 68, 0.2);
             color: #ef4444;
             border: 1px solid rgba(239, 68, 68, 0.3);
-            cursor: pointer;
         }
 
         .clear-btn:hover {
@@ -371,7 +372,6 @@
         .badge-domain {
             background: rgba(193,252,50,0.15);
             color: #C1FC32;
-            cursor: default;
         }
 
         .scroll-top-btn {
@@ -459,46 +459,6 @@
 
         .folder-list-item:hover {
             background: rgba(193,252,50,0.1);
-        }
-
-        .card-action-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            cursor: pointer;
-            border-radius: 999px;
-            transition: background 0.2s;
-        }
-
-        .card-action-icon:hover {
-            background: rgba(255,255,255,0.1);
-        }
-
-        .card-action-icon:active {
-            background: rgba(193,252,50,0.2);
-        }
-
-        .clickable-card {
-            cursor: pointer;
-            width: 100%;
-        }
-
-        .series-open-btn {
-            width: 35px;
-            height: 35px;
-            border-radius: 8px;
-            border: none;
-            background-color: var(--accent-color);
-            color: #000000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 14px;
-            flex-shrink: 0;
         }
 
         .flex { display: flex; }
@@ -684,6 +644,23 @@
             padding: 10px 12px;
             border-radius: 12px;
             font-size: 14px;
+            margin-left: -15px;
+        }
+
+        .series-open-btn {
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            border: none;
+            background-color: var(--accent-color);
+            color: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -949,27 +926,31 @@
             }
         }
 
-        function openUrl(url) {
-            if (url && url.trim()) {
-                window.open(url, '_blank')
+        function openTaskLinkWithCheck(event, url, taskId) {
+            const card = document.getElementById(`task-${taskId}`)
+            if (card && card.dataset.longPressed === 'true') {
+                delete card.dataset.longPressed
+                return
             }
+            if (url && url.trim()) window.open(url, '_blank')
         }
 
         function renderTaskCard(task) {
             const checkedClass = task.checked ? 'bg-[rgba(193,252,50,0.15)] border-[rgba(193,252,50,0.3)]' : 'bg-zinc-900 border-zinc-800'
             const pinColor = task.priority ? "text-[#C1FC32]" : "text-zinc-500"
             const statusBadge = (task.status && task.status.trim() !== "") ? `<span class="badge badge-status">${task.status}</span>` : ""
-            const sourceBadge = (task.sourceUrl && task.sourceUrl.trim() !== "") ? `<span data-source-url="${task.sourceUrl.replace(/'/g, "\\'")}" class="badge badge-status cursor-pointer source-badge">Source</span>` : ""
+            const sourceBadge = (task.sourceUrl && task.sourceUrl.trim() !== "") ? `<span onclick="event.stopPropagation(); window.open('${task.sourceUrl}', '_blank')" class="badge badge-status cursor-pointer">Source</span>` : ""
             const domainPill = task.url ? getDomainPill(task.url) : null
             const domainBadge = domainPill ? `<span class="badge badge-domain">${domainPill}</span>` : ""
             const notesHtml = (task.notes && task.notes.trim() !== "") ? `<div class="text-sm text-zinc-400 mt-2 notes-scrollable">${task.notes}</div>` : ""
+            const safeUrl = task.url ? task.url.replace(/'/g, "\\'") : ''
 
             return `
                 <div id="task-${task.id}" data-id="${task.id}" class="task-card ${checkedClass} rounded-3xl p-4 border flex items-start gap-4">
-                    <div class="w-6 h-6 rounded-2xl border-2 ${task.checked ? 'bg-[#C1FC32] border-[#C1FC32]' : 'border-zinc-600'} flex items-center justify-center cursor-pointer flex-shrink-0 mt-0.5" data-check="${task.id}">
+                    <div onclick="toggleCheck(${task.id});event.stopImmediatePropagation()" class="w-6 h-6 rounded-2xl border-2 ${task.checked ? 'bg-[#C1FC32] border-[#C1FC32]' : 'border-zinc-600'} flex items-center justify-center cursor-pointer flex-shrink-0 mt-0.5">
                         ${task.checked ? '<i class="fa-solid fa-check text-black check-icon-small"></i>' : ''}
                     </div>
-                    <div class="flex-1 pt-0.5 clickable-card" data-url="${task.url ? task.url.replace(/'/g, "\\'") : ''}">
+                    <div class="flex-1 pt-0.5 ${task.url ? 'cursor-pointer' : ''}" onclick="openTaskLinkWithCheck(event, '${safeUrl}', ${task.id})">
                         <div class="${task.checked ? 'line-through text-zinc-400' : 'font-medium text-white'} text-[17px] break-words">${task.title}</div>
                         ${notesHtml}
                         <div class="mt-3 flex items-center gap-2 flex-wrap">
@@ -978,72 +959,11 @@
                             ${domainBadge}
                         </div>
                     </div>
-                    <div class="flex-shrink-0 flex items-center gap-1 mt-1">
-                        <div class="card-action-icon" data-edit="${task.id}">
-                            <i class="fa-solid fa-pencil-alt text-zinc-400 hover:text-[#C1FC32] transition"></i>
-                        </div>
-                        <div class="card-action-icon" data-pin="${task.id}">
-                            <i class="fa-solid fa-thumbtack pin-icon-small ${pinColor}"></i>
-                        </div>
+                    <div class="flex-shrink-0 flex items-center gap-3 mt-1">
+                        <i onclick="showTaskPopup(true,${task.id});event.stopImmediatePropagation()" class="fa-solid fa-pencil-alt cursor-pointer text-zinc-400 hover:text-[#C1FC32] transition"></i>
+                        <i onclick="togglePriority(${task.id});event.stopImmediatePropagation()" class="fa-solid fa-thumbtack pin-icon-small cursor-pointer ${pinColor}"></i>
                     </div>
                 </div>`
-        }
-
-        function attachCardEvents() {
-            document.querySelectorAll('[data-check]').forEach(el => {
-                el.removeEventListener('click', checkHandler)
-                el.addEventListener('click', checkHandler)
-            })
-            document.querySelectorAll('.clickable-card').forEach(el => {
-                el.removeEventListener('click', cardClickHandler)
-                el.addEventListener('click', cardClickHandler)
-            })
-            document.querySelectorAll('.source-badge').forEach(el => {
-                el.removeEventListener('click', sourceClickHandler)
-                el.addEventListener('click', sourceClickHandler)
-            })
-            document.querySelectorAll('[data-edit]').forEach(el => {
-                el.removeEventListener('click', editHandler)
-                el.addEventListener('click', editHandler)
-            })
-            document.querySelectorAll('[data-pin]').forEach(el => {
-                el.removeEventListener('click', pinHandler)
-                el.addEventListener('click', pinHandler)
-            })
-        }
-
-        function checkHandler(e) {
-            e.stopImmediatePropagation()
-            const id = parseInt(this.getAttribute('data-check'))
-            toggleCheck(id)
-        }
-
-        function cardClickHandler(e) {
-            e.stopPropagation()
-            const url = this.getAttribute('data-url')
-            if (url && url.trim()) {
-                openUrl(url)
-            }
-        }
-
-        function sourceClickHandler(e) {
-            e.stopPropagation()
-            const url = this.getAttribute('data-source-url')
-            if (url && url.trim()) {
-                openUrl(url)
-            }
-        }
-
-        function editHandler(e) {
-            e.stopImmediatePropagation()
-            const id = parseInt(this.getAttribute('data-edit'))
-            showTaskPopup(true, id)
-        }
-
-        function pinHandler(e) {
-            e.stopImmediatePropagation()
-            const id = parseInt(this.getAttribute('data-pin'))
-            togglePriority(id)
         }
 
         function attachLongPressListeners() {
@@ -1157,7 +1077,6 @@
             }
             container.innerHTML = html
             updateFilterButtonState()
-            attachCardEvents()
             attachLongPressListeners()
         }
 
@@ -1262,7 +1181,7 @@
                     <div class="series-input-row">
                         <label>Eps ${i + 1}</label>
                         <input type="text" placeholder="Link" value="${val.replace(/"/g, '&quot;')}" oninput="updateSeriesValue(${i}, this.value)">
-                        <button class="series-open-btn" onclick="openSeriesInputUrl(this)">
+                        <button class="series-open-btn" onclick="openSeriesInputUrl(this)" title="Open URL">
                             <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>`
