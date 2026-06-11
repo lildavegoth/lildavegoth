@@ -194,8 +194,8 @@
             display: none;
         }
         .filter-tab {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
+            background: var(--bg-dark);
+            border: none;
             color: var(--text-secondary);
             padding: 10px 20px;
             border-radius: 25px;
@@ -205,13 +205,12 @@
             font-size: 14px;
         }
         .filter-tab:hover {
-            border-color: var(--accent-color);
-            color: var(--accent-color);
+            background: var(--accent-color);
+            color: #000;
         }
         .filter-tab.active {
-            background: rgba(193, 252, 50, 0.15);
-            border-color: var(--accent-color);
-            color: var(--accent-color);
+            background: var(--accent-color);
+            color: #000;
             font-weight: 600;
         }
         .gallery-grid {
@@ -306,6 +305,9 @@
             margin-top: 4px;
             align-self: flex-start;
         }
+        .media-category-long {
+            border-radius: 8px;
+        }
         .media-source {
             display: none;
             font-size: 10px;
@@ -380,6 +382,9 @@
             justify-content: center;
             z-index: 99999999;
             animation: fadeIn 0.3s ease;
+        }
+        .category-popup-overlay {
+            z-index: 100000000;
         }
         .popup-content {
             background: var(--bg-card);
@@ -569,12 +574,6 @@
             gap: 8px;
             transition: all 0.3s ease;
         }
-        .scroll-pill:hover {
-            background: rgba(193, 252, 50, 0.15);
-            color: var(--accent-color);
-            border-color: var(--accent-color);
-            transform: translateY(-2px);
-        }
         @media (min-width: 720px) {
             .scroll-pill {
                 padding: 14px 30px;
@@ -643,6 +642,45 @@
             background: rgba(255, 255, 255, 0.05);
             padding-right: 40px;
         }
+        .category-trigger-btn {
+            width: 100%;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-medium);
+            color: var(--text-primary);
+            font-size: 16px;
+            padding: 12px 16px;
+        }
+        .category-trigger-btn i {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .category-popup .popup-content {
+            max-width: 300px;
+            padding: var(--spacing-md);
+        }
+        .category-option-btn {
+            width: 100%;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 10px;
+            border-radius: var(--radius-small);
+            margin-bottom: 8px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+        .category-option-btn.active {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+        }
     </style>
 </head>
 <body>
@@ -679,11 +717,11 @@
         </div>
     
         <div class="filter-tabs">
-            <div class="filter-tab active" onclick="filterMedia('anime')">Anime</div>
-            <div class="filter-tab" onclick="filterMedia('animeseries')">Anime Series</div>
-            <div class="filter-tab" onclick="filterMedia('movies')">Movies</div>
-            <div class="filter-tab" onclick="filterMedia('series')">Series</div>
-            <div class="filter-tab" onclick="filterMedia('top')">Top Rated</div>
+            <div class="filter-tab active" onclick="let b=this;b.classList.add('btnMDYE');setTimeout(()=>b.classList.remove('btnMDYE'),500);filterMedia('anime')">Anime</div>
+            <div class="filter-tab" onclick="let b=this;b.classList.add('btnMDYE');setTimeout(()=>b.classList.remove('btnMDYE'),500);filterMedia('animeseries')">Anime Series</div>
+            <div class="filter-tab" onclick="let b=this;b.classList.add('btnMDYE');setTimeout(()=>b.classList.remove('btnMDYE'),500);filterMedia('movies')">Movies</div>
+            <div class="filter-tab" onclick="let b=this;b.classList.add('btnMDYE');setTimeout(()=>b.classList.remove('btnMDYE'),500);filterMedia('series')">Series</div>
+            <div class="filter-tab" onclick="let b=this;b.classList.add('btnMDYE');setTimeout(()=>b.classList.remove('btnMDYE'),500);filterMedia('top')">Top Rated</div>
         </div>
     
         <div class="gallery-grid" id="galleryGrid"></div>
@@ -713,8 +751,20 @@
         </div>
     </div>
 
+    <div id="categoryPopup" class="popup-overlay category-popup-overlay" style="display: none;">
+        <div class="popup-content category-popup">
+            <div class="popup-header">
+                <h2>Select Category</h2>
+                <button class="close-popup" onclick="closeCategoryPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="categoryPopupContent" class="popup-form"></div>
+        </div>
+    </div>
+
     <div class="fab-container">
-        <button class="scroll-pill" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-arrow-up"></i></button>
+        <button class="scroll-pill" onclick="let b=this;b.classList.add('btnMDYE');setTimeout(()=>b.classList.remove('btnMDYE'),500);window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-arrow-up"></i></button>
         <button class="fab-square" onclick="openAddPopup()"><i class="fas fa-plus"></i></button>
     </div>
 
@@ -725,6 +775,13 @@
         const DEBOUNCE_DELAY = 150;
         let searchTimeout;
         let suggestionHighlightTimer = null;
+        let pendingCategoryValue = 'anime';
+        const categoryOptions = [
+            { value: 'anime', label: 'Anime Movies' },
+            { value: 'animeseries', label: 'Anime Series' },
+            { value: 'movies', label: 'Movies' },
+            { value: 'series', label: 'Series' }
+        ];
 
         function loadData() {
             const saved = localStorage.getItem('mediaGalleryData');
@@ -763,7 +820,9 @@
                     'anime': 'Anime',
                     'animeseries': 'Anime Series'
                 }[item.category] || item.category;
-                const genreHtml = (item.genre && item.genre !== 'No genre') ? `<span class="media-category">${item.genre}</span>` : '';
+                const genreText = (item.genre && item.genre !== 'No genre') ? item.genre : '';
+                const genreClass = genreText.length > 15 ? 'media-category media-category-long' : 'media-category';
+                const genreHtml = genreText ? `<span class="${genreClass}">${genreText}</span>` : '';
                 const yearHtml = (item.year && item.year.toString().trim() !== '') ? `<div class="media-year">${item.year}</div>` : '';
                 const synopsisHtml = (item.synopsis && item.synopsis.trim() !== '') ? `<div class="media-synopsis" id="synopsis-${item.id}">${item.synopsis}</div>` : '';
                 const readMoreHtml = (item.synopsis && item.synopsis.length > 80) ? `<button class="read-more-btn" onclick="toggleSynopsis(event, ${item.id})"><i class="fas fa-chevron-down"></i> Read More</button>` : '';
@@ -835,6 +894,7 @@
             document.getElementById('popupFooter').style.display = 'flex';
         }
         function openAddPopup() {
+            pendingCategoryValue = 'anime';
             const content = getAddEditFormHTML();
             const footer = `
                 <button class="btn-secondary" onclick="closeUniversalPopup()">Cancel</button>
@@ -847,6 +907,7 @@
         function editMedia(id) {
             const m = mediaData.find(x => x.id === id);
             if (!m) return;
+            pendingCategoryValue = m.category || 'movies';
             const content = getAddEditFormHTML();
             const footer = `
                 <button class="btn-secondary" onclick="closeUniversalPopup()">Cancel</button>
@@ -859,9 +920,10 @@
             document.getElementById('mediaGenre').value = m.genre || '';
             document.getElementById('mediaCountry').value = m.country || '';
             document.getElementById('mediaLink').value = m.link || '';
-            document.getElementById('mediaCategory').value = m.category || 'movies';
+            document.getElementById('mediaCategory').value = m.category || 'anime';
             document.getElementById('mediaSynopsis').value = m.synopsis || '';
             document.getElementById('mediaReleaseYear').value = m.year || '';
+            updateCategoryTriggerButton(pendingCategoryValue);
             editingMediaId = id;
         }
         function openDeleteConfirm(id) {
@@ -918,19 +980,19 @@
                     </div>
                     <div class="form-row">
                         <label class="form-label">Rating (1-10 or 100)</label>
-                        <input type="text" class="form-input" id="mediaRating" placeholder="e.g., 1,2,3,4,5,6,7,8,9,10,100">
+                        <input type="text" class="form-input" id="mediaRating" placeholder="1,2,3,4,5,6,7,8,9,10,100">
                     </div>
                     <div class="form-row">
-                        <label class="form-label">Genre</label>
-                        <input type="text" class="form-input" id="mediaGenre" placeholder="e.g., Action | Comedy">
+                        <label class="form-label">Genre or Tags</label>
+                        <input type="text" class="form-input" id="mediaGenre" placeholder="Action, Comedy">
                     </div>
                     <div class="form-row">
                         <label class="form-label">Country</label>
-                        <input type="text" class="form-input" id="mediaCountry" placeholder="e.g., Japan, USA">
+                        <input type="text" class="form-input" id="mediaCountry" placeholder="Japan, Indonesia">
                     </div>
                     <div class="form-row">
                         <label class="form-label">Release Year</label>
-                        <input type="text" class="form-input" id="mediaReleaseYear" placeholder="e.g., 2023">
+                        <input type="text" class="form-input" id="mediaReleaseYear" placeholder="2023">
                     </div>
                     <div class="form-row">
                         <label class="form-label">Watch URL</label>
@@ -938,15 +1000,11 @@
                     </div>
                     <div class="form-row">
                         <label class="form-label">Category</label>
-                        <div class="select-wrapper">
-                            <select class="form-select" id="mediaCategory">
-                                <option value="">Select category</option>
-                                <option value="movies">Movies</option>
-                                <option value="series">Series</option>
-                                <option value="anime">Anime Movies</option>
-                                <option value="animeseries">Anime Series</option>
-                            </select>
-                        </div>
+                        <input type="hidden" id="mediaCategory" value="${pendingCategoryValue}">
+                        <button type="button" id="categoryTriggerBtn" class="category-trigger-btn" onclick="openCategoryPopup()">
+                            <span id="categoryTriggerLabel">${getCategoryLabel(pendingCategoryValue)}</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
                     </div>
                     <div class="form-row">
                         <label class="form-label">Descriptions</label>
@@ -954,6 +1012,33 @@
                     </div>
                 </div>
             `;
+        }
+        function getCategoryLabel(value) {
+            const opt = categoryOptions.find(o => o.value === value);
+            return opt ? opt.label : 'Select category';
+        }
+        function updateCategoryTriggerButton(value) {
+            const btn = document.getElementById('categoryTriggerLabel');
+            if (btn) btn.textContent = getCategoryLabel(value);
+            const hidden = document.getElementById('mediaCategory');
+            if (hidden) hidden.value = value;
+            pendingCategoryValue = value;
+        }
+        function openCategoryPopup() {
+            const current = document.getElementById('mediaCategory').value || pendingCategoryValue;
+            let optionsHTML = categoryOptions.map(opt => {
+                const activeClass = opt.value === current ? 'active' : '';
+                return `<button class="category-option-btn ${activeClass}" onclick="setCategoryAndClose('${opt.value}')">${opt.label}</button>`;
+            }).join('');
+            document.getElementById('categoryPopupContent').innerHTML = optionsHTML;
+            document.getElementById('categoryPopup').style.display = 'flex';
+        }
+        function closeCategoryPopup() {
+            document.getElementById('categoryPopup').style.display = 'none';
+        }
+        function setCategoryAndClose(value) {
+            updateCategoryTriggerButton(value);
+            closeCategoryPopup();
         }
         function saveMedia() {
             const name = document.getElementById('mediaName').value.trim();
@@ -966,6 +1051,7 @@
                 window.showMessage('Rating must be one of: 1,2,3,4,5,6,7,8,9,10,100');
                 return;
             }
+            const categoryValue = document.getElementById('mediaCategory').value;
             
             const mediaItem = {
                 name: name,
@@ -973,7 +1059,7 @@
                 genre: document.getElementById('mediaGenre').value.trim() || 'No genre',
                 country: document.getElementById('mediaCountry').value.trim() || 'Unknown',
                 year: document.getElementById('mediaReleaseYear').value.trim(),
-                category: document.getElementById('mediaCategory').value || 'movies',
+                category: categoryValue || 'movies',
                 link: document.getElementById('mediaLink').value.trim() || '',
                 synopsis: document.getElementById('mediaSynopsis').value.trim(),
             };
