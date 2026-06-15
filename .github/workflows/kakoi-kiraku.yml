@@ -425,23 +425,30 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Fetch job and run AI
+      - name: Debug and run AI
         run: |
-          set -e
           JOB_ID="${{ github.event.client_payload.job_id }}"
+          echo "JOB_ID=$JOB_ID"
+          echo "SUPABASE_URL=$SUPABASE_URL"
 
-          JOB=$(curl -s "https://$SUPABASE_URL/rest/v1/kira_jobs?id=eq.$JOB_ID&select=*" \
-            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+          JOB=$(curl -s "https://${SUPABASE_URL}/rest/v1/kira_jobs?id=eq.${JOB_ID}&select=*" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" || true)
+
+          echo "JOB=$JOB"
 
           USER_ID=$(echo "$JOB" | jq -r '.[0].user_id')
           CHAT_ID=$(echo "$JOB" | jq -r '.[0].chat_id')
           MESSAGE_ID=$(echo "$JOB" | jq -r '.[0].message_id')
           TEXT=$(echo "$JOB" | jq -r '.[0].text')
 
-          TOKEN_DATA=$(curl -s "https://$SUPABASE_URL/rest/v1/kira_keys?user_id=eq.$USER_ID&select=encrypted_token" \
-            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+          echo "USER_ID=$USER_ID CHAT_ID=$CHAT_ID MESSAGE_ID=$MESSAGE_ID TEXT=$TEXT"
+
+          TOKEN_DATA=$(curl -s "https://${SUPABASE_URL}/rest/v1/kira_keys?user_id=eq.${USER_ID}&select=encrypted_token" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" || true)
+
+          echo "TOKEN_DATA=$TOKEN_DATA"
 
           ENC_TOKEN=$(echo "$TOKEN_DATA" | jq -r '.[0].encrypted_token')
 
@@ -458,12 +465,15 @@ jobs:
             console.log(decipher(cipher));
           ")
 
+          echo "OpenRouter call..."
           RESPONSE=$(curl -s "https://openrouter.ai/api/v1/chat/completions" \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
             -H "HTTP-Referer: https://github.com" \
             -H "X-Title: Telegram Bot" \
-            -d "{\"model\":\"openrouter/free\",\"messages\":[{\"role\":\"user\",\"content\":\"$TEXT\"}],\"max_tokens\":800,\"temperature\":0.7}")
+            -d "{\"model\":\"openrouter/free\",\"messages\":[{\"role\":\"user\",\"content\":\"$TEXT\"}],\"max_tokens\":800,\"temperature\":0.7}" || true)
+
+          echo "RESPONSE=$RESPONSE"
 
           REPLY_TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Sorry, I could not generate a reply."')
 
@@ -472,9 +482,9 @@ jobs:
             -d "message_id=$MESSAGE_ID" \
             -d "text=$REPLY_TEXT"
 
-          curl -s -X DELETE "https://$SUPABASE_URL/rest/v1/kira_jobs?id=eq.$JOB_ID" \
-            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
+          curl -s -X DELETE "https://${SUPABASE_URL}/rest/v1/kira_jobs?id=eq.${JOB_ID}" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"
 
   cleanup-history:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
