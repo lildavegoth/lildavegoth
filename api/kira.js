@@ -55,7 +55,11 @@ async function setMaintenance(value) {
 
 bot.use(async (ctx, next) => {
     const text = ctx.message?.text;
-    if (text && (text.startsWith("/revive") || text.startsWith("/shutdown") || text.startsWith("/restart"))) {
+    const cbData = ctx.callbackQuery?.data;
+    if (
+        (text && (text.startsWith("/revive") || text.startsWith("/shutdown") || text.startsWith("/restart"))) ||
+        (cbData && (cbData === "admin_shutdown" || cbData === "admin_revive" || cbData === "admin_restart"))
+    ) {
         return next();
     }
     const maintenance = await isUnderMaintenance();
@@ -106,6 +110,8 @@ bot.command("owner", async (ctx) => {
             inline_keyboard: [
                 [{ text: "Users", callback_data: "admin_users" }],
                 [{ text: "Grant", callback_data: "admin_grant" }, { text: "Revoke", callback_data: "admin_revoke" }],
+                [{ text: "Shutdown", callback_data: "admin_shutdown" }, { text: "Revive", callback_data: "admin_revive" }],
+                [{ text: "Restart", callback_data: "admin_restart" }],
             ],
         },
     });
@@ -152,6 +158,31 @@ bot.callbackQuery("admin_revoke", async (ctx) => {
     await ctx.answerCallbackQuery();
     pendingAdminAction.set(ctx.from.id, "revoke");
     return ctx.reply("Send me the Telegram ID to revoke access.");
+});
+
+bot.callbackQuery("admin_shutdown", async (ctx) => {
+    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
+    await setMaintenance(true);
+    await ctx.answerCallbackQuery();
+    return ctx.reply("Bot is now in maintenance mode.");
+});
+
+bot.callbackQuery("admin_revive", async (ctx) => {
+    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
+    await setMaintenance(false);
+    await ctx.answerCallbackQuery();
+    return ctx.reply("Bot is back online.");
+});
+
+bot.callbackQuery("admin_restart", async (ctx) => {
+    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
+    if (!process.env.VERCEL_DEPLOY_HOOK) {
+        await ctx.answerCallbackQuery();
+        return ctx.reply("Deploy hook not configured.");
+    }
+    await fetch(process.env.VERCEL_DEPLOY_HOOK, { method: "POST" });
+    await ctx.answerCallbackQuery();
+    return ctx.reply("Redeploying…");
 });
 
 bot.command("connect", async (ctx) => {
@@ -210,27 +241,6 @@ bot.callbackQuery("revoke_prompt", async (ctx) => {
     await ctx.deleteMessage();
     pendingConnectAction.set(ctx.from.id, "revoke");
     return ctx.reply("You want to delete access to your channel? Send me your Channel ID.");
-});
-
-bot.command("shutdown", async (ctx) => {
-    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
-    await setMaintenance(true);
-    return ctx.reply("Bot is now in maintenance mode.");
-});
-
-bot.command("revive", async (ctx) => {
-    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
-    await setMaintenance(false);
-    return ctx.reply("Bot is back online.");
-});
-
-bot.command("restart", async (ctx) => {
-    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
-    if (!process.env.VERCEL_DEPLOY_HOOK) {
-        return ctx.reply("Deploy hook not configured.");
-    }
-    await fetch(process.env.VERCEL_DEPLOY_HOOK, { method: "POST" });
-    return ctx.reply("Redeploying…");
 });
 
 bot.command("start", async (ctx) => {
