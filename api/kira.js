@@ -182,7 +182,7 @@ bot.command("start", async (ctx) => {
         language: user.language_code,
     });
     return ctx.reply(
-        `Hey! I'm Kira, i'll be ready to assist you if you're one of friend of my owner @lildavegoth\n\ndon't forget to check Kakoi Kiraku Home page to see more useful stuff from @lildavegoth`,
+        `Hey! I'm Kira, i'll be ready to assist you if you're one of friend of my owner @lildavegoth\n\nDon't forget to check Kakoi Kiraku Home page to see more useful stuff from @lildavegoth`,
         {
             reply_markup: {
                 inline_keyboard: [
