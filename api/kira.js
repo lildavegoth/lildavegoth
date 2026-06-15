@@ -680,8 +680,6 @@ bot.command("post", async (ctx) => {
         return null;
     }).filter(Boolean);
 
-    const content = contentLines.join("\n").trim();
-
     const { data: channels, error } = await supabase
         .from("user_channels")
         .select("channel_id, channel_name")
@@ -694,10 +692,10 @@ bot.command("post", async (ctx) => {
 
     const channelButtons = channels.map((c) => [{
         text: c.channel_name || c.channel_id,
-        callback_data: `post_to_channel_${c.channel_id}`,
+        callback_data: `post_to_channel_${c.channel_id}_${reply.chat.id}_${reply.message_id}`,
     }]);
 
-    const previewText = content || (reply.photo ? "[Photo]" : reply.video ? "[Video]" : "[Message]");
+    const previewText = contentLines.join("\n").trim() || (reply.photo ? "[Photo]" : reply.video ? "[Video]" : "[Message]");
 
     return ctx.reply(previewText, {
         reply_markup: {
@@ -706,17 +704,18 @@ bot.command("post", async (ctx) => {
     });
 });
 
-bot.callbackQuery(/^post_to_channel_(.+)$/, async (ctx) => {
+bot.callbackQuery(/^post_to_channel_(.+)_(.+)_(.+)$/, async (ctx) => {
     const channelId = ctx.match[1];
-    const userId = ctx.from.id;
+    const originalChatId = ctx.match[2];
+    const originalMessageId = parseInt(ctx.match[3], 10);
+
     const message = ctx.callbackQuery.message;
-    if (!message || !message.reply_to_message) {
-        await ctx.answerCallbackQuery("Original message not found.");
+    if (!message) {
+        await ctx.answerCallbackQuery("Something went wrong.");
         return;
     }
 
-    const originalMsg = message.reply_to_message;
-    const originalText = originalMsg.text || originalMsg.caption || "";
+    const originalText = message.text || message.caption || "";
     const lines = originalText.split("\n");
     const buttonLines = [];
 
@@ -741,8 +740,8 @@ bot.callbackQuery(/^post_to_channel_(.+)$/, async (ctx) => {
     try {
         await ctx.api.copyMessage(
             channelId,
-            originalMsg.chat.id,
-            originalMsg.message_id,
+            originalChatId,
+            originalMessageId,
             { reply_markup: replyMarkup }
         );
         await ctx.answerCallbackQuery("Posted!");
