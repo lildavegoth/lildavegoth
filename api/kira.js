@@ -92,7 +92,7 @@ bot.use(async (ctx, next) => {
     return next();
 });
 
-bot.command("admin", async (ctx) => {
+bot.command("owner", async (ctx) => {
     if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
     return ctx.reply(`Hey ${ctx.from.first_name}! I'm here for you.`, {
         reply_markup: {
