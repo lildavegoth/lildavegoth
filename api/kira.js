@@ -697,12 +697,36 @@ bot.command("post", async (ctx) => {
     const postKey = Math.random().toString(36).slice(2, 10);
     postButtons.set(postKey, buttons);
 
+    const cleanText = contentLines.join("\n").trim();
+
+    let fileId = null;
+    let mediaType = "text";
+
+    if (reply.photo) {
+        mediaType = "photo";
+        fileId = reply.photo[reply.photo.length - 1].file_id;
+    } else if (reply.video) {
+        mediaType = "video";
+        fileId = reply.video.file_id;
+    } else if (reply.document) {
+        mediaType = "document";
+        fileId = reply.document.file_id;
+    } else if (reply.audio) {
+        mediaType = "audio";
+        fileId = reply.audio.file_id;
+    } else if (reply.voice) {
+        mediaType = "voice";
+        fileId = reply.voice.file_id;
+    }
+
     const channelButtons = channels.map((c) => [{
         text: c.channel_name || c.channel_id,
-        callback_data: `post_to_channel_${c.channel_id}_${reply.chat.id}_${reply.message_id}_${postKey}`,
+        callback_data: `post_to_channel_${c.channel_id}_${postKey}`,
     }]);
 
-    const previewText = contentLines.join("\n").trim() || (reply.photo ? "[Photo]" : reply.video ? "[Video]" : "[Message]");
+    postButtons.set(postKey + "_media", { type: mediaType, fileId, cleanText, chatId: reply.chat.id, messageId: reply.message_id });
+
+    const previewText = cleanText || (reply.photo ? "[Photo]" : reply.video ? "[Video]" : reply.document ? "[Document]" : reply.audio ? "[Audio]" : reply.voice ? "[Voice]" : "[Message]");
 
     return ctx.reply(previewText, {
         reply_markup: {
@@ -711,30 +735,33 @@ bot.command("post", async (ctx) => {
     });
 });
 
-bot.callbackQuery(/^post_to_channel_(.+)_(.+)_(.+)_(.+)$/, async (ctx) => {
+bot.callbackQuery(/^post_to_channel_(.+)_(.+)$/, async (ctx) => {
     let channelId = ctx.match[1];
-    const originalChatId = ctx.match[2];
-    const originalMessageId = parseInt(ctx.match[3], 10);
-    const postKey = ctx.match[4];
+    const postKey = ctx.match[2];
 
     if (!channelId.startsWith("-100")) {
         channelId = "-100" + channelId;
     }
 
     const buttons = postButtons.get(postKey) || [];
+    const mediaData = postButtons.get(postKey + "_media") || {};
     postButtons.delete(postKey);
+    postButtons.delete(postKey + "_media");
 
     const replyMarkup = buttons.length > 0
         ? { inline_keyboard: [buttons] }
         : undefined;
 
+    const { type, fileId, cleanText, chatId, messageId } = mediaData;
+
     try {
-        await ctx.api.copyMessage(
-            channelId,
-            originalChatId,
-            originalMessageId,
-            { reply_markup: replyMarkup }
-        );
+        if (type === "text") {
+            await ctx.api.sendMessage(channelId, cleanText, { reply_markup: replyMarkup });
+        } else if (fileId) {
+            await ctx.api.copyMessage(channelId, chatId, messageId, { reply_markup: replyMarkup, caption: cleanText || undefined });
+        } else {
+            await ctx.api.sendMessage(channelId, cleanText, { reply_markup: replyMarkup });
+        }
         await ctx.answerCallbackQuery("Posted!");
         await ctx.deleteMessage();
     } catch (e) {
