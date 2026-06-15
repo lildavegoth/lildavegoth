@@ -338,30 +338,44 @@ jobs:
 
       - name: Check and send reminders
         run: |
-          set -euo pipefail
+          set -ex
           NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "Current UTC: $NOW"
 
-          REMINDERS=$(curl -sS -G \
+          RESPONSE=$(curl -sS -w "\n%{http_code}" -G \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             "$SUPABASE_URL/rest/v1/reminders" \
             --data-urlencode "select=id,chat_id,description" \
             --data-urlencode "remind_at=lte.$NOW")
 
-          if [ -z "$REMINDERS" ] || [ "$REMINDERS" = "[]" ]; then
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -c -4)
+
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response body: $BODY"
+
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "Failed to query Supabase"
+            exit 1
+          fi
+
+          if [ -z "$BODY" ] || [ "$BODY" = "[]" ]; then
             echo "No reminders due."
             exit 0
           fi
 
-          echo "$REMINDERS" | jq -c '.[]' | while read -r reminder; do
+          echo "$BODY" | jq -c '.[]' | while read -r reminder; do
             CHAT_ID=$(echo "$reminder" | jq -r '.chat_id')
             DESCRIPTION=$(echo "$reminder" | jq -r '.description')
             ID=$(echo "$reminder" | jq -r '.id')
 
+            echo "Sending reminder $ID to $CHAT_ID: $DESCRIPTION"
             curl -sS -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendMessage" \
               -d "chat_id=$CHAT_ID" \
               -d "text=Reminder: $DESCRIPTION"
 
+            echo "Deleting reminder $ID"
             curl -sS -X DELETE \
               -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
               -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
