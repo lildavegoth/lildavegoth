@@ -126,56 +126,57 @@ jobs:
                   mv "$OLD_FILE" "$FILENAME"
               fi
           fi
-      - name: Upload and get link
-        id: upload
+      - name: Deliver file based on destination
         run: |
           cd downloads
-          rm -f cookies.txt
           FILE=$(ls -1 | head -1)
           if [ -z "$FILE" ]; then
-            echo "UPLOAD_SUCCESS=false" >> $GITHUB_ENV
-            echo "UPLOAD_ERROR=No file found to upload" >> $GITHUB_ENV
-            exit 1
-          fi
-          if rclone copy "$FILE" mirror_drive: -P 2> upload_error.log; then
-            LINK=$(rclone link "mirror_drive:$FILE")
-            echo "UPLOAD_SUCCESS=true" >> $GITHUB_ENV
-            echo "DRIVE_LINK=$LINK" >> $GITHUB_ENV
-          else
-            ERROR_MSG=$(cat upload_error.log)
-            echo "UPLOAD_SUCCESS=false" >> $GITHUB_ENV
-            echo "UPLOAD_ERROR=$ERROR_MSG" >> $GITHUB_ENV
-          fi
-      - name: Edit Mirroring message
-        run: |
-          if [ "$UPLOAD_SUCCESS" = "true" ]; then
-            LINK="$DRIVE_LINK"
-            if [ -z "$LINK" ]; then
-              LINK="https://drive.google.com/drive/folders/${{ secrets.GDRIVE_FOLDER_ID }}"
-            fi
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
-              -d "chat_id=${{ github.event.client_payload.chat_id }}" \
-              -d "message_id=${{ github.event.client_payload.message_id }}" \
-              -d "text=Mirror completed: $LINK"
-          else
-            RAW_ERROR="$UPLOAD_ERROR"
-            # Check if it's a storage quota exceeded error
-            if echo "$RAW_ERROR" | grep -qi "storage quota exceeded"; then
-              MSG="Mirror failed: Google Drive storage quota exceeded. Please free up space."
-            else
-              # Truncate error to avoid message too long
-              TRUNCATED=$(echo "$RAW_ERROR" | head -c 800)
-              MSG="Mirror failed: $TRUNCATED"
-            fi
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+            MSG="Mirror failed: No file found to upload"
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
               -d "chat_id=${{ github.event.client_payload.chat_id }}" \
               -d "message_id=${{ github.event.client_payload.message_id }}" \
               -d "text=$MSG"
+            exit 1
           fi
-        env:
-          UPLOAD_SUCCESS: ${{ env.UPLOAD_SUCCESS }}
-          DRIVE_LINK: ${{ env.DRIVE_LINK }}
-          UPLOAD_ERROR: ${{ env.UPLOAD_ERROR }}
+          SIZE=$(stat -c%s "$FILE")
+          DEST="${{ github.event.client_payload.destination }}"
+          if [ "$DEST" == "telegram" ]; then
+            if [ "$SIZE" -lt 50000000 ]; then
+              curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
+                -F "chat_id=${{ github.event.client_payload.chat_id }}" \
+                -F "document=@$FILE" \
+                -F "caption=$FILE"
+              curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+                -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+                -d "message_id=${{ github.event.client_payload.message_id }}"
+            else
+              MSG="Mirror failed: File too large for Telegram (over 50MB). Use Drive instead."
+              curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+                -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+                -d "message_id=${{ github.event.client_payload.message_id }}" \
+                -d "text=$MSG"
+            fi
+          else
+            if rclone copy "$FILE" mirror_drive: -P 2> upload_error.log; then
+              LINK=$(rclone link "mirror_drive:$FILE")
+              curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+                -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+                -d "message_id=${{ github.event.client_payload.message_id }}" \
+                -d "text=Mirror completed: $LINK"
+            else
+              RAW_ERROR=$(cat upload_error.log)
+              if echo "$RAW_ERROR" | grep -qi "storage quota exceeded"; then
+                MSG="Mirror failed: Google Drive storage quota exceeded. Please free up space."
+              else
+                TRUNCATED=$(echo "$RAW_ERROR" | head -c 800)
+                MSG="Mirror failed: $TRUNCATED"
+              fi
+              curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+                -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+                -d "message_id=${{ github.event.client_payload.message_id }}" \
+                -d "text=$MSG"
+            fi
+          fi
 
   capture-frames:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'capture-frames'
@@ -192,7 +193,6 @@ jobs:
       - name: Extract 10 frames
         run: |
           DURATION=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 capture/input.mp4)
-          # Calculate fps to get exactly 10 frames over the whole video
           FPS=$(echo "scale=6; 10 / $DURATION" | bc)
           ffmpeg -y -i capture/input.mp4 \
             -vf "fps=$FPS,scale=1280:trunc(ow/a/2)*2" \
@@ -206,23 +206,18 @@ jobs:
             echo "No frames extracted"
             exit 1
           fi
-          # Build media JSON array
           MEDIA="["
           for i in "${!FRAMES[@]}"; do
             if [ $i -gt 0 ]; then MEDIA+=","; fi
             MEDIA+="{\"type\":\"photo\",\"media\":\"attach://frame$i\"}"
           done
           MEDIA+="]"
-
-          # Build curl arguments in an array (safe quoting)
           CURL_ARGS=(-X POST "https://api.telegram.org/bot${KIRA_TOKEN}/sendMediaGroup")
           CURL_ARGS+=(-F "chat_id=${{ github.event.client_payload.chat_id }}")
           CURL_ARGS+=(-F "media=${MEDIA}")
-
           for i in "${!FRAMES[@]}"; do
             CURL_ARGS+=(-F "frame${i}=@${FRAMES[$i]}")
           done
-
           curl "${CURL_ARGS[@]}"
       - name: Delete progress message
         if: github.event.client_payload.progress_message_id != ''
@@ -241,24 +236,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - name: Install yt-dlp and ffmpeg
         run: |
           pip install yt-dlp
           sudo apt-get update && sudo apt-get install -y ffmpeg
-
       - name: Fetch media info and send format buttons
         run: |
           echo "${{ secrets.YOUTUBE_COOKIES }}" > cookies.txt
           URL="${{ github.event.client_payload.url }}"
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           FETCH_MSG_ID="${{ github.event.client_payload.fetching_message_id }}"
-
           INFO=$(yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github --dump-json "$URL")
-
           TITLE=$(echo "$INFO" | jq -r '.title // "Unknown"')
           DURATION=$(echo "$INFO" | jq -r '.duration_string // "?"')
-
           FORMATS=$(echo "$INFO" | jq -r '
             [.formats[] |
               select(.ext == "mp4" and .height != null and .filesize != null) |
@@ -270,9 +260,7 @@ jobs:
               }
             ] | unique_by(.res) | sort_by(.height)
           ')
-
           FORMAT_LIST=$(echo "$FORMATS" | jq -r '.[] | "\(.res) (\(.size_mb)MB)"' 2>/dev/null || echo "")
-
           if [ -z "$FORMATS" ] || [ "$FORMATS" == "[]" ]; then
             KEYBOARD='[[{"text":"Best quality","callback_data":"dl_fmt_best_'"$URL"'"}]]'
             FORMAT_LIST="Best quality available"
@@ -285,14 +273,10 @@ jobs:
               reduce .[] as $item ([]; if length == 0 or (.[-1] | length) == 2 then . + [[$item]] else .[-1] += [$item] end)
             ' --arg URL "$URL")
           fi
-
           REPLY_MARKUP=$(jq -n --argjson keyboard "$KEYBOARD" '{inline_keyboard: $keyboard}')
-
           printf -v TEXT "Choose format for: %s (%s)\n%s" "$TITLE" "$DURATION" "$FORMAT_LIST"
-
           curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
             -d "chat_id=$CHAT_ID" -d "message_id=$FETCH_MSG_ID"
-
           curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendMessage" \
             -d "chat_id=$CHAT_ID" \
             --data-urlencode "text=$TEXT" \
@@ -308,12 +292,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - name: Install yt-dlp, ffmpeg and rclone
         run: |
           pip install yt-dlp
           sudo apt-get update && sudo apt-get install -y ffmpeg rclone
-
       - name: Configure rclone
         run: |
           export TOKEN='${{ secrets.GDRIVE_TOKEN }}'
@@ -327,7 +309,6 @@ jobs:
           token = $TOKEN
           root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
           EOF
-
       - name: Download with chosen format
         run: |
           echo "${{ secrets.YOUTUBE_COOKIES }}" > cookies.txt
@@ -336,14 +317,12 @@ jobs:
           mkdir -p downloads
           yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL"
           echo "FILE=$(ls downloads)" >> $GITHUB_ENV
-
       - name: Check file size and deliver
         run: |
           FILE="downloads/${{ env.FILE }}"
           SIZE=$(stat -c%s "$FILE")
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
-
           if [ "$SIZE" -lt 50000000 ]; then
             curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
               -F "chat_id=$CHAT_ID" \
@@ -370,31 +349,22 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip
-
       - name: Download and run Real-ESRGAN, then send result
         run: |
           set -e
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
           IMAGE_URL="${{ github.event.client_payload.image_url }}"
-
-          # Download Real-ESRGAN
           mkdir -p Real-ESRGAN
           cd Real-ESRGAN
           wget -q -O realesrgan-ncnn-vulkan-20220424-ubuntu.zip \
             "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-ubuntu.zip"
           unzip -q realesrgan-ncnn-vulkan-20220424-ubuntu.zip
           chmod +x realesrgan-ncnn-vulkan
-
-          # Download input image
           mkdir -p ../images
           cd ../images
           wget -q -O input.jpg "$IMAGE_URL"
-
-          # Run restoration
           ../Real-ESRGAN/realesrgan-ncnn-vulkan -i input.jpg -o restored.jpg -s 4 -n realesrgan-x4plus || true
-
-          # Send result
           if [ -f restored.jpg ]; then
             curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
               -F "chat_id=$CHAT_ID" \
@@ -417,22 +387,18 @@ jobs:
     steps:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
-
       - name: Enhance and send result
         run: |
           set -e
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
           IMAGE_URL="${{ github.event.client_payload.image_url }}"
-
           mkdir -p images
           cd images
           wget -q -O input.jpg "$IMAGE_URL"
-
           ffmpeg -y -i input.jpg \
             -vf "unsharp=5:5:1.0:5:5:0.0,eq=contrast=1.1:brightness=0.05" \
             enhanced.jpg || true
-
           if [ -f enhanced.jpg ]; then
             curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
               -F "chat_id=$CHAT_ID" \
