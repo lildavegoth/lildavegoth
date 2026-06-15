@@ -167,6 +167,7 @@ bot.command("connect", async (ctx) => {
 
 bot.callbackQuery("connect_prompt", async (ctx) => {
     await ctx.answerCallbackQuery();
+    await ctx.deleteMessage();
     pendingConnectAction.set(ctx.from.id, "connect");
     return ctx.reply(
         "Send me your channel ID and add me as an admin to let me post to your channel, you can add me in 5 channels\n\nFormat: Channel Name Channel ID\nExample: Yume 1513725816"
@@ -175,6 +176,7 @@ bot.callbackQuery("connect_prompt", async (ctx) => {
 
 bot.callbackQuery("list_channels", async (ctx) => {
     await ctx.answerCallbackQuery();
+    await ctx.deleteMessage();
     const { data: channels, error } = await supabase
         .from("user_channels")
         .select("channel_name, channel_id")
@@ -204,6 +206,7 @@ bot.callbackQuery("list_channels", async (ctx) => {
 
 bot.callbackQuery("revoke_prompt", async (ctx) => {
     await ctx.answerCallbackQuery();
+    await ctx.deleteMessage();
     pendingConnectAction.set(ctx.from.id, "revoke");
     return ctx.reply("You want to delete access to your channel? Send me your Channel ID.");
 });
@@ -705,9 +708,13 @@ bot.command("post", async (ctx) => {
 });
 
 bot.callbackQuery(/^post_to_channel_(.+)_(.+)_(.+)$/, async (ctx) => {
-    const channelId = ctx.match[1];
+    let channelId = ctx.match[1];
     const originalChatId = ctx.match[2];
     const originalMessageId = parseInt(ctx.match[3], 10);
+
+    if (!channelId.startsWith("-100")) {
+        channelId = "-100" + channelId;
+    }
 
     const message = ctx.callbackQuery.message;
     if (!message) {
