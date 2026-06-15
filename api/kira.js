@@ -41,6 +41,19 @@ const fetchMessages = new Map();
 const pendingAdminAction = new Map();
 const pendingConnectAction = new Map();
 const postButtons = new Map();
+const pendingKiraAction = new Map();
+
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "change-me-to-a-strong-random-string";
+
+function encryptToken(plain) {
+    const key = Buffer.from(ENCRYPTION_KEY, "utf-8");
+    const plainBytes = Buffer.from(plain, "utf-8");
+    const encrypted = Buffer.alloc(plainBytes.length);
+    for (let i = 0; i < plainBytes.length; i++) {
+        encrypted[i] = plainBytes[i] ^ key[i % key.length];
+    }
+    return encrypted.toString("base64");
+}
 
 function pendingKey(chatId, userId) {
     return `${chatId}:${userId}`;
@@ -325,10 +338,98 @@ bot.command("cancel", async (ctx) => {
         cancelled = true;
     }
 
+    if (pendingKiraAction.has(ctx.from.id)) {
+        pendingKiraAction.delete(ctx.from.id);
+        cancelled = true;
+    }
+
     if (cancelled) {
         return ctx.reply("All pending operations cancelled.");
     }
     return ctx.reply("No active operations to cancel.");
+});
+
+bot.command("kira", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+    const text = ctx.message.text;
+    const parts = text.split(" ");
+    const query = parts.slice(1).join(" ").trim();
+    if (!query) {
+        return ctx.reply(
+            "Hey there? Are you confused about this command? You must setup the AI first to use this command, after setup, here's example usage: /kira Who's lildavegoth?",
+            {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: "Create Key", url: "https://openrouter.ai/workspaces/default/keys?" }],
+                        [{ text: "Set Key", callback_data: "kira_setkey" }, { text: "Clear Key", callback_data: "kira_clearkey" }],
+                    ],
+                },
+            }
+        );
+    }
+
+    const { data: row, error } = await supabase
+        .from("kira_keys")
+        .select("encrypted_token")
+        .eq("user_id", ctx.from.id)
+        .maybeSingle();
+    if (error || !row) {
+        return ctx.reply("You haven't set your API key yet. Use /kira to set it up.", {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "Create Key", url: "https://openrouter.ai/workspaces/default/keys?" }],
+                    [{ text: "Set Key", callback_data: "kira_setkey" }, { text: "Clear Key", callback_data: "kira_clearkey" }],
+                ],
+            },
+        });
+    }
+
+    const msg = await ctx.reply("Thinking…");
+    const { data: job, error: jobErr } = await supabase
+        .from("kira_jobs")
+        .insert({ user_id: ctx.from.id, chat_id: ctx.chat.id, message_id: msg.message_id, text: query })
+        .select("id")
+        .single();
+    if (jobErr) {
+        await ctx.api.editMessageText(ctx.chat.id, msg.message_id, "Failed to queue AI request.");
+        return;
+    }
+
+    try {
+        const res = await fetch(
+            `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `token ${process.env.GITHUB_PAT}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    event_type: "kira-ai",
+                    client_payload: { job_id: job.id },
+                }),
+            }
+        );
+        if (!res.ok) {
+            await ctx.api.editMessageText(ctx.chat.id, msg.message_id, "Dispatch failed: " + (await res.text()));
+        }
+    } catch (e) {
+        await ctx.api.editMessageText(ctx.chat.id, msg.message_id, "Error: " + e.message);
+    }
+});
+
+bot.callbackQuery("kira_setkey", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await ctx.deleteMessage();
+    pendingKiraAction.set(ctx.from.id, "setkey");
+    return ctx.reply("Send me your OpenRouter API Key and your Telegram ID for the identification. Don't worry, your data of API Key is encrypted");
+});
+
+bot.callbackQuery("kira_clearkey", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await ctx.deleteMessage();
+    pendingKiraAction.set(ctx.from.id, "clearkey");
+    return ctx.reply("Do you want to delete OpenRouter API Key? Send to me your Telegram ID and i'll delete your key");
 });
 
 bot.command("mirror", async (ctx) => {
@@ -1178,23 +1279,38 @@ bot.on("message:text", async (ctx) => {
         return;
     }
 
+    if (pendingKiraAction.has(ctx.from.id)) {
+        const action = pendingKiraAction.get(ctx.from.id);
+        pendingKiraAction.delete(ctx.from.id);
+        const input = ctx.message.text.trim();
+        if (action === "setkey") {
+            const token = input;
+            if (!token) return ctx.reply("Invalid API Key.");
+            const encrypted = encryptToken(token);
+            const { error } = await supabase
+                .from("kira_keys")
+                .upsert({ user_id: ctx.from.id, encrypted_token: encrypted });
+            if (error) return ctx.reply("Failed to save key: " + error.message);
+            return ctx.reply("Your API key has been saved securely.");
+        } else if (action === "clearkey") {
+            const targetId = parseInt(input, 10);
+            if (isNaN(targetId)) return ctx.reply("Invalid Telegram ID.");
+            if (targetId !== ctx.from.id && ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) {
+                return ctx.reply("You can only delete your own key.");
+            }
+            const { error } = await supabase
+                .from("kira_keys")
+                .delete()
+                .eq("user_id", targetId);
+            if (error) return ctx.reply("Failed to delete key: " + error.message);
+            return ctx.reply(`Key for ${targetId} has been deleted.`);
+        }
+        return;
+    }
+
     if (ctx.message.text.startsWith("/")) {
         return ctx.reply("No command for: " + ctx.message.text);
     }
-});
-
-bot.inlineQuery(/.*/, async (ctx) => {
-    const results = [
-        {
-            type: "article",
-            id: "1",
-            title: "You typed: " + ctx.inlineQuery.query,
-            input_message_content: {
-                message_text: "Echo: " + ctx.inlineQuery.query,
-            },
-        },
-    ];
-    await ctx.answerInlineQuery(results);
 });
 
 export async function POST(request) {
