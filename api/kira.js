@@ -134,14 +134,18 @@ bot.command("cancel", async (ctx) => {
         }
     }
 
-    const { error, count } = await supabase
+    const { data: reminders, error: listErr } = await supabase
         .from("reminders")
-        .delete()
+        .select("id")
         .eq("chat_id", ctx.chat.id)
-        .eq("user_id", ctx.from.id)
-        .select("count");
+        .eq("user_id", ctx.from.id);
 
-    if (!error && count > 0) {
+    if (!listErr && reminders && reminders.length > 0) {
+        await supabase
+            .from("reminders")
+            .delete()
+            .eq("chat_id", ctx.chat.id)
+            .eq("user_id", ctx.from.id);
         cancelled = true;
     }
 
@@ -771,7 +775,7 @@ bot.command("remind", async (ctx) => {
     });
 
     if (error) {
-        return ctx.reply("Failed to set reminder.");
+        return ctx.reply("Failed to set reminder: " + error.message);
     }
     return ctx.reply(`Reminder set for ${timeStr} from now: "${description}"`);
 });
