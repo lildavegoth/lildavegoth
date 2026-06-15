@@ -27,6 +27,15 @@ function pendingKey(chatId, userId) {
     return `${chatId}:${userId}`;
 }
 
+function parseRemindTime(timeStr) {
+    const match = timeStr.match(/^(\d+)([hms])$/i);
+    if (!match) return null;
+    const value = parseInt(match[1], 10);
+    const unit = match[2].toLowerCase();
+    const multipliers = { h: 3600, m: 60, s: 1 };
+    return value * multipliers[unit] * 1000;
+}
+
 async function isUnderMaintenance() {
     try {
         const { data, error } = await supabase
@@ -727,6 +736,93 @@ bot.command("videocapture", async (ctx) => {
         await ctx.api.deleteMessage(ctx.chat.id, captureMsg.message_id);
         return ctx.reply("Failed to start frame capture: " + (e.message || "unknown"));
     }
+});
+
+bot.command("remind", async (ctx) => {
+    const text = ctx.message.text;
+    const parts = text.split(" ");
+    if (parts.length < 3) {
+        return ctx.reply("Usage: /remind <time> <description>\nExample: /remind 1h harvest your strawberry");
+    }
+    const timeStr = parts[1];
+    const description = parts.slice(2).join(" ");
+    const ms = parseRemindTime(timeStr);
+    if (ms === null) {
+        return ctx.reply("Invalid time format. Use e.g. 1h, 30m, 45s.");
+    }
+    const remindAt = new Date(Date.now() + ms).toISOString();
+
+    const { error } = await supabase.from("reminders").insert({
+        chat_id: ctx.chat.id,
+        user_id: ctx.from.id,
+        description: description,
+        remind_at: remindAt,
+    });
+
+    if (error) {
+        return ctx.reply("Failed to set reminder.");
+    }
+    return ctx.reply(`Reminder set for ${timeStr} from now: "${description}"`);
+});
+
+bot.command("remindcancel", async (ctx) => {
+    const { data, error } = await supabase
+        .from("reminders")
+        .select("id, description")
+        .eq("chat_id", ctx.chat.id)
+        .eq("user_id", ctx.from.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+    if (error || !data) {
+        return ctx.reply("No active reminder to cancel.");
+    }
+
+    await supabase.from("reminders").delete().eq("id", data.id);
+    return ctx.reply(`Cancelled reminder: "${data.description}"`);
+});
+
+bot.command("remindremove", async (ctx) => {
+    const { data: reminders, error } = await supabase
+        .from("reminders")
+        .select("id, description")
+        .eq("chat_id", ctx.chat.id)
+        .eq("user_id", ctx.from.id)
+        .order("created_at", { ascending: true });
+
+    if (error || !reminders || reminders.length === 0) {
+        return ctx.reply("No active reminders.");
+    }
+
+    const buttons = reminders.map((r) => [{
+        text: r.description,
+        callback_data: `remdel_${r.id}`,
+    }]);
+
+    return ctx.reply("Select a reminder to delete:", {
+        reply_markup: { inline_keyboard: buttons },
+    });
+});
+
+bot.callbackQuery(/^remdel_(.+)$/, async (ctx) => {
+    const id = ctx.match[1];
+    const { data, error } = await supabase
+        .from("reminders")
+        .select("id, description")
+        .eq("id", id)
+        .single();
+
+    if (error || !data) {
+        await ctx.answerCallbackQuery("Reminder not found.");
+        return;
+    }
+
+    await supabase.from("reminders").delete().eq("id", id);
+    await ctx.answerCallbackQuery(`Deleted: "${data.description}"`);
+    try {
+        await ctx.deleteMessage();
+    } catch {}
 });
 
 bot.on(":pinned_message", async (ctx) => {
