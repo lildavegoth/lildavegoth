@@ -22,6 +22,7 @@ const MAX_DIRECT_MB = 0;
 const mirrorJobs = new Map();
 const pendingRenames = new Map();
 const fetchMessages = new Map();
+const pendingAdminAction = new Map();
 
 function pendingKey(chatId, userId) {
     return `${chatId}:${userId}`;
@@ -97,6 +98,7 @@ bot.command("admin", async (ctx) => {
         reply_markup: {
             inline_keyboard: [
                 [{ text: "Users", callback_data: "admin_users" }],
+                [{ text: "Grant", callback_data: "admin_grant" }, { text: "Revoke", callback_data: "admin_revoke" }],
             ],
         },
     });
@@ -118,7 +120,7 @@ bot.callbackQuery("admin_users", async (ctx) => {
     }
 
     const lines = users.map(
-        (u) => `**${u.username || u.first_name || "Unknown"}** - ${u.telegram_id}`
+        (u) => `**${u.username || u.first_name || "Unknown"}** - \`${u.telegram_id}\``
     );
     const text = lines.join("\n");
 
@@ -131,6 +133,18 @@ bot.callbackQuery("admin_users", async (ctx) => {
         { source: buffer, filename: "users.md" },
         { caption: "List of users." }
     );
+});
+
+bot.callbackQuery("admin_grant", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    pendingAdminAction.set(ctx.from.id, "grant");
+    return ctx.reply("Send me the Telegram ID to grant access.");
+});
+
+bot.callbackQuery("admin_revoke", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    pendingAdminAction.set(ctx.from.id, "revoke");
+    return ctx.reply("Send me the Telegram ID to revoke access.");
 });
 
 bot.command("shutdown", async (ctx) => {
@@ -196,6 +210,11 @@ bot.command("cancel", async (ctx) => {
             try { await ctx.api.deleteMessage(ctx.chat.id, msgId); } catch {}
             cancelled = true;
         }
+    }
+
+    if (pendingAdminAction.has(ctx.from.id)) {
+        pendingAdminAction.delete(ctx.from.id);
+        cancelled = true;
     }
 
     if (cancelled) {
@@ -834,6 +853,31 @@ bot.on("message:text", async (ctx) => {
             return;
         }
     }
+
+    if (pendingAdminAction.has(ctx.from.id)) {
+        const action = pendingAdminAction.get(ctx.from.id);
+        pendingAdminAction.delete(ctx.from.id);
+        const input = ctx.message.text.trim();
+        const targetId = parseInt(input, 10);
+        if (isNaN(targetId)) {
+            return ctx.reply("Invalid Telegram ID.");
+        }
+        if (action === "grant") {
+            const { error } = await supabase.from("allowed_users").upsert({ telegram_id: targetId });
+            if (error) {
+                return ctx.reply("Failed to grant access: " + error.message);
+            }
+            return ctx.reply(`Access granted to ${targetId}.`);
+        } else if (action === "revoke") {
+            const { error } = await supabase.from("allowed_users").delete().eq("telegram_id", targetId);
+            if (error) {
+                return ctx.reply("Failed to revoke access: " + error.message);
+            }
+            return ctx.reply(`Access revoked for ${targetId}.`);
+        }
+        return;
+    }
+
     if (ctx.message.text.startsWith("/")) {
         return ctx.reply("No command for: " + ctx.message.text);
     }
