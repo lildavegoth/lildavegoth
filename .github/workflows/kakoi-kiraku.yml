@@ -435,7 +435,7 @@ jobs:
             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
 
           if [ -z "$JOB" ] || [ "$JOB" == "[]" ]; then
-            echo "No job found, exiting."
+            echo "No job found"
             exit 0
           fi
 
@@ -451,45 +451,48 @@ jobs:
           ENC_TOKEN=$(echo "$TOKEN_DATA" | jq -r '.[0].encrypted_token')
 
           if [ -z "$ENC_TOKEN" ] || [ "$ENC_TOKEN" == "null" ]; then
-            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
-              -d "chat_id=$CHAT_ID" \
-              -d "message_id=$MESSAGE_ID" \
-              -d "text=No API key found. Please set your key first."
-            exit 0
-          fi
-
-          TOKEN=$(node -e "
-            const key = process.env.ENCRYPTION_KEY;
-            const cipher = '${ENC_TOKEN}';
-            const decipher = (c) => {
-              const k = Buffer.from(key, 'utf-8');
-              const cBytes = Buffer.from(c, 'base64');
-              const r = Buffer.alloc(cBytes.length);
-              for (let i=0; i<cBytes.length; i++) r[i] = cBytes[i] ^ k[i % k.length];
-              return r.toString('utf-8');
-            };
-            console.log(decipher(cipher));
-          ")
-
-          RESPONSE=$(curl -s "https://openrouter.ai/api/v1/chat/completions" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            -H "HTTP-Referer: https://github.com" \
-            -H "X-Title: Telegram Bot" \
-            -d "{\"model\":\"openrouter/free\",\"messages\":[{\"role\":\"user\",\"content\":\"$TEXT\"}],\"max_tokens\":800,\"temperature\":0.7}")
-
-          ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error.message // empty')
-
-          if [ -n "$ERROR_MSG" ]; then
-            REPLY_TEXT="OpenRouter error: ${ERROR_MSG}"
+            REPLY_TEXT="No API key found. Please set your key first."
           else
-            REPLY_TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Sorry, I could not generate a reply."')
+            TOKEN=$(node -e "
+              const key = process.env.ENCRYPTION_KEY;
+              const cipher = '${ENC_TOKEN}';
+              const decipher = (c) => {
+                const k = Buffer.from(key, 'utf-8');
+                const cBytes = Buffer.from(c, 'base64');
+                const r = Buffer.alloc(cBytes.length);
+                for (let i=0; i<cBytes.length; i++) r[i] = cBytes[i] ^ k[i % k.length];
+                return r.toString('utf-8');
+              };
+              console.log(decipher(cipher));
+            ")
+
+            RESPONSE=$(curl -s -w "\n%{http_code}" "https://openrouter.ai/api/v1/chat/completions" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              -H "HTTP-Referer: https://github.com" \
+              -H "X-Title: Telegram Bot" \
+              -d "{\"model\":\"openrouter/free\",\"messages\":[{\"role\":\"user\",\"content\":\"$TEXT\"}],\"max_tokens\":800,\"temperature\":0.7}")
+
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+
+            echo "OpenRouter HTTP code: $HTTP_CODE"
+            echo "OpenRouter response: $BODY"
+
+            if [ "$HTTP_CODE" != "200" ]; then
+              ERROR_MSG=$(echo "$BODY" | jq -r '.error.message // "Unknown API error"')
+              REPLY_TEXT="OpenRouter error: ${ERROR_MSG}"
+            else
+              REPLY_TEXT=$(echo "$BODY" | jq -r '.choices[0].message.content // "Sorry, I could not generate a reply."')
+            fi
           fi
+
+          echo "Final reply: $REPLY_TEXT"
 
           curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
-            -d "chat_id=$CHAT_ID" \
-            -d "message_id=$MESSAGE_ID" \
-            -d "text=$REPLY_TEXT"
+            --data-urlencode "chat_id=$CHAT_ID" \
+            --data-urlencode "message_id=$MESSAGE_ID" \
+            --data-urlencode "text=$REPLY_TEXT"
 
           curl -s -X DELETE "${SUPABASE_URL}/rest/v1/kira_jobs?id=eq.${JOB_ID}" \
             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
