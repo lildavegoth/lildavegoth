@@ -134,6 +134,17 @@ bot.command("cancel", async (ctx) => {
         }
     }
 
+    const { error, count } = await supabase
+        .from("reminders")
+        .delete()
+        .eq("chat_id", ctx.chat.id)
+        .eq("user_id", ctx.from.id)
+        .select("count");
+
+    if (!error && count > 0) {
+        cancelled = true;
+    }
+
     if (cancelled) {
         return ctx.reply("All pending operations cancelled.");
     }
@@ -763,24 +774,6 @@ bot.command("remind", async (ctx) => {
         return ctx.reply("Failed to set reminder.");
     }
     return ctx.reply(`Reminder set for ${timeStr} from now: "${description}"`);
-});
-
-bot.command("remindcancel", async (ctx) => {
-    const { data, error } = await supabase
-        .from("reminders")
-        .select("id, description")
-        .eq("chat_id", ctx.chat.id)
-        .eq("user_id", ctx.from.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-    if (error || !data) {
-        return ctx.reply("No active reminder to cancel.");
-    }
-
-    await supabase.from("reminders").delete().eq("id", data.id);
-    return ctx.reply(`Cancelled reminder: "${data.description}"`);
 });
 
 bot.command("remindremove", async (ctx) => {
