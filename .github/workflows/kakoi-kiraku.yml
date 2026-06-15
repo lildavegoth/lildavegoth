@@ -450,7 +450,7 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_BASE: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
     permissions:
@@ -467,7 +467,7 @@ jobs:
           RESPONSE=$(curl -sS -w "\n%{http_code}" -G \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-            "$SUPABASE_URL/rest/v1/reminders" \
+            "${SUPABASE_BASE}/rest/v1/reminders" \
             --data-urlencode "select=id,chat_id,description" \
             --data-urlencode "remind_at=lte.$NOW")
 
@@ -501,7 +501,7 @@ jobs:
             curl -sS -X DELETE \
               -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
               -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-              "$SUPABASE_URL/rest/v1/reminders?id=eq.${ID}"
+              "${SUPABASE_BASE}/rest/v1/reminders?id=eq.${ID}"
           done
 
       - name: Delete this workflow run
