@@ -14,6 +14,9 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const bot = new Bot(process.env.KIRA_TOKEN);
+await bot.init();
+
 try {
     const { data: restartRow, error: restartErr } = await supabase
         .from("bot_config")
