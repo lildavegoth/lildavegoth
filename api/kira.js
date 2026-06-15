@@ -24,6 +24,7 @@ const pendingRenames = new Map();
 const fetchMessages = new Map();
 const pendingAdminAction = new Map();
 const pendingConnectAction = new Map();
+const postButtons = new Map();
 
 function pendingKey(chatId, userId) {
     return `${chatId}:${userId}`;
@@ -693,9 +694,12 @@ bot.command("post", async (ctx) => {
         return ctx.reply("You have no connected channels. Use /connect to add one.");
     }
 
+    const postKey = Math.random().toString(36).slice(2, 10);
+    postButtons.set(postKey, buttons);
+
     const channelButtons = channels.map((c) => [{
         text: c.channel_name || c.channel_id,
-        callback_data: `post_to_channel_${c.channel_id}_${reply.chat.id}_${reply.message_id}`,
+        callback_data: `post_to_channel_${c.channel_id}_${reply.chat.id}_${reply.message_id}_${postKey}`,
     }]);
 
     const previewText = contentLines.join("\n").trim() || (reply.photo ? "[Photo]" : reply.video ? "[Video]" : "[Message]");
@@ -707,38 +711,18 @@ bot.command("post", async (ctx) => {
     });
 });
 
-bot.callbackQuery(/^post_to_channel_(.+)_(.+)_(.+)$/, async (ctx) => {
+bot.callbackQuery(/^post_to_channel_(.+)_(.+)_(.+)_(.+)$/, async (ctx) => {
     let channelId = ctx.match[1];
     const originalChatId = ctx.match[2];
     const originalMessageId = parseInt(ctx.match[3], 10);
+    const postKey = ctx.match[4];
 
     if (!channelId.startsWith("-100")) {
         channelId = "-100" + channelId;
     }
 
-    const message = ctx.callbackQuery.message;
-    if (!message) {
-        await ctx.answerCallbackQuery("Something went wrong.");
-        return;
-    }
-
-    const originalText = message.text || message.caption || "";
-    const lines = originalText.split("\n");
-    const buttonLines = [];
-
-    for (const line of lines) {
-        if (line.match(/\[.+\]\(buttonurl:\/\/.+\)/)) {
-            buttonLines.push(line);
-        }
-    }
-
-    const buttons = buttonLines.slice(0, 3).map((line) => {
-        const match = line.match(/\[(.+)\]\(buttonurl:\/\/(.+)\)/);
-        if (match) {
-            return { text: match[1], url: "https://" + match[2] };
-        }
-        return null;
-    }).filter(Boolean);
+    const buttons = postButtons.get(postKey) || [];
+    postButtons.delete(postKey);
 
     const replyMarkup = buttons.length > 0
         ? { inline_keyboard: [buttons] }
