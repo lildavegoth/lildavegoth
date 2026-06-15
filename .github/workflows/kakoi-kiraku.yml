@@ -466,12 +466,20 @@ jobs:
               console.log(decipher(cipher));
             ")
 
+            # Build safe JSON payload with jq
+            PAYLOAD=$(jq -n --arg content "$TEXT" '{
+              model: "openrouter/free",
+              messages: [{role: "user", content: $content}],
+              max_tokens: 800,
+              temperature: 0.7
+            }')
+
             RESPONSE=$(curl -s -w "\n%{http_code}" "https://openrouter.ai/api/v1/chat/completions" \
               -H "Authorization: Bearer $TOKEN" \
               -H "Content-Type: application/json" \
               -H "HTTP-Referer: https://github.com" \
               -H "X-Title: Telegram Bot" \
-              -d "{\"model\":\"openrouter/free\",\"messages\":[{\"role\":\"user\",\"content\":\"$TEXT\"}],\"max_tokens\":800,\"temperature\":0.7}")
+              -d "$PAYLOAD")
 
             HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
             BODY=$(echo "$RESPONSE" | sed '$d')
