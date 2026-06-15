@@ -23,6 +23,7 @@ const mirrorJobs = new Map();
 const pendingRenames = new Map();
 const fetchMessages = new Map();
 const pendingAdminAction = new Map();
+const pendingConnectAction = new Map();
 
 function pendingKey(chatId, userId) {
     return `${chatId}:${userId}`;
@@ -152,6 +153,61 @@ bot.callbackQuery("admin_revoke", async (ctx) => {
     return ctx.reply("Send me the Telegram ID to revoke access.");
 });
 
+bot.command("connect", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+    return ctx.reply("Do you want me to post to your channel or something?", {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "Connect", callback_data: "connect_prompt" }],
+                [{ text: "Channels", callback_data: "list_channels" }],
+            ],
+        },
+    });
+});
+
+bot.callbackQuery("connect_prompt", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    pendingConnectAction.set(ctx.from.id, "connect");
+    return ctx.reply(
+        "Send me your channel ID and add me as an admin to let me post to your channel, you can add me in 5 channels\n\nFormat: Channel Name Channel ID\nExample: Yume 1513725816"
+    );
+});
+
+bot.callbackQuery("list_channels", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const { data: channels, error } = await supabase
+        .from("user_channels")
+        .select("channel_name, channel_id")
+        .eq("user_id", ctx.from.id)
+        .order("id", { ascending: true });
+
+    if (error) {
+        return ctx.reply("Failed to fetch channels.");
+    }
+
+    if (!channels || channels.length === 0) {
+        return ctx.reply("You have no connected channels.");
+    }
+
+    const lines = channels.map((c) => `**${c.channel_name}** - \`${c.channel_id}\``);
+    const text = lines.join("\n");
+
+    return ctx.reply(text, {
+        parse_mode: "Markdown",
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "Revoke", callback_data: "revoke_prompt" }],
+            ],
+        },
+    });
+});
+
+bot.callbackQuery("revoke_prompt", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    pendingConnectAction.set(ctx.from.id, "revoke");
+    return ctx.reply("You want to delete access to your channel? Send me your Channel ID.");
+});
+
 bot.command("shutdown", async (ctx) => {
     if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
     await setMaintenance(true);
@@ -228,6 +284,11 @@ bot.command("cancel", async (ctx) => {
 
     if (pendingAdminAction.has(ctx.from.id)) {
         pendingAdminAction.delete(ctx.from.id);
+        cancelled = true;
+    }
+
+    if (pendingConnectAction.has(ctx.from.id)) {
+        pendingConnectAction.delete(ctx.from.id);
         cancelled = true;
     }
 
@@ -591,6 +652,106 @@ bot.callbackQuery(/^imgbuf_(enhance|restore)_(.+)$/, async (ctx) => {
     }
 });
 
+bot.command("post", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+    const reply = ctx.message?.reply_to_message;
+    if (!reply) {
+        return ctx.reply("Reply to a message with /post to create a post.");
+    }
+
+    const originalText = reply.text || reply.caption || "";
+    const lines = originalText.split("\n");
+    const buttonLines = [];
+    const contentLines = [];
+
+    for (const line of lines) {
+        if (line.match(/\[.+\]\(buttonurl:\/\/.+\)/)) {
+            buttonLines.push(line);
+        } else {
+            contentLines.push(line);
+        }
+    }
+
+    const buttons = buttonLines.slice(0, 3).map((line) => {
+        const match = line.match(/\[(.+)\]\(buttonurl:\/\/(.+)\)/);
+        if (match) {
+            return { text: match[1], url: "https://" + match[2] };
+        }
+        return null;
+    }).filter(Boolean);
+
+    const content = contentLines.join("\n").trim();
+
+    const { data: channels, error } = await supabase
+        .from("user_channels")
+        .select("channel_id, channel_name")
+        .eq("user_id", ctx.from.id)
+        .order("id", { ascending: true });
+
+    if (error || !channels || channels.length === 0) {
+        return ctx.reply("You have no connected channels. Use /connect to add one.");
+    }
+
+    const channelButtons = channels.map((c) => [{
+        text: c.channel_name || c.channel_id,
+        callback_data: `post_to_channel_${c.channel_id}`,
+    }]);
+
+    const previewText = content || (reply.photo ? "[Photo]" : reply.video ? "[Video]" : "[Message]");
+
+    return ctx.reply(previewText, {
+        reply_markup: {
+            inline_keyboard: channelButtons,
+        },
+    });
+});
+
+bot.callbackQuery(/^post_to_channel_(.+)$/, async (ctx) => {
+    const channelId = ctx.match[1];
+    const userId = ctx.from.id;
+    const message = ctx.callbackQuery.message;
+    if (!message || !message.reply_to_message) {
+        await ctx.answerCallbackQuery("Original message not found.");
+        return;
+    }
+
+    const originalMsg = message.reply_to_message;
+    const originalText = originalMsg.text || originalMsg.caption || "";
+    const lines = originalText.split("\n");
+    const buttonLines = [];
+
+    for (const line of lines) {
+        if (line.match(/\[.+\]\(buttonurl:\/\/.+\)/)) {
+            buttonLines.push(line);
+        }
+    }
+
+    const buttons = buttonLines.slice(0, 3).map((line) => {
+        const match = line.match(/\[(.+)\]\(buttonurl:\/\/(.+)\)/);
+        if (match) {
+            return { text: match[1], url: "https://" + match[2] };
+        }
+        return null;
+    }).filter(Boolean);
+
+    const replyMarkup = buttons.length > 0
+        ? { inline_keyboard: [buttons] }
+        : undefined;
+
+    try {
+        await ctx.api.copyMessage(
+            channelId,
+            originalMsg.chat.id,
+            originalMsg.message_id,
+            { reply_markup: replyMarkup }
+        );
+        await ctx.answerCallbackQuery("Posted!");
+        await ctx.deleteMessage();
+    } catch (e) {
+        await ctx.answerCallbackQuery("Failed to post. Make sure I'm admin in the channel.");
+    }
+});
+
 bot.command("imagesearch", async (ctx) => {
     const reply = ctx.message?.reply_to_message;
     if (!reply || (!reply.photo && !reply.sticker)) {
@@ -898,6 +1059,53 @@ bot.on("message:text", async (ctx) => {
             await startMirror(ctx, job.url, newName, job.destination);
             return;
         }
+    }
+
+    if (pendingConnectAction.has(ctx.from.id)) {
+        const action = pendingConnectAction.get(ctx.from.id);
+        pendingConnectAction.delete(ctx.from.id);
+        const input = ctx.message.text.trim();
+        if (action === "connect") {
+            const parts = input.split(/\s+/);
+            if (parts.length < 2) {
+                return ctx.reply("Invalid format. Use: Channel Name Channel ID");
+            }
+            const channelId = parts.pop();
+            const channelName = parts.join(" ");
+
+            const { count, error: countErr } = await supabase
+                .from("user_channels")
+                .select("*", { count: "exact", head: true })
+                .eq("user_id", ctx.from.id);
+
+            if (!countErr && count >= 5) {
+                return ctx.reply("You already have 5 channels connected. Revoke one first.");
+            }
+
+            const { error } = await supabase.from("user_channels").insert({
+                user_id: ctx.from.id,
+                channel_id: channelId,
+                channel_name: channelName,
+            });
+
+            if (error) {
+                return ctx.reply("Failed to add channel. It may already be connected.");
+            }
+            return ctx.reply(`Channel "${channelName}" connected.`);
+        } else if (action === "revoke") {
+            const channelId = input;
+            const { error } = await supabase
+                .from("user_channels")
+                .delete()
+                .eq("user_id", ctx.from.id)
+                .eq("channel_id", channelId);
+
+            if (error) {
+                return ctx.reply("Failed to revoke channel. Make sure the ID is correct.");
+            }
+            return ctx.reply("Channel revoked.");
+        }
+        return;
     }
 
     if (pendingAdminAction.has(ctx.from.id)) {
