@@ -61,6 +61,24 @@ bot.use(async (ctx, next) => {
 });
 
 bot.use(async (ctx, next) => {
+    if (ctx.from.id.toString() === process.env.OWNER_TELEGRAM_ID) {
+        return next();
+    }
+
+    const { data, error } = await supabase
+        .from("allowed_users")
+        .select("telegram_id")
+        .eq("telegram_id", ctx.from.id)
+        .maybeSingle();
+
+    if (error || !data) {
+        return;
+    }
+
+    return next();
+});
+
+bot.use(async (ctx, next) => {
     if (ctx.from && ctx.chat) {
         const user = ctx.from;
         await supabase.from("users").upsert({
