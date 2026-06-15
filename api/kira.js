@@ -92,7 +92,7 @@ bot.callbackQuery("admin_users", async (ctx) => {
         .order("telegram_id", { ascending: true });
 
     if (error) {
-        return ctx.reply("Failed to fetch users.");
+        return ctx.reply("Failed to fetch users: " + error.message);
     }
 
     if (!users || users.length === 0) {
