@@ -121,7 +121,7 @@ bot.use(async (ctx, next) => {
 
 bot.command("owner", async (ctx) => {
     if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
-    return ctx.reply(`Hey ${ctx.from.first_name}! I'm here for you.`, {
+    return ctx.reply(`Hey ${ctx.from.first_name}! I'm here for you, what do you want me to do?`, {
         reply_markup: {
             inline_keyboard: [
                 [{ text: "Users", callback_data: "admin_users" }],
@@ -180,14 +180,14 @@ bot.callbackQuery("admin_shutdown", async (ctx) => {
     if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
     await setMaintenance(true);
     await ctx.answerCallbackQuery();
-    return ctx.reply("Bot is now in maintenance mode.");
+    return ctx.reply("Kira is under maintenance mode right now.");
 });
 
 bot.callbackQuery("admin_revive", async (ctx) => {
     if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
     await setMaintenance(false);
     await ctx.answerCallbackQuery();
-    return ctx.reply("Bot is back online.");
+    return ctx.reply("I'm back online.");
 });
 
 bot.callbackQuery("admin_restart", async (ctx) => {
@@ -1181,6 +1181,20 @@ bot.on("message:text", async (ctx) => {
     if (ctx.message.text.startsWith("/")) {
         return ctx.reply("No command for: " + ctx.message.text);
     }
+});
+
+bot.inlineQuery(/.*/, async (ctx) => {
+    const results = [
+        {
+            type: "article",
+            id: "1",
+            title: "You typed: " + ctx.inlineQuery.query,
+            input_message_content: {
+                message_text: "Echo: " + ctx.inlineQuery.query,
+            },
+        },
+    ];
+    await ctx.answerInlineQuery(results);
 });
 
 export async function POST(request) {
