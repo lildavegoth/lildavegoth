@@ -14,8 +14,21 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-const bot = new Bot(process.env.KIRA_TOKEN);
-await bot.init();
+try {
+    const { data: restartRow, error: restartErr } = await supabase
+        .from("bot_config")
+        .select("value")
+        .eq("key", "restart_pending")
+        .single();
+    if (!restartErr && restartRow && restartRow.value) {
+        const ownerChatId = restartRow.value;
+        await supabase
+            .from("bot_config")
+            .delete()
+            .eq("key", "restart_pending");
+        await bot.api.sendMessage(ownerChatId, "I'm back, ready to assist you");
+    }
+} catch {}
 
 const MAX_DIRECT_MB = 0;
 
@@ -180,6 +193,9 @@ bot.callbackQuery("admin_restart", async (ctx) => {
         await ctx.answerCallbackQuery();
         return ctx.reply("Deploy hook not configured.");
     }
+    await supabase
+        .from("bot_config")
+        .upsert({ key: "restart_pending", value: ctx.chat.id.toString() });
     await fetch(process.env.VERCEL_DEPLOY_HOOK, { method: "POST" });
     await ctx.answerCallbackQuery();
     return ctx.reply("Redeploying…");
