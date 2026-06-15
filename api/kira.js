@@ -60,6 +60,61 @@ bot.use(async (ctx, next) => {
     return next();
 });
 
+bot.use(async (ctx, next) => {
+    if (ctx.from && ctx.chat) {
+        const user = ctx.from;
+        await supabase.from("users").upsert({
+            telegram_id: user.id,
+            first_name: user.first_name,
+            username: user.username,
+            language: user.language_code,
+        });
+    }
+    return next();
+});
+
+bot.command("admin", async (ctx) => {
+    if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
+    return ctx.reply(`Hey ${ctx.from.first_name}! I'm here for you.`, {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "Users", callback_data: "admin_users" }],
+            ],
+        },
+    });
+});
+
+bot.callbackQuery("admin_users", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const { data: users, error } = await supabase
+        .from("users")
+        .select("telegram_id, username, first_name")
+        .order("telegram_id", { ascending: true });
+
+    if (error) {
+        return ctx.reply("Failed to fetch users.");
+    }
+
+    if (!users || users.length === 0) {
+        return ctx.reply("No users yet.");
+    }
+
+    const lines = users.map(
+        (u) => `**${u.username || u.first_name || "Unknown"}** - ${u.telegram_id}`
+    );
+    const text = lines.join("\n");
+
+    if (text.length <= 4000) {
+        return ctx.reply(text, { parse_mode: "Markdown" });
+    }
+
+    const buffer = Buffer.from(text, "utf-8");
+    return ctx.replyWithDocument(
+        { source: buffer, filename: "users.md" },
+        { caption: "List of users." }
+    );
+});
+
 bot.command("shutdown", async (ctx) => {
     if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
     await setMaintenance(true);
