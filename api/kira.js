@@ -66,6 +66,11 @@ bot.use(async (ctx, next) => {
         return next();
     }
 
+    const text = ctx.message?.text;
+    if (text && text.startsWith("/start")) {
+        return next();
+    }
+
     const { data, error } = await supabase
         .from("allowed_users")
         .select("telegram_id")
@@ -176,7 +181,16 @@ bot.command("start", async (ctx) => {
         username: user.username,
         language: user.language_code,
     });
-    return ctx.reply(`Hey ${user.first_name}! I'm alive and I remember you.`);
+    return ctx.reply(
+        `Hey! I'm Kira, i'll be ready to assist you if you're one of friend of my owner @lildavegoth\n\ndon't forget to check Kakoi Kiraku Home page to see more useful stuff from @lildavegoth`,
+        {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "Kakoi Kiraku Home", url: "https://kakoi-kiraku-home.vercel.app/" }],
+                ],
+            },
+        }
+    );
 });
 
 bot.command("ping", (ctx) => ctx.reply("pong"));
@@ -229,7 +243,6 @@ bot.command("mirror", async (ctx) => {
     const parts = text.split(" ");
 
     let url = "";
-    let originalFilename = null;
 
     if (parts.length >= 2) {
         url = parts[1];
@@ -237,29 +250,13 @@ bot.command("mirror", async (ctx) => {
         const reply = ctx.message.reply_to_message;
         let fileId = null;
 
-        if (reply.document) {
-            fileId = reply.document.file_id;
-            originalFilename = reply.document.file_name;
-        } else if (reply.video) {
-            fileId = reply.video.file_id;
-            originalFilename = reply.video.file_name;
-        } else if (reply.audio) {
-            fileId = reply.audio.file_id;
-            originalFilename = reply.audio.file_name;
-        } else if (reply.photo) {
-            const largest = reply.photo[reply.photo.length - 1];
-            fileId = largest.file_id;
-            originalFilename = `photo_${fileId}.jpg`;
-        } else if (reply.voice) {
-            fileId = reply.voice.file_id;
-            originalFilename = `voice_${fileId}.ogg`;
-        } else if (reply.video_note) {
-            fileId = reply.video_note.file_id;
-            originalFilename = `video_note_${fileId}.mp4`;
-        } else if (reply.sticker) {
-            fileId = reply.sticker.file_id;
-            originalFilename = `sticker_${fileId}.webp`;
-        }
+        if (reply.document) fileId = reply.document.file_id;
+        else if (reply.video) fileId = reply.video.file_id;
+        else if (reply.audio) fileId = reply.audio.file_id;
+        else if (reply.photo) fileId = reply.photo[reply.photo.length - 1].file_id;
+        else if (reply.voice) fileId = reply.voice.file_id;
+        else if (reply.video_note) fileId = reply.video_note.file_id;
+        else if (reply.sticker) fileId = reply.sticker.file_id;
 
         if (fileId) {
             try {
@@ -280,14 +277,68 @@ bot.command("mirror", async (ctx) => {
         return ctx.reply("Usage: /mirror <url> or reply to a file with /mirror");
     }
 
+    let filename = "Unknown";
+    let fileSize = "Unknown";
+
+    try {
+        const headRes = await fetch(url, { method: "HEAD" });
+        if (headRes.ok) {
+            const disposition = headRes.headers.get("content-disposition");
+            if (disposition) {
+                const match = disposition.match(/filename\*?=(?:UTF-8''|"")?(.+?)(?:;|$)/i);
+                if (match) filename = match[1].replace(/"/g, "").trim();
+            }
+            if (filename === "Unknown") {
+                const urlPath = new URL(url).pathname;
+                filename = decodeURIComponent(urlPath.split("/").pop()) || "Unknown";
+            }
+            const cl = headRes.headers.get("content-length");
+            if (cl) {
+                const mb = parseInt(cl, 10) / (1024 * 1024);
+                fileSize = mb >= 1 ? `${mb.toFixed(0)}MB` : `${(mb * 1024).toFixed(0)}KB`;
+            }
+        }
+    } catch {}
+
     const jobKey = Math.random().toString(36).slice(2, 10);
     mirrorJobs.set(jobKey, {
         url,
-        originalFilename,
-        promptMessageId: null,
+        filename,
+        fileSize,
         chatId: ctx.chat.id,
         userId: ctx.from.id,
     });
+
+    const keyboard = {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: "Drive", callback_data: `mirror_dest_drive_${jobKey}` },
+                    { text: "Telegram", callback_data: `mirror_dest_telegram_${jobKey}` },
+                ],
+            ],
+        },
+    };
+
+    await ctx.reply(
+        `Where do you want the file to be saved? Use Telegram if your file is less than 50MB\n\nDetails\nName: ${filename}\nSize: ${fileSize}`,
+        keyboard
+    );
+});
+
+bot.callbackQuery(/^mirror_dest_(drive|telegram)_(.+)$/, async (ctx) => {
+    const destination = ctx.match[1];
+    const jobKey = ctx.match[2];
+    const job = mirrorJobs.get(jobKey);
+
+    if (!job || job.chatId !== ctx.chat.id || job.userId !== ctx.from.id) {
+        await ctx.answerCallbackQuery("This action has expired. Please /mirror again.");
+        return;
+    }
+
+    job.destination = destination;
+    await ctx.answerCallbackQuery();
+    await ctx.deleteMessage();
 
     const keyboard = {
         reply_markup: {
@@ -301,7 +352,7 @@ bot.command("mirror", async (ctx) => {
     };
 
     const promptMsg = await ctx.reply("Do you want to rename the file before mirroring?", keyboard);
-    mirrorJobs.get(jobKey).promptMessageId = promptMsg.message_id;
+    job.promptMessageId = promptMsg.message_id;
 });
 
 bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
@@ -319,29 +370,23 @@ bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
     if (choice === "no") {
         mirrorJobs.delete(jobKey);
         await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
-        let filename = job.originalFilename;
-        if (!filename) {
+        let filename = job.filename;
+        if (filename === "Unknown") {
             try {
                 const urlPath = new URL(job.url).pathname;
-                const segments = urlPath.split('/');
-                const lastSegment = segments[segments.length - 1];
-                if (lastSegment && lastSegment.includes('.')) {
-                    filename = decodeURIComponent(lastSegment);
-                } else {
-                    filename = "file";
-                }
+                filename = decodeURIComponent(urlPath.split("/").pop()) || "file";
             } catch {
                 filename = "file";
             }
         }
-        await startMirror(ctx, job.url, filename);
+        await startMirror(ctx, job.url, filename, job.destination);
     } else {
         await ctx.editMessageText("Send the new file name:");
         pendingRenames.set(pendingKey(ctx.chat.id, ctx.from.id), jobKey);
     }
 });
 
-async function startMirror(ctx, url, filename) {
+async function startMirror(ctx, url, filename, destination) {
     const sentMsg = await ctx.reply("Mirroring…");
 
     let jobLabel = filename.replace(/\.[^/.]+$/, "");
@@ -355,6 +400,7 @@ async function startMirror(ctx, url, filename) {
             download_url: url,
             filename: filename,
             job_label: jobLabel,
+            destination: destination,
         },
     };
 
@@ -849,7 +895,7 @@ bot.on("message:text", async (ctx) => {
             mirrorJobs.delete(jobKey);
             const newName = ctx.message.text.trim();
             await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
-            await startMirror(ctx, job.url, newName);
+            await startMirror(ctx, job.url, newName, job.destination);
             return;
         }
     }
