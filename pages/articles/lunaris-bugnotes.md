@@ -10,9 +10,13 @@ categories: "Bug Notes, ROMs"
 # [Lunaris 3.8](https://t.me/PocoX3IDUpdate/6519) | Android 16 by [NothingHere03](https://t.me/NothingHere03) Stock Kernel
 - new apps delayed to be added in desktop (not app drawer)
 
+---
+
 # [Lunaris 3.9](https://t.me/PocoX3IDUpdate/6532) | Android 16 by [NothingHere03](https://t.me/NothingHere03) Stock Kernel
 - limit charging is not like version 3.8 (in current version it's only limit the ampere to 1mA and not really stop the charging like in 3.8)
 - new apps still delayed to be added in desktop (not app drawer)
+
+---
 
 # [Lunaris 3.10](https://t.me/lunaris_update/273) | Android 16 by [NothingHere03](https://t.me/NothingHere03) Stock Kernel
 - limit charging is not like version 3.8 (in current version it's only limit the ampere to 1mA and not really stop the charging like in 3.8), i thought this was a bug and will be fixed soon
