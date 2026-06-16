@@ -140,7 +140,7 @@
             right: 28px;
             width: 56px;
             height: 56px;
-            border-radius: 50%;
+            border-radius: 12px;
             background: var(--accent-color);
             color: #000;
             font-size: 1.6rem;
@@ -152,11 +152,7 @@
             border: none;
             cursor: pointer;
             z-index: 20;
-            transition: transform 0.1s;
-        }
-
-        .fab:active {
-            transform: scale(0.92);
+            transition: opacity 0.2s;
         }
 
         .fab:hover {
@@ -296,6 +292,32 @@
             border-color: var(--accent-color);
         }
 
+        .folder-pills {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .folder-pill {
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .folder-pill.active {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+        }
+
         .button-group {
             display: flex;
             gap: var(--spacing-sm);
@@ -379,7 +401,7 @@
             right: 16px;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--text-secondary);
+            color: var(--accent-color);
             font-size: 1.1rem;
         }
 
@@ -554,8 +576,15 @@
                 </div>
                 <div class="search-suggestions" id="searchSuggestions"></div>
             </div>
+            <div class="folder-pills">
+                <button class="folder-pill active" data-folder="all">All</button>
+                <button class="folder-pill" data-folder="bugnotes">Bug Notes</button>
+                <button class="folder-pill" data-folder="highlight">Highlight</button>
+                <button class="folder-pill" data-folder="featured">Featured</button>
+            </div>
             <div class="articles-grid" id="articleList"></div>
             <button class="fab" id="fabAdd">+</button>
+            <button class="fab" id="fabRefresh" style="bottom: 96px; right: 28px; border-radius: 50%; background: var(--accent-color); color: #000; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; border: none; cursor: pointer; z-index: 20;"><i class="fas fa-refresh"></i></button>
         </div>
 
         <div id="editorContainer" class="hidden">
@@ -641,6 +670,7 @@
         var selectedImageFile = null;
         var isEditing = false;
         var selectedBadge = '';
+        var activeFolder = 'all';
 
         var btnFeatured = document.getElementById('btnFeatured');
         var btnHighlight = document.getElementById('btnHighlight');
@@ -720,6 +750,15 @@
             goToEditor(null);
         });
 
+        document.getElementById('fabRefresh').addEventListener('click', function() {
+            var btn = this;
+            btn.classList.add('btnMDYE');
+            setTimeout(function() {
+                btn.classList.remove('btnMDYE');
+                window.location.reload(true);
+            }, 500);
+        });
+
         document.getElementById('backToHome').addEventListener('click', function(e) {
             e.preventDefault();
             showHome();
@@ -764,7 +803,45 @@
             var res = await fetch('https://raw.githubusercontent.com/lildavegoth/lildavegoth/homepage/files/fetch/articles.json?t=' + Date.now());
             var data = await res.json();
             articlesData = Array.isArray(data) ? data : data.allArticles;
-            renderArticleCards(articlesData);
+            articlesData.sort(function(a, b) {
+                return (b.date || '').localeCompare(a.date || '');
+            });
+            updateFolderPillsUI();
+            applyFolderAndRender();
+        }
+
+        function isBugNotesArticle(art) {
+            var slug = art.link.split('slug=')[1]?.split('&')[0];
+            return slug && slug.toLowerCase().includes('-bugnotes');
+        }
+
+        function getFolderArticles() {
+            if (activeFolder === 'bugnotes') {
+                return articlesData.filter(isBugNotesArticle);
+            } else if (activeFolder === 'highlight') {
+                return articlesData.filter(function(art) { return art.badge === 'highlight'; });
+            } else if (activeFolder === 'featured') {
+                return articlesData.filter(function(art) { return art.badge === 'featured'; });
+            } else {
+                return articlesData.filter(function(art) {
+                    return !isBugNotesArticle(art) && art.badge !== 'highlight' && art.badge !== 'featured';
+                });
+            }
+        }
+
+        function applyFolderAndRender(term) {
+            var folderArticles = getFolderArticles();
+            if (term) {
+                term = term.trim().toLowerCase();
+                folderArticles = folderArticles.filter(function(art) {
+                    var slug = art.link.split('slug=')[1]?.split('&')[0];
+                    return (art.name && art.name.toLowerCase().includes(term)) ||
+                           (slug && slug.toLowerCase().includes(term)) ||
+                           (art.description && art.description.toLowerCase().includes(term));
+                });
+            }
+            renderArticleCards(folderArticles);
+            return folderArticles;
         }
 
         function renderArticleCards(articles) {
@@ -782,6 +859,28 @@
                 list.appendChild(card);
             });
         }
+
+        function updateFolderPillsUI() {
+            var pills = document.querySelectorAll('.folder-pill');
+            pills.forEach(function(pill) {
+                if (pill.getAttribute('data-folder') === activeFolder) {
+                    pill.classList.add('active');
+                } else {
+                    pill.classList.remove('active');
+                }
+            });
+        }
+
+        var folderPills = document.querySelectorAll('.folder-pill');
+        folderPills.forEach(function(pill) {
+            pill.addEventListener('click', function() {
+                activeFolder = this.getAttribute('data-folder');
+                updateFolderPillsUI();
+                document.getElementById('globalSearch').value = '';
+                document.getElementById('searchSuggestions').style.display = 'none';
+                applyFolderAndRender();
+            });
+        });
 
         function clearForm() {
             document.getElementById('slugInput').value = '';
@@ -1011,20 +1110,12 @@
 
             searchInput.addEventListener('input', function() {
                 var term = this.value.trim().toLowerCase();
+                var folderArticles = applyFolderAndRender(term);
                 if (!term) {
                     suggestionsContainer.style.display = 'none';
-                    renderArticleCards(articlesData);
                     return;
                 }
-                var filtered = articlesData.filter(function(art) {
-                    var slug = art.link.split('slug=')[1]?.split('&')[0];
-                    return (art.name && art.name.toLowerCase().includes(term)) ||
-                           (slug && slug.toLowerCase().includes(term)) ||
-                           (art.description && art.description.toLowerCase().includes(term));
-                });
-                renderArticleCards(filtered);
-
-                var suggestions = filtered.slice(0, 5);
+                var suggestions = folderArticles.slice(0, 5);
                 if (suggestions.length) {
                     suggestionsContainer.innerHTML = suggestions.map(function(item) {
                         var slug = item.link.split('slug=')[1]?.split('&')[0];
@@ -1058,7 +1149,7 @@
                         goToEditor(slug);
                         suggestionsContainer.style.display = 'none';
                         searchInput.value = '';
-                        renderArticleCards(articlesData);
+                        applyFolderAndRender();
                     }
                 }
             });
