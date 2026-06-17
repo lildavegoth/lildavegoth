@@ -772,7 +772,10 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (
     
     if (action === "custom") {
         pendingImageEditAction.set(ctx.from.id, `imgedit_custom_${fileId}`);
-        await ctx.editMessageText("Send me your custom ffmpeg/cjpeg command. Use `input.jpg` as input and `output.jpg` as final output.\n\nExample:\n`ffmpeg -y -i input.jpg -vf scale=1200:-1:bicubic temp.png && cjpeg -quality 70 temp.png > output.jpg`");
+        await ctx.editMessageText(
+            "Send me your custom ffmpeg/cjpeg command. Use `input.jpg` as input and `output.jpg` as final output.\n\nExample:\n`ffmpeg -y -i input.jpg -vf scale=1200:-1:bicubic -frames:v 1 temp.jpg && cjpeg -quality 70 temp.jpg > output.jpg`",
+            { parse_mode: "Markdown" }
+        );
         return;
     }
 
@@ -1514,4 +1517,4 @@ export async function POST(request) {
     const body = await request.json();
     await bot.handleUpdate(body);
     return new Response("ok");
-}
+            }
