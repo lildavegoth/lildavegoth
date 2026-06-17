@@ -566,27 +566,28 @@ jobs:
       - name: Install ffmpeg and cjpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg libjpeg-turbo-progs
-
+          sudo apt-get install -y ffmpeg libjpeg-turbo-progs.
       - name: Download image
         run: |
           mkdir -p images
           wget -q -O images/input.jpg "${{ github.event.client_payload.image_url }}"
-
       - name: Run custom command
+        id: custom_cmd
+        continue-on-error: true
         run: |
           cd images
           COMMAND="${{ github.event.client_payload.command }}"
           eval "$COMMAND"
-
-      - name: Send result as document
+      - name: Send result or error
+        if: always()
         run: |
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
-          if [ -f images/output.jpg ]; then
+          cd images
+          if [ -f output.jpg ]; then
             curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
               -F "chat_id=$CHAT_ID" \
-              -F "document=@images/output.jpg" \
+              -F "document=@output.jpg" \
               -F "caption=Custom processed image"
             curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
               -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
