@@ -338,13 +338,16 @@ jobs:
           mkdir -p downloads
 
           if [ "$FMT" == "images" ]; then
-            pip install -q gallery-dl
-            gallery-dl -d downloads/images "$URL"
+            # Download all images from the carousel (default format selection picks images)
+            yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
+              --no-playlist --embed-metadata \
+              -o "downloads/images/%(playlist_index)s_%(title)s.%(ext)s" "$URL"
             echo "IMAGE_COUNT=$(ls downloads/images/*.jpg downloads/images/*.png downloads/images/*.webp 2>/dev/null | wc -l)" >> $GITHUB_ENV
           else
-            # Try yt-dlp first
+            # Let yt-dlp automatically pick the best format (no -f restriction)
             yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
-              -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL" >/dev/null 2>&1
+              --embed-metadata \
+              -o "downloads/%(title)s.%(ext)s" "$URL" >/dev/null 2>&1
             DOWNLOADED_FILE=$(ls -t downloads | head -1)
 
             if [ -z "$DOWNLOADED_FILE" ]; then
