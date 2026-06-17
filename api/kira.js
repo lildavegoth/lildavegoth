@@ -42,6 +42,7 @@ const pendingAdminAction = new Map();
 const pendingConnectAction = new Map();
 const postButtons = new Map();
 const pendingKiraAction = new Map();
+const pendingImageEditAction = new Map();
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "change-me-to-a-strong-random-string";
 
@@ -340,6 +341,11 @@ bot.command("cancel", async (ctx) => {
 
     if (pendingKiraAction.has(ctx.from.id)) {
         pendingKiraAction.delete(ctx.from.id);
+        cancelled = true;
+    }
+
+    if (pendingImageEditAction.has(ctx.from.id)) {
+        pendingImageEditAction.delete(ctx.from.id);
         cancelled = true;
     }
 
@@ -707,7 +713,35 @@ bot.callbackQuery(/^dl_fmt_(.+)_(.+)$/, async (ctx) => {
     }
 });
 
-bot.callbackQuery(/^imgbuf_(enhance|restore)_(.+)$/, async (ctx) => {
+bot.command("imageedit", async (ctx) => {
+    const reply = ctx.message?.reply_to_message;
+    if (!reply || !reply.photo) {
+        return ctx.reply("Reply to a photo with /imageedit to edit it.");
+    }
+
+    const photos = reply.photo;
+    const fileId = photos[photos.length - 1].file_id;
+
+    const shortKey = Math.random().toString(36).slice(2, 8);
+    await supabase.from("temp_file_ids").insert({ key: shortKey, file_id: fileId });
+
+    return ctx.reply("What do you want to do with this image?", {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: "Enhance", callback_data: `imgedit_enhance_${shortKey}` },
+                    { text: "Restore", callback_data: `imgedit_restore_${shortKey}` },
+                ],
+                [
+                    { text: "Reduce", callback_data: `imgedit_reduce_${shortKey}` },
+                    { text: "Text Overlay", callback_data: `imgedit_text_${shortKey}` },
+                ],
+            ],
+        },
+    });
+});
+
+bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text)_(.+)$/, async (ctx) => {
     const action = ctx.match[1];
     const shortKey = ctx.match[2];
 
@@ -718,7 +752,7 @@ bot.callbackQuery(/^imgbuf_(enhance|restore)_(.+)$/, async (ctx) => {
         .single();
 
     if (fetchErr || !row) {
-        await ctx.answerCallbackQuery("This action has expired. Please use /imagebuff again.");
+        await ctx.answerCallbackQuery("This action has expired. Please use /imageedit again.");
         return;
     }
 
@@ -726,6 +760,12 @@ bot.callbackQuery(/^imgbuf_(enhance|restore)_(.+)$/, async (ctx) => {
     await supabase.from("temp_file_ids").delete().eq("key", shortKey);
     await ctx.answerCallbackQuery();
     await ctx.editMessageReplyMarkup(undefined);
+
+    if (action === "text") {
+        pendingImageEditAction.set(ctx.from.id, `imgedit_text_${fileId}`);
+        await ctx.editMessageText("Send me the text you want to overlay on the image.");
+        return;
+    }
 
     try {
         const file = await ctx.api.getFile(fileId);
@@ -751,7 +791,12 @@ bot.callbackQuery(/^imgbuf_(enhance|restore)_(.+)$/, async (ctx) => {
             .getPublicUrl(fileName);
         const imageUrl = publicUrlData.publicUrl;
 
-        const eventType = action === "enhance" ? "enhance-image" : "restore-image";
+        const eventTypeMap = {
+            enhance: "enhance-image",
+            restore: "restore-image",
+            reduce: "reduce-image",
+        };
+        const eventType = eventTypeMap[action] || "enhance-image";
 
         const dispatchBody = {
             event_type: eventType,
@@ -948,30 +993,6 @@ bot.command("imagesearch", async (ctx) => {
             inline_keyboard: [
                 [{ text: "Google Lens", url: googleLensUrl }],
                 [{ text: "Yandex", url: yandexUrl }],
-            ],
-        },
-    });
-});
-
-bot.command("imagebuff", async (ctx) => {
-    const reply = ctx.message?.reply_to_message;
-    if (!reply || !reply.photo) {
-        return ctx.reply("Reply to a photo with /imagebuff to enhance or restore it.");
-    }
-
-    const photos = reply.photo;
-    const fileId = photos[photos.length - 1].file_id;
-
-    const shortKey = Math.random().toString(36).slice(2, 8);
-    await supabase.from("temp_file_ids").insert({ key: shortKey, file_id: fileId });
-
-    return ctx.reply("What do you want to do with this image?", {
-        reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: "Enhance", callback_data: `imgbuf_enhance_${shortKey}` },
-                    { text: "Restore", callback_data: `imgbuf_restore_${shortKey}` },
-                ],
             ],
         },
     });
@@ -1275,6 +1296,71 @@ bot.on("message:text", async (ctx) => {
                 return ctx.reply("Failed to revoke access: " + error.message);
             }
             return ctx.reply(`Access revoked for ${targetId}.`);
+        }
+        return;
+    }
+
+    if (pendingImageEditAction.has(ctx.from.id)) {
+        const action = pendingImageEditAction.get(ctx.from.id);
+        pendingImageEditAction.delete(ctx.from.id);
+        const input = ctx.message.text.trim();
+        if (action.startsWith("imgedit_text_")) {
+            const fileId = action.substring("imgedit_text_".length);
+            if (!fileId || !input) return ctx.reply("Invalid input.");
+            try {
+                const file = await ctx.api.getFile(fileId);
+                const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+                const response = await fetch(fileUrl);
+                const buffer = await response.arrayBuffer();
+                const fileName = `text_${Date.now()}.jpg`;
+
+                const { error } = await supabase.storage
+                    .from("images")
+                    .upload(fileName, buffer, {
+                        contentType: "image/jpeg",
+                        upsert: true,
+                    });
+
+                if (error) {
+                    return ctx.reply("Failed to upload image.");
+                }
+
+                const { data: publicUrlData } = supabase.storage
+                    .from("images")
+                    .getPublicUrl(fileName);
+                const imageUrl = publicUrlData.publicUrl;
+
+                const dispatchBody = {
+                    event_type: "text-overlay-image",
+                    client_payload: {
+                        chat_id: ctx.chat.id,
+                        image_url: imageUrl,
+                        original_name: fileName,
+                        text: input,
+                        progress_message_id: ctx.message?.reply_to_message?.message_id,
+                    },
+                };
+
+                const dispatchRes = await fetch(
+                    `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+                    {
+                        method: "POST",
+                        headers: {
+                            Authorization: `token ${process.env.GITHUB_PAT}`,
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(dispatchBody),
+                    }
+                );
+
+                if (!dispatchRes.ok) {
+                    return ctx.reply("Dispatch failed: " + (await dispatchRes.text()));
+                }
+
+                return ctx.reply("Processing image, please wait…");
+            } catch (e) {
+                return ctx.reply("Error: " + e.message);
+            }
         }
         return;
     }
