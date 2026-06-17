@@ -5,7 +5,7 @@ on:
     branches: [homepage]
   workflow_dispatch:
   repository_dispatch:
-    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai]
+    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image]
   schedule:
     - cron: '0 0 * * *'
 
@@ -412,6 +412,87 @@ jobs:
               -d "message_id=$PROGRESS_MSG_ID" \
               -d "text=Enhancement failed. The image may be too large or unsupported."
           fi
+
+  reduce-image:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'reduce-image'
+    runs-on: ubuntu-latest
+    env:
+      KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install sharp
+        run: npm install sharp
+      - name: Download and reduce image
+        run: |
+          mkdir -p images
+          wget -q -O images/input.jpg "${{ github.event.client_payload.image_url }}"
+          node -e "
+            const sharp = require('sharp');
+            sharp('images/input.jpg')
+              .webp({ quality: 30 })
+              .withMetadata({ strip: true })
+              .toFile('images/reduced.webp')
+              .then(() => {
+                const { execSync } = require('child_process');
+                const size = require('fs').statSync('images/reduced.webp').size;
+                console.log('Reduced, size:', size);
+              });
+          "
+      - name: Send reduced image as document
+        run: |
+          CHAT_ID="${{ github.event.client_payload.chat_id }}"
+          PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
+          curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
+            -F "chat_id=$CHAT_ID" \
+            -F "document=@images/reduced.webp" \
+            -F "caption=Reduced image"
+          curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+            -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
+
+  text-overlay-image:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'text-overlay-image'
+    runs-on: ubuntu-latest
+    env:
+      KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install sharp
+        run: npm install sharp
+      - name: Download image and add text overlay
+        run: |
+          mkdir -p images
+          wget -q -O images/input.jpg "${{ github.event.client_payload.image_url }}"
+          node -e "
+            const sharp = require('sharp');
+            const text = '${{ github.event.client_payload.text }}';
+            sharp('images/input.jpg')
+              .resize(800, 600, { fit: 'inside' })
+              .composite([{
+                input: Buffer.from(
+                  '<svg width=\"800\" height=\"600\"><text x=\"100%\" y=\"100%\" text-anchor=\"end\" font-size=\"24\" fill=\"white\" font-family=\"Arial\" dy=\"-10\">' + text + '</text></svg>'
+                ),
+                top: 0,
+                left: 0,
+              }])
+              .jpeg()
+              .toFile('images/output.jpg');
+          "
+      - name: Send image with text overlay
+        run: |
+          CHAT_ID="${{ github.event.client_payload.chat_id }}"
+          PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
+          curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
+            -F "chat_id=$CHAT_ID" \
+            -F "document=@images/output.jpg" \
+            -F "caption=Image with text"
+          curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+            -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
 
   kira-ai:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'kira-ai'
