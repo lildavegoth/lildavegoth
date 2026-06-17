@@ -322,6 +322,8 @@ jobs:
           URL="${{ github.event.client_payload.url }}"
           FMT="${{ github.event.client_payload.format_id }}"
           mkdir -p downloads
+          echo "FMT=$FMT"
+          echo "URL=$URL"
           if [ "$FMT" == "images" ]; then
             yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
               -f best --skip-download --dump-single-json "$URL" > /tmp/info.json
@@ -341,88 +343,17 @@ jobs:
           else
             yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
               -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL"
-            DOWNLOADED_FILE=$(ls downloads)
+            echo "yt-dlp exit code: $?"
+            echo "Contents of downloads directory:"
+            ls -la downloads || echo "downloads directory empty/missing"
+            DOWNLOADED_FILE=$(ls downloads | head -1)
+            echo "DOWNLOADED_FILE=$DOWNLOADED_FILE"
+            if [ -z "$DOWNLOADED_FILE" ]; then
+              echo "No file found after download"
+              exit 1
+            fi
             echo "FILE=$DOWNLOADED_FILE" >> $GITHUB_ENV
           fi
-
-      - name: Deliver images or file
-        run: |
-          CHAT_ID="${{ github.event.client_payload.chat_id }}"
-          PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
-          FMT="${{ github.event.client_payload.format_id }}"
-
-          if [ "$FMT" == "images" ]; then
-            cd downloads/images
-            IMAGES=(image_*)
-            if [ ${#IMAGES[@]} -eq 0 ]; then
-              curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
-                -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID" \
-                -d "text=No images found."
-              exit 1
-            fi
-
-            group=()
-            count=0
-            for img in "${IMAGES[@]}"; do
-              group+=("$img")
-              count=$((count + 1))
-              if [ $count -eq 10 ]; then
-                MEDIA="["
-                for idx in "${!group[@]}"; do
-                  if [ $idx -gt 0 ]; then MEDIA+=","; fi
-                  MEDIA+="{\"type\":\"photo\",\"media\":\"attach://file$idx\"}"
-                done
-                MEDIA+="]"
-                CURL_ARGS=(-X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendMediaGroup" -F "chat_id=$CHAT_ID" -F "media=$MEDIA")
-                for idx in "${!group[@]}"; do
-                  CURL_ARGS+=(-F "file$idx=@${group[$idx]}")
-                done
-                curl "${CURL_ARGS[@]}"
-                group=()
-                count=0
-              fi
-            done
-
-            if [ ${#group[@]} -gt 0 ]; then
-              MEDIA="["
-              for idx in "${!group[@]}"; do
-                if [ $idx -gt 0 ]; then MEDIA+=","; fi
-                MEDIA+="{\"type\":\"photo\",\"media\":\"attach://file$idx\"}"
-              done
-              MEDIA+="]"
-              CURL_ARGS=(-X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendMediaGroup" -F "chat_id=$CHAT_ID" -F "media=$MEDIA")
-              for idx in "${!group[@]}"; do
-                CURL_ARGS+=(-F "file$idx=@${group[$idx]}")
-              done
-              curl "${CURL_ARGS[@]}"
-            fi
-
-            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
-              -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
-
-          else
-            FILE="downloads/${{ env.FILE }}"
-            if [ ! -f "$FILE" ]; then
-              curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
-                -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID" \
-                -d "text=Download failed: No file was downloaded."
-              exit 1
-            fi
-            SIZE=$(stat -c%s "$FILE")
-            if [ "$SIZE" -lt 50000000 ]; then
-              curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
-                -F "chat_id=$CHAT_ID" -F "document=@$FILE" -F "caption=Downloaded: ${{ env.FILE }}"
-              curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
-                -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
-            else
-              rclone copy "$FILE" mirror_drive: -P
-              LINK=$(rclone link "mirror_drive:${{ env.FILE }}")
-              curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
-                -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID" \
-                -d "text=Download complete: $LINK"
-            fi
-          fi
-
   restore-image:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'restore-image'
     runs-on: ubuntu-latest
