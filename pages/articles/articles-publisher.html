@@ -600,6 +600,11 @@
                     <input type="number" id="highlightNumber" placeholder="1" min="1">
                 </div>
 
+                <label>Visibility</label>
+                <div class="toggle-group">
+                    <button class="toggle-btn" id="btnHidden">Hidden</button>
+                </div>
+
                 <label for="descInput">Description</label>
                 <textarea id="descInput" rows="3" placeholder="A short description..."></textarea>
 
@@ -609,6 +614,15 @@
                 <div class="button-group">
                     <button id="deleteBtn">Delete</button>
                     <button id="publishBtn">Publish</button>
+                    <button id="shareBtn" class="btnMDYE" style="background: var(--accent-color); color: #000; padding: 12px 24px; border: none; border-radius: var(--radius-small); cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+                            <circle cx="18" cy="5" r="3"></circle>
+                            <circle cx="6" cy="12" r="3"></circle>
+                            <circle cx="18" cy="19" r="3"></circle>
+                            <line x1="8.59" y1="13.51" x2="15.41" y2="17.49"></line>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
@@ -641,6 +655,7 @@
         var isEditing = false;
         var selectedBadge = '';
         var activeFolder = 'all';
+        var isHidden = false;
 
         var btnFeatured = document.getElementById('btnFeatured');
         var btnHighlight = document.getElementById('btnHighlight');
@@ -670,6 +685,16 @@
                 btnFeatured.classList.remove('active');
                 selectedBadge = 'highlight';
                 highlightNumberGroup.classList.remove('hidden');
+            }
+        });
+        
+        document.getElementById('btnHidden').addEventListener('click', function() {
+            if (this.classList.contains('active')) {
+                this.classList.remove('active');
+                isHidden = false;
+            } else {
+                this.classList.add('active');
+                isHidden = true;
             }
         });
 
@@ -854,6 +879,8 @@
             document.getElementById('descInput').value = '';
             document.getElementById('contentInput').value = '';
             document.getElementById('imageFileInput').value = '';
+            document.getElementById('btnHidden').classList.remove('active');
+            isHidden = false;
             selectedImageFile = null;
             btnFeatured.classList.remove('active');
             btnHighlight.classList.remove('active');
@@ -882,6 +909,13 @@
             document.getElementById('contentInput').value = parts.content.trim();
 
             var badge = parts.data.badge || '';
+            var hidden = parts.data.hidden === true || parts.data.hidden === 'true';
+            isHidden = hidden;
+            if (hidden) {
+                document.getElementById('btnHidden').classList.add('active');
+            } else {
+                document.getElementById('btnHidden').classList.remove('active');
+            }
             btnFeatured.classList.remove('active');
             btnHighlight.classList.remove('active');
             selectedBadge = '';
@@ -933,7 +967,8 @@
                 image: imagePath,
                 description: document.getElementById('descInput').value,
                 categories: document.getElementById('catInput').value,
-                content: document.getElementById('contentInput').value
+                content: document.getElementById('contentInput').value,
+                hidden: isHidden
             };
 
             if (selectedBadge) {
@@ -1011,6 +1046,25 @@
                     publishCooldown = false;
                 }, 15000);
             }
+        });
+        
+        document.getElementById('shareBtn').addEventListener('click', function() {
+            var slug = document.getElementById('slugInput').value.trim();
+            if (!slug) {
+                window.showMessage('No slug to share');
+                return;
+            }
+            var shareUrl = window.location.origin + '/pages/articles/article-page.html?slug=' + encodeURIComponent(slug);
+            if (navigator.share) {
+                navigator.share({ url: shareUrl });
+            } else {
+                navigator.clipboard.writeText(shareUrl).then(function() {
+                    window.showMessage('Link copied');
+                });
+            }
+            var btn = this;
+            btn.classList.add('btnMDYE');
+            setTimeout(function() { btn.classList.remove('btnMDYE'); }, 500);
         });
 
         function sleep(ms) {
