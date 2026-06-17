@@ -462,8 +462,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - name: Install sharp
         run: npm install sharp
+
       - name: Download image and add text overlay
         run: |
           mkdir -p images
@@ -473,17 +475,25 @@ jobs:
             const text = '${{ github.event.client_payload.text }}';
             sharp('images/input.jpg')
               .resize(800, 600, { fit: 'inside' })
-              .composite([{
-                input: Buffer.from(
-                  '<svg width=\"800\" height=\"600\"><text x=\"100%\" y=\"100%\" text-anchor=\"end\" font-size=\"24\" fill=\"white\" font-family=\"Arial\" dy=\"-10\">' + text + '</text></svg>'
-                ),
-                top: 0,
-                left: 0,
-              }])
-              .jpeg()
-              .toFile('images/output.jpg');
+              .toBuffer()
+              .then(data => {
+                const { width, height } = sharp(data);
+                return width.then(w => height.then(h => ({ data, w, h })));
+              })
+              .then(({ data, w, h }) => {
+                const svg = Buffer.from(
+                  '<svg width=\"' + w + '\" height=\"' + h + '\">' +
+                  '<text x=\"100%\" y=\"100%\" text-anchor=\"end\" font-size=\"24\" fill=\"white\" font-family=\"Arial\" dy=\"-10\">' +
+                  text + '</text></svg>'
+                );
+                return sharp(data)
+                  .composite([{ input: svg, top: 0, left: 0 }])
+                  .jpeg()
+                  .toFile('images/output.jpg');
+              });
           "
-      - name: Send image with text overlay
+
+      - name: Send image with text overlay as document
         run: |
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
