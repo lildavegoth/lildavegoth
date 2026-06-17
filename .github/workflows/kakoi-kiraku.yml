@@ -252,10 +252,9 @@ jobs:
           TITLE=$(echo "$INFO" | jq -r '.title // "Unknown"')
           DURATION=$(echo "$INFO" | jq -r '.duration_string // "?"')
           PLAYLIST_COUNT=$(echo "$INFO" | jq -r '.playlist_count // 0')
+          HAS_VIDEO=$(echo "$INFO" | jq -r '[.formats[] | select(.vcodec != "none")] | length')
+          HAS_IMAGE=$(echo "$INFO" | jq -r '[.formats[] | select(.ext == "jpg" or .ext == "png" or .ext == "webp")] | length')
 
-          # Check if this is an image-only album (carousel)
-          HAS_VIDEO=$(echo "$INFO" | jq -r '.formats | map(select(.vcodec != "none")) | length')
-          HAS_IMAGE=$(echo "$INFO" | jq -r '.formats | map(select(.ext=="jpg" or .ext=="png" or .ext=="webp")) | length')
           IS_CAROUSEL=false
           if [ "$PLAYLIST_COUNT" -gt 1 ] && [ "$HAS_VIDEO" == "0" ] && [ "$HAS_IMAGE" -gt 0 ]; then
             IS_CAROUSEL=true
@@ -335,17 +334,31 @@ jobs:
           URL="${{ github.event.client_payload.url }}"
           FMT="${{ github.event.client_payload.format_id }}"
           mkdir -p downloads
+
+          try_ytdlp() {
+            yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
+              -f "$1" -o "downloads/%(title)s.%(ext)s" "$2"
+            ls downloads | head -1
+          }
+
           if [ "$FMT" == "images" ]; then
             pip install gallery-dl
             gallery-dl -d downloads/images "$URL"
             echo "IMAGE_COUNT=$(ls downloads/images/*.jpg downloads/images/*.png downloads/images/*.webp 2>/dev/null | wc -l)" >> $GITHUB_ENV
           else
-            yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
-              -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL"
-            DOWNLOADED_FILE=$(ls downloads | head -1)
+            DOWNLOADED_FILE=$(try_ytdlp "$FMT" "$URL")
             if [ -z "$DOWNLOADED_FILE" ]; then
-              echo "No file found after download"
-              exit 1
+              echo "yt-dlp failed, trying gallery-dl..."
+              pip install gallery-dl
+              rm -rf downloads/* 2>/dev/null
+              gallery-dl -d downloads "$URL"
+              DOWNLOADED_FILE=$(ls downloads/*.* 2>/dev/null | head -1)
+              if [ -z "$DOWNLOADED_FILE" ]; then
+                echo "No file found after gallery-dl as well"
+                exit 1
+              fi
+              mv "$DOWNLOADED_FILE" downloads/
+              DOWNLOADED_FILE=$(basename "$DOWNLOADED_FILE")
             fi
             echo "FILE=$DOWNLOADED_FILE" >> $GITHUB_ENV
           fi
