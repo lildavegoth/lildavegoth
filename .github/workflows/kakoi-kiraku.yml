@@ -251,19 +251,15 @@ jobs:
 
           TITLE=$(echo "$INFO" | jq -r '.title // "Unknown"')
           DURATION=$(echo "$INFO" | jq -r '.duration_string // "?"')
-          PLAYLIST_COUNT=$(echo "$INFO" | jq -r '.playlist_count // 0')
-          HAS_VIDEO=$(echo "$INFO" | jq -r '[.formats[] | select(.vcodec != "none")] | length')
-          HAS_IMAGE=$(echo "$INFO" | jq -r '[.formats[] | select(.ext == "jpg" or .ext == "png" or .ext == "webp")] | length')
 
-          IS_CAROUSEL=false
-          if [ "$PLAYLIST_COUNT" -gt 1 ] && [ "$HAS_VIDEO" == "0" ] && [ "$HAS_IMAGE" -gt 0 ]; then
-            IS_CAROUSEL=true
-          fi
+          # Check if any video formats exist
+          HAS_VIDEO_FORMATS=$(echo "$INFO" | jq -r '[.formats[] | select(.vcodec != "none" and .height != null)] | length')
 
-          if [ "$IS_CAROUSEL" == "true" ]; then
-            KEYBOARD='[[{"text":"Download all images","callback_data":"dl_fmt_images_'"$URL"'"}]]'
-            FORMAT_LIST="$PLAYLIST_COUNT images available"
-          else
+          # Check if any image formats exist
+          HAS_IMAGE_FORMATS=$(echo "$INFO" | jq -r '[.formats[] | select(.ext == "jpg" or .ext == "png" or .ext == "webp")] | length')
+
+          if [ "$HAS_VIDEO_FORMATS" -gt 0 ]; then
+            # Normal video – show resolution buttons
             FORMATS=$(echo "$INFO" | jq -r '
               [.formats[] |
                 select(.ext == "mp4" and .height != null and .filesize != null) |
@@ -288,6 +284,12 @@ jobs:
                 reduce .[] as $item ([]; if length == 0 or (.[-1] | length) == 2 then . + [[$item]] else .[-1] += [$item] end)
               ' --arg URL "$URL")
             fi
+          elif [ "$HAS_IMAGE_FORMATS" -gt 0 ]; then
+            KEYBOARD='[[{"text":"Download all images","callback_data":"dl_fmt_images_'"$URL"'"}]]'
+            FORMAT_LIST="Images available"
+          else
+            KEYBOARD='[[{"text":"Best quality","callback_data":"dl_fmt_best_'"$URL"'"}]]'
+            FORMAT_LIST="Best quality available"
           fi
 
           REPLY_MARKUP=$(jq -n --argjson keyboard "$KEYBOARD" '{inline_keyboard: $keyboard}')
@@ -335,30 +337,26 @@ jobs:
           FMT="${{ github.event.client_payload.format_id }}"
           mkdir -p downloads
 
-          try_ytdlp() {
-            yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
-              -f "$1" -o "downloads/%(title)s.%(ext)s" "$2"
-            ls downloads | head -1
-          }
-
           if [ "$FMT" == "images" ]; then
-            pip install gallery-dl
+            pip install -q gallery-dl
             gallery-dl -d downloads/images "$URL"
             echo "IMAGE_COUNT=$(ls downloads/images/*.jpg downloads/images/*.png downloads/images/*.webp 2>/dev/null | wc -l)" >> $GITHUB_ENV
           else
-            DOWNLOADED_FILE=$(try_ytdlp "$FMT" "$URL")
+            # Try yt-dlp first
+            yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
+              -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL" >/dev/null 2>&1
+            DOWNLOADED_FILE=$(ls -t downloads | head -1)
+
             if [ -z "$DOWNLOADED_FILE" ]; then
-              echo "yt-dlp failed, trying gallery-dl..."
-              pip install gallery-dl
-              rm -rf downloads/* 2>/dev/null
+              echo "yt-dlp produced no file, trying gallery-dl..."
+              pip install -q gallery-dl
+              rm -rf downloads/*
               gallery-dl -d downloads "$URL"
-              DOWNLOADED_FILE=$(ls downloads/*.* 2>/dev/null | head -1)
+              DOWNLOADED_FILE=$(ls -t downloads | head -1)
               if [ -z "$DOWNLOADED_FILE" ]; then
                 echo "No file found after gallery-dl as well"
                 exit 1
               fi
-              mv "$DOWNLOADED_FILE" downloads/
-              DOWNLOADED_FILE=$(basename "$DOWNLOADED_FILE")
             fi
             echo "FILE=$DOWNLOADED_FILE" >> $GITHUB_ENV
           fi
