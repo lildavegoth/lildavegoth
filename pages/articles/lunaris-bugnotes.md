@@ -6,6 +6,7 @@ author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
 description: "Bug Notes of Lunaris AOSP"
 categories: "Bug Notes, ROMs"
+hidden: true
 ---
 # [Lunaris 3.8](https://t.me/PocoX3IDUpdate/6519) →
 Android 16 by [NothingHere03](https://t.me/NothingHere03) Stock Kernel
