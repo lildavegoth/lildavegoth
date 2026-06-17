@@ -315,11 +315,20 @@ jobs:
           URL="${{ github.event.client_payload.url }}"
           FMT="${{ github.event.client_payload.format_id }}"
           mkdir -p downloads
-          yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL"
-          echo "FILE=$(ls downloads)" >> $GITHUB_ENV
+          yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github -f "$FMT" -o "downloads/%(title)s.%(ext)s" --print "filename" "$URL" > /tmp/downloaded_filename
+          DOWNLOADED_FILE=$(cat /tmp/downloaded_filename)
+          echo "FILE=$(basename "$DOWNLOADED_FILE")" >> $GITHUB_ENV
       - name: Check file size and deliver
         run: |
           FILE="downloads/${{ env.FILE }}"
+          if [ ! -f "$FILE" ]; then
+            MSG="Download failed: No file was downloaded."
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+              -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+              -d "message_id=${{ github.event.client_payload.progress_message_id }}" \
+              -d "text=$MSG"
+            exit 1
+          fi
           SIZE=$(stat -c%s "$FILE")
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
@@ -422,89 +431,66 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
     steps:
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Fetch job and run AI
+      - name: Fetch job from Supabase
+        id: fetch
         run: |
-          set -e
           JOB_ID="${{ github.event.client_payload.job_id }}"
-
-          JOB=$(curl -s "${SUPABASE_URL}/rest/v1/kira_jobs?id=eq.${JOB_ID}&select=*" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
-
-          if [ -z "$JOB" ] || [ "$JOB" == "[]" ]; then
-            echo "No job found"
-            exit 0
-          fi
-
-          USER_ID=$(echo "$JOB" | jq -r '.[0].user_id')
-          CHAT_ID=$(echo "$JOB" | jq -r '.[0].chat_id')
-          MESSAGE_ID=$(echo "$JOB" | jq -r '.[0].message_id')
-          TEXT=$(echo "$JOB" | jq -r '.[0].text')
-
-          TOKEN_DATA=$(curl -s "${SUPABASE_URL}/rest/v1/kira_keys?user_id=eq.${USER_ID}&select=encrypted_token" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
-
+          DATA=$(curl -s "https://$SUPABASE_URL/rest/v1/kira_jobs?id=eq.$JOB_ID&select=*" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+          echo "JOB=$DATA" >> $GITHUB_ENV
+      - name: Get user token
+        id: token
+        run: |
+          JOB_ID="${{ github.event.client_payload.job_id }}"
+          JOB=$(echo "$JOB" | jq '.[0]')
+          USER_ID=$(echo "$JOB" | jq -r '.user_id')
+          TOKEN_DATA=$(curl -s "https://$SUPABASE_URL/rest/v1/kira_keys?user_id=eq.$USER_ID&select=encrypted_token" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
           ENC_TOKEN=$(echo "$TOKEN_DATA" | jq -r '.[0].encrypted_token')
-
-          if [ -z "$ENC_TOKEN" ] || [ "$ENC_TOKEN" == "null" ]; then
-            REPLY_TEXT="No API key found. Please set your key first."
-          else
-            TOKEN=$(node -e "
-              const key = process.env.ENCRYPTION_KEY;
-              const cipher = '${ENC_TOKEN}';
-              const decipher = (c) => {
-                const k = Buffer.from(key, 'utf-8');
-                const cBytes = Buffer.from(c, 'base64');
-                const r = Buffer.alloc(cBytes.length);
-                for (let i=0; i<cBytes.length; i++) r[i] = cBytes[i] ^ k[i % k.length];
-                return r.toString('utf-8');
-              };
-              console.log(decipher(cipher));
-            ")
-
-            # Build safe JSON payload with jq
-            PAYLOAD=$(jq -n --arg content "$TEXT" '{
-              model: "openrouter/free",
-              messages: [{role: "user", content: $content}],
-              max_tokens: 800,
-              temperature: 0.7
-            }')
-
-            RESPONSE=$(curl -s -w "\n%{http_code}" "https://openrouter.ai/api/v1/chat/completions" \
-              -H "Authorization: Bearer $TOKEN" \
-              -H "Content-Type: application/json" \
-              -H "HTTP-Referer: https://github.com" \
-              -H "X-Title: Telegram Bot" \
-              -d "$PAYLOAD")
-
-            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-            BODY=$(echo "$RESPONSE" | sed '$d')
-
-            echo "OpenRouter HTTP code: $HTTP_CODE"
-            echo "OpenRouter response: $BODY"
-
-            if [ "$HTTP_CODE" != "200" ]; then
-              ERROR_MSG=$(echo "$BODY" | jq -r '.error.message // "Unknown API error"')
-              REPLY_TEXT="OpenRouter error: ${ERROR_MSG}"
-            else
-              REPLY_TEXT=$(echo "$BODY" | jq -r '.choices[0].message.content // "Sorry, I could not generate a reply."')
-            fi
-          fi
-
-          echo "Final reply: $REPLY_TEXT"
-
+          echo "ENC_TOKEN=$ENC_TOKEN" >> $GITHUB_ENV
+          echo "USER_ID=$USER_ID" >> $GITHUB_ENV
+          echo "CHAT_ID=$(echo "$JOB" | jq -r '.chat_id')" >> $GITHUB_ENV
+          echo "MESSAGE_ID=$(echo "$JOB" | jq -r '.message_id')" >> $GITHUB_ENV
+          echo "TEXT=$(echo "$JOB" | jq -r '.text')" >> $GITHUB_ENV
+      - name: Decrypt token and call OpenRouter
+        id: ai
+        run: |
+          # Simple XOR decrypt (Node.js)
+          node -e "
+            const key = process.env.ENCRYPTION_KEY;
+            const cipher = process.env.ENC_TOKEN;
+            const decipher = (c) => {
+              const k = Buffer.from(key, 'utf-8');
+              const cBytes = Buffer.from(c, 'base64');
+              const r = Buffer.alloc(cBytes.length);
+              for (let i=0; i<cBytes.length; i++) r[i] = cBytes[i] ^ k[i % k.length];
+              return r.toString('utf-8');
+            };
+            console.log(decipher(cipher));
+          " > token.txt
+          TOKEN=$(cat token.txt)
+          RESPONSE=$(curl -s "https://openrouter.ai/api/v1/chat/completions" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -H "HTTP-Referer: https://github.com" \
+            -H "X-Title: Telegram Bot" \
+            -d "{\"model\":\"openrouter/free\",\"messages\":[{\"role\":\"user\",\"content\":\"$TEXT\"}],\"max_tokens\":800,\"temperature\":0.7}")
+          echo "REPLY=$RESPONSE" >> $GITHUB_ENV
+      - name: Edit Telegram message
+        run: |
+          REPLY_TEXT=$(echo "$REPLY" | jq -r '.choices[0].message.content // "Sorry, I could not generate a reply."')
           curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
-            --data-urlencode "chat_id=$CHAT_ID" \
-            --data-urlencode "message_id=$MESSAGE_ID" \
-            --data-urlencode "text=$REPLY_TEXT"
-
-          curl -s -X DELETE "${SUPABASE_URL}/rest/v1/kira_jobs?id=eq.${JOB_ID}" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"
+            -d "chat_id=$CHAT_ID" \
+            -d "message_id=$MESSAGE_ID" \
+            -d "text=$REPLY_TEXT"
+      - name: Delete job
+        run: |
+          JOB_ID="${{ github.event.client_payload.job_id }}"
+          curl -s -X DELETE "https://$SUPABASE_URL/rest/v1/kira_jobs?id=eq.$JOB_ID" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
 
   cleanup-history:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
