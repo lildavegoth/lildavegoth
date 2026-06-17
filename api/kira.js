@@ -744,7 +744,7 @@ bot.command("imageedit", async (ctx) => {
     });
 });
 
-bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text)_(.+)$/, async (ctx) => {
+bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (ctx) => {
     const action = ctx.match[1];
     const shortKey = ctx.match[2];
 
@@ -1514,4 +1514,4 @@ export async function POST(request) {
     const body = await request.json();
     await bot.handleUpdate(body);
     return new Response("ok");
-                                      }
+}
