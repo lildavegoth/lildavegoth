@@ -5,7 +5,7 @@ on:
     branches: [homepage]
   workflow_dispatch:
   repository_dispatch:
-    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image]
+    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image, delete-mirror]
   schedule:
     - cron: '0 0 * * *'
 
@@ -94,6 +94,8 @@ jobs:
     name: ${{ github.event.client_payload.job_label || 'mirror' }}
     env:
       KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - name: Install rclone
         run: sudo apt-get update && sudo apt-get install -y rclone
@@ -126,6 +128,8 @@ jobs:
                   mv "$OLD_FILE" "$FILENAME"
               fi
           fi
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
       - name: Deliver file based on destination
         run: |
           cd downloads
@@ -159,10 +163,31 @@ jobs:
           else
             if rclone copy "$FILE" mirror_drive: -P 2> upload_error.log; then
               LINK=$(rclone link "mirror_drive:$FILE")
-              curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
-                -d "chat_id=${{ github.event.client_payload.chat_id }}" \
-                -d "message_id=${{ github.event.client_payload.message_id }}" \
-                -d "text=Mirror completed: $LINK"
+              FILE_ID=$(echo "$LINK" | sed -n 's/.*id=\([^&]*\).*/\1/p')
+              if [ -n "$FILE_ID" ]; then
+                DIRECT_LINK="https://drive.usercontent.google.com/download?id=${FILE_ID}&export=download&authuser=0"
+              else
+                DIRECT_LINK="$LINK"
+              fi
+              INSERT_RES=$(curl -s -X POST "${SUPABASE_URL}/rest/v1/mirrored_files" \
+                -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+                -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+                -H "Content-Type: application/json" \
+                -d "{\"drive_file_name\": \"$FILE\", \"chat_id\": ${{ github.event.client_payload.chat_id }}}")
+              ROW_ID=$(echo "$INSERT_RES" | jq -r '.id // empty')
+              if [ -n "$ROW_ID" ]; then
+                REPLY_MARKUP=$(jq -n --arg id "$ROW_ID" '{inline_keyboard: [[{text: "Delete", callback_data: ("delete_mirror_" + $id)}]]}')
+                curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+                  -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+                  -d "message_id=${{ github.event.client_payload.message_id }}" \
+                  -d "text=Mirror completed: $DIRECT_LINK" \
+                  -d "reply_markup=$REPLY_MARKUP"
+              else
+                curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+                  -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+                  -d "message_id=${{ github.event.client_payload.message_id }}" \
+                  -d "text=Mirror completed: $DIRECT_LINK"
+              fi
             else
               RAW_ERROR=$(cat upload_error.log)
               if echo "$RAW_ERROR" | grep -qi "storage quota exceeded"; then
@@ -177,6 +202,41 @@ jobs:
                 -d "text=$MSG"
             fi
           fi
+          
+  delete-mirror:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'delete-mirror'
+    runs-on: ubuntu-latest
+    env:
+      KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Install rclone
+        run: sudo apt-get update && sudo apt-get install -y rclone
+      - name: Configure rclone
+        run: |
+          export TOKEN='${{ secrets.GDRIVE_TOKEN }}'
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [mirror_drive]
+          type = drive
+          scope = drive
+          client_id = ${{ secrets.GDRIVE_CLIENT_ID }}
+          client_secret = ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          token = $TOKEN
+          root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
+          EOF
+      - name: Delete file from Drive
+        run: |
+          FILE_NAME="${{ github.event.client_payload.drive_file_name }}"
+          rclone delete "mirror_drive:$FILE_NAME" -P
+          curl -s -X DELETE "${SUPABASE_URL}/rest/v1/mirrored_files?drive_file_name=eq.${FILE_NAME}" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"
+          curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+            -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+            -d "message_id=${{ github.event.client_payload.message_id }}" \
+            -d "text=File deleted."
 
   capture-frames:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'capture-frames'
