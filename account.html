@@ -597,7 +597,7 @@
                 setTimeout(function() {
                     target.className = 'message';
                     target.textContent = '';
-                }, 3000);
+                }, 4000);
             } else {
                 alert(msg);
             }
@@ -696,7 +696,15 @@
             var displayNameEl = document.getElementById('displayUsername');
             var displayIdEl = document.getElementById('displayUserID');
             if (currentUser) {
-                displayNameEl.textContent = currentUser.username;
+                var displayName = currentUser.username;
+                if (!displayName) {
+                    if (currentUser.email) {
+                        displayName = currentUser.email.split('@')[0];
+                    } else {
+                        displayName = 'User';
+                    }
+                }
+                displayNameEl.textContent = displayName;
                 displayIdEl.textContent = currentUser.id;
                 displayNameEl.style.display = 'inline-block';
                 displayIdEl.style.display = 'inline-block';
@@ -797,7 +805,11 @@
         }
 
         function handleAuthError(error) {
-            showMessage(error.message || 'Authentication failed', true);
+            var msg = error.message || 'Authentication failed';
+            if (msg.includes('Email not confirmed')) {
+                msg = 'Please confirm your email before signing in. Check your inbox.';
+            }
+            showMessage(msg, true);
         }
 
         async function signInWithEmail(email, password) {
@@ -807,7 +819,7 @@
                 return null;
             }
             var user = result.data.user;
-            var username = user.user_metadata.username || user.email;
+            var username = user.user_metadata.username || user.email.split('@')[0] || 'User';
             var userData = {
                 id: user.id,
                 username: username,
@@ -829,11 +841,20 @@
                 return null;
             }
             var user = result.data.user;
+            if (!user) {
+                showMessage('Sign‑up succeeded but user object is missing. Please check your email to confirm.', false);
+                return null;
+            }
             var userData = {
                 id: user.id,
-                username: username,
+                username: username || user.email.split('@')[0] || 'User',
                 email: user.email
             };
+            if (user.confirmed_at === null) {
+                showMessage('Account created! Please check your email to confirm your address, then sign in.', false);
+            } else {
+                showMessage('Account created! You can now sign in.', false);
+            }
             return userData;
         }
 
@@ -852,7 +873,7 @@
                 var session = sessionResult.data.session;
                 if (session) {
                     var user = session.user;
-                    var username = user.user_metadata.username || user.email;
+                    var username = user.user_metadata.username || user.email.split('@')[0] || 'User';
                     var userData = {
                         id: user.id,
                         username: username,
@@ -910,9 +931,13 @@
                 showMessage('Please enter email and password', true);
                 return;
             }
-            var userData = await signInWithEmail(email, password);
-            if (userData) {
-                showUserInfo(userData);
+            try {
+                var userData = await signInWithEmail(email, password);
+                if (userData) {
+                    showUserInfo(userData);
+                }
+            } catch (error) {
+                showMessage('Something went wrong: ' + error.message, true);
             }
         });
 
@@ -941,13 +966,16 @@
                 showMessage('Passwords do not match', true);
                 return;
             }
-            var userData = await signUpWithEmail(email, username, password);
-            if (userData) {
-                showMessage('Account created! You can now sign in.', false);
-                setTimeout(function() {
-                    document.getElementById('signUpForm').style.display = 'none';
-                    document.getElementById('signInForm').style.display = 'block';
-                }, 2000);
+            try {
+                var userData = await signUpWithEmail(email, username, password);
+                if (userData) {
+                    setTimeout(function() {
+                        document.getElementById('signUpForm').style.display = 'none';
+                        document.getElementById('signInForm').style.display = 'block';
+                    }, 2000);
+                }
+            } catch (error) {
+                showMessage('Something went wrong: ' + error.message, true);
             }
         });
 
