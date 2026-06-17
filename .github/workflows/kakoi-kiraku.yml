@@ -317,7 +317,6 @@ jobs:
           root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
           EOF
       - name: Download with chosen format
-        id: download
         run: |
           echo "${{ secrets.YOUTUBE_COOKIES }}" > cookies.txt
           URL="${{ github.event.client_payload.url }}"
@@ -341,9 +340,9 @@ jobs:
             echo "IMAGE_COUNT=$i" >> $GITHUB_ENV
           else
             yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
-              -f "$FMT" -o "downloads/%(title)s.%(ext)s" --print "filename" "$URL" > /tmp/downloaded_filename
-            DOWNLOADED_FILE=$(cat /tmp/downloaded_filename)
-            echo "FILE=$(basename "$DOWNLOADED_FILE")" >> $GITHUB_ENV
+              -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL"
+            DOWNLOADED_FILE=$(ls downloads)
+            echo "FILE=$DOWNLOADED_FILE" >> $GITHUB_ENV
           fi
 
       - name: Deliver images or file
@@ -354,7 +353,7 @@ jobs:
 
           if [ "$FMT" == "images" ]; then
             cd downloads/images
-            IMAGES=(*.jpg *.png *.webp)
+            IMAGES=(image_*)
             if [ ${#IMAGES[@]} -eq 0 ]; then
               curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
                 -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID" \
@@ -362,14 +361,12 @@ jobs:
               exit 1
             fi
 
-            # Send in groups of 10
             group=()
             count=0
             for img in "${IMAGES[@]}"; do
               group+=("$img")
               count=$((count + 1))
               if [ $count -eq 10 ]; then
-                # Build media JSON and curl arguments
                 MEDIA="["
                 for idx in "${!group[@]}"; do
                   if [ $idx -gt 0 ]; then MEDIA+=","; fi
@@ -386,7 +383,6 @@ jobs:
               fi
             done
 
-            # Send any remaining images (less than 10)
             if [ ${#group[@]} -gt 0 ]; then
               MEDIA="["
               for idx in "${!group[@]}"; do
