@@ -944,6 +944,50 @@ bot.callbackQuery(/^post_to_channel_(.+)_(.+)$/, async (ctx) => {
     }
 });
 
+bot.callbackQuery(/^delete_mirror_(.+)$/, async (ctx) => {
+    const id = ctx.match[1];
+    const { data: row, error: fetchErr } = await supabase
+        .from("mirrored_files")
+        .select("drive_file_name, chat_id")
+        .eq("id", id)
+        .single();
+
+    if (fetchErr || !row) {
+        await ctx.answerCallbackQuery("File not found or already deleted.");
+        return;
+    }
+
+    await ctx.answerCallbackQuery();
+
+    try {
+        const res = await fetch(
+            `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `token ${process.env.GITHUB_PAT}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    event_type: "delete-mirror",
+                    client_payload: {
+                        chat_id: ctx.chat.id,
+                        message_id: ctx.callbackQuery.message.message_id,
+                        drive_file_name: row.drive_file_name,
+                    },
+                }),
+            }
+        );
+        if (!res.ok) {
+            await ctx.answerCallbackQuery("Failed to dispatch deletion.");
+        } else {
+            await ctx.deleteMessage();
+        }
+    } catch (e) {
+        await ctx.answerCallbackQuery("Error: " + e.message);
+    }
+});
+
 bot.command("imagesearch", async (ctx) => {
     const reply = ctx.message?.reply_to_message;
     if (!reply || (!reply.photo && !reply.sticker)) {
