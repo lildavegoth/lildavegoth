@@ -476,21 +476,23 @@ jobs:
             sharp('images/input.jpg')
               .resize(800, 600, { fit: 'inside' })
               .toBuffer()
-              .then(data => {
-                const { width, height } = sharp(data);
-                return width.then(w => height.then(h => ({ data, w, h })));
+              .then(buffer => {
+                return sharp(buffer).metadata().then(meta => {
+                  const w = meta.width;
+                  const h = meta.height;
+                  const svg = Buffer.from(
+                    '<svg width=\"' + w + '\" height=\"' + h + '\">' +
+                    '<text x=\"100%\" y=\"100%\" text-anchor=\"end\" font-size=\"24\" fill=\"white\" font-family=\"Arial\" dy=\"-10\">' +
+                    text + '</text></svg>'
+                  );
+                  return sharp(buffer)
+                    .composite([{ input: svg, top: 0, left: 0 }])
+                    .jpeg()
+                    .toFile('images/output.jpg');
+                });
               })
-              .then(({ data, w, h }) => {
-                const svg = Buffer.from(
-                  '<svg width=\"' + w + '\" height=\"' + h + '\">' +
-                  '<text x=\"100%\" y=\"100%\" text-anchor=\"end\" font-size=\"24\" fill=\"white\" font-family=\"Arial\" dy=\"-10\">' +
-                  text + '</text></svg>'
-                );
-                return sharp(data)
-                  .composite([{ input: svg, top: 0, left: 0 }])
-                  .jpeg()
-                  .toFile('images/output.jpg');
-              });
+              .then(() => process.exit(0))
+              .catch(err => { console.error(err); process.exit(1); });
           "
 
       - name: Send image with text overlay as document
