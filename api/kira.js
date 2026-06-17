@@ -736,6 +736,9 @@ bot.command("imageedit", async (ctx) => {
                     { text: "Reduce", callback_data: `imgedit_reduce_${shortKey}` },
                     { text: "Text Overlay", callback_data: `imgedit_text_${shortKey}` },
                 ],
+                [
+                    { text: "Custom", callback_data: `imgedit_custom_${shortKey}` },
+                ],
             ],
         },
     });
@@ -764,6 +767,12 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text)_(.+)$/, async (ctx) =>
     if (action === "text") {
         pendingImageEditAction.set(ctx.from.id, `imgedit_text_${fileId}`);
         await ctx.editMessageText("Send me the text you want to overlay on the image.");
+        return;
+    }
+    
+    if (action === "custom") {
+        pendingImageEditAction.set(ctx.from.id, `imgedit_custom_${fileId}`);
+        await ctx.editMessageText("Send me your custom ffmpeg/cjpeg command. Use `input.jpg` as input and `output.jpg` as final output.\n\nExample:\n`ffmpeg -y -i input.jpg -vf scale=1200:-1:bicubic temp.png && cjpeg -quality 70 temp.png > output.jpg`");
         return;
     }
 
@@ -1406,6 +1415,64 @@ bot.on("message:text", async (ctx) => {
                 return ctx.reply("Error: " + e.message);
             }
         }
+        if (action.startsWith("imgedit_custom_")) {
+            const fileId = action.substring("imgedit_custom_".length);
+            if (!fileId || !input) return ctx.reply("Invalid input.");
+            try {
+                const file = await ctx.api.getFile(fileId);
+                const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
+                const response = await fetch(fileUrl);
+                const buffer = await response.arrayBuffer();
+                const fileName = `custom_${Date.now()}.jpg`;
+
+                const { error } = await supabase.storage
+                    .from("images")
+                    .upload(fileName, buffer, {
+                        contentType: "image/jpeg",
+                        upsert: true,
+                    });
+
+                if (error) {
+                    return ctx.reply("Failed to upload image.");
+                }
+
+                const { data: publicUrlData } = supabase.storage
+                    .from("images")
+                    .getPublicUrl(fileName);
+                const imageUrl = publicUrlData.publicUrl;
+
+                const dispatchBody = {
+                    event_type: "custom-image",
+                    client_payload: {
+                        chat_id: ctx.chat.id,
+                        image_url: imageUrl,
+                        original_name: fileName,
+                        command: input,
+                        progress_message_id: ctx.message?.reply_to_message?.message_id,
+                    },
+                };
+
+                const dispatchRes = await fetch(
+                    `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+                    {
+                        method: "POST",
+                        headers: {
+                            Authorization: `token ${process.env.GITHUB_PAT}`,
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(dispatchBody),
+                    }
+                );
+
+                if (!dispatchRes.ok) {
+                    return ctx.reply("Dispatch failed: " + (await dispatchRes.text()));
+                }
+
+                return ctx.reply("Processing image, please wait…");
+            } catch (e) {
+                return ctx.reply("Error: " + e.message);
+            }
+        }
         return;
     }
 
@@ -1447,4 +1514,4 @@ export async function POST(request) {
     const body = await request.json();
     await bot.handleUpdate(body);
     return new Response("ok");
-}
+                                      }
