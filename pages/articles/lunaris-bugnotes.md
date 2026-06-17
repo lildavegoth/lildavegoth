@@ -1,7 +1,7 @@
 ---
 title: "Lunaris Bug Notes"
 date: "2026-06-16"
-image: "images/bugnotes.webp"
+image: ""
 author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
 description: "Bug Notes of Lunaris AOSP"
