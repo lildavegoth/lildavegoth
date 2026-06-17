@@ -246,44 +246,57 @@ jobs:
           URL="${{ github.event.client_payload.url }}"
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           FETCH_MSG_ID="${{ github.event.client_payload.fetching_message_id }}"
+
           INFO=$(yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github --dump-json "$URL")
+
           TITLE=$(echo "$INFO" | jq -r '.title // "Unknown"')
           DURATION=$(echo "$INFO" | jq -r '.duration_string // "?"')
-          FORMATS=$(echo "$INFO" | jq -r '
-            [.formats[] |
-              select(.ext == "mp4" and .height != null and .filesize != null) |
-              {
-                format_id: .format_id,
-                res: "\(.height)p",
-                size_mb: ((.filesize / 1048576) | round),
-                ext: .ext
-              }
-            ] | unique_by(.res) | sort_by(.height)
-          ')
-          FORMAT_LIST=$(echo "$FORMATS" | jq -r '.[] | "\(.res) (\(.size_mb)MB)"' 2>/dev/null || echo "")
           PLAYLIST_COUNT=$(echo "$INFO" | jq -r '.playlist_count // 0')
-          IS_IMAGE_ALBUM=$(echo "$INFO" | jq -r '.formats | map(select(.ext != "mhtml" and .ext != "m3u8" and .ext != "html")) | all(.vcodec == "none" and .acodec == "none")')
-          if [ -z "$FORMATS" ] || [ "$FORMATS" == "[]" ]; then
-            if [ "$PLAYLIST_COUNT" -gt 1 ] && [ "$IS_IMAGE_ALBUM" == "true" ]; then
-              KEYBOARD='[[{"text":"Download all images","callback_data":"dl_fmt_images_'"$URL"'"}]]'
-              FORMAT_LIST="$PLAYLIST_COUNT images available"
-            else
+
+          # Check if this is an image-only album (carousel)
+          HAS_VIDEO=$(echo "$INFO" | jq -r '.formats | map(select(.vcodec != "none")) | length')
+          HAS_IMAGE=$(echo "$INFO" | jq -r '.formats | map(select(.ext=="jpg" or .ext=="png" or .ext=="webp")) | length')
+          IS_CAROUSEL=false
+          if [ "$PLAYLIST_COUNT" -gt 1 ] && [ "$HAS_VIDEO" == "0" ] && [ "$HAS_IMAGE" -gt 0 ]; then
+            IS_CAROUSEL=true
+          fi
+
+          if [ "$IS_CAROUSEL" == "true" ]; then
+            KEYBOARD='[[{"text":"Download all images","callback_data":"dl_fmt_images_'"$URL"'"}]]'
+            FORMAT_LIST="$PLAYLIST_COUNT images available"
+          else
+            FORMATS=$(echo "$INFO" | jq -r '
+              [.formats[] |
+                select(.ext == "mp4" and .height != null and .filesize != null) |
+                {
+                  format_id: .format_id,
+                  res: "\(.height)p",
+                  size_mb: ((.filesize / 1048576) | round),
+                  ext: .ext
+                }
+              ] | unique_by(.res) | sort_by(.height)
+            ')
+            FORMAT_LIST=$(echo "$FORMATS" | jq -r '.[] | "\(.res) (\(.size_mb)MB)"' 2>/dev/null || echo "")
+            if [ -z "$FORMATS" ] || [ "$FORMATS" == "[]" ]; then
               KEYBOARD='[[{"text":"Best quality","callback_data":"dl_fmt_best_'"$URL"'"}]]'
               FORMAT_LIST="Best quality available"
+            else
+              KEYBOARD=$(echo "$FORMATS" | jq -r '
+                [.[] | {
+                  text: "\(.res) (\(.size_mb)MB)",
+                  callback_data: "dl_fmt_\(.format_id)_\($URL)"
+                }] | unique_by(.text) |
+                reduce .[] as $item ([]; if length == 0 or (.[-1] | length) == 2 then . + [[$item]] else .[-1] += [$item] end)
+              ' --arg URL "$URL")
             fi
-          else
-            KEYBOARD=$(echo "$FORMATS" | jq -r '
-              [.[] | {
-                text: "\(.res) (\(.size_mb)MB)",
-                callback_data: "dl_fmt_\(.format_id)_\($URL)"
-              }] | unique_by(.text) |
-              reduce .[] as $item ([]; if length == 0 or (.[-1] | length) == 2 then . + [[$item]] else .[-1] += [$item] end)
-            ' --arg URL "$URL")
           fi
+
           REPLY_MARKUP=$(jq -n --argjson keyboard "$KEYBOARD" '{inline_keyboard: $keyboard}')
           printf -v TEXT "Choose format for: %s (%s)\n%s" "$TITLE" "$DURATION" "$FORMAT_LIST"
+
           curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
             -d "chat_id=$CHAT_ID" -d "message_id=$FETCH_MSG_ID"
+
           curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendMessage" \
             -d "chat_id=$CHAT_ID" \
             --data-urlencode "text=$TEXT" \
@@ -322,8 +335,6 @@ jobs:
           URL="${{ github.event.client_payload.url }}"
           FMT="${{ github.event.client_payload.format_id }}"
           mkdir -p downloads
-          echo "FMT=$FMT"
-          echo "URL=$URL"
           if [ "$FMT" == "images" ]; then
             yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
               -f best --skip-download --dump-single-json "$URL" > /tmp/info.json
@@ -343,17 +354,91 @@ jobs:
           else
             yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
               -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL"
-            echo "yt-dlp exit code: $?"
-            echo "Contents of downloads directory:"
-            ls -la downloads || echo "downloads directory empty/missing"
             DOWNLOADED_FILE=$(ls downloads | head -1)
-            echo "DOWNLOADED_FILE=$DOWNLOADED_FILE"
             if [ -z "$DOWNLOADED_FILE" ]; then
               echo "No file found after download"
               exit 1
             fi
             echo "FILE=$DOWNLOADED_FILE" >> $GITHUB_ENV
           fi
+      - name: Deliver images or file
+        run: |
+          CHAT_ID="${{ github.event.client_payload.chat_id }}"
+          PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
+          FMT="${{ github.event.client_payload.format_id }}"
+
+          if [ "$FMT" == "images" ]; then
+            cd downloads/images
+            IMAGES=(image_*)
+            if [ ${#IMAGES[@]} -eq 0 ]; then
+              curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+                -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID" \
+                -d "text=No images found."
+              exit 1
+            fi
+
+            group=()
+            count=0
+            for img in "${IMAGES[@]}"; do
+              group+=("$img")
+              count=$((count + 1))
+              if [ $count -eq 10 ]; then
+                MEDIA="["
+                for idx in "${!group[@]}"; do
+                  if [ $idx -gt 0 ]; then MEDIA+=","; fi
+                  MEDIA+="{\"type\":\"photo\",\"media\":\"attach://file$idx\"}"
+                done
+                MEDIA+="]"
+                CURL_ARGS=(-X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendMediaGroup" -F "chat_id=$CHAT_ID" -F "media=$MEDIA")
+                for idx in "${!group[@]}"; do
+                  CURL_ARGS+=(-F "file$idx=@${group[$idx]}")
+                done
+                curl "${CURL_ARGS[@]}"
+                group=()
+                count=0
+              fi
+            done
+
+            if [ ${#group[@]} -gt 0 ]; then
+              MEDIA="["
+              for idx in "${!group[@]}"; do
+                if [ $idx -gt 0 ]; then MEDIA+=","; fi
+                MEDIA+="{\"type\":\"photo\",\"media\":\"attach://file$idx\"}"
+              done
+              MEDIA+="]"
+              CURL_ARGS=(-X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendMediaGroup" -F "chat_id=$CHAT_ID" -F "media=$MEDIA")
+              for idx in "${!group[@]}"; do
+                CURL_ARGS+=(-F "file$idx=@${group[$idx]}")
+              done
+              curl "${CURL_ARGS[@]}"
+            fi
+
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+              -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
+
+          else
+            FILE="downloads/${{ env.FILE }}"
+            if [ ! -f "$FILE" ]; then
+              curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+                -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID" \
+                -d "text=Download failed: No file was downloaded."
+              exit 1
+            fi
+            SIZE=$(stat -c%s "$FILE")
+            if [ "$SIZE" -lt 50000000 ]; then
+              curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
+                -F "chat_id=$CHAT_ID" -F "document=@$FILE" -F "caption=Downloaded: ${{ env.FILE }}"
+              curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+                -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
+            else
+              rclone copy "$FILE" mirror_drive: -P
+              LINK=$(rclone link "mirror_drive:${{ env.FILE }}")
+              curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+                -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID" \
+                -d "text=Download complete: $LINK"
+            fi
+          fi
+
   restore-image:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'restore-image'
     runs-on: ubuntu-latest
