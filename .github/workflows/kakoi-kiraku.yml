@@ -5,7 +5,7 @@ on:
     branches: [homepage]
   workflow_dispatch:
   repository_dispatch:
-    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image, delete-mirror]
+    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image, delete-mirror, custom-image]
   schedule:
     - cron: '0 0 * * *'
 
@@ -556,6 +556,46 @@ jobs:
               .then(() => process.exit(0))
               .catch(err => { console.error(err); process.exit(1); });
           "
+
+  custom-image:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'custom-image'
+    runs-on: ubuntu-latest
+    env:
+      KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
+    steps:
+      - name: Install ffmpeg and cjpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libjpeg-turbo-progs
+
+      - name: Download image
+        run: |
+          mkdir -p images
+          wget -q -O images/input.jpg "${{ github.event.client_payload.image_url }}"
+
+      - name: Run custom command
+        run: |
+          cd images
+          COMMAND="${{ github.event.client_payload.command }}"
+          eval "$COMMAND"
+
+      - name: Send result as document
+        run: |
+          CHAT_ID="${{ github.event.client_payload.chat_id }}"
+          PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
+          if [ -f images/output.jpg ]; then
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
+              -F "chat_id=$CHAT_ID" \
+              -F "document=@images/output.jpg" \
+              -F "caption=Custom processed image"
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+              -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
+          else
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+              -d "chat_id=$CHAT_ID" \
+              -d "message_id=$PROGRESS_MSG_ID" \
+              -d "text=Custom processing failed. Check your command syntax."
+          fi
 
       - name: Send image with text overlay as document
         run: |
