@@ -321,6 +321,14 @@ jobs:
       - name: Check file size and deliver
         run: |
           FILE="downloads/${{ env.FILE }}"
+          if [ ! -f "$FILE" ]; then
+            MSG="Download failed, make sure your url has a video."
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+              -d "chat_id=${{ github.event.client_payload.chat_id }}" \
+              -d "message_id=${{ github.event.client_payload.progress_message_id }}" \
+              -d "text=$MSG"
+            exit 1
+          fi
           SIZE=$(stat -c%s "$FILE")
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
