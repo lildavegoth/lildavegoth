@@ -36,7 +36,7 @@ export default async (req, res) => {
     return res.status(400).json({ error: 'Invalid JSON' });
   }
 
-  const { slug, title, author, profile, date, image, description, categories, content, badge, number } = payload;
+  const { slug, title, author, profile, date, image, description, categories, content, badge, number, hidden } = payload;
   if (!slug || !content) return res.status(400).json({ error: 'Missing fields' });
 
   const owner = 'lildavegoth';
@@ -44,6 +44,7 @@ export default async (req, res) => {
   const branch = 'homepage';
   const ghToken = process.env.GH_TOKEN;
 
+  let hiddenLine = hidden ? '\nhidden: true' : '';
   let fileContent = `---
 title: "${title}"
 date: "${date}"
@@ -51,7 +52,7 @@ image: "${image}"
 author: "${author || 'lildavegoth'}"
 profile: "${profile || 'https://t.me/lildavegoth'}"
 description: "${description}"
-categories: "${categories}"
+categories: "${categories}"${hiddenLine}
 ---
 ${content}`;
 
@@ -112,6 +113,9 @@ ${content}`;
       description: description,
       date: date,
     };
+    if (hidden) {
+      newEntry.hidden = true;
+    }
 
     if (badge) {
       newEntry.badge = badge;
