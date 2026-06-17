@@ -261,9 +261,16 @@ jobs:
             ] | unique_by(.res) | sort_by(.height)
           ')
           FORMAT_LIST=$(echo "$FORMATS" | jq -r '.[] | "\(.res) (\(.size_mb)MB)"' 2>/dev/null || echo "")
+          PLAYLIST_COUNT=$(echo "$INFO" | jq -r '.playlist_count // 0')
+          IS_IMAGE_ALBUM=$(echo "$INFO" | jq -r '.formats | map(select(.ext != "mhtml" and .ext != "m3u8" and .ext != "html")) | all(.vcodec == "none" and .acodec == "none")')
           if [ -z "$FORMATS" ] || [ "$FORMATS" == "[]" ]; then
-            KEYBOARD='[[{"text":"Best quality","callback_data":"dl_fmt_best_'"$URL"'"}]]'
-            FORMAT_LIST="Best quality available"
+            if [ "$PLAYLIST_COUNT" -gt 1 ] && [ "$IS_IMAGE_ALBUM" == "true" ]; then
+              KEYBOARD='[[{"text":"Download all images","callback_data":"dl_fmt_images_'"$URL"'"}]]'
+              FORMAT_LIST="$PLAYLIST_COUNT images available"
+            else
+              KEYBOARD='[[{"text":"Best quality","callback_data":"dl_fmt_best_'"$URL"'"}]]'
+              FORMAT_LIST="Best quality available"
+            fi
           else
             KEYBOARD=$(echo "$FORMATS" | jq -r '
               [.[] | {
@@ -310,42 +317,114 @@ jobs:
           root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
           EOF
       - name: Download with chosen format
+        id: download
         run: |
           echo "${{ secrets.YOUTUBE_COOKIES }}" > cookies.txt
           URL="${{ github.event.client_payload.url }}"
           FMT="${{ github.event.client_payload.format_id }}"
           mkdir -p downloads
-          yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github -f "$FMT" -o "downloads/%(title)s.%(ext)s" --print "filename" "$URL" > /tmp/downloaded_filename
-          DOWNLOADED_FILE=$(cat /tmp/downloaded_filename)
-          echo "FILE=$(basename "$DOWNLOADED_FILE")" >> $GITHUB_ENV
-      - name: Check file size and deliver
-        run: |
-          FILE="downloads/${{ env.FILE }}"
-          if [ ! -f "$FILE" ]; then
-            MSG="Download failed: No file was downloaded."
-            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
-              -d "chat_id=${{ github.event.client_payload.chat_id }}" \
-              -d "message_id=${{ github.event.client_payload.progress_message_id }}" \
-              -d "text=$MSG"
-            exit 1
+          if [ "$FMT" == "images" ]; then
+            yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
+              -f best --skip-download --dump-single-json "$URL" > /tmp/info.json
+            jq -r '.formats[]? | select(.ext=="jpg" or .ext=="png" or .ext=="webp") | .url' /tmp/info.json > /tmp/urls.txt
+            if [ ! -s /tmp/urls.txt ]; then
+              jq -r '.thumbnails[]?.url // empty' /tmp/info.json > /tmp/urls.txt
+            fi
+            mkdir -p downloads/images
+            i=0
+            while read -r IMG_URL; do
+              ext=$(echo "$IMG_URL" | grep -o '\.\(jpg\|png\|webp\)' | head -1)
+              if [ -z "$ext" ]; then ext=".jpg"; fi
+              wget -q -O "downloads/images/image_${i}${ext}" "$IMG_URL"
+              i=$((i+1))
+            done < /tmp/urls.txt
+            echo "IMAGE_COUNT=$i" >> $GITHUB_ENV
+          else
+            yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
+              -f "$FMT" -o "downloads/%(title)s.%(ext)s" --print "filename" "$URL" > /tmp/downloaded_filename
+            DOWNLOADED_FILE=$(cat /tmp/downloaded_filename)
+            echo "FILE=$(basename "$DOWNLOADED_FILE")" >> $GITHUB_ENV
           fi
-          SIZE=$(stat -c%s "$FILE")
+
+      - name: Deliver images or file
+        run: |
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
-          if [ "$SIZE" -lt 50000000 ]; then
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
-              -F "chat_id=$CHAT_ID" \
-              -F "document=@$FILE" \
-              -F "caption=Downloaded: ${{ env.FILE }}"
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+          FMT="${{ github.event.client_payload.format_id }}"
+
+          if [ "$FMT" == "images" ]; then
+            cd downloads/images
+            IMAGES=(*.jpg *.png *.webp)
+            if [ ${#IMAGES[@]} -eq 0 ]; then
+              curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+                -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID" \
+                -d "text=No images found."
+              exit 1
+            fi
+
+            # Send in groups of 10
+            group=()
+            count=0
+            for img in "${IMAGES[@]}"; do
+              group+=("$img")
+              count=$((count + 1))
+              if [ $count -eq 10 ]; then
+                # Build media JSON and curl arguments
+                MEDIA="["
+                for idx in "${!group[@]}"; do
+                  if [ $idx -gt 0 ]; then MEDIA+=","; fi
+                  MEDIA+="{\"type\":\"photo\",\"media\":\"attach://file$idx\"}"
+                done
+                MEDIA+="]"
+                CURL_ARGS=(-X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendMediaGroup" -F "chat_id=$CHAT_ID" -F "media=$MEDIA")
+                for idx in "${!group[@]}"; do
+                  CURL_ARGS+=(-F "file$idx=@${group[$idx]}")
+                done
+                curl "${CURL_ARGS[@]}"
+                group=()
+                count=0
+              fi
+            done
+
+            # Send any remaining images (less than 10)
+            if [ ${#group[@]} -gt 0 ]; then
+              MEDIA="["
+              for idx in "${!group[@]}"; do
+                if [ $idx -gt 0 ]; then MEDIA+=","; fi
+                MEDIA+="{\"type\":\"photo\",\"media\":\"attach://file$idx\"}"
+              done
+              MEDIA+="]"
+              CURL_ARGS=(-X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendMediaGroup" -F "chat_id=$CHAT_ID" -F "media=$MEDIA")
+              for idx in "${!group[@]}"; do
+                CURL_ARGS+=(-F "file$idx=@${group[$idx]}")
+              done
+              curl "${CURL_ARGS[@]}"
+            fi
+
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
               -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
+
           else
-            rclone copy "$FILE" mirror_drive: -P
-            LINK=$(rclone link "mirror_drive:${{ env.FILE }}")
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
-              -d "chat_id=$CHAT_ID" \
-              -d "message_id=$PROGRESS_MSG_ID" \
-              -d "text=Download complete: $LINK"
+            FILE="downloads/${{ env.FILE }}"
+            if [ ! -f "$FILE" ]; then
+              curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+                -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID" \
+                -d "text=Download failed: No file was downloaded."
+              exit 1
+            fi
+            SIZE=$(stat -c%s "$FILE")
+            if [ "$SIZE" -lt 50000000 ]; then
+              curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
+                -F "chat_id=$CHAT_ID" -F "document=@$FILE" -F "caption=Downloaded: ${{ env.FILE }}"
+              curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+                -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
+            else
+              rclone copy "$FILE" mirror_drive: -P
+              LINK=$(rclone link "mirror_drive:${{ env.FILE }}")
+              curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+                -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID" \
+                -d "text=Download complete: $LINK"
+            fi
           fi
 
   restore-image:
@@ -435,7 +514,7 @@ jobs:
         id: fetch
         run: |
           JOB_ID="${{ github.event.client_payload.job_id }}"
-          DATA=$(curl -s "https://$SUPABASE_URL/rest/v1/kira_jobs?id=eq.$JOB_ID&select=*" \
+          DATA=$(curl -s "${SUPABASE_URL}/rest/v1/kira_jobs?id=eq.$JOB_ID&select=*" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
           echo "JOB=$DATA" >> $GITHUB_ENV
