@@ -336,21 +336,9 @@ jobs:
           FMT="${{ github.event.client_payload.format_id }}"
           mkdir -p downloads
           if [ "$FMT" == "images" ]; then
-            yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
-              -f best --skip-download --dump-single-json "$URL" > /tmp/info.json
-            jq -r '.formats[]? | select(.ext=="jpg" or .ext=="png" or .ext=="webp") | .url' /tmp/info.json > /tmp/urls.txt
-            if [ ! -s /tmp/urls.txt ]; then
-              jq -r '.thumbnails[]?.url // empty' /tmp/info.json > /tmp/urls.txt
-            fi
-            mkdir -p downloads/images
-            i=0
-            while read -r IMG_URL; do
-              ext=$(echo "$IMG_URL" | grep -o '\.\(jpg\|png\|webp\)' | head -1)
-              if [ -z "$ext" ]; then ext=".jpg"; fi
-              wget -q -O "downloads/images/image_${i}${ext}" "$IMG_URL"
-              i=$((i+1))
-            done < /tmp/urls.txt
-            echo "IMAGE_COUNT=$i" >> $GITHUB_ENV
+            pip install gallery-dl
+            gallery-dl -d downloads/images "$URL"
+            echo "IMAGE_COUNT=$(ls downloads/images/*.jpg downloads/images/*.png downloads/images/*.webp 2>/dev/null | wc -l)" >> $GITHUB_ENV
           else
             yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
               -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL"
@@ -369,7 +357,8 @@ jobs:
 
           if [ "$FMT" == "images" ]; then
             cd downloads/images
-            IMAGES=(image_*)
+            shopt -s nullglob
+            IMAGES=(*.jpg *.png *.webp)
             if [ ${#IMAGES[@]} -eq 0 ]; then
               curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
                 -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID" \
