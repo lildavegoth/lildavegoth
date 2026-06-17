@@ -572,9 +572,27 @@
     <script>
         var SUPABASE_URL = 'YOUR_SUPABASE_URL';
         var SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-        var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        var supabase = null;
         var currentUser = null;
         var giveawayIframeLoaded = false;
+
+        function initSupabase() {
+            if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+                document.getElementById('signInBtn').disabled = true;
+                document.getElementById('signUpBtn').disabled = true;
+                document.getElementById('switchToSignUp').style.pointerEvents = 'none';
+                document.getElementById('switchToSignIn').style.pointerEvents = 'none';
+                showMessage('Supabase credentials missing. Please set SUPABASE_URL and SUPABASE_ANON_KEY.', true);
+                return false;
+            }
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return true;
+            } catch (e) {
+                showMessage('Failed to initialize Supabase client.', true);
+                return false;
+            }
+        }
 
         function togglePassword(inputId, buttonId) {
             var input = document.getElementById(inputId);
@@ -597,7 +615,7 @@
                 setTimeout(function() {
                     target.className = 'message';
                     target.textContent = '';
-                }, 3000);
+                }, 4000);
             } else {
                 alert(msg);
             }
@@ -615,7 +633,7 @@
         function enableUsernameEdit() {
             var streak = getUserStreak();
             if (streak < 15) {
-                window.showMessage('Cannot change username. Required: 15+ day streak on Routine Quest, (Current: ' + streak + ' days)');
+                showMessage('Cannot change username. Required: 15+ day streak on Routine Quest, (Current: ' + streak + ' days)', true);
                 return;
             }
             var displayEl = document.getElementById('displayUsername');
@@ -634,7 +652,7 @@
             var newUsername = inputEl.value.trim();
             if (newUsername) {
                 if (newUsername.toLowerCase() === 'lildavegoth') {
-                    window.showMessage('Username "lildavegoth" is not allowed');
+                    showMessage('Username "lildavegoth" is not allowed', true);
                     inputEl.focus();
                     return;
                 }
@@ -652,7 +670,7 @@
         function enableUserIdEdit() {
             var streak = getUserStreak();
             if (streak < 15) {
-                window.showMessage('Cannot change UserID. Required: 15+ day streak on Routine Quest, (Current: ' + streak + ' days)');
+                showMessage('Cannot change UserID. Required: 15+ day streak on Routine Quest, (Current: ' + streak + ' days)', true);
                 return;
             }
             var displayIdEl = document.getElementById('displayUserID');
@@ -671,12 +689,12 @@
             var newUserId = inputIdEl.value.trim();
             if (newUserId) {
                 if (newUserId.length < 6) {
-                    window.showMessage('UserID must be more than 6 characters');
+                    showMessage('UserID must be more than 6 characters', true);
                     inputIdEl.focus();
                     return;
                 }
                 if (newUserId.toLowerCase() === 'lildavegoth') {
-                    window.showMessage('UserID "lildavegoth" is not allowed');
+                    showMessage('UserID "lildavegoth" is not allowed', true);
                     inputIdEl.focus();
                     return;
                 }
@@ -797,10 +815,15 @@
         }
 
         function handleAuthError(error) {
-            showMessage(error.message || 'Authentication failed', true);
+            var msg = error.message || 'Authentication failed';
+            if (error.status === 400 && msg.includes('Email not confirmed')) {
+                msg = 'Please confirm your email before signing in. Check your inbox.';
+            }
+            showMessage(msg, true);
         }
 
         async function signInWithEmail(email, password) {
+            if (!supabase) return null;
             var result = await supabase.auth.signInWithPassword({ email: email, password: password });
             if (result.error) {
                 handleAuthError(result.error);
@@ -817,6 +840,7 @@
         }
 
         async function signUpWithEmail(email, username, password) {
+            if (!supabase) return null;
             var result = await supabase.auth.signUp({
                 email: email,
                 password: password,
@@ -838,7 +862,7 @@
         }
 
         async function signOutUser() {
-            await supabase.auth.signOut();
+            if (supabase) await supabase.auth.signOut();
             localStorage.removeItem('currentUser');
             document.getElementById('userInfo').classList.remove('active');
             document.getElementById('signInForm').style.display = 'block';
@@ -847,8 +871,15 @@
         }
 
         function checkSession() {
+            if (!supabase) {
+                updateProfileDisplay();
+                return;
+            }
             supabase.auth.getSession().then(function(sessionResult) {
-                if (sessionResult.error) return;
+                if (sessionResult.error) {
+                    updateProfileDisplay();
+                    return;
+                }
                 var session = sessionResult.data.session;
                 if (session) {
                     var user = session.user;
@@ -866,7 +897,10 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            checkSession();
+            var initialized = initSupabase();
+            if (initialized) {
+                checkSession();
+            }
             var profilePhoto = document.getElementById('profilePhoto');
             var profileInput = document.getElementById('profilePhotoInput');
             var savedPhoto = localStorage.getItem('profilePhoto');
@@ -891,68 +925,68 @@
             updateStreakNumberDisplay();
             var giveawayIframe = document.getElementById('giveawayIframe');
             giveawayIframe.style.display = 'none';
-        });
 
-        document.getElementById('switchToSignUp').addEventListener('click', function() {
-            document.getElementById('signInForm').style.display = 'none';
-            document.getElementById('signUpForm').style.display = 'block';
-        });
+            document.getElementById('switchToSignUp').addEventListener('click', function() {
+                document.getElementById('signInForm').style.display = 'none';
+                document.getElementById('signUpForm').style.display = 'block';
+            });
 
-        document.getElementById('switchToSignIn').addEventListener('click', function() {
-            document.getElementById('signUpForm').style.display = 'none';
-            document.getElementById('signInForm').style.display = 'block';
-        });
+            document.getElementById('switchToSignIn').addEventListener('click', function() {
+                document.getElementById('signUpForm').style.display = 'none';
+                document.getElementById('signInForm').style.display = 'block';
+            });
 
-        document.getElementById('signInBtn').addEventListener('click', async function() {
-            var email = document.getElementById('signInEmail').value.trim();
-            var password = document.getElementById('signInPassword').value.trim();
-            if (!email || !password) {
-                showMessage('Please enter email and password', true);
-                return;
-            }
-            var userData = await signInWithEmail(email, password);
-            if (userData) {
-                showUserInfo(userData);
-            }
-        });
+            document.getElementById('signInBtn').addEventListener('click', async function() {
+                var email = document.getElementById('signInEmail').value.trim();
+                var password = document.getElementById('signInPassword').value.trim();
+                if (!email || !password) {
+                    showMessage('Please enter email and password', true);
+                    return;
+                }
+                var userData = await signInWithEmail(email, password);
+                if (userData) {
+                    showUserInfo(userData);
+                }
+            });
 
-        document.getElementById('signUpBtn').addEventListener('click', async function() {
-            var email = document.getElementById('signUpEmail').value.trim();
-            var username = document.getElementById('signUpUsername').value.trim();
-            var password = document.getElementById('signUpPassword').value.trim();
-            var confirm = document.getElementById('signUpConfirmPassword').value.trim();
-            if (!email) {
-                showMessage('Please enter an email', true);
-                return;
-            }
-            if (!username) {
-                showMessage('Please enter a username', true);
-                return;
-            }
-            if (username.toLowerCase() === 'lildavegoth') {
-                showMessage('Username "lildavegoth" is not allowed', true);
-                return;
-            }
-            if (!password) {
-                showMessage('Please enter a password', true);
-                return;
-            }
-            if (password !== confirm) {
-                showMessage('Passwords do not match', true);
-                return;
-            }
-            var userData = await signUpWithEmail(email, username, password);
-            if (userData) {
-                showMessage('Account created! You can now sign in.', false);
-                setTimeout(function() {
-                    document.getElementById('signUpForm').style.display = 'none';
-                    document.getElementById('signInForm').style.display = 'block';
-                }, 2000);
-            }
-        });
+            document.getElementById('signUpBtn').addEventListener('click', async function() {
+                var email = document.getElementById('signUpEmail').value.trim();
+                var username = document.getElementById('signUpUsername').value.trim();
+                var password = document.getElementById('signUpPassword').value.trim();
+                var confirm = document.getElementById('signUpConfirmPassword').value.trim();
+                if (!email) {
+                    showMessage('Please enter an email', true);
+                    return;
+                }
+                if (!username) {
+                    showMessage('Please enter a username', true);
+                    return;
+                }
+                if (username.toLowerCase() === 'lildavegoth') {
+                    showMessage('Username "lildavegoth" is not allowed', true);
+                    return;
+                }
+                if (!password) {
+                    showMessage('Please enter a password', true);
+                    return;
+                }
+                if (password !== confirm) {
+                    showMessage('Passwords do not match', true);
+                    return;
+                }
+                var userData = await signUpWithEmail(email, username, password);
+                if (userData) {
+                    showMessage('Account created! Please check your email for confirmation (if enabled). You can now sign in.', false);
+                    setTimeout(function() {
+                        document.getElementById('signUpForm').style.display = 'none';
+                        document.getElementById('signInForm').style.display = 'block';
+                    }, 3000);
+                }
+            });
 
-        document.getElementById('logoutBtn').addEventListener('click', function() {
-            signOutUser();
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                signOutUser();
+            });
         });
     </script>
 </body>
