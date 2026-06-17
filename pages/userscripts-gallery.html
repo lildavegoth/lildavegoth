@@ -145,26 +145,13 @@
             justify-content: center;
             gap: 8px;
             transition: all 0.2s;
+            background: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.2);
         }
 
-        .copy-btn {
-            background: rgba(193, 252, 50, 0.1);
-            color: var(--accent-color);
-            border: 1px solid rgba(193, 252, 50, 0.2);
-        }
-
-        .copy-btn:hover {
-            background: rgba(193, 252, 50, 0.2);
-        }
-
-        .download-btn {
-            background: rgba(33, 150, 243, 0.1);
-            color: #2196F3;
-            border: 1px solid rgba(33, 150, 243, 0.2);
-        }
-
-        .download-btn:hover {
-            background: rgba(33, 150, 243, 0.2);
+        .script-btn:hover {
+            background: rgba(76, 175, 80, 0.2);
         }
 
         .empty-state {
@@ -258,22 +245,62 @@
             transform: translateY(-2px);
         }
 
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-bottom: 20px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--accent-color);
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
             }
-
             .header h1 {
                 font-size: 1.8rem;
             }
-
             .scripts-grid {
                 grid-template-columns: 1fr;
             }
-
             .script-actions {
                 flex-direction: column;
             }
+        }
+
+        footer {
+            margin-top: 40px;
+            padding: 20px 0;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        footer p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 12px;
+        }
+
+        .social-links a {
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            transition: color 0.2s;
+        }
+
+        .social-links a:hover {
+            color: var(--accent-color);
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -289,7 +316,7 @@
             <p>Collection of useful UserScripts for enhancing web browsing</p>
         </div>
 
-        <div style="margin-top: 25px; margin-bottom: 25px;" class="search-container">
+        <div class="search-container">
             <div class="search-wrapper">
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" id="searchInput" class="search-input" placeholder="Search userscripts by title or description...">
@@ -298,26 +325,24 @@
 
         <div id="scriptsGrid" class="scripts-grid"></div>
 
-        <div style="margin-top: -10px;" class="guide-background">
+        <div class="guide-background">
             <h2 style="margin-top: 0; margin-bottom: 15px;">How to Use</h2>
             <ol style="margin-left: 20px; margin-bottom: 20px;">
                 <li>Install a userscript manager like <strong>Tampermonkey</strong> or <strong>Violentmonkey</strong></li>
-                <li>Click <strong>Copy Code</strong> to copy the script to clipboard</li>
-                <li>Click the <strong>Add Script</strong> button in your userscript manager</li>
-                <li>Paste the code and click <strong>Save</strong></li>
-                <li>The script will automatically run on the specified websites</li>
+                <li>Click <strong>Install</strong> to automatically open the installer (script becomes <strong>read‑only</strong>)</li>
             </ol>
 
             <h2 style="margin-top: 0; margin-bottom: 15px;">Notes</h2>
             <ul style="margin-left: 20px; margin-bottom: 20px;">
-                <li>All the Userscripts are made by <strong>lildavegoth</strong> and not steal from any other exists userscripts</li>
+                <li>All scripts are made by <strong>lildavegoth</strong> – original work, not copied from others</li>
+                <li>Scripts installed via <strong>Install</strong> are <strong>read‑only</strong> in Tampermonkey</li>
             </ul>
         </div>
 
         <footer class="fade-in">
             <div class="social-links">
-                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
-                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"><i class="fab fa-twitter"></i></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"><i class="fab fa-instagram"></i></span></a>
             </div>
             <p>© 2026 lildavegoth | UserScripts Gallery</p>
             <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
@@ -327,218 +352,166 @@
     </div>
 
     <script>
-        async function saveFile(content, filename, mimeType) {
-            return new Promise((resolve, reject) => {
-                if (window.cordova) {
-                    const writeFile = (dirEntry, isDownloads) => {
-                        dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
-                            fileEntry.createWriter((writer) => {
-                                writer.onwriteend = () => {
-                                    const location = isDownloads ? 'Downloads' : 'app folder';
-                                    window.showMessage(`Script saved to ${location}!`);
-                                    if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
-                                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
-                                    }
-                                    resolve();
-                                };
-                                writer.onerror = () => {
-                                    window.showMessage('Download failed', 'error');
-                                    reject();
-                                };
-                                writer.write(content);
-                            }, () => {
-                                window.showMessage('Download failed', 'error');
-                                reject();
-                            });
-                        }, () => {
-                            window.showMessage('Download failed', 'error');
-                            reject();
-                        });
-                    };
+        if (typeof window.showMessage !== 'function') {
+            window.showMessage = function (msg, type) {
+                var el = document.createElement('div');
+                var bg = '#1b5e20';
+                if (type === 'error') bg = '#c62828';
+                else if (type === 'info') bg = '#1565c0';
+                el.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: ' + bg + '; color: #fff; padding: 12px 24px; border-radius: 12px; font-weight: 500; z-index: 9999; max-width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.4); animation: fadeInUp 0.3s ease;';
+                el.textContent = msg;
+                document.body.appendChild(el);
+                setTimeout(function () {
+                    el.style.opacity = '0';
+                    el.style.transition = 'opacity 0.3s';
+                    setTimeout(function () { el.remove(); }, 400);
+                }, 3000);
+            };
+        }
 
-                    const saveToDownloads = () => {
-                        window.resolveLocalFileSystemURL(
-                            cordova.file.externalRootDirectory + 'Download/',
-                            (dir) => {
-                                writeFile(dir, true);
-                            },
-                            () => {
-                                window.resolveLocalFileSystemURL(
-                                    cordova.file.dataDirectory,
-                                    (dir) => {
-                                        writeFile(dir, false);
-                                    },
-                                    () => {
-                                        window.showMessage('Download failed', 'error');
-                                        reject();
-                                    }
-                                );
-                            }
-                        );
-                    };
+        var scriptsGrid = document.getElementById('scriptsGrid');
+        var searchInput = document.getElementById('searchInput');
+        var scripts = [];
 
-                    if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
-                        saveToDownloads();
-                    } else {
-                        document.addEventListener('deviceready', saveToDownloads);
+        function parseMetadata(code) {
+            var name = '';
+            var description = '';
+            var version = '';
+            var match = code.match(/\/\/ ==UserScript==([\s\S]*?)\/\/ ==\/UserScript==/);
+            if (match) {
+                var block = match[1];
+                var nameMatch = block.match(/@name\s+(.+)/);
+                if (nameMatch) name = nameMatch[1].trim();
+                var descMatch = block.match(/@description\s+(.+)/);
+                if (descMatch) description = descMatch[1].trim();
+                var verMatch = block.match(/@version\s+(.+)/);
+                if (verMatch) version = verMatch[1].trim();
+            }
+            return { name: name, description: description, version: version };
+        }
+
+        function fetchScripts() {
+            var apiUrl = 'https://api.github.com/repos/lildavegoth/lildavegoth/contents/files/fetch/userscripts?ref=homepage';
+            fetch(apiUrl)
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (!Array.isArray(data)) {
+                        scriptsGrid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📁</div><h3>Failed to load scripts</h3><p>Invalid response from GitHub</p></div>';
+                        return;
                     }
-                } else {
-                    const blob = new Blob([content], { type: mimeType });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    window.showMessage('Script downloaded!');
-                    resolve();
-                }
+                    var files = data.filter(function (item) { return item.name.endsWith('.user.js'); });
+                    if (files.length === 0) {
+                        scriptsGrid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📁</div><h3>No scripts found</h3><p>No .user.js files in the repository</p></div>';
+                        return;
+                    }
+                    var fetchPromises = files.map(function (file) {
+                        return fetch(file.download_url)
+                            .then(function (r) { return r.text(); })
+                            .then(function (code) {
+                                var meta = parseMetadata(code);
+                                var id = file.name.replace(/\.user\.js$/, '');
+                                return {
+                                    id: id,
+                                    title: meta.name || id,
+                                    description: meta.description || 'No description provided',
+                                    version: meta.version || '1.0',
+                                    url: file.download_url,
+                                    code: code,
+                                    createdAt: new Date().toISOString()
+                                };
+                            })
+                            .catch(function () {
+                                return null;
+                            });
+                    });
+                    Promise.all(fetchPromises)
+                        .then(function (results) {
+                            scripts = results.filter(function (s) { return s !== null; });
+                            if (scripts.length === 0) {
+                                scriptsGrid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📁</div><h3>No scripts loaded</h3><p>Could not fetch script contents</p></div>';
+                                return;
+                            }
+                            renderScripts(scripts);
+                        })
+                        .catch(function () {
+                            scriptsGrid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📁</div><h3>Error loading scripts</h3><p>Please try again later</p></div>';
+                        });
+                })
+                .catch(function () {
+                    scriptsGrid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📁</div><h3>Failed to load scripts</h3><p>Please try again later</p></div>';
+                });
+        }
+
+        function sortNewestFirst(arr) {
+            return arr.sort(function (a, b) {
+                return new Date(b.createdAt) - new Date(a.createdAt);
             });
         }
 
-        const scriptsGrid = document.getElementById('scriptsGrid');
-        const searchInput = document.getElementById('searchInput');
-        const USERS_CRIPTS_URL = 'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/userscripts.json';
-        let userscripts = [];
-
-        fetch(USERS_CRIPTS_URL)
-            .then(response => response.json())
-            .then(data => {
-                userscripts = data;
-                renderScripts(userscripts);
-            })
-            .catch(() => {
-                scriptsGrid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📁</div><h3>Failed to load scripts</h3><p>Please try again later</p></div>';
-            });
-
-        function sortNewestFirst(scripts) {
-            return scripts.sort((a, b) => {
-                const dateA = new Date(a.createdAt);
-                const dateB = new Date(b.createdAt);
-                return dateB - dateA;
-            });
-        }
-
-        function renderScripts(scriptsToRender) {
-            const sortedScripts = sortNewestFirst([...scriptsToRender]);
+        function renderScripts(list) {
+            var sorted = sortNewestFirst(list.slice());
             scriptsGrid.innerHTML = '';
-
-            sortedScripts.forEach(script => {
-                const scriptCard = document.createElement('div');
-                scriptCard.className = 'script-card';
-
-                const date = new Date(script.createdAt);
-                const formattedDate = date.toLocaleDateString('en-US', {
+            sorted.forEach(function (script) {
+                var card = document.createElement('div');
+                card.className = 'script-card';
+                var date = new Date(script.createdAt);
+                var formattedDate = date.toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric'
                 });
-
-                const pillTag = script.tag ?
-                    `<span class="pill-tag">${script.tag}</span>` :
-                    '';
-
-                scriptCard.innerHTML = `
-                    <div class="script-header">
-                        <div class="title-container">
-                            <h3 class="script-title">${script.title}</h3>
-                            ${pillTag}
-                        </div>
-                        <div class="script-date">${formattedDate}</div>
-                    </div>
-                    
-                    <div class="script-description">
-                        ${script.description}
-                    </div>
-                    
-                    <div class="script-actions">
-                        <button class="script-btn copy-btn" data-id="${script.id}">
-                            <i class="fas fa-copy"></i> Copy Code
-                        </button>
-                        <button class="script-btn download-btn" data-id="${script.id}">
-                            <i class="fas fa-download"></i> Download
-                        </button>
-                    </div>
-                `;
-
-                scriptsGrid.appendChild(scriptCard);
-
-                const copyBtn = scriptCard.querySelector('.copy-btn');
-                const downloadBtn = scriptCard.querySelector('.download-btn');
-
-                copyBtn.addEventListener('click', function(e) {
+                var pill = script.version ? '<span class="pill-tag">v' + script.version + '</span>' : '';
+                card.innerHTML =
+                    '<div class="script-header">' +
+                    '   <div class="title-container">' +
+                    '       <h3 class="script-title">' + script.title + '</h3>' +
+                    '       ' + pill +
+                    '   </div>' +
+                    '   <div class="script-date">' + formattedDate + '</div>' +
+                    '</div>' +
+                    '<div class="script-description">' + script.description + '</div>' +
+                    '<div class="script-actions">' +
+                    '   <button class="script-btn" data-id="' + script.id + '"><i class="fas fa-cloud-download-alt"></i> Install</button>' +
+                    '</div>';
+                scriptsGrid.appendChild(card);
+                card.querySelector('.script-btn').addEventListener('click', function (e) {
                     e.stopPropagation();
-                    const id = this.getAttribute('data-id');
-                    copyToClipboard(id);
-                });
-
-                downloadBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    const id = this.getAttribute('data-id');
-                    downloadScript(id);
+                    var id = this.getAttribute('data-id');
+                    installScript(id);
                 });
             });
         }
 
-        function copyToClipboard(id) {
-            const script = userscripts.find(s => s.id === id);
-            if (!script) return;
-
-            navigator.clipboard.writeText(script.code)
-                .then(() => {
-                    window.showMessage('Script copied to clipboard!');
-                })
-                .catch(() => {
-                    const textArea = document.createElement('textarea');
-                    textArea.value = script.code;
-                    textArea.style.position = 'fixed';
-                    textArea.style.opacity = '0';
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    window.showMessage('Script copied to clipboard!');
-                    document.body.removeChild(textArea);
-                });
-        }
-
-        async function downloadScript(id) {
-            const script = userscripts.find(s => s.id === id);
-            if (!script) return;
-
-            const fileName = script.title
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, '-')
-                .replace(/-+/g, '-')
-                .replace(/^-|-$/g, '') + '.js';
-
-            const content = script.code;
-            const mimeType = 'text/javascript';
-
-            await saveFile(content, fileName, mimeType);
-        }
-
-        function performSearch(searchTerm) {
-            const term = searchTerm.toLowerCase().trim();
-
-            if (term === '') {
-                renderScripts(userscripts);
+        function installScript(id) {
+            var script = scripts.find(function (s) { return s.id === id; });
+            if (!script) {
+                window.showMessage('Script not found', 'error');
                 return;
             }
-
-            const filteredScripts = userscripts.filter(script => {
-                const titleMatch = script.title.toLowerCase().includes(term);
-                const descMatch = script.description.toLowerCase().includes(term);
-                return titleMatch || descMatch;
-            });
-
-            renderScripts(filteredScripts);
+            if (script.url) {
+                window.location.href = script.url;
+            } else {
+                window.showMessage('No install URL available', 'error');
+            }
         }
 
-        searchInput.addEventListener('input', function() {
+        function performSearch(term) {
+            var t = term.toLowerCase().trim();
+            if (t === '') {
+                renderScripts(scripts);
+                return;
+            }
+            var filtered = scripts.filter(function (s) {
+                return s.title.toLowerCase().includes(t) || s.description.toLowerCase().includes(t);
+            });
+            renderScripts(filtered);
+        }
+
+        searchInput.addEventListener('input', function () {
             performSearch(this.value);
         });
+
+        fetchScripts();
     </script>
 </body>
 </html>
