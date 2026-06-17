@@ -332,32 +332,43 @@ jobs:
           EOF
       - name: Download with chosen format
         run: |
-          echo "${{ secrets.YOUTUBE_COOKIES }}" > cookies.txt
+          echo "${{ secrets.YOUTUBE_COOKIES }}" > youtube_cookies.txt
           URL="${{ github.event.client_payload.url }}"
           FMT="${{ github.event.client_payload.format_id }}"
           mkdir -p downloads
 
           if [ "$FMT" == "images" ]; then
-            # Download all images from the carousel (default format selection picks images)
-            yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
-              --no-playlist --embed-metadata \
+            # Instagram carousel – slow down and use mobile headers
+            yt-dlp \
+              --cookies youtube_cookies.txt \
+              --js-runtimes node \
+              --remote-components ejs:github \
+              --sleep-requests 2 \
+              --max-sleep-interval 5 \
+              --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/537.36" \
+              --no-playlist \
               -o "downloads/images/%(playlist_index)s_%(title)s.%(ext)s" "$URL"
             echo "IMAGE_COUNT=$(ls downloads/images/*.jpg downloads/images/*.png downloads/images/*.webp 2>/dev/null | wc -l)" >> $GITHUB_ENV
           else
-            # Let yt-dlp automatically pick the best format (no -f restriction)
-            yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
-              --embed-metadata \
+            # Video download – use best quality with mobile headers
+            yt-dlp \
+              --cookies youtube_cookies.txt \
+              --js-runtimes node \
+              --remote-components ejs:github \
+              --sleep-requests 2 \
+              --max-sleep-interval 5 \
+              --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/537.36" \
               -o "downloads/%(title)s.%(ext)s" "$URL" >/dev/null 2>&1
             DOWNLOADED_FILE=$(ls -t downloads | head -1)
 
             if [ -z "$DOWNLOADED_FILE" ]; then
-              echo "yt-dlp produced no file, trying gallery-dl..."
+              echo "yt-dlp produced no file, trying gallery-dl with rate limiting..."
               pip install -q gallery-dl
               rm -rf downloads/*
-              gallery-dl -d downloads "$URL"
+              gallery-dl --sleep 3 --abort-on-skip "$URL" -d downloads
               DOWNLOADED_FILE=$(ls -t downloads | head -1)
               if [ -z "$DOWNLOADED_FILE" ]; then
-                echo "No file found after gallery-dl as well"
+                echo "No file found"
                 exit 1
               fi
             fi
