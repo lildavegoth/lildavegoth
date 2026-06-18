@@ -44,7 +44,7 @@ export default async function handler(req, res) {
           profile: frontmatter.profile || 'https://t.me/lildavegoth',
           submission: frontmatter.submission === true || frontmatter.submission === 'true',
           html: htmlContent,
-          wordCount: content.split(/\s+/).filter(w => w.length > 0).length,
+          wordCount: content.split(/\s+/).filter(w => /^[a-zA-Z0-9.,]+$/.test(w)).length,
         });
     } catch (error) {
         res.status(500).json({ error: 'Internal server error' });
