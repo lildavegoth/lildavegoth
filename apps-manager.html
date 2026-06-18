@@ -362,6 +362,10 @@
         var token = localStorage.getItem('adminToken');
         var currentUrl = null;
 
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(function(){});
+        }
+
         if (token) {
             showHome();
         }
@@ -389,6 +393,9 @@
 
         document.getElementById('closeVersionPopup').addEventListener('click', closeVersionPopup);
         document.getElementById('cancelVersionBtn').addEventListener('click', closeVersionPopup);
+        document.getElementById('versionPopup').addEventListener('click', function(e) {
+            if (e.target === this) closeVersionPopup();
+        });
         document.getElementById('saveVersionBtn').addEventListener('click', saveVersion);
 
         function showHome() {
@@ -397,21 +404,32 @@
             loadAppList();
         }
 
+        async function ensureSWReady() {
+            if (!navigator.serviceWorker) {
+                throw new Error('Service Worker not supported');
+            }
+            await navigator.serviceWorker.ready;
+            if (!navigator.serviceWorker.controller) {
+                throw new Error('Service Worker not active. Please reload the page.');
+            }
+        }
+
         function sendMessage(message) {
-            return new Promise(function(resolve, reject) {
-                if (!navigator.serviceWorker.controller) {
-                    reject(new Error('No active service worker'));
-                    return;
+            return new Promise(async function(resolve, reject) {
+                try {
+                    await ensureSWReady();
+                    var messageChannel = new MessageChannel();
+                    messageChannel.port1.onmessage = function(event) {
+                        if (event.data.error) {
+                            reject(new Error(event.data.error));
+                        } else {
+                            resolve(event.data);
+                        }
+                    };
+                    navigator.serviceWorker.controller.postMessage(message, [messageChannel.port2]);
+                } catch (e) {
+                    reject(e);
                 }
-                var messageChannel = new MessageChannel();
-                messageChannel.port1.onmessage = function(event) {
-                    if (event.data.error) {
-                        reject(new Error(event.data.error));
-                    } else {
-                        resolve(event.data);
-                    }
-                };
-                navigator.serviceWorker.controller.postMessage(message, [messageChannel.port2]);
             });
         }
 
@@ -494,6 +512,7 @@
                 window.showMessage('Version updated');
             } catch (e) {
                 window.showMessage('Failed: ' + e.message);
+                closeVersionPopup();
             }
         }
 
