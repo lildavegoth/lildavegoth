@@ -1495,6 +1495,8 @@ bot.on("message:text", async (ctx) => {
             }
             return;
         }
+        return;
+    }
 
     if (pendingKiraAction.has(ctx.from.id)) {
         const action = pendingKiraAction.get(ctx.from.id);
