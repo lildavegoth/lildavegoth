@@ -117,8 +117,8 @@
             cursor: pointer;
             transition: background 0.2s, transform 0.1s;
             display: flex;
-            align-items: center;
-            gap: var(--spacing-xs);
+            align-items: flex-start;
+            gap: 8px;
         }
 
         .article-card:hover {
@@ -126,30 +126,26 @@
             transform: translateY(-2px);
         }
 
-        .pin-indicator {
-            width: 20px;
-            height: 20px;
+        .article-card .card-pin {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
             background: var(--accent-color);
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #000;
-            font-size: 0.7rem;
             flex-shrink: 0;
+            margin-top: 4px;
         }
 
-        .card-content {
+        .article-card .card-content {
             flex: 1;
         }
 
-        .card-title {
+        .article-card .card-title {
             font-weight: 600;
             color: var(--text-primary);
             margin-bottom: 4px;
         }
 
-        .card-date {
+        .article-card .card-date {
             font-size: 0.85rem;
             color: var(--accent-color);
         }
@@ -315,39 +311,94 @@
             align-items: center;
         }
 
-        #pinBtn,
-        #shareBtn,
-        #deleteBtn,
+        #deleteBtn {
+            padding: 12px;
+            background: #C42833;
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+        }
+
+        #deleteBtn:active {
+            transform: scale(0.96);
+        }
+
+        #deleteBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         #publishBtn {
             padding: 12px 24px;
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        #publishBtn:active {
+            transform: scale(0.96);
+        }
+
+        #publishBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #pinBtn {
+            background: var(--bg-card);
+            color: #000;
+            padding: 0;
+            width: 44px;
+            height: 44px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        #pinBtn.active {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        #pinBtn i {
+            font-size: 1.2rem;
+        }
+
+        #shareBtn {
+            background: var(--accent-color);
+            color: #000;
+            padding: 0;
+            width: 44px;
+            height: 44px;
             border: none;
             border-radius: var(--radius-small);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
             transition: transform 0.1s, opacity 0.2s;
         }
 
-        #pinBtn {
-            background: var(--accent-color);
-            color: #000;
-        }
-
-        #pinBtn:active,
-        #shareBtn:active,
-        #deleteBtn:active,
-        #publishBtn:active {
+        #shareBtn:active {
             transform: scale(0.96);
-        }
-
-        #pinBtn:disabled,
-        #shareBtn:disabled,
-        #deleteBtn:disabled,
-        #publishBtn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
         }
 
         hr {
@@ -625,9 +676,9 @@
                 <textarea id="contentInput" rows="22" placeholder="Write your Markdown here..."></textarea>
 
                 <div class="button-group">
-                    <button id="pinBtn"><i class="fas fa-thumbtack"></i></button>
                     <button id="publishBtn">Publish</button>
-                    <button id="shareBtn" class="btnMDYE" style="background: var(--accent-color); color: #000;">
+                    <button id="pinBtn"><i class="fas fa-thumb-tack"></i></button>
+                    <button id="shareBtn" class="btnMDYE">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
                             <circle cx="18" cy="5" r="3"></circle>
                             <circle cx="6" cy="12" r="3"></circle>
@@ -636,7 +687,7 @@
                             <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                         </svg>
                     </button>
-                    <button id="deleteBtn" style="background: #C42833; color: #fff;"><i class="fas fa-trash"></i></button>
+                    <button id="deleteBtn"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         </div>
@@ -670,7 +721,8 @@
         var selectedBadge = '';
         var activeFolder = 'all';
         var isHidden = false;
-        var isPinned = false;
+        var pinnedSlugs = JSON.parse(localStorage.getItem('pinnedSlugs') || '[]');
+        var currentSlug = '';
 
         var btnFeatured = document.getElementById('btnFeatured');
         var btnHighlight = document.getElementById('btnHighlight');
@@ -715,13 +767,16 @@
         });
 
         pinBtn.addEventListener('click', function() {
-            if (this.classList.contains('active')) {
-                this.classList.remove('active');
-                isPinned = false;
+            if (!currentSlug) return;
+            var index = pinnedSlugs.indexOf(currentSlug);
+            if (index > -1) {
+                pinnedSlugs.splice(index, 1);
+                pinBtn.classList.remove('active');
             } else {
-                this.classList.add('active');
-                isPinned = true;
+                pinnedSlugs.push(currentSlug);
+                pinBtn.classList.add('active');
             }
+            localStorage.setItem('pinnedSlugs', JSON.stringify(pinnedSlugs));
         });
 
         function showHome() {
@@ -738,9 +793,21 @@
             document.getElementById('imageFileInput').value = '';
             if (slug) {
                 isEditing = true;
+                currentSlug = slug;
+                pinBtn.style.pointerEvents = 'auto';
+                pinBtn.style.opacity = '1';
+                if (pinnedSlugs.indexOf(slug) > -1) {
+                    pinBtn.classList.add('active');
+                } else {
+                    pinBtn.classList.remove('active');
+                }
                 loadArticle(slug);
             } else {
                 isEditing = false;
+                currentSlug = '';
+                pinBtn.style.pointerEvents = 'none';
+                pinBtn.style.opacity = '0.5';
+                pinBtn.classList.remove('active');
                 clearForm();
             }
             document.getElementById('imageUploadContainer').style.display = isEditing ? 'none' : 'block';
@@ -815,6 +882,7 @@
             var res = await fetch('https://raw.githubusercontent.com/lildavegoth/lildavegoth/homepage/files/fetch/articles.json?t=' + Date.now());
             var data = await res.json();
             articlesData = Array.isArray(data) ? data : data.allArticles;
+            pinnedSlugs = JSON.parse(localStorage.getItem('pinnedSlugs') || '[]');
             articlesData.sort(function(a, b) {
                 return (b.date || '').localeCompare(a.date || '');
             });
@@ -828,21 +896,17 @@
         }
 
         function getFolderArticles() {
-            var filtered = articlesData;
             if (activeFolder === 'bugnotes') {
-                filtered = filtered.filter(isBugNotesArticle);
+                return articlesData.filter(isBugNotesArticle);
             } else if (activeFolder === 'highlight') {
-                filtered = filtered.filter(function(art) { return art.badge === 'highlight'; });
+                return articlesData.filter(function(art) { return art.badge === 'highlight'; });
             } else if (activeFolder === 'featured') {
-                filtered = filtered.filter(function(art) { return art.badge === 'featured'; });
+                return articlesData.filter(function(art) { return art.badge === 'featured'; });
             } else {
-                filtered = filtered.filter(function(art) {
+                return articlesData.filter(function(art) {
                     return !isBugNotesArticle(art) && art.badge !== 'highlight' && art.badge !== 'featured';
                 });
             }
-            var pinned = filtered.filter(function(art) { return art.pinned; });
-            var unpinned = filtered.filter(function(art) { return !art.pinned; });
-            return pinned.concat(unpinned);
         }
 
         function applyFolderAndRender(term) {
@@ -856,6 +920,14 @@
                            (art.description && art.description.toLowerCase().includes(term));
                 });
             }
+            folderArticles.sort(function(a, b) {
+                var slugA = a.link.split('slug=')[1]?.split('&')[0];
+                var slugB = b.link.split('slug=')[1]?.split('&')[0];
+                var aPinned = pinnedSlugs.indexOf(slugA) > -1 ? 1 : 0;
+                var bPinned = pinnedSlugs.indexOf(slugB) > -1 ? 1 : 0;
+                if (aPinned !== bPinned) return bPinned - aPinned;
+                return (b.date || '').localeCompare(a.date || '');
+            });
             renderArticleCards(folderArticles);
             return folderArticles;
         }
@@ -868,12 +940,12 @@
                 if (!slug) return;
                 var card = document.createElement('div');
                 card.className = 'article-card';
-                var innerHTML = '';
-                if (art.pinned) {
-                    innerHTML += '<div class="pin-indicator"><i class="fas fa-thumbtack"></i></div>';
-                }
-                innerHTML += '<div class="card-content"><div class="card-title">' + art.name + '</div><div class="card-date">' + (art.date || '') + '</div></div>';
-                card.innerHTML = innerHTML;
+                var isPinned = pinnedSlugs.indexOf(slug) > -1;
+                card.innerHTML = (isPinned ? '<div class="card-pin"></div>' : '') +
+                    '<div class="card-content">' +
+                    '<div class="card-title">' + art.name + '</div>' +
+                    '<div class="card-date">' + (art.date || '') + '</div>' +
+                    '</div>';
                 card.addEventListener('click', function() {
                     goToEditor(slug);
                 });
@@ -916,8 +988,6 @@
             document.getElementById('imageFileInput').value = '';
             document.getElementById('btnHidden').classList.remove('active');
             isHidden = false;
-            pinBtn.classList.remove('active');
-            isPinned = false;
             selectedImageFile = null;
             btnFeatured.classList.remove('active');
             btnHighlight.classList.remove('active');
@@ -947,18 +1017,11 @@
 
             var badge = parts.data.badge || '';
             var hidden = parts.data.hidden === true || parts.data.hidden === 'true';
-            var pinned = parts.data.pinned === true || parts.data.pinned === 'true';
             isHidden = hidden;
-            isPinned = pinned;
             if (hidden) {
                 document.getElementById('btnHidden').classList.add('active');
             } else {
                 document.getElementById('btnHidden').classList.remove('active');
-            }
-            if (pinned) {
-                pinBtn.classList.add('active');
-            } else {
-                pinBtn.classList.remove('active');
             }
             btnFeatured.classList.remove('active');
             btnHighlight.classList.remove('active');
@@ -1012,8 +1075,7 @@
                 description: document.getElementById('descInput').value,
                 categories: document.getElementById('catInput').value,
                 content: document.getElementById('contentInput').value,
-                hidden: isHidden,
-                pinned: isPinned
+                hidden: isHidden
             };
 
             if (selectedBadge) {
