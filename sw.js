@@ -130,7 +130,7 @@ let manifest = {};
 
 function openIDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(IDB_NAME, 1);
+        const request = indexedDB.open(IDB_NAME, 2);  // version bumped to 2
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
             if (!db.objectStoreNames.contains(IDB_STORE)) {
