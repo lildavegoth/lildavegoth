@@ -1,5 +1,7 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.7.1';
-const META_CACHE = 'kakoi-kiraku-meta-v1';
+const CACHE_NAME = 'kakoi-kiraku-app-v2';
+const IDB_NAME = 'AppCacheManifest';
+const IDB_STORE = 'versions';
+
 const urlsToCache = [
     '/',
     'account.html',
@@ -14,6 +16,7 @@ const urlsToCache = [
     'protections.js',
     'storage.html',
     'sw.js',
+    'apps-manager.html',
     'pages/2048.html',
     'pages/appflowy-json-converter.html',
     'pages/adblock-checker.html',
@@ -112,16 +115,77 @@ const urlsToCache = [
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'
 ];
 
-function resolveUrl(url) {
-    if (url.startsWith('http')) return url;
-    return new URL(url, self.location.origin).href;
+const STALE_WHILE_REVALIDATE_URLS = [
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/articles.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/pages.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/popup-pages.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/gift-codes.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/javascript.js',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/o-css-snippets.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/userscripts.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/world-events.json'
+];
+
+let manifest = {};
+
+function openIDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(IDB_NAME, 1);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) {
+                db.createObjectStore(IDB_STORE, { keyPath: 'url' });
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function loadManifest() {
+    try {
+        const db = await openIDB();
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const store = tx.objectStore(IDB_STORE);
+        const getAll = store.getAll();
+        return new Promise((resolve, reject) => {
+            getAll.onsuccess = () => {
+                const entries = getAll.result || [];
+                const map = {};
+                entries.forEach(entry => { map[entry.url] = { version: entry.version, live: entry.live }; });
+                manifest = map;
+                resolve(map);
+            };
+            getAll.onerror = reject;
+        });
+    } catch (e) {
+        manifest = {};
+        return {};
+    }
+}
+
+async function saveManifestEntry(url, version, live) {
+    const db = await openIDB();
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const store = tx.objectStore(IDB_STORE);
+    if (version === undefined && live === undefined) {
+        store.delete(url);
+    } else {
+        store.put({ url, version, live });
+    }
+    return new Promise((resolve, reject) => {
+        tx.oncomplete = resolve;
+        tx.onerror = reject;
+    });
 }
 
 self.addEventListener('install', event => {
     self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            return Promise.allSettled(urlsToCache.map(url => cache.add(url).catch(() => {})));
+            return Promise.all(
+                urlsToCache.map(url => cache.add(url).catch(() => {}))
+            );
         })
     );
 });
@@ -129,45 +193,66 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
-            return Promise.all(cacheNames.map(cacheName => {
-                if (cacheName !== CACHE_NAME && cacheName !== META_CACHE) {
-                    return caches.delete(cacheName);
-                }
-            }));
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
         })
     );
     self.clients.claim();
+    event.waitUntil(loadManifest());
 });
+
+function getVersionedRequest(request, url) {
+    const entry = manifest[url];
+    if (!entry || !entry.version || entry.live) return request;
+    const versionedUrl = url + '?__cache_version__=' + entry.version;
+    return new Request(versionedUrl, {
+        method: request.method,
+        headers: request.headers,
+        mode: request.mode,
+        credentials: request.credentials,
+        redirect: request.redirect,
+        referrer: request.referrer,
+        integrity: request.integrity
+    });
+}
 
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
 
     const url = new URL(event.request.url);
+    const requestUrl = url.origin + url.pathname;
+
     if (url.pathname.startsWith('/pages/articles/images/')) {
         event.respondWith(fetch(event.request));
         return;
     }
 
-    const requestUrl = event.request.url;
-    const isMonitored = urlsToCache.some(entry => {
-        const target = resolveUrl(entry);
-        return target === requestUrl;
-    });
+    const entry = manifest[requestUrl];
+    if (entry && entry.live) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
 
-    if (isMonitored) {
+    if (STALE_WHILE_REVALIDATE_URLS.includes(requestUrl)) {
         event.respondWith(
             caches.open(CACHE_NAME).then(async cache => {
-                let cached = await cache.match(event.request);
-                if (!cached) {
-                    const fresh = await fetch(event.request);
-                    if (fresh.ok) {
-                        await cache.put(event.request, fresh.clone());
-                        await storeInitialSize(requestUrl, fresh);
-                    }
-                    return fresh;
-                }
-                updateIfChanged(event.request, cache, requestUrl);
-                return cached;
+                const versionedReq = getVersionedRequest(event.request, requestUrl);
+                const cachedResponse = await cache.match(versionedReq);
+                const fetchUrl = event.request.url + '?t=' + Date.now();
+                const fetchPromise = fetch(fetchUrl, { cache: 'no-cache' })
+                    .then(networkResponse => {
+                        if (networkResponse && networkResponse.status === 200) {
+                            cache.put(versionedReq, networkResponse.clone());
+                        }
+                        return networkResponse;
+                    })
+                    .catch(() => {});
+                return cachedResponse || fetchPromise;
             })
         );
         return;
@@ -175,49 +260,72 @@ self.addEventListener('fetch', event => {
 
     if (event.request.mode === 'navigate') {
         event.respondWith(
-            fetch(event.request).catch(() => caches.match(event.request).then(cached => cached || caches.match('/index.html')))
+            fetch(event.request)
+                .then(response => {
+                    if (response && response.status === 200) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then(cache => {
+                            cache.put(getVersionedRequest(event.request, requestUrl), clone);
+                        });
+                    }
+                    return response;
+                })
+                .catch(() => {
+                    const versionedReq = getVersionedRequest(event.request, requestUrl);
+                    return caches.match(versionedReq).then(cached => cached || caches.match('index.html'));
+                })
         );
         return;
     }
 
     event.respondWith(
-        caches.match(event.request).then(cached => {
-            return cached || fetch(event.request).then(response => {
-                if (response && response.status === 200) {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-                }
-                return response;
-            });
-        })
+        caches.match(getVersionedRequest(event.request, requestUrl))
+            .then(cached => {
+                if (cached) return cached;
+                return fetch(event.request).then(response => {
+                    if (response && response.status === 200) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then(cache => {
+                            cache.put(getVersionedRequest(event.request, requestUrl), clone);
+                        });
+                    }
+                    return response;
+                });
+            })
     );
 });
 
-async function storeInitialSize(url, response) {
-    const size = response.headers.get('Content-Length');
-    if (size) {
-        const meta = await caches.open(META_CACHE);
-        await meta.put(url, new Response(size));
+self.addEventListener('message', async event => {
+    if (event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+        return;
     }
-}
 
-async function updateIfChanged(request, cache, url) {
+    const port = event.ports[0];
+    if (!port) return;
+
     try {
-        const head = await fetch(url, { method: 'HEAD', cache: 'no-store' });
-        const newSize = head.headers.get('Content-Length');
-        if (!newSize) return;
-
-        const meta = await caches.open(META_CACHE);
-        const oldSizeRecord = await meta.match(url);
-        let oldSize = null;
-        if (oldSizeRecord) oldSize = await oldSizeRecord.text();
-
-        if (oldSize !== newSize) {
-            const fresh = await fetch(url, { cache: 'no-store' });
-            if (fresh.ok) {
-                await cache.put(request, fresh.clone());
-                await meta.put(url, new Response(newSize));
-            }
+        if (event.data.type === 'GET_URL_LIST') {
+            port.postMessage({ urls: urlsToCache.filter(u => !u.startsWith('http') || u.startsWith(location.origin)) });
+        } else if (event.data.type === 'GET_MANIFEST') {
+            await loadManifest();
+            port.postMessage({ manifest: { ...manifest } });
+        } else if (event.data.type === 'SET_VERSION') {
+            const { url, version } = event.data;
+            manifest[url] = { version, live: false };
+            await saveManifestEntry(url, version, false);
+            port.postMessage({ success: true });
+        } else if (event.data.type === 'TOGGLE_LIVE') {
+            const { url } = event.data;
+            const current = manifest[url] || {};
+            const newLive = !current.live;
+            manifest[url] = { version: current.version || '', live: newLive };
+            await saveManifestEntry(url, current.version || '', newLive);
+            port.postMessage({ success: true });
+        } else {
+            port.postMessage({ error: 'Unknown message type' });
         }
-    } catch (e) {}
-}
+    } catch (e) {
+        port.postMessage({ error: e.message });
+    }
+});
