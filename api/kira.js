@@ -473,6 +473,37 @@ bot.command("mirror", async (ctx) => {
             }
         }
     }
+    
+    if (url && url.match(/https?:\/\/gofile\.io\/d\/[a-f0-9]+/i)) {
+        const fetchingMsg = await ctx.reply("Fetching file list...");
+        const dispatchBody = {
+            event_type: "gofile-list",
+            client_payload: {
+                chat_id: ctx.chat.id,
+                url: url,
+                message_id: fetchingMsg.message_id,
+            },
+        };
+        try {
+            const res = await fetch(
+                `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `token ${process.env.GITHUB_PAT}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(dispatchBody),
+                }
+            );
+            if (!res.ok) {
+                await ctx.api.editMessageText(ctx.chat.id, fetchingMsg.message_id, "Failed to fetch GoFile list.");
+            }
+        } catch (e) {
+            await ctx.api.editMessageText(ctx.chat.id, fetchingMsg.message_id, "Error: " + e.message);
+        }
+        return;
+    }
 
     if (!url || !url.startsWith("http")) {
         return ctx.reply("Usage: /mirror <url> or reply to a file with /mirror");
@@ -962,6 +993,51 @@ bot.callbackQuery(/^post_to_channel_(.+)_(.+)$/, async (ctx) => {
     } catch (e) {
         await ctx.answerCallbackQuery("Failed to post. Make sure I'm admin in the channel.");
     }
+});
+
+bot.callbackQuery(/^gofile_mirror_(.+)_(\d+)$/, async (ctx) => {
+    const shortKey = ctx.match[1];
+    const index = parseInt(ctx.match[2], 10);
+    const { data: row, error } = await supabase
+        .from("gofile_folders")
+        .select("files")
+        .eq("key", shortKey)
+        .single();
+    if (error || !row) {
+        await ctx.answerCallbackQuery("This link has expired.");
+        return;
+    }
+    const files = row.files;
+    if (index < 0 || index >= files.length) {
+        await ctx.answerCallbackQuery("Invalid file.");
+        return;
+    }
+    const file = files[index];
+    const directLink = file.link;
+    const filename = file.name;
+    await ctx.answerCallbackQuery();
+    await ctx.deleteMessage();
+
+    const jobKey = Math.random().toString(36).slice(2, 10);
+    mirrorJobs.set(jobKey, {
+        url: directLink,
+        filename: filename,
+        chatId: ctx.chat.id,
+        userId: ctx.from.id,
+    });
+
+    const keyboard = {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: "Drive", callback_data: `mirror_dest_drive_${jobKey}` },
+                    { text: "Telegram", callback_data: `mirror_dest_telegram_${jobKey}` },
+                ],
+            ],
+        },
+    };
+
+    await ctx.reply(`Where do you want to save "${filename}"?`, keyboard);
 });
 
 bot.callbackQuery(/^delete_mirror_(.+)$/, async (ctx) => {
