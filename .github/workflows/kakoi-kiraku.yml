@@ -223,10 +223,12 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
-      - name: Install rclone
-        run: sudo apt-get update && sudo apt-get install -y rclone
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Install rclone and jq
+        run: |
+          sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock
+          sudo dpkg --configure -a --force-depends 2>/dev/null || true
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends rclone jq
       - name: Configure rclone
         run: |
           export TOKEN='${{ secrets.GDRIVE_TOKEN }}'
