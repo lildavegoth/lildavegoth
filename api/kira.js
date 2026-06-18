@@ -505,6 +505,37 @@ bot.command("mirror", async (ctx) => {
         return;
     }
 
+    if (url && url.match(/https?:\/\/gofile\.io\/d\/[a-f0-9]+/i)) {
+        const fetchingMsg = await ctx.reply("Fetching file list...");
+        const dispatchBody = {
+            event_type: "gofile-list",
+            client_payload: {
+                chat_id: ctx.chat.id,
+                url: url,
+                message_id: fetchingMsg.message_id,
+            },
+        };
+        try {
+            const res = await fetch(
+                `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `token ${process.env.GITHUB_PAT}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(dispatchBody),
+                }
+            );
+            if (!res.ok) {
+                await ctx.api.editMessageText(ctx.chat.id, fetchingMsg.message_id, "Failed to fetch GoFile list.");
+            }
+        } catch (e) {
+            await ctx.api.editMessageText(ctx.chat.id, fetchingMsg.message_id, "Error: " + e.message);
+        }
+        return;
+    }
+
     if (!url || !url.startsWith("http")) {
         return ctx.reply("Usage: /mirror <url> or reply to a file with /mirror");
     }
