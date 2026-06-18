@@ -11,9 +11,7 @@ Everytime i use any custom ROMs, i always put bugs i'm facing to my personal not
 
 # Notes →
 You must take note that this Bug Notes list are only contains ROMs that i personally use, and those bugs that i'm facing can possibly only a User Bugs.
-
-# List →
-- `[AOSP →](^^^aosp1show^^^)`
+- `[AOSP](^^^aosp1show^^^)`
 
 ^^^aosp1hide^^^
 # AOSP →
