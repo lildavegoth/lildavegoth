@@ -42,6 +42,7 @@ export default async function handler(req, res) {
           image: frontmatter.image || '/images/default.jpg',
           author: frontmatter.author || 'lildavegoth',
           profile: frontmatter.profile || 'https://t.me/lildavegoth',
+          submission: frontmatter.submission === true || frontmatter.submission === 'true',
           html: htmlContent,
           wordCount: content.split(/\s+/).filter(w => w.length > 0).length,
         });
