@@ -715,12 +715,24 @@ bot.callbackQuery(/^dl_fmt_(.+)_(.+)$/, async (ctx) => {
 
 bot.command("imageedit", async (ctx) => {
     const reply = ctx.message?.reply_to_message;
-    if (!reply || !reply.photo) {
-        return ctx.reply("Reply to a photo with /imageedit to edit it.");
+    if (!reply) {
+        return ctx.reply("Reply to a photo or image document with /imageedit to edit it.");
     }
 
-    const photos = reply.photo;
-    const fileId = photos[photos.length - 1].file_id;
+    let fileId = null;
+    let isImage = false;
+
+    if (reply.photo) {
+        fileId = reply.photo[reply.photo.length - 1].file_id;
+        isImage = true;
+    } else if (reply.document && reply.document.mime_type && reply.document.mime_type.startsWith("image/")) {
+        fileId = reply.document.file_id;
+        isImage = true;
+    }
+
+    if (!isImage) {
+        return ctx.reply("Reply to a photo or image document with /imageedit to edit it.");
+    }
 
     const shortKey = Math.random().toString(36).slice(2, 8);
     await supabase.from("temp_file_ids").insert({ key: shortKey, file_id: fileId });
@@ -762,22 +774,24 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (
     const fileId = row.file_id;
     await supabase.from("temp_file_ids").delete().eq("key", shortKey);
     await ctx.answerCallbackQuery();
-    await ctx.editMessageReplyMarkup(undefined);
+    await ctx.deleteMessage();
 
     if (action === "text") {
         pendingImageEditAction.set(ctx.from.id, `imgedit_text_${fileId}`);
-        await ctx.editMessageText("Send me the text you want to overlay on the image.");
+        await ctx.reply("Send me the text you want to overlay on the image.");
         return;
     }
-    
+
     if (action === "custom") {
         pendingImageEditAction.set(ctx.from.id, `imgedit_custom_${fileId}`);
-        await ctx.editMessageText(
+        await ctx.reply(
             "Send me your custom ffmpeg command. Use `input.jpg` as input and `output.jpg` as final output.\n\nExample:\n`ffmpeg -y -i input.jpg -vf scale=1200:-1:bicubic -frames:v 1 -q:v 3 output.jpg`",
             { parse_mode: "Markdown" }
         );
         return;
     }
+
+    const progressMsg = await ctx.reply("Processing image, please wait…");
 
     try {
         const file = await ctx.api.getFile(fileId);
@@ -794,7 +808,7 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (
             });
 
         if (error) {
-            await ctx.editMessageText("Failed to upload image.");
+            await ctx.api.editMessageText(ctx.chat.id, progressMsg.message_id, "Failed to upload image.");
             return;
         }
 
@@ -816,7 +830,7 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (
                 chat_id: ctx.chat.id,
                 image_url: imageUrl,
                 original_name: fileName,
-                progress_message_id: ctx.callbackQuery.message.message_id,
+                progress_message_id: progressMsg.message_id,
             },
         };
 
@@ -833,13 +847,11 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (
         );
 
         if (!dispatchRes.ok) {
-            await ctx.editMessageText("Dispatch failed: " + (await dispatchRes.text()));
+            await ctx.api.editMessageText(ctx.chat.id, progressMsg.message_id, "Dispatch failed: " + (await dispatchRes.text()));
             return;
         }
-
-        await ctx.editMessageText("Processing image, please wait…");
     } catch (e) {
-        await ctx.editMessageText("Error: " + e.message);
+        await ctx.api.editMessageText(ctx.chat.id, progressMsg.message_id, "Error: " + e.message);
     }
 });
 
