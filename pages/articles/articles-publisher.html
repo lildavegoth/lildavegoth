@@ -116,6 +116,9 @@
             border: 1px solid rgba(255,255,255,0.08);
             cursor: pointer;
             transition: background 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
         }
 
         .article-card:hover {
@@ -123,13 +126,30 @@
             transform: translateY(-2px);
         }
 
-        .article-card .card-title {
+        .pin-indicator {
+            width: 20px;
+            height: 20px;
+            background: var(--accent-color);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+
+        .card-content {
+            flex: 1;
+        }
+
+        .card-title {
             font-weight: 600;
             color: var(--text-primary);
             margin-bottom: 4px;
         }
 
-        .article-card .card-date {
+        .card-date {
             font-size: 0.85rem;
             color: var(--accent-color);
         }
@@ -155,7 +175,7 @@
             transition: opacity 0.2s;
             overflow: hidden;
         }
-        
+
         .back-link {
             display: inline-flex;
             align-items: center;
@@ -295,43 +315,36 @@
             align-items: center;
         }
 
-        #deleteBtn {
-            padding: 12px 24px;
-            background: #C42833;
-            color: #fff;
-            border: none;
-            border-radius: var(--radius-small);
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: transform 0.1s, opacity 0.2s;
-        }
-
-        #deleteBtn:active {
-            transform: scale(0.96);
-        }
-
-        #deleteBtn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
+        #pinBtn,
+        #shareBtn,
+        #deleteBtn,
         #publishBtn {
             padding: 12px 24px;
-            background: var(--accent-color);
-            color: #000;
             border: none;
             border-radius: var(--radius-small);
-            font-weight: 700;
-            font-size: 1rem;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
             transition: transform 0.1s, opacity 0.2s;
         }
 
+        #pinBtn {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        #pinBtn:active,
+        #shareBtn:active,
+        #deleteBtn:active,
         #publishBtn:active {
             transform: scale(0.96);
         }
 
+        #pinBtn:disabled,
+        #shareBtn:disabled,
+        #deleteBtn:disabled,
         #publishBtn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -612,9 +625,9 @@
                 <textarea id="contentInput" rows="22" placeholder="Write your Markdown here..."></textarea>
 
                 <div class="button-group">
-                    <button id="deleteBtn">Delete</button>
+                    <button id="pinBtn"><i class="fas fa-thumbtack"></i></button>
                     <button id="publishBtn">Publish</button>
-                    <button id="shareBtn" class="btnMDYE" style="background: var(--accent-color); color: #000; padding: 12px 24px; border: none; border-radius: var(--radius-small); cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <button id="shareBtn" class="btnMDYE" style="background: var(--accent-color); color: #000;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
                             <circle cx="18" cy="5" r="3"></circle>
                             <circle cx="6" cy="12" r="3"></circle>
@@ -623,6 +636,7 @@
                             <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                         </svg>
                     </button>
+                    <button id="deleteBtn" style="background: #C42833; color: #fff;"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         </div>
@@ -656,11 +670,13 @@
         var selectedBadge = '';
         var activeFolder = 'all';
         var isHidden = false;
+        var isPinned = false;
 
         var btnFeatured = document.getElementById('btnFeatured');
         var btnHighlight = document.getElementById('btnHighlight');
         var highlightNumberGroup = document.getElementById('highlightNumberGroup');
         var highlightNumberInput = document.getElementById('highlightNumber');
+        var pinBtn = document.getElementById('pinBtn');
 
         btnFeatured.addEventListener('click', function() {
             if (btnFeatured.classList.contains('active')) {
@@ -687,7 +703,7 @@
                 highlightNumberGroup.classList.remove('hidden');
             }
         });
-        
+
         document.getElementById('btnHidden').addEventListener('click', function() {
             if (this.classList.contains('active')) {
                 this.classList.remove('active');
@@ -695,6 +711,16 @@
             } else {
                 this.classList.add('active');
                 isHidden = true;
+            }
+        });
+
+        pinBtn.addEventListener('click', function() {
+            if (this.classList.contains('active')) {
+                this.classList.remove('active');
+                isPinned = false;
+            } else {
+                this.classList.add('active');
+                isPinned = true;
             }
         });
 
@@ -802,17 +828,21 @@
         }
 
         function getFolderArticles() {
+            var filtered = articlesData;
             if (activeFolder === 'bugnotes') {
-                return articlesData.filter(isBugNotesArticle);
+                filtered = filtered.filter(isBugNotesArticle);
             } else if (activeFolder === 'highlight') {
-                return articlesData.filter(function(art) { return art.badge === 'highlight'; });
+                filtered = filtered.filter(function(art) { return art.badge === 'highlight'; });
             } else if (activeFolder === 'featured') {
-                return articlesData.filter(function(art) { return art.badge === 'featured'; });
+                filtered = filtered.filter(function(art) { return art.badge === 'featured'; });
             } else {
-                return articlesData.filter(function(art) {
+                filtered = filtered.filter(function(art) {
                     return !isBugNotesArticle(art) && art.badge !== 'highlight' && art.badge !== 'featured';
                 });
             }
+            var pinned = filtered.filter(function(art) { return art.pinned; });
+            var unpinned = filtered.filter(function(art) { return !art.pinned; });
+            return pinned.concat(unpinned);
         }
 
         function applyFolderAndRender(term) {
@@ -838,7 +868,12 @@
                 if (!slug) return;
                 var card = document.createElement('div');
                 card.className = 'article-card';
-                card.innerHTML = '<div class="card-title">' + art.name + '</div><div class="card-date">' + (art.date || '') + '</div>';
+                var innerHTML = '';
+                if (art.pinned) {
+                    innerHTML += '<div class="pin-indicator"><i class="fas fa-thumbtack"></i></div>';
+                }
+                innerHTML += '<div class="card-content"><div class="card-title">' + art.name + '</div><div class="card-date">' + (art.date || '') + '</div></div>';
+                card.innerHTML = innerHTML;
                 card.addEventListener('click', function() {
                     goToEditor(slug);
                 });
@@ -881,6 +916,8 @@
             document.getElementById('imageFileInput').value = '';
             document.getElementById('btnHidden').classList.remove('active');
             isHidden = false;
+            pinBtn.classList.remove('active');
+            isPinned = false;
             selectedImageFile = null;
             btnFeatured.classList.remove('active');
             btnHighlight.classList.remove('active');
@@ -910,11 +947,18 @@
 
             var badge = parts.data.badge || '';
             var hidden = parts.data.hidden === true || parts.data.hidden === 'true';
+            var pinned = parts.data.pinned === true || parts.data.pinned === 'true';
             isHidden = hidden;
+            isPinned = pinned;
             if (hidden) {
                 document.getElementById('btnHidden').classList.add('active');
             } else {
                 document.getElementById('btnHidden').classList.remove('active');
+            }
+            if (pinned) {
+                pinBtn.classList.add('active');
+            } else {
+                pinBtn.classList.remove('active');
             }
             btnFeatured.classList.remove('active');
             btnHighlight.classList.remove('active');
@@ -968,7 +1012,8 @@
                 description: document.getElementById('descInput').value,
                 categories: document.getElementById('catInput').value,
                 content: document.getElementById('contentInput').value,
-                hidden: isHidden
+                hidden: isHidden,
+                pinned: isPinned
             };
 
             if (selectedBadge) {
@@ -1047,7 +1092,7 @@
                 }, 15000);
             }
         });
-        
+
         document.getElementById('shareBtn').addEventListener('click', function() {
             var slug = document.getElementById('slugInput').value.trim();
             if (!slug) {
