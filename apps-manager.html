@@ -361,9 +361,23 @@
     <script>
         var token = localStorage.getItem('adminToken');
         var currentUrl = null;
+        var swReadyPromise = null;
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(function(){});
+        function initServiceWorker() {
+            if (!('serviceWorker' in navigator)) return;
+            navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                if (reg.active && !navigator.serviceWorker.controller) {
+                    swReadyPromise = new Promise(function(resolve) {
+                        var onControllerChange = function() {
+                            navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+                            window.location.reload();
+                        };
+                        navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+                    });
+                } else {
+                    swReadyPromise = Promise.resolve();
+                }
+            }).catch(function() {});
         }
 
         if (token) {
@@ -401,12 +415,16 @@
         function showHome() {
             document.getElementById('loginContainer').classList.add('hidden');
             document.getElementById('homeContainer').classList.remove('hidden');
+            initServiceWorker();
             loadAppList();
         }
 
         async function ensureSWReady() {
             if (!navigator.serviceWorker) {
                 throw new Error('Service Worker not supported');
+            }
+            if (swReadyPromise) {
+                await swReadyPromise;
             }
             await navigator.serviceWorker.ready;
             if (!navigator.serviceWorker.controller) {
