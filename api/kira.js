@@ -537,28 +537,58 @@ bot.callbackQuery(/^mirror_dest_(drive|telegram)_(.+)$/, async (ctx) => {
         return;
     }
 
-    mirrorJobs.delete(jobKey);
+    job.destination = destination;
     await ctx.answerCallbackQuery();
     await ctx.deleteMessage();
 
-    let filename = job.filename;
-    if (filename === "Unknown") {
-        try {
-            const urlPath = new URL(job.url).pathname;
-            filename = decodeURIComponent(urlPath.split("/").pop()) || "file";
-        } catch {
-            filename = "file";
-        }
+    const keyboard = {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: "Yes", callback_data: `rename_yes_${jobKey}` },
+                    { text: "No", callback_data: `rename_no_${jobKey}` },
+                ],
+            ],
+        },
+    };
+
+    const promptMsg = await ctx.reply("Do you want to rename the file before mirroring?", keyboard);
+    job.promptMessageId = promptMsg.message_id;
+});
+
+bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
+    const choice = ctx.match[1];
+    const jobKey = ctx.match[2];
+    const job = mirrorJobs.get(jobKey);
+
+    if (!job || job.chatId !== ctx.chat.id || job.userId !== ctx.from.id) {
+        await ctx.answerCallbackQuery("This action has expired. Please /mirror again.");
+        return;
     }
 
-    await startMirror(ctx, job.url, filename, destination);
+    await ctx.answerCallbackQuery();
+
+    if (choice === "no") {
+        mirrorJobs.delete(jobKey);
+        await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
+        let filename = job.filename;
+        if (filename === "Unknown") {
+            try {
+                const urlPath = new URL(job.url).pathname;
+                filename = decodeURIComponent(urlPath.split("/").pop()) || "file";
+            } catch {
+                filename = "file";
+            }
+        }
+        await startMirror(ctx, job.url, filename, job.destination);
+    } else {
+        await ctx.editMessageText("Send the new file name:");
+        pendingRenames.set(pendingKey(ctx.chat.id, ctx.from.id), jobKey);
+    }
 });
 
 async function startMirror(ctx, url, filename, destination) {
     const sentMsg = await ctx.reply("Mirroring…");
-
-    let jobLabel = filename.replace(/\.[^/.]+$/, "");
-    if (jobLabel.length > 50) jobLabel = jobLabel.substring(0, 50);
 
     const dispatchBody = {
         event_type: "mirror",
@@ -567,11 +597,10 @@ async function startMirror(ctx, url, filename, destination) {
             message_id: sentMsg.message_id,
             download_url: url,
             filename: filename,
-            job_label: jobLabel,
             destination: destination,
         },
     };
-
+    
     try {
         const res = await fetch(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
@@ -1250,6 +1279,20 @@ bot.on(":left_chat_member", async (ctx) => {
 });
 
 bot.on("message:text", async (ctx) => {
+    const pk = pendingKey(ctx.chat.id, ctx.from.id);
+    const jobKey = pendingRenames.get(pk);
+    if (jobKey) {
+        pendingRenames.delete(pk);
+        const job = mirrorJobs.get(jobKey);
+        if (job) {
+            mirrorJobs.delete(jobKey);
+            const newName = ctx.message.text.trim();
+            await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
+            await startMirror(ctx, job.url, newName, job.destination);
+            return;
+        }
+    }
+
     if (pendingConnectAction.has(ctx.from.id)) {
         const action = pendingConnectAction.get(ctx.from.id);
         pendingConnectAction.delete(ctx.from.id);
