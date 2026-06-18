@@ -5,7 +5,7 @@ on:
     branches: [homepage]
   workflow_dispatch:
   repository_dispatch:
-    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image, delete-mirror, custom-image]
+    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image, delete-mirror, custom-image, gofile-list]
   schedule:
     - cron: '0 0 * * *'
 
@@ -214,7 +214,58 @@ jobs:
                 -d "text=$MSG"
             fi
           fi
-          
+        
+  gofile-list:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'gofile-list'
+    runs-on: ubuntu-latest
+    env:
+      KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Install jq
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq
+
+      - name: Fetch GoFile list and send buttons
+        run: |
+          URL="${{ github.event.client_payload.url }}"
+          CHAT_ID="${{ github.event.client_payload.chat_id }}"
+          MSG_ID="${{ github.event.client_payload.message_id }}"
+          CONTENT_ID=$(echo "$URL" | grep -oP '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}' | head -1)
+          if [ -z "$CONTENT_ID" ]; then
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+              -d "chat_id=$CHAT_ID" -d "message_id=$MSG_ID" -d "text=Invalid GoFile link."
+            exit 0
+          fi
+          API_RESPONSE=$(curl -s "https://api.gofile.io/getContent?contentId=$CONTENT_ID")
+          STATUS=$(echo "$API_RESPONSE" | jq -r '.status')
+          if [ "$STATUS" != "ok" ]; then
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+              -d "chat_id=$CHAT_ID" -d "message_id=$MSG_ID" -d "text=Failed to fetch GoFile content."
+            exit 0
+          fi
+          FILES=$(echo "$API_RESPONSE" | jq -c '[.data.contents | to_entries[] | {name: .value.name, size: .value.size, link: .value.directLink}]')
+          FILE_COUNT=$(echo "$FILES" | jq 'length')
+          if [ "$FILE_COUNT" -eq 0 ]; then
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+              -d "chat_id=$CHAT_ID" -d "message_id=$MSG_ID" -d "text=No files found in the folder."
+            exit 0
+          fi
+          SHORT_KEY=$(head /dev/urandom | tr -dc 'a-z0-9' | head -c 8)
+          curl -s -X POST "${SUPABASE_URL}/rest/v1/gofile_folders" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"key\": \"$SHORT_KEY\", \"files\": $FILES}" > /dev/null
+          KEYBOARD=$(echo "$FILES" | jq -r --arg key "$SHORT_KEY" 'to_entries | map({text: "\(.value.name) (\(.value.size))", callback_data: "gofile_mirror_\($key)_\(.key)"}) | {inline_keyboard: [.[]]}')
+          curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+            -d "chat_id=$CHAT_ID" \
+            -d "message_id=$MSG_ID" \
+            -d "text=Choose a file to mirror:" \
+            -d "reply_markup=$KEYBOARD"
+              
   delete-mirror:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'delete-mirror'
     runs-on: ubuntu-latest
