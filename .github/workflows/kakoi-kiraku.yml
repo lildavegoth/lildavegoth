@@ -213,6 +213,8 @@ jobs:
     steps:
       - name: Install rclone
         run: sudo apt-get update && sudo apt-get install -y rclone
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
       - name: Configure rclone
         run: |
           export TOKEN='${{ secrets.GDRIVE_TOKEN }}'
@@ -228,9 +230,11 @@ jobs:
           EOF
       - name: Delete file from Drive
         run: |
+          set -e
           FILE_NAME="${{ github.event.client_payload.drive_file_name }}"
           rclone delete "mirror_drive:$FILE_NAME" -P
-          curl -s -X DELETE "${SUPABASE_URL}/rest/v1/mirrored_files?drive_file_name=eq.${FILE_NAME}" \
+          ENCODED_NAME=$(printf '%s' "$FILE_NAME" | jq -sRr @uri)
+          curl -s -X DELETE "${SUPABASE_URL}/rest/v1/mirrored_files?drive_file_name=eq.${ENCODED_NAME}" \
             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"
           curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
