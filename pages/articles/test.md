@@ -1,12 +1,12 @@
 ---
 title: "Test"
 date: "2026-06-21"
-image: "../../images/4ever.webp"
+image: "images/kakoikiraku.webp"
 ---
 
-![test](https://github.com/lildavegoth/lildavegoth/raw/refs/heads/homepage/images/4ever.webp)
+![test](https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/pages/articles/images/kakoikiraku.webp)
 
-![test](../../images/4ever.webp)
+![test](images/kakoikiraku.webp)
 
 ``` test
 su
@@ -21,7 +21,7 @@ pm uninstall -k --user 0 com.test.apk and also com.test.double.apk
 | ------ | ------ | ---- | ---- | ---- | ---- |
 |        | [test](https://t.me/lildavegoth) |      |      |      | test |
 |        |        |      | - test \n - test\n 1. test\n 2. test\n- test indent\n    - test indent |      |      |
-| test test test ![test](../../images/4ever.webp)   |        |      |      |      | test test test test |
+| test test test ![test](images/kakoikiraku.webp)   |        |      |      |      | test test test test |
 
 > [!TEST] Test
 > Test Test Test
@@ -66,3 +66,7 @@ Text for note 2
 ![UDM](images/udm.webp)
 ![Debloat](images/batchdeb.webp)
 :::
+
+-- test
+
+-- [test](https://t.me/lildavegoth)
