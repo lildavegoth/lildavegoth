@@ -783,11 +783,11 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (
     }
 
     if (action === "custom") {
-        pendingImageEditAction.set(ctx.from.id, `imgedit_custom_${fileId}`);
-        await ctx.reply(
-            "Send me your custom ffmpeg command. Use `input.jpg` as input and `output.jpg` as final output.\n\nExample:\n`ffmpeg -y -i input.jpg -vf scale=1200:-1:bicubic -frames:v 1 -q:v 3 output.jpg`",
+        const promptMsg = await ctx.reply(
+            "Send me your custom ffmpeg command. Use `input.jpg` as input and `output.jpg` as final output.\n\nExample:\n`ffmpeg -y -i input.jpg -vf scale=1200:-1:bicubic -frames:v 1 -q:v 10 output.jpg`",
             { parse_mode: "Markdown" }
         );
+        pendingImageEditAction.set(ctx.from.id, `imgedit_custom_${fileId}_${promptMsg.message_id}`);
         return;
     }
 
@@ -1431,8 +1431,14 @@ bot.on("message:text", async (ctx) => {
             }
         }
         if (action.startsWith("imgedit_custom_")) {
-            const fileId = action.substring("imgedit_custom_".length);
+            const rest = action.substring("imgedit_custom_".length);
+            const underscoreIdx = rest.lastIndexOf("_");
+            const fileId = underscoreIdx > 0 ? rest.substring(0, underscoreIdx) : rest;
+            const promptMsgId = underscoreIdx > 0 ? parseInt(rest.substring(underscoreIdx + 1), 10) : null;
             if (!fileId || !input) return ctx.reply("Invalid input.");
+            if (promptMsgId) {
+                try { await ctx.api.deleteMessage(ctx.chat.id, promptMsgId); } catch {}
+            }
             try {
                 const file = await ctx.api.getFile(fileId);
                 const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
@@ -1456,6 +1462,8 @@ bot.on("message:text", async (ctx) => {
                     .getPublicUrl(fileName);
                 const imageUrl = publicUrlData.publicUrl;
 
+                const processingMsg = await ctx.reply("Processing image, please wait…");
+
                 const dispatchBody = {
                     event_type: "custom-image",
                     client_payload: {
@@ -1463,7 +1471,7 @@ bot.on("message:text", async (ctx) => {
                         image_url: imageUrl,
                         original_name: fileName,
                         command: input,
-                        progress_message_id: ctx.message?.reply_to_message?.message_id,
+                        progress_message_id: processingMsg.message_id,
                     },
                 };
 
@@ -1480,16 +1488,13 @@ bot.on("message:text", async (ctx) => {
                 );
 
                 if (!dispatchRes.ok) {
-                    return ctx.reply("Dispatch failed: " + (await dispatchRes.text()));
+                    await ctx.api.editMessageText(ctx.chat.id, processingMsg.message_id, "Dispatch failed: " + (await dispatchRes.text()));
                 }
-
-                return ctx.reply("Processing image, please wait…");
             } catch (e) {
                 return ctx.reply("Error: " + e.message);
             }
+            return;
         }
-        return;
-    }
 
     if (pendingKiraAction.has(ctx.from.id)) {
         const action = pendingKiraAction.get(ctx.from.id);
