@@ -4,6 +4,7 @@ date: "2026-06-18"
 image: "images/bugnotes.webp"
 author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
+submission: true
 description: "Everytime i use any custom ROMs, i always put bugs i'm facing to my personal notes for reminder of myself, like don't install this or that ROM again because it has this or that bugs. In this Article..."
 categories: "ROMs, Bug Notes"
 ---
