@@ -115,6 +115,18 @@ jobs:
         run: |
           URL="${{ github.event.client_payload.download_url }}"
           mkdir -p downloads
+
+          if echo "$URL" | grep -q "gofile.io"; then
+            CONTENT_ID=$(echo "$URL" | sed -n 's/.*gofile\.io\/\(d\|download\/web\)\/\([a-f0-9-]\{36\}\).*/\2/p')
+            if [ -n "$CONTENT_ID" ]; then
+              API_RESPONSE=$(curl -s "https://api.gofile.io/getContent?contentId=$CONTENT_ID")
+              DIRECT_LINK=$(echo "$API_RESPONSE" | jq -r '.data.contents | to_entries[0].value.directLink // empty')
+              if [ -n "$DIRECT_LINK" ]; then
+                URL="$DIRECT_LINK"
+              fi
+            fi
+          fi
+
           wget --content-disposition -P downloads --header="User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" "$URL" || \
           curl -L -o "downloads/file" -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" "$URL"
       - name: Rename to original filename if provided
