@@ -650,6 +650,46 @@
             overflow: hidden;
         }
 
+        .card-list-item {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: 14px 20px;
+            margin: 0.6rem 0;
+            transition: border-radius 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .card-list-item.card-list-item-clicked {
+            border-radius: 50px !important;
+        }
+
+        .submission-btn {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: 14px 20px;
+            margin: 0.6rem 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: border-radius 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-align: left;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .submission-btn i {
+            font-size: 1.3rem;
+            color: var(--accent-color);
+        }
+
+        .submission-btn-clicked {
+            border-radius: 50px !important;
+        }
+
         @media (min-width: 720px) {
             .main {
                 display: flex;
@@ -659,18 +699,18 @@
                 margin: 0 auto;
                 padding: 2rem;
             }
-        
+
             .image-container {
                 flex: 0 0 300px;
                 margin: 0;
                 max-width: none;
                 width: 300px;
             }
-        
+
             .table-of-contents {
                 display: block;
             }
-        
+
             .content {
                 flex: 1;
                 margin: 0;
@@ -694,7 +734,7 @@
             z-index: 1;
             pointer-events: none;
         }
-        
+
         .bug-note-header {
             width: 90%;
             max-width: 500px;
@@ -705,13 +745,13 @@
             text-align: center;
             border: 1px solid rgba(255,255,255,0.1);
         }
-        
+
         .bug-note-header i {
             font-size: 40px;
             color: var(--accent-color);
             margin-bottom: 12px;
         }
-        
+
         .bug-note-header h1 {
             font-size: 26px;
             font-weight: bold;
@@ -719,7 +759,7 @@
             margin: 0;
             word-break: break-word;
         }
-        
+
         @media (min-width: 720px) {
             .bug-note-header {
                 flex: 0 0 300px;
@@ -758,7 +798,6 @@
                 </div>
             </div>
             <div class="header-bottom-card"></div>
-            </div>
             <div id="tocContainer" class="table-of-contents"></div>
         </div>
 
@@ -1101,21 +1140,21 @@
                 var rendered = marked.parse(content.trim());
                 var temp = document.createElement('div');
                 temp.innerHTML = rendered;
-        
+
                 var images = Array.from(temp.querySelectorAll('img')).map(function(img) {
                     return img.getAttribute('src');
                 });
-        
+
                 if (!images.length) return '';
-        
+
                 var slides = images.map(function(src) {
                     return '<div class="gallery-slide"><img src="' + src + '" alt=""></div>';
                 }).join('');
-        
+
                 var dots = images.map(function(_, i) {
                     return '<span class="gallery-dot' + (i === 0 ? ' active' : '') + '" data-index="' + i + '"></span>';
                 }).join('');
-        
+
                 return '<div class="gallery-wrapper"><div class="gallery-viewport"><div class="gallery-slides">' + slides + '</div></div><div class="gallery-dots">' + dots + '</div></div>';
             });
         }
@@ -1174,6 +1213,55 @@
             });
         }
 
+        function processCardListBlocks(html) {
+            html = html.replace(/^-- (.*?)(?:\n|$)/gm, function(match, content) {
+                var inlineHtml = marked.parseInline(content.trim());
+                return '<div class="card-list-item">' + inlineHtml + '</div>';
+            });
+
+            html = html.replace(/^--email\s+(\S+)\s+"([^"]*)"(?:\n|$)/gm, function(match, email, body) {
+                var encodedBody = encodeURIComponent(body);
+                var mailtoLink = 'mailto:' + email + '?subject=ROM%20Bug%20Submission&body=' + encodedBody;
+                return '<div class="submission-btn" data-url="' + mailtoLink + '"><i class="fas fa-envelope"></i> Email</div>';
+            });
+
+            html = html.replace(/^--telegram\s+(\S+)\s+"([^"]*)"(?:\n|$)/gm, function(match, url, text) {
+                var tgLink = url + '?text=' + encodeURIComponent(text);
+                return '<div class="submission-btn" data-url="' + tgLink + '"><i class="fab fa-telegram-plane"></i> Telegram</div>';
+            });
+
+            return html;
+        }
+
+        function setupCardListInteractions(container) {
+            container.addEventListener('click', function(e) {
+                var target = e.target.closest('.card-list-item, .submission-btn');
+                if (!target) return;
+
+                if (target.classList.contains('card-list-item')) {
+                    target.classList.add('card-list-item-clicked');
+                    setTimeout(function() {
+                        target.classList.remove('card-list-item-clicked');
+                    }, 350);
+
+                    var link = target.querySelector('a');
+                    if (link) {
+                        window.location.href = link.getAttribute('href');
+                    }
+                } else if (target.classList.contains('submission-btn')) {
+                    target.classList.add('submission-btn-clicked');
+                    setTimeout(function() {
+                        target.classList.remove('submission-btn-clicked');
+                    }, 350);
+
+                    var url = target.getAttribute('data-url');
+                    if (url) {
+                        window.location.href = url;
+                    }
+                }
+            });
+        }
+
         async function fetchAndShowMoreArticles(currentSlug) {
             var contentDiv = document.getElementById('articleContent');
             if (!contentDiv) return;
@@ -1227,6 +1315,7 @@
             enhanceCustomQuotes(content);
             enhanceVideos(content);
             setupGalleries(content);
+            setupCardListInteractions(content);
 
             var dividerImg = document.createElement('img');
             dividerImg.src = 'images/divider.webp';
@@ -1380,7 +1469,7 @@
 
                 document.getElementById('articleTitle').textContent = article.title;
                 document.getElementById('heroImage').src = article.image;
-                
+
                 var isBugNote = slug && slug.endsWith('-bugnotes');
                 var imageContainer = document.querySelector('.image-container');
                 var bugHeader = document.getElementById('bugHeader');
@@ -1409,6 +1498,7 @@
 
                 var processed = processHideBlocks(article.html);
                 processed = processGalleryBlocks(processed);
+                processed = processCardListBlocks(processed);
                 document.getElementById('articleContent').innerHTML = marked.parse(processed);
                 setupHideToggles(document.getElementById('articleContent'));
                 document.getElementById('wordCount').textContent = article.wordCount + ' words';
