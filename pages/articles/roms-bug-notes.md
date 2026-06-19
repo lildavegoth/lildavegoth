@@ -18,6 +18,7 @@ You must take note that this Bug Notes list are only contains ROMs that i person
 ^^^aosp1hide^^^
 # AOSP →
 - [Lunaris AOSP](https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=lunaris-bugnotes)
+- [Nusantara](https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=nusantara-bugnotes)
 
 ^^^aosp1hide^^^
 
