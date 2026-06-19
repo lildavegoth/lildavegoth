@@ -130,7 +130,7 @@ bot.use(async (ctx, next) => {
     return next();
 });
 
-bot.on(":message", async (ctx, next) => {
+bot.on("message", async (ctx, next) => {
     if (!ctx.from) return next();
     if (ctx.chat?.type === "private") return next();
     const msg = ctx.message;
