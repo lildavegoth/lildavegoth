@@ -10,7 +10,7 @@ from ui.bulletin import BulletinHelper
 
 __name__ = "Batch Forward"
 __description__ = "Forwards any messages without limits, without sender name and supports for Bulk or Batch forwards! (.forward url).\nhttps://github.com/lildavegoth/lildavegoth"
-__version__ = "1.1.1"
+__version__ = "1.2.3"
 __id__ = "batch_forward"
 __author__ = "@lildavegoth"
 __icon__ = "kirakustickers/3"
@@ -62,7 +62,7 @@ class RestrictForward(BasePlugin):
             return HookResult(strategy=HookStrategy.CANCEL)
 
         rest = parts[1].strip()
-        links = re.findall(r'https?://t\.me/(?:c/)?[^/\s]+/\d+(?:/\d+)?', rest)
+        links = re.findall(r'https?://t\.me/(?:c/)?[^/\s]+/\d+(?:/\d+)?(?:[?]\S+)?', rest)
         if not links:
             self._show_error("No valid Telegram message link found.")
             return HookResult(strategy=HookStrategy.CANCEL)
@@ -74,12 +74,19 @@ class RestrictForward(BasePlugin):
         for url in links:
             done = threading.Event()
             self._forward_message(account, url, params, url, done)
-            done.wait()  # wait until this URL's send is fully complete
+            done.wait()
 
     def _forward_message(self, account, url, params, source_url, done_event=None):
         try:
+            comment_id = None
+            clean_url = url.split("?")[0]
+            if "?comment=" in url:
+                parts = url.split("?comment=")
+                if len(parts) > 1:
+                    comment_id = int(parts[1].split("&")[0])
+
             pattern = r"https?://t\.me/(c/)?([^/]+)/(\d+)(?:/(\d+))?"
-            match = re.search(pattern, url)
+            match = re.search(pattern, clean_url)
             if not match:
                 self._show_error(f"Invalid link: {url}")
                 if done_event: done_event.set()
@@ -112,222 +119,11 @@ class RestrictForward(BasePlugin):
                     if done_event: done_event.set()
                     return
 
-                msg_req = TLRPC.TL_messages_getHistory()
-                msg_req.peer = resolved_peer
-                msg_req.offset_id = jint(message_id + 5)
-                msg_req.offset_date = jint(0)
-                msg_req.add_offset = jint(0)
-                msg_req.limit = jint(15)
-                msg_req.max_id = jint(0)
-                msg_req.min_id = jint(0)
-                msg_req.hash = jlong(0)
-
-                class GetHistoryDelegate(dynamic_proxy(RequestDelegate)):
-                    def __init__(self, plugin, current_account, source_peer, target_params, src_chat, src_url, done_evt):
-                        super().__init__()
-                        self.plugin = plugin
-                        self.account = current_account
-                        self.source_peer = source_peer
-                        self.target_params = target_params
-                        self.src_chat = src_chat
-                        self.source_url = src_url
-                        self.done_event = done_evt
-
-                    def run(self, response, error):
-                        if error is not None:
-                            self.plugin._show_error(f"Failed to fetch history: {error.text}")
-                            if self.done_event: self.done_event.set()
-                            return
-
-                        messages = response.messages
-                        if messages is None or messages.size() == 0:
-                            self.plugin._show_error("Channel history inaccessible.")
-                            if self.done_event: self.done_event.set()
-                            return
-
-                        target_msg = None
-                        for i in range(messages.size()):
-                            m = messages.get(i)
-                            if m.id == message_id:
-                                target_msg = m
-                                break
-
-                        if target_msg is None:
-                            self.plugin._show_error("Target message ID not found.")
-                            if self.done_event: self.done_event.set()
-                            return
-
-                        messages_to_process = self.plugin._create_int_arraylist()
-                        message_objects_list = []
-
-                        grouped_id = getattr(target_msg, 'grouped_id', jlong(0))
-
-                        if grouped_id != 0:
-                            for i in range(messages.size() - 1, -1, -1):
-                                m = messages.get(i)
-                                if getattr(m, 'grouped_id', jlong(0)) == grouped_id:
-                                    messages_to_process.add(jint(m.id))
-                                    message_objects_list.append(m)
-                        else:
-                            messages_to_process.add(jint(target_msg.id))
-                            message_objects_list.append(target_msg)
-
-                        try:
-                            destination_peer = self.plugin._get_current_peer_compiled(self.account, self.target_params)
-                            if destination_peer is None:
-                                self.plugin._show_error("Destination chat context missing.")
-                                if self.done_event: self.done_event.set()
-                                return
-
-                            self._send_cloned_via_helper(message_objects_list, destination_peer, self.source_url)
-
-                        except Exception as e:
-                            self.plugin._show_error(f"Execution handling failure: {str(e)}")
-                            if self.done_event: self.done_event.set()
-
-                    def _send_cloned_via_helper(self, msg_list, dest_peer, source_url):
-                        TLRPC = find_class("org.telegram.tgnet.TLRPC")
-                        ConnectionsManager = find_class("org.telegram.tgnet.ConnectionsManager")
-                        if not TLRPC or not ConnectionsManager:
-                            self.plugin._show_error("Core classes missing for cloning.")
-                            if self.done_event: self.done_event.set()
-                            return
-
-                        # Find main text for album caption
-                        main_text = ""
-                        for m in msg_list:
-                            txt = getattr(m, 'message', "") or ""
-                            if txt:
-                                main_text = txt
-                                break
-                        final_text = main_text
-                        if final_text:
-                            final_text += "\n\n" + source_url
-                        else:
-                            final_text = source_url
-
-                        # Separate media messages
-                        media_messages = [m for m in msg_list if hasattr(m, 'media') and m.media and not isinstance(m.media, TLRPC.TL_messageMediaEmpty)]
-
-                        if len(media_messages) > 1:
-                            # Send as album
-                            multi_req = TLRPC.TL_messages_sendMultiMedia()
-                            multi_req.peer = dest_peer
-
-                            single_media_list = self.plugin._create_int_arraylist()
-                            for idx, m in enumerate(media_messages):
-                                media_obj = m.media
-                                single_media = TLRPC.TL_inputSingleMedia()
-                                single_media.random_id = jlong(Random().nextLong() & 0x7FFFFFFFFFFFFFFF)
-
-                                if "TL_messageMediaDocument" in media_obj.getClass().getName() and getattr(media_obj, 'document', None):
-                                    input_media = TLRPC.TL_inputMediaDocument()
-                                    input_media.id = TLRPC.TL_inputDocument()
-                                    input_media.id.id = jlong(media_obj.document.id)
-                                    input_media.id.access_hash = jlong(media_obj.document.access_hash)
-                                    input_media.id.file_reference = media_obj.document.file_reference
-                                    single_media.media = input_media
-                                elif "TL_messageMediaPhoto" in media_obj.getClass().getName() and getattr(media_obj, 'photo', None):
-                                    input_media = TLRPC.TL_inputMediaPhoto()
-                                    input_media.id = TLRPC.TL_inputPhoto()
-                                    input_media.id.id = jlong(media_obj.photo.id)
-                                    input_media.id.access_hash = jlong(media_obj.photo.access_hash)
-                                    input_media.id.file_reference = media_obj.photo.file_reference
-                                    single_media.media = input_media
-                                else:
-                                    continue
-
-                                single_media.message = final_text if idx == 0 else ""
-                                single_media_list.add(single_media)
-
-                            multi_req.multi_media = single_media_list
-
-                            class MultiMediaDelegate(dynamic_proxy(RequestDelegate)):
-                                def __init__(self, plugin, account, done_evt):
-                                    super().__init__()
-                                    self.plugin = plugin
-                                    self.account = account
-                                    self.done_event = done_evt
-                                def run(self, resp, err):
-                                    if err is not None:
-                                        self.plugin._show_error(f"Album send failed: {err.text}")
-                                    else:
-                                        self.plugin._process_updates(resp, self.account)
-                                    if self.done_event: self.done_event.set()
-
-                            ConnectionsManager.getInstance(self.account).sendRequest(multi_req, MultiMediaDelegate(self.plugin, self.account, self.done_event))
-                        elif len(media_messages) == 1:
-                            # Single media
-                            m = media_messages[0]
-                            media_obj = m.media
-                            send_req = None
-                            if "TL_messageMediaDocument" in media_obj.getClass().getName() and getattr(media_obj, 'document', None):
-                                input_media = TLRPC.TL_inputMediaDocument()
-                                input_media.id = TLRPC.TL_inputDocument()
-                                input_media.id.id = jlong(media_obj.document.id)
-                                input_media.id.access_hash = jlong(media_obj.document.access_hash)
-                                input_media.id.file_reference = media_obj.document.file_reference
-                                send_req = TLRPC.TL_messages_sendMedia()
-                                send_req.media = input_media
-                            elif "TL_messageMediaPhoto" in media_obj.getClass().getName() and getattr(media_obj, 'photo', None):
-                                input_media = TLRPC.TL_inputMediaPhoto()
-                                input_media.id = TLRPC.TL_inputPhoto()
-                                input_media.id.id = jlong(media_obj.photo.id)
-                                input_media.id.access_hash = jlong(media_obj.photo.access_hash)
-                                input_media.id.file_reference = media_obj.photo.file_reference
-                                send_req = TLRPC.TL_messages_sendMedia()
-                                send_req.media = input_media
-
-                            if send_req:
-                                send_req.peer = dest_peer
-                                send_req.message = final_text
-                                send_req.random_id = jlong(Random().nextLong() & 0x7FFFFFFFFFFFFFFF)
-
-                                class ClonedMediaDelegate(dynamic_proxy(RequestDelegate)):
-                                    def __init__(self, plugin, account, done_evt):
-                                        super().__init__()
-                                        self.plugin = plugin
-                                        self.account = account
-                                        self.done_event = done_evt
-                                    def run(self, resp, err):
-                                        if err is not None:
-                                            self.plugin._show_error(f"Cloned media failed: {err.text}")
-                                        else:
-                                            self.plugin._process_updates(resp, self.account)
-                                        if self.done_event: self.done_event.set()
-
-                                ConnectionsManager.getInstance(self.account).sendRequest(send_req, ClonedMediaDelegate(self.plugin, self.account, self.done_event))
-                            else:
-                                self.plugin._show_error("Unsupported media type.")
-                                if self.done_event: self.done_event.set()
-                        else:
-                            # Pure text
-                            if final_text.strip():
-                                msg_req = TLRPC.TL_messages_sendMessage()
-                                msg_req.peer = dest_peer
-                                msg_req.message = final_text
-                                msg_req.random_id = jlong(Random().nextLong() & 0x7FFFFFFFFFFFFFFF)
-
-                                class ClonedTextDelegate(dynamic_proxy(RequestDelegate)):
-                                    def __init__(self, plugin, account, done_evt):
-                                        super().__init__()
-                                        self.plugin = plugin
-                                        self.account = account
-                                        self.done_event = done_evt
-                                    def run(self, resp, err):
-                                        if err is not None:
-                                            self.plugin._show_error(f"Cloned text failed: {err.text}")
-                                        else:
-                                            self.plugin._process_updates(resp, self.account)
-                                        if self.done_event: self.done_event.set()
-
-                                ConnectionsManager.getInstance(self.account).sendRequest(msg_req, ClonedTextDelegate(self.plugin, self.account, self.done_event))
-                            else:
-                                if self.done_event: self.done_event.set()
-
-                        self.plugin._show_success("Message forwarded with source!")
-
-                connections.sendRequest(msg_req, GetHistoryDelegate(self, account, resolved_peer, params, chat_object, source_url, done_event))
+                if comment_id is not None:
+                    # Use the dedicated discussion-message API
+                    self._handle_comment_direct(account, resolved_peer, comment_id, source_url, params, done_event)
+                else:
+                    self._fetch_messages(account, resolved_peer, message_id, chat_object, source_url, params, done_event)
 
             if is_private:
                 try:
@@ -373,6 +169,296 @@ class RestrictForward(BasePlugin):
             self._show_error(f"Critical exception: {str(e)}")
             if done_event: done_event.set()
 
+    # -------------------------------------------------------------------------
+    # Comment forwarding – uses the official getDiscussionMessage API
+    # -------------------------------------------------------------------------
+    def _handle_comment_direct(self, account, channel_peer, comment_id, source_url, params, done_event):
+        TLRPC = find_class("org.telegram.tgnet.TLRPC")
+        ConnectionsManager = find_class("org.telegram.tgnet.ConnectionsManager")
+        RequestDelegate = find_class("org.telegram.tgnet.RequestDelegate")
+
+        if not TLRPC or not ConnectionsManager or not RequestDelegate:
+            self._show_error("Core classes missing for comment forwarding.")
+            if done_event: done_event.set()
+            return
+
+        req = TLRPC.TL_messages_getDiscussionMessage()
+        req.peer = channel_peer
+        req.msg_id = jint(comment_id)
+
+        class DiscussionMessageDelegate(dynamic_proxy(RequestDelegate)):
+            def __init__(self, plugin, account, source_url, params, done_event):
+                super().__init__()
+                self.plugin = plugin
+                self.account = account
+                self.source_url = source_url
+                self.params = params
+                self.done_event = done_event
+
+            def run(self, response, error):
+                if error is not None:
+                    self.plugin._show_error(f"Failed to fetch comment: {error.text}")
+                    if self.done_event: self.done_event.set()
+                    return
+
+                # The response contains a single message or an array of messages
+                messages = response.messages
+                if messages is None or messages.size() == 0:
+                    self.plugin._show_error("Comment not found.")
+                    if self.done_event: self.done_event.set()
+                    return
+
+                comment_msg = messages.get(0)
+                msg_list = [comment_msg]
+
+                try:
+                    destination_peer = self.plugin._get_current_peer_compiled(self.account, self.params)
+                    if destination_peer is None:
+                        self.plugin._show_error("Destination chat context missing.")
+                        if self.done_event: self.done_event.set()
+                        return
+
+                    self.plugin._send_cloned_via_helper_static(
+                        self.account, msg_list, destination_peer, self.source_url, self.done_event
+                    )
+                except Exception as e:
+                    self.plugin._show_error(f"Error forwarding comment: {str(e)}")
+                    if self.done_event: self.done_event.set()
+
+        ConnectionsManager.getInstance(account).sendRequest(req, DiscussionMessageDelegate(self, account, source_url, params, done_event))
+
+    # -------------------------------------------------------------------------
+    # Original fetch + clone (unchanged)
+    # -------------------------------------------------------------------------
+    def _fetch_messages(self, account, resolved_peer, message_id, chat_object, source_url, params, done_event):
+        TLRPC = find_class("org.telegram.tgnet.TLRPC")
+        ConnectionsManager = find_class("org.telegram.tgnet.ConnectionsManager")
+        connections = ConnectionsManager.getInstance(account)
+        RequestDelegate = find_class("org.telegram.tgnet.RequestDelegate")
+
+        msg_req = TLRPC.TL_messages_getHistory()
+        msg_req.peer = resolved_peer
+        msg_req.offset_id = jint(message_id + 5)
+        msg_req.offset_date = jint(0)
+        msg_req.add_offset = jint(0)
+        msg_req.limit = jint(15)
+        msg_req.max_id = jint(0)
+        msg_req.min_id = jint(0)
+        msg_req.hash = jlong(0)
+
+        class GetHistoryDelegate(dynamic_proxy(RequestDelegate)):
+            def __init__(self, plugin, current_account, source_peer, target_params, src_chat, src_url, done_evt):
+                super().__init__()
+                self.plugin = plugin
+                self.account = current_account
+                self.source_peer = source_peer
+                self.target_params = target_params
+                self.src_chat = src_chat
+                self.source_url = src_url
+                self.done_event = done_evt
+
+            def run(self, response, error):
+                if error is not None:
+                    self.plugin._show_error(f"Failed to fetch history: {error.text}")
+                    if self.done_event: self.done_event.set()
+                    return
+
+                messages = response.messages
+                if messages is None or messages.size() == 0:
+                    self.plugin._show_error("Channel history inaccessible.")
+                    if self.done_event: self.done_event.set()
+                    return
+
+                target_msg = None
+                for i in range(messages.size()):
+                    m = messages.get(i)
+                    if m.id == message_id:
+                        target_msg = m
+                        break
+
+                if target_msg is None:
+                    self.plugin._show_error("Target message ID not found.")
+                    if self.done_event: self.done_event.set()
+                    return
+
+                messages_to_process = self.plugin._create_int_arraylist()
+                message_objects_list = []
+
+                grouped_id = getattr(target_msg, 'grouped_id', jlong(0))
+
+                if grouped_id != 0:
+                    for i in range(messages.size() - 1, -1, -1):
+                        m = messages.get(i)
+                        if getattr(m, 'grouped_id', jlong(0)) == grouped_id:
+                            messages_to_process.add(jint(m.id))
+                            message_objects_list.append(m)
+                else:
+                    messages_to_process.add(jint(target_msg.id))
+                    message_objects_list.append(target_msg)
+
+                try:
+                    destination_peer = self.plugin._get_current_peer_compiled(self.account, self.target_params)
+                    if destination_peer is None:
+                        self.plugin._show_error("Destination chat context missing.")
+                        if self.done_event: self.done_event.set()
+                        return
+
+                    self._send_cloned_via_helper(message_objects_list, destination_peer, self.source_url)
+
+                except Exception as e:
+                    self.plugin._show_error(f"Execution handling failure: {str(e)}")
+                    if self.done_event: self.done_event.set()
+
+            def _send_cloned_via_helper(self, msg_list, dest_peer, source_url):
+                self.plugin._send_cloned_via_helper_static(self.account, msg_list, dest_peer, source_url, self.done_event)
+
+        connections.sendRequest(msg_req, GetHistoryDelegate(self, account, resolved_peer, params, chat_object, source_url, done_event))
+
+    # -------------------------------------------------------------------------
+    # Shared clone helper (used by both comment and normal messages)
+    # -------------------------------------------------------------------------
+    def _send_cloned_via_helper_static(self, account, msg_list, dest_peer, source_url, done_event):
+        TLRPC = find_class("org.telegram.tgnet.TLRPC")
+        ConnectionsManager = find_class("org.telegram.tgnet.ConnectionsManager")
+        RequestDelegate = find_class("org.telegram.tgnet.RequestDelegate")
+
+        if not TLRPC or not ConnectionsManager or not RequestDelegate:
+            self._show_error("Core classes missing for cloning.")
+            if done_event: done_event.set()
+            return
+
+        main_text = ""
+        for m in msg_list:
+            txt = getattr(m, 'message', "") or ""
+            if txt:
+                main_text = txt
+                break
+        final_text = main_text
+        if final_text:
+            final_text += "\n\n" + source_url
+        else:
+            final_text = source_url
+
+        media_messages = [m for m in msg_list if hasattr(m, 'media') and m.media and not isinstance(m.media, TLRPC.TL_messageMediaEmpty)]
+
+        if len(media_messages) > 1:
+            multi_req = TLRPC.TL_messages_sendMultiMedia()
+            multi_req.peer = dest_peer
+
+            single_media_list = self._create_int_arraylist()
+            for idx, m in enumerate(media_messages):
+                media_obj = m.media
+                single_media = TLRPC.TL_inputSingleMedia()
+                single_media.random_id = jlong(Random().nextLong() & 0x7FFFFFFFFFFFFFFF)
+
+                if "TL_messageMediaDocument" in media_obj.getClass().getName() and getattr(media_obj, 'document', None):
+                    input_media = TLRPC.TL_inputMediaDocument()
+                    input_media.id = TLRPC.TL_inputDocument()
+                    input_media.id.id = jlong(media_obj.document.id)
+                    input_media.id.access_hash = jlong(media_obj.document.access_hash)
+                    input_media.id.file_reference = media_obj.document.file_reference
+                    single_media.media = input_media
+                elif "TL_messageMediaPhoto" in media_obj.getClass().getName() and getattr(media_obj, 'photo', None):
+                    input_media = TLRPC.TL_inputMediaPhoto()
+                    input_media.id = TLRPC.TL_inputPhoto()
+                    input_media.id.id = jlong(media_obj.photo.id)
+                    input_media.id.access_hash = jlong(media_obj.photo.access_hash)
+                    input_media.id.file_reference = media_obj.photo.file_reference
+                    single_media.media = input_media
+                else:
+                    continue
+
+                single_media.message = final_text if idx == 0 else ""
+                single_media_list.add(single_media)
+
+            multi_req.multi_media = single_media_list
+
+            class MultiMediaDelegate(dynamic_proxy(RequestDelegate)):
+                def __init__(self, plugin, account, done_evt):
+                    super().__init__()
+                    self.plugin = plugin
+                    self.account = account
+                    self.done_event = done_evt
+                def run(self, resp, err):
+                    if err is not None:
+                        self.plugin._show_error(f"Album send failed: {err.text}")
+                    else:
+                        self.plugin._process_updates(resp, self.account)
+                    if self.done_event: self.done_event.set()
+
+            ConnectionsManager.getInstance(account).sendRequest(multi_req, MultiMediaDelegate(self, account, done_event))
+        elif len(media_messages) == 1:
+            m = media_messages[0]
+            media_obj = m.media
+            send_req = None
+            if "TL_messageMediaDocument" in media_obj.getClass().getName() and getattr(media_obj, 'document', None):
+                input_media = TLRPC.TL_inputMediaDocument()
+                input_media.id = TLRPC.TL_inputDocument()
+                input_media.id.id = jlong(media_obj.document.id)
+                input_media.id.access_hash = jlong(media_obj.document.access_hash)
+                input_media.id.file_reference = media_obj.document.file_reference
+                send_req = TLRPC.TL_messages_sendMedia()
+                send_req.media = input_media
+            elif "TL_messageMediaPhoto" in media_obj.getClass().getName() and getattr(media_obj, 'photo', None):
+                input_media = TLRPC.TL_inputMediaPhoto()
+                input_media.id = TLRPC.TL_inputPhoto()
+                input_media.id.id = jlong(media_obj.photo.id)
+                input_media.id.access_hash = jlong(media_obj.photo.access_hash)
+                input_media.id.file_reference = media_obj.photo.file_reference
+                send_req = TLRPC.TL_messages_sendMedia()
+                send_req.media = input_media
+
+            if send_req:
+                send_req.peer = dest_peer
+                send_req.message = final_text
+                send_req.random_id = jlong(Random().nextLong() & 0x7FFFFFFFFFFFFFFF)
+
+                class ClonedMediaDelegate(dynamic_proxy(RequestDelegate)):
+                    def __init__(self, plugin, account, done_evt):
+                        super().__init__()
+                        self.plugin = plugin
+                        self.account = account
+                        self.done_event = done_evt
+                    def run(self, resp, err):
+                        if err is not None:
+                            self.plugin._show_error(f"Cloned media failed: {err.text}")
+                        else:
+                            self.plugin._process_updates(resp, self.account)
+                        if self.done_event: self.done_event.set()
+
+                ConnectionsManager.getInstance(account).sendRequest(send_req, ClonedMediaDelegate(self, account, done_event))
+            else:
+                self._show_error("Unsupported media type.")
+                if done_event: done_event.set()
+        else:
+            if final_text.strip():
+                msg_req = TLRPC.TL_messages_sendMessage()
+                msg_req.peer = dest_peer
+                msg_req.message = final_text
+                msg_req.random_id = jlong(Random().nextLong() & 0x7FFFFFFFFFFFFFFF)
+
+                class ClonedTextDelegate(dynamic_proxy(RequestDelegate)):
+                    def __init__(self, plugin, account, done_evt):
+                        super().__init__()
+                        self.plugin = plugin
+                        self.account = account
+                        self.done_event = done_evt
+                    def run(self, resp, err):
+                        if err is not None:
+                            self.plugin._show_error(f"Cloned text failed: {err.text}")
+                        else:
+                            self.plugin._process_updates(resp, self.account)
+                        if self.done_event: self.done_event.set()
+
+                ConnectionsManager.getInstance(account).sendRequest(msg_req, ClonedTextDelegate(self, account, done_event))
+            else:
+                if done_event: done_event.set()
+
+        self._show_success("Message forwarded with source!")
+
+    # -------------------------------------------------------------------------
+    # Helper methods (unchanged)
+    # -------------------------------------------------------------------------
     def _get_dialog_id_from_peer(self, peer):
         if hasattr(peer, 'chat_id') and peer.chat_id != 0:
             return jlong(-peer.chat_id)
