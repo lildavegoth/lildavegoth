@@ -763,6 +763,17 @@
         .submission-buttons .submission-btn {
             flex: 1;
         }
+        
+        .two-column-buttons {
+            display: flex;
+            gap: 12px;
+            margin: 0.6rem 0;
+        }
+
+        .two-column-buttons .card-list-item {
+            flex: 1;
+            margin: 0;
+        }
 
         @media (min-width: 720px) {
             .main {
@@ -1380,6 +1391,8 @@
                     var link = target.querySelector('a');
                     if (link) {
                         window.location.href = link.getAttribute('href');
+                    } else if (target.getAttribute('data-url')) {
+                        window.location.href = target.getAttribute('data-url');
                     }
                 } else if (target.classList.contains('submission-btn')) {
                     target.classList.add('submission-btn-clicked');
@@ -1393,6 +1406,16 @@
                     }
                 }
             });
+        }
+        
+        function processTwoColumnButtons(html) {
+            html = html.replace(/<code>\s*\[([^\]]+)\]\(([^)]+)\)\s*\|\s*\[([^\]]+)\]\(([^)]+)\)\s*<\/code>/gi, function(match, text1, url1, text2, url2) {
+                return '<div class="two-column-buttons">' +
+                    '<div class="card-list-item" data-url="' + url1 + '">' + text1 + '</div>' +
+                    '<div class="card-list-item" data-url="' + url2 + '">' + text2 + '</div>' +
+                    '</div>';
+            });
+            return html;
         }
 
         async function fetchAndShowMoreArticles(currentSlug) {
@@ -1641,6 +1664,7 @@
                 processed = marked.parse(processed);
                 processed = processGalleryBlocks(processed);
                 processed = processCardListBlocks(processed);
+                processed = processTwoColumnButtons(processed);
                 document.getElementById('articleContent').innerHTML = processed;
                 enhanceContent();
                 if (article.submission) {
