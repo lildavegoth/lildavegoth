@@ -283,17 +283,19 @@ bot.callbackQuery("auto_reactions_toggle", async (ctx) => {
             .from("auto_reactions")
             .upsert({ user_id: ctx.from.id, enabled: newState });
 
-        const label = newState ? "Auto Reactions: On" : "Auto Reactions: Off";
-
-        await ctx.editMessageReplyMarkup({
-            inline_keyboard: [
-                [{ text: "Connect", callback_data: "connect_prompt" }],
-                [{ text: "Channels", callback_data: "list_channels" }],
-                [{ text: label, callback_data: "auto_reactions_toggle" }],
-            ],
-        });
-
         await ctx.answerCallbackQuery();
+        await ctx.deleteMessage();
+
+        const label = newState ? "Auto Reactions: On" : "Auto Reactions: Off";
+        return ctx.reply("Do you want me to post to your channel or something?", {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "Connect", callback_data: "connect_prompt" }],
+                    [{ text: "Channels", callback_data: "list_channels" }],
+                    [{ text: label, callback_data: "auto_reactions_toggle" }],
+                ],
+            },
+        });
     } catch {
         await ctx.answerCallbackQuery("Failed to toggle. Please try again.");
     }
