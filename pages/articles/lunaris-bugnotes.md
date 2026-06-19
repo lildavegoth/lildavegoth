@@ -16,6 +16,8 @@ Android 16 by [NothingHere03](https://t.me/NothingHere03) Stock Kernel
 - icon in home screen desktop always gone after the screen is unlocked (turn on the screen), open any app in dock to fix it
 - new apps still delayed to be added in desktop (not app drawer)
 - sometimes, any app cannot be accessed at all, like it's refuses to be open (restart device to fix)
+- Bubble feature cannot be opened sometimes, like open from home screen and notification will not open the app in Bubble
+- Bubble can only open one app at a time (when you have 2 apps in Bubble, one of the app that not used will be killed by the system)
 
 ---
 
