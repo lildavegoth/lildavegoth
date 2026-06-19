@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 function getRawBody(req) {
     return new Promise((resolve, reject) => {
@@ -9,7 +9,7 @@ function getRawBody(req) {
     });
 }
 
-module.exports = async (req, res) => {
+export default async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     if (req.method === 'OPTIONS') return res.status(200).end();
 
