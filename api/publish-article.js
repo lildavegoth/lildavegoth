@@ -1,4 +1,10 @@
 import jwt from 'jsonwebtoken';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 function getRawBody(req) {
     return new Promise((resolve, reject) => {
@@ -94,72 +100,34 @@ ${content}`;
         }
     };
 
-    const getArticlesJsonAndSha = async () => {
-        const url = `https://api.github.com/repos/${owner}/${repo}/contents/files/fetch/articles.json?ref=${branch}`;
-        const response = await fetch(url, {
-            headers: { Authorization: `token ${ghToken}` }
-        });
-        if (!response.ok) return { content: '[]', sha: null };
-        const data = await response.json();
-        const content = Buffer.from(data.content, 'base64').toString('utf8');
-        return { content, sha: data.sha };
-    };
-
     try {
         await putFile(mdPath, mdBase64, `Update article ${title}`);
 
-        const maxRetries = 5;
-        for (let i = 0; i < maxRetries; i++) {
-            const { content: articlesContent, sha: articlesSha } = await getArticlesJsonAndSha();
-            let articlesData = JSON.parse(articlesContent || '[]');
-            if (!Array.isArray(articlesData)) articlesData = [];
+        const { error: supabaseError } = await supabase
+            .from('articles')
+            .upsert({
+                slug,
+                title,
+                date: date || null,
+                image: image || null,
+                description: description || null,
+                categories: categories || null,
+                badge: badge || null,
+                number: number ? parseInt(number, 10) : null,
+                hidden: hidden ? true : false,
+                submission: submission ? true : false,
+                author: author || 'lildavegoth',
+                profile: profile || 'https://t.me/lildavegoth',
+                updated_at: new Date().toISOString(),
+            }, { onConflict: 'slug' });
 
-            const newEntry = {
-                name: title,
-                categories: categories,
-                image: image,
-                link: `article-page.html?slug=${slug}`,
-                description: description,
-                date: date,
-            };
-            if (hidden) newEntry.hidden = true;
-            if (submission) newEntry.submission = true;
-            if (badge) {
-                newEntry.badge = badge;
-                if (badge === 'highlight' && number) {
-                    newEntry.number = parseInt(number, 10);
-                }
-            }
-
-            let found = false;
-            articlesData = articlesData.map(entry => {
-                if (entry.link && entry.link.includes(`slug=${slug}`)) {
-                    found = true;
-                    return Object.assign({}, entry, newEntry);
-                }
-                return entry;
-            });
-            if (!found) {
-                articlesData.push(newEntry);
-            }
-
-            const updatedJson = JSON.stringify(articlesData, null, 2);
-            try {
-                await putFile(
-                    'files/fetch/articles.json',
-                    Buffer.from(updatedJson).toString('base64'),
-                    `Update articles.json for ${title}`,
-                    articlesSha
-                );
-                break;
-            } catch (err) {
-                if (i === maxRetries - 1) throw err;
-                await new Promise(r => setTimeout(r, 500));
-            }
+        if (supabaseError) {
+            console.error('Supabase upsert failed:', supabaseError);
+            return res.status(500).json({ error: 'Failed to update database' });
         }
 
         res.status(200).json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: 'GitHub commit failed' });
+        res.status(500).json({ error: 'GitHub commit or database update failed' });
     }
-};
+};.
