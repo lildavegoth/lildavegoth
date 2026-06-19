@@ -5,7 +5,7 @@ image: "images/batchdeb.webp"
 author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
 description: "Still using Debloater apps and modules? Why bother restarting your device to uninstall system apps when you can do it just by copy and paste text? Restart device after Debloating apps is unnecessary, but..."
-categories: "Tutorials, App, Useful"
+categories: "Tutorials, Apps, Useful"
 ---
 Still using Debloater apps and modules? Why bother restarting your device to uninstall system apps when you can do it just by copy and paste text?
 
