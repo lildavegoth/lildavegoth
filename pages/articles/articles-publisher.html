@@ -893,9 +893,9 @@
         });
 
         async function loadArticleList() {
-            var res = await fetch('https://raw.githubusercontent.com/lildavegoth/lildavegoth/homepage/files/fetch/articles.json?t=' + Date.now());
+            var res = await fetch('/api/articles-list?t=' + Date.now());
             var data = await res.json();
-            articlesData = Array.isArray(data) ? data : data.allArticles;
+            articlesData = Array.isArray(data) ? data : [];
             pinnedSlugs = JSON.parse(localStorage.getItem('pinnedSlugs') || '[]');
             articlesData.sort(function(a, b) {
                 return (b.date || '').localeCompare(a.date || '');
@@ -905,7 +905,7 @@
         }
 
         function isBugNotesArticle(art) {
-            var slug = art.link.split('slug=')[1]?.split('&')[0];
+            var slug = art.link ? art.link.split('slug=')[1]?.split('&')[0] : art.slug;
             return slug && slug.toLowerCase().includes('-bugnotes');
         }
 
@@ -928,15 +928,15 @@
             if (term) {
                 term = term.trim().toLowerCase();
                 folderArticles = folderArticles.filter(function(art) {
-                    var slug = art.link.split('slug=')[1]?.split('&')[0];
+                    var slug = art.link ? art.link.split('slug=')[1]?.split('&')[0] : art.slug;
                     return (art.name && art.name.toLowerCase().includes(term)) ||
                            (slug && slug.toLowerCase().includes(term)) ||
                            (art.description && art.description.toLowerCase().includes(term));
                 });
             }
             folderArticles.sort(function(a, b) {
-                var slugA = a.link.split('slug=')[1]?.split('&')[0];
-                var slugB = b.link.split('slug=')[1]?.split('&')[0];
+                var slugA = a.link ? a.link.split('slug=')[1]?.split('&')[0] : a.slug;
+                var slugB = b.link ? b.link.split('slug=')[1]?.split('&')[0] : b.slug;
                 var aPinned = pinnedSlugs.indexOf(slugA) > -1 ? 1 : 0;
                 var bPinned = pinnedSlugs.indexOf(slugB) > -1 ? 1 : 0;
                 if (aPinned !== bPinned) return bPinned - aPinned;
@@ -950,7 +950,7 @@
             var list = document.getElementById('articleList');
             list.innerHTML = '';
             articles.forEach(function(art) {
-                var slug = art.link.split('slug=')[1]?.split('&')[0];
+                var slug = art.link ? art.link.split('slug=')[1]?.split('&')[0] : art.slug;
                 if (!slug) return;
                 var card = document.createElement('div');
                 card.className = 'article-card';
@@ -1266,7 +1266,7 @@
                 var suggestions = folderArticles.slice(0, 5);
                 if (suggestions.length) {
                     suggestionsContainer.innerHTML = suggestions.map(function(item) {
-                        var slug = item.link.split('slug=')[1]?.split('&')[0];
+                        var slug = item.link ? item.link.split('slug=')[1]?.split('&')[0] : item.slug;
                         return '<div class="search-suggestion-item" data-slug="' + slug + '">' +
                             '<div class="suggestion-title">' + item.name + '</div>' +
                             '<div class="suggestion-description">' + (item.description || '') + '</div>' +
