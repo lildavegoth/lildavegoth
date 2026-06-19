@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
@@ -22,8 +24,6 @@ export default async function handler(req, res) {
         try {
             const key = Buffer.from(process.env.PRODUCTS_KEY.padEnd(32).slice(0, 32), 'utf8');
             const encPath = `files/fetch/kiraku-store/${type}.json.enc`;
-            const fs = await import('fs');
-            const path = await import('path');
             const fullPath = path.join(process.cwd(), encPath);
             const encData = fs.readFileSync(fullPath, 'utf8');
             const [ivHex, cipherHex] = encData.split(':');
