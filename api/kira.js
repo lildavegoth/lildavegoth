@@ -43,7 +43,7 @@ const postButtons = new Map();
 const pendingKiraAction = new Map();
 const pendingImageEditAction = new Map();
 
-const REACT_EMOJIS = ["👍","👎","❤","🔥","🥰","👏","😁","🤔","🤯","😱","🤬","😢","🎉","🤩","🤮","💩","🙏","👌","🕊","🤡","🥱","🥴","😍","🐳","🌚","🌭","💯","🤣","⚡","🍌","🏆","💔","🤨","😐","🍓","🍾","💋","🖕","😈","😴","😭","🤓","👻","👀","🎃","🙈","😇","😨","🤝","✍","🤗","🫡","🎅","🎄","☃","💅","🤪","🗿","🆒","💘","🙉","🦄","😘","💊","🙊","😎","👾","🤷","🤷‍♀","😡"];
+const REACT_EMOJIS = ["👍","🔥","👌","😢","❤️","👏","😱","😭"];
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "change-me-to-a-strong-random-string";
 
