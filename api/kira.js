@@ -43,8 +43,6 @@ const postButtons = new Map();
 const pendingKiraAction = new Map();
 const pendingImageEditAction = new Map();
 
-const REACT_EMOJIS = ["👍","🔥","👌","😢","❤️","👏","😱","😭"];
-
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "change-me-to-a-strong-random-string";
 
 function encryptToken(plain) {
@@ -127,41 +125,6 @@ bot.use(async (ctx, next) => {
             language: user.language_code,
         });
     }
-    return next();
-});
-
-bot.on("message", async (ctx, next) => {
-    if (!ctx.from) return next();
-    if (ctx.chat?.type === "private") return next();
-    const msg = ctx.message;
-    if (!msg || msg.text?.startsWith("/")) return next();
-
-    try {
-        const { data, error } = await supabase
-            .from("auto_reactions")
-            .select("user_id, enabled")
-            .eq("user_id", ctx.from.id)
-            .maybeSingle();
-
-        if (error || !data || !data.enabled) return next();
-
-        const { data: channels } = await supabase
-            .from("user_channels")
-            .select("channel_id")
-            .eq("user_id", ctx.from.id);
-
-        if (!channels || channels.length === 0) return next();
-
-        const isConnected = channels.some((c) => c.channel_id == ctx.chat.id);
-        if (!isConnected) return next();
-
-        const emoji = REACT_EMOJIS[Math.floor(Math.random() * REACT_EMOJIS.length)];
-        await ctx.api.setMessageReaction(ctx.chat.id, msg.message_id, [{
-            type: "emoji",
-            emoji: emoji,
-        }], { is_big: true });
-    } catch {}
-
     return next();
 });
 
