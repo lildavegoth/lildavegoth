@@ -36,13 +36,14 @@ try {
 const MAX_DIRECT_MB = 0;
 
 const mirrorJobs = new Map();
-const pendingRenames = new Map();
 const fetchMessages = new Map();
 const pendingAdminAction = new Map();
 const pendingConnectAction = new Map();
 const postButtons = new Map();
 const pendingKiraAction = new Map();
 const pendingImageEditAction = new Map();
+
+const REACT_EMOJIS = ["👍","👎","❤","🔥","🥰","👏","😁","🤔","🤯","😱","🤬","😢","🎉","🤩","🤮","💩","🙏","👌","🕊","🤡","🥱","🥴","😍","🐳","🌚","🌭","💯","🤣","⚡","🍌","🏆","💔","🤨","😐","🍓","🍾","💋","🖕","😈","😴","😭","🤓","👻","👀","🎃","🙈","😇","😨","🤝","✍","🤗","🫡","🎅","🎄","☃","💅","🤪","🗿","🆒","💘","🙉","🦄","😘","💊","🙊","😎","👾","🤷","🤷‍♀","😡"];
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "change-me-to-a-strong-random-string";
 
@@ -54,10 +55,6 @@ function encryptToken(plain) {
         encrypted[i] = plainBytes[i] ^ key[i % key.length];
     }
     return encrypted.toString("base64");
-}
-
-function pendingKey(chatId, userId) {
-    return `${chatId}:${userId}`;
 }
 
 async function isUnderMaintenance() {
@@ -130,6 +127,39 @@ bot.use(async (ctx, next) => {
             language: user.language_code,
         });
     }
+    return next();
+});
+
+bot.on("message", async (ctx, next) => {
+    if (ctx.chat.type === "private") return next();
+    if (!ctx.message || ctx.message.text?.startsWith("/")) return next();
+
+    try {
+        const { data, error } = await supabase
+            .from("auto_reactions")
+            .select("user_id, enabled")
+            .eq("user_id", ctx.from.id)
+            .maybeSingle();
+
+        if (error || !data || !data.enabled) return next();
+
+        const { data: channels } = await supabase
+            .from("user_channels")
+            .select("channel_id")
+            .eq("user_id", ctx.from.id);
+
+        if (!channels || channels.length === 0) return next();
+
+        const isConnected = channels.some((c) => c.channel_id == ctx.chat.id);
+        if (!isConnected) return next();
+
+        const emoji = REACT_EMOJIS[Math.floor(Math.random() * REACT_EMOJIS.length)];
+        await ctx.api.setMessageReaction(ctx.chat.id, ctx.message.message_id, [{
+            type: "emoji",
+            emoji: emoji,
+        }], { is_big: true });
+    } catch {}
+
     return next();
 });
 
@@ -225,8 +255,35 @@ bot.command("connect", async (ctx) => {
             inline_keyboard: [
                 [{ text: "Connect", callback_data: "connect_prompt" }],
                 [{ text: "Channels", callback_data: "list_channels" }],
+                [{ text: "Auto Reactions: 🔴 Off", callback_data: "auto_reactions_toggle" }],
             ],
         },
+    });
+});
+
+bot.callbackQuery("auto_reactions_toggle", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const { data: row } = await supabase
+        .from("auto_reactions")
+        .select("enabled")
+        .eq("user_id", ctx.from.id)
+        .maybeSingle();
+
+    const current = row ? row.enabled : false;
+    const newState = !current;
+
+    await supabase
+        .from("auto_reactions")
+        .upsert({ user_id: ctx.from.id, enabled: newState });
+
+    const label = newState ? "Auto Reactions: 🟢 On" : "Auto Reactions: 🔴 Off";
+
+    await ctx.editMessageReplyMarkup({
+        inline_keyboard: [
+            [{ text: "Connect", callback_data: "connect_prompt" }],
+            [{ text: "Channels", callback_data: "list_channels" }],
+            [{ text: label, callback_data: "auto_reactions_toggle" }],
+        ],
     });
 });
 
@@ -235,8 +292,30 @@ bot.callbackQuery("connect_prompt", async (ctx) => {
     await ctx.deleteMessage();
     pendingConnectAction.set(ctx.from.id, "connect");
     return ctx.reply(
-        "Send me your channel ID and add me as an admin to let me post to your channel, you can add me in 5 channels\n\nFormat: Channel Name Channel ID\nExample: Yume 1513725816"
+        "Send me your channel ID and add me as an admin to let me post to your channel, you can add me in 5 channels\n\nFormat: Channel Name Channel ID\nExample: Yume 1513725816",
+        {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "Cancel", callback_data: "connect_cancel" }],
+                ],
+            },
+        }
     );
+});
+
+bot.callbackQuery("connect_cancel", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    pendingConnectAction.delete(ctx.from.id);
+    await ctx.deleteMessage();
+    return ctx.reply("Do you want me to post to your channel or something?", {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "Connect", callback_data: "connect_prompt" }],
+                [{ text: "Channels", callback_data: "list_channels" }],
+                [{ text: "Auto Reactions: 🔴 Off", callback_data: "auto_reactions_toggle" }],
+            ],
+        },
+    });
 });
 
 bot.callbackQuery("list_channels", async (ctx) => {
@@ -264,6 +343,21 @@ bot.callbackQuery("list_channels", async (ctx) => {
         reply_markup: {
             inline_keyboard: [
                 [{ text: "Revoke", callback_data: "revoke_prompt" }],
+                [{ text: "Back", callback_data: "connect_back" }],
+            ],
+        },
+    });
+});
+
+bot.callbackQuery("connect_back", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await ctx.deleteMessage();
+    return ctx.reply("Do you want me to post to your channel or something?", {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "Connect", callback_data: "connect_prompt" }],
+                [{ text: "Channels", callback_data: "list_channels" }],
+                [{ text: "Auto Reactions: 🔴 Off", callback_data: "auto_reactions_toggle" }],
             ],
         },
     });
@@ -300,18 +394,6 @@ bot.command("ping", (ctx) => ctx.reply("pong"));
 
 bot.command("cancel", async (ctx) => {
     let cancelled = false;
-
-    const pk = pendingKey(ctx.chat.id, ctx.from.id);
-    const renameJobKey = pendingRenames.get(pk);
-    if (renameJobKey) {
-        pendingRenames.delete(pk);
-        const job = mirrorJobs.get(renameJobKey);
-        if (job) {
-            mirrorJobs.delete(renameJobKey);
-            try { await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId); } catch {}
-        }
-        cancelled = true;
-    }
 
     for (const [jobKey, job] of mirrorJobs) {
         if (job.chatId === ctx.chat.id && job.userId === ctx.from.id) {
@@ -537,54 +619,21 @@ bot.callbackQuery(/^mirror_dest_(drive|telegram)_(.+)$/, async (ctx) => {
         return;
     }
 
-    job.destination = destination;
+    mirrorJobs.delete(jobKey);
     await ctx.answerCallbackQuery();
     await ctx.deleteMessage();
 
-    const keyboard = {
-        reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: "Yes", callback_data: `rename_yes_${jobKey}` },
-                    { text: "No", callback_data: `rename_no_${jobKey}` },
-                ],
-            ],
-        },
-    };
-
-    const promptMsg = await ctx.reply("Do you want to rename the file before mirroring?", keyboard);
-    job.promptMessageId = promptMsg.message_id;
-});
-
-bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
-    const choice = ctx.match[1];
-    const jobKey = ctx.match[2];
-    const job = mirrorJobs.get(jobKey);
-
-    if (!job || job.chatId !== ctx.chat.id || job.userId !== ctx.from.id) {
-        await ctx.answerCallbackQuery("This action has expired. Please /mirror again.");
-        return;
-    }
-
-    await ctx.answerCallbackQuery();
-
-    if (choice === "no") {
-        mirrorJobs.delete(jobKey);
-        await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
-        let filename = job.filename;
-        if (filename === "Unknown") {
-            try {
-                const urlPath = new URL(job.url).pathname;
-                filename = decodeURIComponent(urlPath.split("/").pop()) || "file";
-            } catch {
-                filename = "file";
-            }
+    let filename = job.filename;
+    if (filename === "Unknown") {
+        try {
+            const urlPath = new URL(job.url).pathname;
+            filename = decodeURIComponent(urlPath.split("/").pop()) || "file";
+        } catch {
+            filename = "file";
         }
-        await startMirror(ctx, job.url, filename, job.destination);
-    } else {
-        await ctx.editMessageText("Send the new file name:");
-        pendingRenames.set(pendingKey(ctx.chat.id, ctx.from.id), jobKey);
     }
+
+    await startMirror(ctx, job.url, filename, destination);
 });
 
 async function startMirror(ctx, url, filename, destination) {
@@ -855,7 +904,7 @@ bot.command("post", async (ctx) => {
     if (ctx.chat.type !== "private") return;
     const reply = ctx.message?.reply_to_message;
     if (!reply) {
-        return ctx.reply("Reply to a message with /post to create a post.");
+        return ctx.reply("Connect your channel first in /connect menu, and reply to a message with /post to create a post.");
     }
 
     const originalText = reply.text || reply.caption || "";
@@ -1279,20 +1328,6 @@ bot.on(":left_chat_member", async (ctx) => {
 });
 
 bot.on("message:text", async (ctx) => {
-    const pk = pendingKey(ctx.chat.id, ctx.from.id);
-    const jobKey = pendingRenames.get(pk);
-    if (jobKey) {
-        pendingRenames.delete(pk);
-        const job = mirrorJobs.get(jobKey);
-        if (job) {
-            mirrorJobs.delete(jobKey);
-            const newName = ctx.message.text.trim();
-            await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
-            await startMirror(ctx, job.url, newName, job.destination);
-            return;
-        }
-    }
-
     if (pendingConnectAction.has(ctx.from.id)) {
         const action = pendingConnectAction.get(ctx.from.id);
         pendingConnectAction.delete(ctx.from.id);
