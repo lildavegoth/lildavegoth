@@ -23,13 +23,19 @@ await Promise.all(
         const botNumber = index + 1;
         bots[botNumber] = bot;
 
-        bot.on("message", async (ctx) => {
-            if (ctx.chat.type === "private") return;
+        const react = async (ctx) => {
             try {
+                const msg = ctx.message || ctx.channelPost;
+                if (!msg) return;
+                if (ctx.chat?.type === "private") return;
+
+                const chatId = ctx.chat.id.toString();
+                const shortId = chatId.startsWith("-100") ? chatId.slice(4) : chatId;
+
                 const { data: channels } = await supabase
                     .from("user_channels")
                     .select("user_id")
-                    .eq("channel_id", ctx.chat.id);
+                    .or(`channel_id.eq.${chatId},channel_id.eq.${shortId}`);
 
                 if (!channels || channels.length === 0) return;
 
@@ -44,12 +50,15 @@ await Promise.all(
                 if (!autoRows || autoRows.length === 0) return;
 
                 const emoji = REACT_EMOJIS[Math.floor(Math.random() * REACT_EMOJIS.length)];
-                await ctx.api.setMessageReaction(ctx.chat.id, ctx.message.message_id, [{
+                await ctx.api.setMessageReaction(ctx.chat.id, msg.message_id, [{
                     type: "emoji",
                     emoji: emoji,
                 }], { is_big: true });
             } catch {}
-        });
+        };
+
+        bot.on("message", react);
+        bot.on("channel_post", react);
     })
 );
 
