@@ -499,17 +499,90 @@
             margin: 1rem 0;
             border-radius: var(--radius-medium);
             overflow: hidden;
+            background: #000;
         }
 
         .video-wrapper video {
             width: 100%;
             display: block;
-            border-radius: var(--radius-medium);
+            border-radius: var(--radius-medium) var(--radius-medium) 0 0;
         }
 
-        .video-overlay-size,
-        .video-overlay-duration {
+        .video-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.8);
+        }
+
+        .video-play-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-progress {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: transparent;
+            border-radius: 4px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .video-progress::-webkit-slider-runnable-track {
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .video-progress::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 4px;
+            height: 20px;
+            background: var(--accent-color);
+            border-radius: 2px;
+            border: none;
+            margin-top: -6px;
+            box-shadow: -6px 0 0 3px transparent, 6px 0 0 3px transparent;
+        }
+
+        .video-progress::-moz-range-track {
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .video-progress::-moz-range-thumb {
+            width: 4px;
+            height: 20px;
+            background: var(--accent-color);
+            border-radius: 2px;
+            border: none;
+        }
+
+        .video-time {
+            color: #fff;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .video-overlay-size {
             position: absolute;
+            top: 8px;
+            right: 8px;
             background: rgba(0,0,0,0.6);
             color: #fff;
             padding: 2px 8px;
@@ -518,16 +591,6 @@
             line-height: 1.4;
             pointer-events: none;
             transition: opacity 0.2s;
-        }
-
-        .video-overlay-size {
-            top: 8px;
-            right: 8px;
-        }
-
-        .video-overlay-duration {
-            bottom: 8px;
-            left: 8px;
         }
 
         @keyframes slideInLeft {
@@ -1081,23 +1144,40 @@
 
                 var video = document.createElement('video');
                 video.src = src;
-                video.controls = true;
                 video.preload = 'metadata';
                 video.style.width = '100%';
                 video.style.display = 'block';
-                video.style.borderRadius = 'var(--radius-medium)';
+                video.style.borderRadius = 'var(--radius-medium) var(--radius-medium) 0 0';
 
                 var sizeOverlay = document.createElement('div');
                 sizeOverlay.className = 'video-overlay-size';
                 sizeOverlay.textContent = '...';
 
-                var durationOverlay = document.createElement('div');
-                durationOverlay.className = 'video-overlay-duration';
-                durationOverlay.textContent = '0:00';
-
                 wrapper.appendChild(video);
                 wrapper.appendChild(sizeOverlay);
-                wrapper.appendChild(durationOverlay);
+
+                var controls = document.createElement('div');
+                controls.className = 'video-controls';
+
+                var playBtn = document.createElement('button');
+                playBtn.className = 'video-play-btn';
+                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+
+                var progress = document.createElement('input');
+                progress.type = 'range';
+                progress.className = 'video-progress';
+                progress.min = 0;
+                progress.max = 100;
+                progress.value = 0;
+
+                var timeDisplay = document.createElement('span');
+                timeDisplay.className = 'video-time';
+                timeDisplay.textContent = '0:00 / 0:00';
+
+                controls.appendChild(playBtn);
+                controls.appendChild(progress);
+                controls.appendChild(timeDisplay);
+                wrapper.appendChild(controls);
 
                 img.parentNode.replaceChild(wrapper, img);
 
@@ -1121,28 +1201,47 @@
                         sizeOverlay.textContent = '?';
                     });
 
+                function formatTime(seconds) {
+                    var mins = Math.floor(seconds / 60);
+                    var secs = Math.floor(seconds % 60);
+                    return mins + ':' + (secs < 10 ? '0' : '') + secs;
+                }
+
+                function updateProgress() {
+                    var percent = (video.currentTime / video.duration) * 100;
+                    progress.value = percent;
+                    progress.style.background = 'linear-gradient(to right, var(--accent-color) ' + percent + '%, transparent ' + percent + '%)';
+                    timeDisplay.textContent = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
+                }
+
                 video.addEventListener('loadedmetadata', function() {
-                    var duration = video.duration;
-                    if (!isNaN(duration)) {
-                        var mins = Math.floor(duration / 60);
-                        var secs = Math.floor(duration % 60);
-                        durationOverlay.textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
+                    progress.max = 100;
+                    updateProgress();
+                });
+
+                video.addEventListener('timeupdate', updateProgress);
+
+                progress.addEventListener('input', function() {
+                    var seekTime = (this.value / 100) * video.duration;
+                    video.currentTime = seekTime;
+                });
+
+                playBtn.addEventListener('click', function() {
+                    if (video.paused) {
+                        video.play();
+                        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                        sizeOverlay.style.opacity = '0';
+                    } else {
+                        video.pause();
+                        playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                        sizeOverlay.style.opacity = '1';
                     }
                 });
 
-                function showOverlays() {
+                video.addEventListener('ended', function() {
+                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
                     sizeOverlay.style.opacity = '1';
-                    durationOverlay.style.opacity = '1';
-                }
-
-                function hideOverlays() {
-                    sizeOverlay.style.opacity = '0';
-                    durationOverlay.style.opacity = '0';
-                }
-
-                video.addEventListener('play', hideOverlays);
-                video.addEventListener('pause', showOverlays);
-                video.addEventListener('ended', showOverlays);
+                });
             });
         }
 
