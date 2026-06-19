@@ -250,41 +250,53 @@ bot.callbackQuery("admin_restart", async (ctx) => {
 
 bot.command("connect", async (ctx) => {
     if (ctx.chat.type !== "private") return;
+    const { data: row } = await supabase
+        .from("auto_reactions")
+        .select("enabled")
+        .eq("user_id", ctx.from.id)
+        .maybeSingle();
+    const enabled = row ? row.enabled : false;
+    const label = enabled ? "Auto Reactions: On" : "Auto Reactions: Off";
     return ctx.reply("Do you want me to post to your channel or something?", {
         reply_markup: {
             inline_keyboard: [
                 [{ text: "Connect", callback_data: "connect_prompt" }],
                 [{ text: "Channels", callback_data: "list_channels" }],
-                [{ text: "Auto Reactions: 🔴 Off", callback_data: "auto_reactions_toggle" }],
+                [{ text: label, callback_data: "auto_reactions_toggle" }],
             ],
         },
     });
 });
 
 bot.callbackQuery("auto_reactions_toggle", async (ctx) => {
-    await ctx.answerCallbackQuery();
-    const { data: row } = await supabase
-        .from("auto_reactions")
-        .select("enabled")
-        .eq("user_id", ctx.from.id)
-        .maybeSingle();
+    try {
+        const { data: row } = await supabase
+            .from("auto_reactions")
+            .select("enabled")
+            .eq("user_id", ctx.from.id)
+            .maybeSingle();
 
-    const current = row ? row.enabled : false;
-    const newState = !current;
+        const current = row ? row.enabled : false;
+        const newState = !current;
 
-    await supabase
-        .from("auto_reactions")
-        .upsert({ user_id: ctx.from.id, enabled: newState });
+        await supabase
+            .from("auto_reactions")
+            .upsert({ user_id: ctx.from.id, enabled: newState });
 
-    const label = newState ? "Auto Reactions: 🟢 On" : "Auto Reactions: 🔴 Off";
+        const label = newState ? "Auto Reactions: On" : "Auto Reactions: Off";
 
-    await ctx.editMessageReplyMarkup({
-        inline_keyboard: [
-            [{ text: "Connect", callback_data: "connect_prompt" }],
-            [{ text: "Channels", callback_data: "list_channels" }],
-            [{ text: label, callback_data: "auto_reactions_toggle" }],
-        ],
-    });
+        await ctx.editMessageReplyMarkup({
+            inline_keyboard: [
+                [{ text: "Connect", callback_data: "connect_prompt" }],
+                [{ text: "Channels", callback_data: "list_channels" }],
+                [{ text: label, callback_data: "auto_reactions_toggle" }],
+            ],
+        });
+
+        await ctx.answerCallbackQuery();
+    } catch {
+        await ctx.answerCallbackQuery("Failed to toggle. Please try again.");
+    }
 });
 
 bot.callbackQuery("connect_prompt", async (ctx) => {
@@ -312,7 +324,7 @@ bot.callbackQuery("connect_cancel", async (ctx) => {
             inline_keyboard: [
                 [{ text: "Connect", callback_data: "connect_prompt" }],
                 [{ text: "Channels", callback_data: "list_channels" }],
-                [{ text: "Auto Reactions: 🔴 Off", callback_data: "auto_reactions_toggle" }],
+                [{ text: "Auto Reactions: Off", callback_data: "auto_reactions_toggle" }],
             ],
         },
     });
@@ -352,12 +364,19 @@ bot.callbackQuery("list_channels", async (ctx) => {
 bot.callbackQuery("connect_back", async (ctx) => {
     await ctx.answerCallbackQuery();
     await ctx.deleteMessage();
+    const { data: row } = await supabase
+        .from("auto_reactions")
+        .select("enabled")
+        .eq("user_id", ctx.from.id)
+        .maybeSingle();
+    const enabled = row ? row.enabled : false;
+    const label = enabled ? "Auto Reactions: On" : "Auto Reactions: Off";
     return ctx.reply("Do you want me to post to your channel or something?", {
         reply_markup: {
             inline_keyboard: [
                 [{ text: "Connect", callback_data: "connect_prompt" }],
                 [{ text: "Channels", callback_data: "list_channels" }],
-                [{ text: "Auto Reactions: 🔴 Off", callback_data: "auto_reactions_toggle" }],
+                [{ text: label, callback_data: "auto_reactions_toggle" }],
             ],
         },
     });
