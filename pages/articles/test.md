@@ -68,5 +68,6 @@ Text for note 2
 :::
 
 -- test
-
 -- [test](https://t.me/lildavegoth)
+
+`[Telegram](https://t.me/lildavegoth) | [WhatsApp](https://wa.me/+628888888888)`
