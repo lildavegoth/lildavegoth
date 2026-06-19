@@ -1007,9 +1007,31 @@
     
     (function() {
         function preventVideoDownload(video) {
-            video.setAttribute('oncontextmenu', 'return false');
             video.setAttribute('controlsList', 'nodownload');
-            video.setAttribute('disablePictureInPicture', 'true');
+            video.setAttribute('disablepictureinpicture', 'true');
+            video.style.webkitTouchCallout = 'none';
+            video.style.webkitUserSelect = 'none';
+            video.style.userSelect = 'none';
+            video.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            video.addEventListener('dragstart', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            var longPressTimer;
+            video.addEventListener('touchstart', function(e) {
+                longPressTimer = setTimeout(function() {
+                    e.preventDefault();
+                }, 500);
+            }, { passive: false });
+            video.addEventListener('touchend', function() {
+                clearTimeout(longPressTimer);
+            });
+            video.addEventListener('touchmove', function() {
+                clearTimeout(longPressTimer);
+            });
         }
 
         function protectAllVideos() {
