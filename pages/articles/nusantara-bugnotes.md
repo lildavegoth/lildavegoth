@@ -1,3 +1,13 @@
+---
+title: "Nusantara Bug Notes"
+date: "2021-12-12"
+image: ""
+author: "lildavegoth"
+profile: "https://t.me/lildavegoth"
+description: "Nusantara Bug Notes"
+categories: "Bug Notes, ROMs"
+hidden: true
+---
 # Nusantara 5.8 →
 - qs icon disappear (restart system ui to fix, rarely happens)
 ![qs-icon-disappear-nusan](images/qs-icon-disappear-nusan.webp)
