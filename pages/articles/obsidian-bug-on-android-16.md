@@ -2,12 +2,11 @@
 title: "Obsidian Bug on Android 16"
 date: "2026-05-21"
 image: "images/obsidian16bug.webp"
-description: "Obsidian cannot save any notes in Android 16 at all, and here's the method and tutorial to fix..."
-categories: "Tutorials, Useful, Fix"
 author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
+description: "Obsidian cannot save any notes in Android 16 at all, and here's the method and tutorial to fix..."
+categories: "Apps, Tutorials, Useful, Fix"
 ---
-
 **Obsidian** cannot save any notes in Android 16 at all, and here's the method and tutorial to fix it.
 
 # Guides →
