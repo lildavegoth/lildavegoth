@@ -55,6 +55,30 @@ function encryptToken(plain) {
     return encrypted.toString("base64");
 }
 
+function buildHtml(text, entities) {
+    if (!entities || entities.length === 0) return text;
+    const sorted = [...entities].sort((a, b) => a.offset - b.offset);
+    let result = "";
+    let lastPos = 0;
+    for (const e of sorted) {
+        result += text.slice(lastPos, e.offset).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const content = text.slice(e.offset, e.offset + e.length).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        switch (e.type) {
+            case "bold": result += `<b>${content}</b>`; break;
+            case "italic": result += `<i>${content}</i>`; break;
+            case "underline": result += `<u>${content}</u>`; break;
+            case "strikethrough": result += `<s>${content}</s>`; break;
+            case "code": result += `<code>${content}</code>`; break;
+            case "pre": result += `<pre>${content}</pre>`; break;
+            case "text_link": result += `<a href="${e.url}">${content}</a>`; break;
+            default: result += content;
+        }
+        lastPos = e.offset + e.length;
+    }
+    result += text.slice(lastPos).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return result;
+}
+
 async function isUnderMaintenance() {
     try {
         const { data, error } = await supabase
@@ -956,7 +980,8 @@ bot.command("post", async (ctx) => {
         callback_data: `post_to_channel_${c.channel_id}_${postKey}`,
     }]);
 
-    postButtons.set(postKey + "_media", { type: mediaType, fileId, cleanText, chatId: reply.chat.id, messageId: reply.message_id });
+    const originalEntities = reply.entities || reply.caption_entities || [];
+    postButtons.set(postKey + "_media", { type: mediaType, fileId, cleanText, chatId: reply.chat.id, messageId: reply.message_id, entities: originalEntities });
 
     const previewText = cleanText || (reply.photo ? "[Photo]" : reply.video ? "[Video]" : reply.document ? "[Document]" : reply.audio ? "[Audio]" : reply.voice ? "[Voice]" : "[Message]");
 
@@ -987,12 +1012,22 @@ bot.callbackQuery(/^post_to_channel_(.+)_(.+)$/, async (ctx) => {
     const { type, fileId, cleanText, chatId, messageId } = mediaData;
 
     try {
+        const { type, fileId, cleanText, chatId, messageId, entities } = mediaData;
+
+        let textToSend = cleanText || "";
+        let parseMode = undefined;
+
+        if (textToSend && entities && entities.length > 0) {
+            textToSend = buildHtml(textToSend, entities);
+            parseMode = "HTML";
+        }
+
         if (type === "text") {
-            await ctx.api.sendMessage(channelId, cleanText, { reply_markup: replyMarkup });
+            await ctx.api.sendMessage(channelId, textToSend, { reply_markup: replyMarkup, parse_mode: parseMode });
         } else if (fileId) {
-            await ctx.api.copyMessage(channelId, chatId, messageId, { reply_markup: replyMarkup, caption: cleanText || undefined });
+            await ctx.api.copyMessage(channelId, chatId, messageId, { reply_markup: replyMarkup, caption: textToSend || undefined, parse_mode: parseMode });
         } else {
-            await ctx.api.sendMessage(channelId, cleanText, { reply_markup: replyMarkup });
+            await ctx.api.sendMessage(channelId, textToSend, { reply_markup: replyMarkup, parse_mode: parseMode });
         }
         await ctx.answerCallbackQuery("Posted!");
         await ctx.deleteMessage();
