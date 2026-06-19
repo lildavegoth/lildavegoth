@@ -134,3 +134,5 @@ Some files that you might needed
 - **Decrypt**: don't forget to flash dfe after flash rom if your device is decrypted, even if you just doing dirty flash
 - **MIUI Flash**: Use Basic Clean Flash step
 - **Magisk**: Always flash Magisk after boot to the system (Lock screen or Home screen)
+
+^^^other1hide^^^
