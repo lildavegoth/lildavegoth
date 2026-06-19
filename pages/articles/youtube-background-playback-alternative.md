@@ -5,7 +5,7 @@ image: "images/youtube-bg-playback-alternative.webp"
 author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
 description: "Playing any videos in background on YouTube app is impossible except you pay or use YouTube Revanced, but in this Article..."
-categories: "Tutorials, YouTube, Recommended"
+categories: "Apps, Tutorials, YouTube, Recommended"
 ---
 Playing any videos in background on YouTube app is **impossible** except you pay or use **YouTube Revanced**, but in this Article i'll guide you to use it for free without third party app and no payments needed.
 
