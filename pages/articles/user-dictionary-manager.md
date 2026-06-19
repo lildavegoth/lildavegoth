@@ -7,7 +7,6 @@ profile: "https://t.me/lildavegoth"
 description: "For some users who doesn't and not using a Keyboard with auto save learned word, or you're the one who have a custom ROM on your device? you must be always loses learned words from your keyboard, don't you worry about it any more, User Dictionary Manager is"
 categories: "Tutorials, Useful, Keyboard"
 ---
-
 For some users who doesn't and not using a Keyboard with auto save learned word, or you're the one who have a custom ROM on your device? you must be always loses learned words from your keyboard, don't you worry about it any more, **User Dictionary Manager** is here for you!
 
 **User Dictionary Manager** aka **UDM** was made for the most common problems like i say above, including me are facing the same issue about it, because i use custom ROM and use third party Keyboard app.
