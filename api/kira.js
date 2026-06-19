@@ -130,10 +130,11 @@ bot.use(async (ctx, next) => {
     return next();
 });
 
-bot.on("message", async (ctx, next) => {
+bot.on(":message", async (ctx, next) => {
     if (!ctx.from) return next();
-    if (ctx.chat.type === "private") return next();
-    if (!ctx.message || ctx.message.text?.startsWith("/")) return next();
+    if (ctx.chat?.type === "private") return next();
+    const msg = ctx.message;
+    if (!msg || msg.text?.startsWith("/")) return next();
 
     try {
         const { data, error } = await supabase
@@ -155,7 +156,7 @@ bot.on("message", async (ctx, next) => {
         if (!isConnected) return next();
 
         const emoji = REACT_EMOJIS[Math.floor(Math.random() * REACT_EMOJIS.length)];
-        await ctx.api.setMessageReaction(ctx.chat.id, ctx.message.message_id, [{
+        await ctx.api.setMessageReaction(ctx.chat.id, msg.message_id, [{
             type: "emoji",
             emoji: emoji,
         }], { is_big: true });
