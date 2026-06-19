@@ -1005,4 +1005,32 @@
         };
     });
     
+    (function() {
+        function preventVideoDownload(video) {
+            video.setAttribute('oncontextmenu', 'return false');
+            video.setAttribute('controlsList', 'nodownload');
+            video.setAttribute('disablePictureInPicture', 'true');
+        }
+
+        function protectAllVideos() {
+            document.querySelectorAll('video').forEach(preventVideoDownload);
+        }
+
+        document.addEventListener('DOMContentLoaded', protectAllVideos);
+
+        var videoObserver = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.tagName === 'VIDEO') {
+                        preventVideoDownload(node);
+                    } else if (node.querySelectorAll) {
+                        node.querySelectorAll('video').forEach(preventVideoDownload);
+                    }
+                });
+            });
+        });
+
+        videoObserver.observe(document.body, { childList: true, subtree: true });
+    })();
+    
 })();
