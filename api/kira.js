@@ -93,6 +93,8 @@ bot.use(async (ctx, next) => {
 });
 
 bot.use(async (ctx, next) => {
+    if (!ctx.from) return next();
+
     if (ctx.from.id.toString() === process.env.OWNER_TELEGRAM_ID) {
         return next();
     }
