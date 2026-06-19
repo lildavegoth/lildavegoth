@@ -131,6 +131,7 @@ bot.use(async (ctx, next) => {
 });
 
 bot.on("message", async (ctx, next) => {
+    if (!ctx.from) return next();
     if (ctx.chat.type === "private") return next();
     if (!ctx.message || ctx.message.text?.startsWith("/")) return next();
 
@@ -286,7 +287,7 @@ bot.callbackQuery("auto_reactions_toggle", async (ctx) => {
         await ctx.answerCallbackQuery();
         await ctx.deleteMessage();
 
-        const label = newState ? "Auto Reactions: On" : "Auto Reactions: Off";
+        const label = newState ? "Auto Reactions: On" : "Auto Reactions Off";
         return ctx.reply("Do you want me to post to your channel or something?", {
             reply_markup: {
                 inline_keyboard: [
