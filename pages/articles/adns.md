@@ -5,7 +5,7 @@ image: "images/adns.webp"
 author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
 description: "ADNS is a lightweight DNS-based ad blocker for Android. No VPN, no background services, no battery drain, no hassle..."
-categories: "App, Tutorials, Recommended, Open Source"
+categories: "Apps, Tutorials, Recommended, Open Source"
 ---
 ADNS is a lightweight DNS-based ad blocker for Android. No VPN, no background services, no battery drain, no hassle.
 
