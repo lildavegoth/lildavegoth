@@ -851,7 +851,7 @@
         document.head.appendChild(scrollbarCSS);
         
         function makeRoundedScrollbar(element) {
-            if (element.classList.contains('has-custom-scroll')) return;
+            if (element.getAttribute('data-no-scrollbar') === 'true') return;
             if (element.scrollHeight <= element.clientHeight) return;
             
             const originalHTML = element.innerHTML;
