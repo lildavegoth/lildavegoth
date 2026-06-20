@@ -345,7 +345,7 @@ ${content}`;
             });
 
         if (error) return res.status(500).json({ error: error.message });
-        notifyOwner(`New comment on ${article_slug} by ${decoded.username}: ${commentBody}`);
+        notifyOwner(`New comment on ${article_slug}\nby ${decoded.username}: ${commentBody}\nRead: https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=${article_slug}`);
         return res.status(200).json({ success: true });
     }
     
@@ -386,7 +386,7 @@ ${content}`;
             .eq('id', id);
 
         if (error) return res.status(500).json({ error: error.message });
-        notifyOwner(`Comment #${id} edited by ${decoded.username}: ${newBody}`);
+        notifyOwner(`Comment #${id} edited by ${decoded.username}: ${newBody}\nArticle: https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=...`);
         return res.status(200).json({ success: true });
     }
 
