@@ -881,6 +881,17 @@
             background: rgba(255,255,255,0.1);
             color: var(--text-primary);
         }
+        
+        .comment-edit-delete {
+            background: #C42833;
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-small);
+            padding: 6px 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
 
         .comment-reply-box {
             margin-top: 8px;
@@ -1633,9 +1644,23 @@
                 }
             });
 
+            var deleteBtn = document.createElement('button');
+            deleteBtn.className = 'comment-action-btn';
+            deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+            deleteBtn.addEventListener('click', function() {
+                if (currentUser && currentUser.username === comment.username) {
+                    if (confirm('Delete this comment?')) {
+                        deleteComment(comment.id).then(function() {
+                            loadComments(currentArticleSlug);
+                        });
+                    }
+                }
+            });
+
             actions.appendChild(replyBtn);
             if (currentUser && currentUser.username === comment.username) {
                 actions.appendChild(editBtn);
+                actions.appendChild(deleteBtn);
             }
 
             card.appendChild(header);
@@ -1711,8 +1736,19 @@
                 editActions.remove();
                 actions.style.display = '';
             });
+            var deleteBtn = document.createElement('button');
+            deleteBtn.className = 'comment-edit-delete';
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.addEventListener('click', function() {
+                if (confirm('Delete this comment?')) {
+                    deleteComment(comment.id).then(function() {
+                        loadComments(currentArticleSlug);
+                    });
+                }
+            });
             editActions.appendChild(saveBtn);
             editActions.appendChild(cancelBtn);
+            editActions.appendChild(deleteBtn);
             bodyEl.style.display = 'none';
             bodyEl.parentNode.insertBefore(textarea, bodyEl.nextSibling);
             actions.style.display = 'none';
@@ -1748,6 +1784,22 @@
             if (!res.ok) {
                 var err = await res.json();
                 alert(err.error || 'Failed to edit comment');
+            }
+        }
+        
+        async function deleteComment(id) {
+            if (!authToken) return;
+            var res = await fetch('/api/article-tools?action=delete-comment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken
+                },
+                body: JSON.stringify({ id: id })
+            });
+            if (!res.ok) {
+                var err = await res.json();
+                alert(err.error || 'Failed to delete comment');
             }
         }
 
