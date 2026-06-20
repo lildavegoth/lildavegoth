@@ -54,8 +54,8 @@ export default async function handler(req, res) {
 
     const authHeader = req.headers.authorization;
 
-    // Public actions – no token required
     if (action === 'get-comments') {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         const { slug } = req.query;
         if (!slug) return res.status(400).json({ error: 'Missing slug' });
         const { data, error } = await supabase
@@ -67,11 +67,9 @@ export default async function handler(req, res) {
         return res.status(200).json(data);
     }
 
-    // Protected actions – require valid JWT
     if (!authHeader) return res.status(401).json({ error: 'No token' });
     const token = authHeader.split(' ')[1];
 
-    // Admin‑only actions (publisher functions)
     if (action === 'upload-image') {
         try {
             jwt.verify(token, process.env.JWT_SECRET);
@@ -309,7 +307,6 @@ ${content}`;
         return;
     }
 
-    // User‑authenticated comment action
     if (action === 'post-comment') {
         let decoded;
         try { decoded = jwt.verify(token, process.env.JWT_SECRET); } catch (e) { return res.status(401).json({ error: 'Invalid token' }); }
@@ -328,7 +325,6 @@ ${content}`;
         });
         if (error) return res.status(500).json({ error: error.message });
 
-        // Direct Telegram notification – no helper
         fetch(`https://api.telegram.org/bot${process.env.KIRA_TOKEN}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -360,7 +356,6 @@ ${content}`;
         const { error } = await supabase.from('comments').update({ body: newBody }).eq('id', id);
         if (error) return res.status(500).json({ error: error.message });
 
-        // Direct Telegram notification
         fetch(`https://api.telegram.org/bot${process.env.KIRA_TOKEN}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
