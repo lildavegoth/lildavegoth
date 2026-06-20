@@ -823,7 +823,6 @@
         
         .comment-quote {
             background: rgba(255,255,255,0.05);
-            border-left: 3px solid var(--accent-color);
             border-radius: var(--radius-small);
             padding: 8px 12px;
             margin-bottom: 8px;
@@ -1736,7 +1735,8 @@
 
         function renderComments(comments, container) {
             container.innerHTML = '';
-            comments.forEach(function(comment) {
+            var topLevel = comments.filter(function(c) { return !c.parent_id; });
+            topLevel.forEach(function(comment) {
                 container.appendChild(buildCommentCard(comment, comments));
             });
         }
@@ -1768,7 +1768,7 @@
                 if (parentComment) {
                     var quote = document.createElement('div');
                     quote.className = 'comment-quote';
-                    quote.textContent = parentComment.username + ': ' + parentComment.body;
+                    quote.textContent = parentComment.body;
                     card.appendChild(quote);
                 }
             }
@@ -1799,6 +1799,16 @@
                 actions.appendChild(editBtn);
             }
             card.appendChild(actions);
+
+            var replies = allComments.filter(function(c) { return c.parent_id === comment.id; });
+            if (replies.length > 0) {
+                var replyContainer = document.createElement('div');
+                replyContainer.style.marginLeft = '24px';
+                replies.forEach(function(reply) {
+                    replyContainer.appendChild(buildCommentCard(reply, allComments));
+                });
+                card.appendChild(replyContainer);
+            }
 
             return card;
         }
