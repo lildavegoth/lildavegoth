@@ -25,7 +25,7 @@ I can't even write the list of all stuff inside **Kakoi Kiraku** project because
 **Kakoi Kiraku** is also has a **Telegram** and **Discord** community for the discussions, like talks and chats about games, anime, donghua, movies and literally everything! in **Discord**, it has even has a **Kira** bot that can post a confessions to let your feelings out without let people knows who's post (anonymous), and i guess it will available in Telegram community soon.
 
 Do you want to join the communities? Here's the 2 platforms of **Kakoi Kiraku** communities.
-`[Discord](https://discord.gg/tPbndvrRDd) | [Telegram](https://t.me/+Skci4dDZo1A1ZTNl)`
+`[Discord →](https://discord.gg/tPbndvrRDd) | [Telegram →](https://t.me/+Skci4dDZo1A1ZTNl)`
 
 Both community has **Kira** bot as your assistant inside the communities!
 
