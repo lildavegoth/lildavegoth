@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -34,9 +35,8 @@ export default async (req, res) => {
             return res.status(400).json({ error: 'Username and password required' });
         }
 
-        // Check if username exists
         const { data: existing } = await supabase
-            .from('users')
+            .from('accounts')
             .select('username')
             .eq('username', username)
             .single();
@@ -46,10 +46,10 @@ export default async (req, res) => {
         }
 
         const id = 'USER_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9).toUpperCase();
-        const passwordHash = require('crypto').createHash('sha256').update(password).digest('hex');
+        const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
 
         const { error } = await supabase
-            .from('users')
+            .from('accounts')
             .insert({
                 id,
                 username,
@@ -71,22 +71,21 @@ export default async (req, res) => {
             return res.status(400).json({ error: 'Username and password required' });
         }
 
-        const { data: user } = await supabase
-            .from('users')
+        const { data: user, error: fetchError } = await supabase
+            .from('accounts')
             .select('*')
             .eq('username', username)
             .single();
 
-        if (!user) {
+        if (fetchError || !user) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const inputHash = require('crypto').createHash('sha256').update(password).digest('hex');
+        const inputHash = crypto.createHash('sha256').update(password).digest('hex');
         if (user.password_hash !== inputHash) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // Create JWT
         const token = jwt.sign(
             { sub: user.id, username: user.username },
             process.env.JWT_SECRET,
