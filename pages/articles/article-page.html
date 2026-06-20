@@ -793,13 +793,41 @@
         
         .comment-reply-item {
             margin-left: 28px;
-            margin-top: 8px;
+            margin-top: 0;
+        }
+
+        .comment-reply-item:first-child {
+            margin-top: 0;
         }
 
         .comment-reply-item .comment-card {
             background: none;
             padding: 0;
             margin: 0;
+        }
+        
+        .replies-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.0, 0.0, 0.2, 1);
+        }
+
+        .replies-container.expanded {
+            max-height: 4000px;
+        }
+
+        .collapse-toggle {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0 4px;
+            font-size: 1.2rem;
+            transition: color 0.2s;
+        }
+
+        .collapse-toggle:hover {
+            color: var(--accent-color);
         }
 
         .comment-card.editing {
@@ -1764,8 +1792,10 @@
 
             var topLevel = comments.filter(function(c) { return !c.parent_id; });
             topLevel.forEach(function(comment) {
-                var mainCard = buildMainCard(comment);
                 var allDescendantIds = getAllDescendantIds(comment.id);
+                var hasReplies = allDescendantIds.length > 0;
+                var mainCard = buildMainCard(comment, hasReplies);
+
                 var descendantComments = comments
                     .filter(function(c) { return allDescendantIds.indexOf(c.id) !== -1; })
                     .sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
@@ -1781,21 +1811,46 @@
             });
         }
 
-        function buildMainCard(comment) {
+        function buildMainCard(comment, hasReplies) {
             var card = document.createElement('div');
             card.className = 'comment-card';
             card.setAttribute('data-id', comment.id);
 
             var header = document.createElement('div');
             header.className = 'comment-header';
+
+            var leftSide = document.createElement('div');
+            leftSide.style.display = 'flex';
+            leftSide.style.alignItems = 'center';
+            leftSide.style.gap = '12px';
+
             var username = document.createElement('span');
             username.className = 'comment-username';
             username.textContent = comment.username;
             var time = document.createElement('span');
             time.className = 'comment-time';
             time.textContent = formatCommentTime(comment.created_at);
-            header.appendChild(username);
-            header.appendChild(time);
+            leftSide.appendChild(username);
+            leftSide.appendChild(time);
+            header.appendChild(leftSide);
+
+            if (hasReplies) {
+                var toggleBtn = document.createElement('button');
+                toggleBtn.className = 'collapse-toggle';
+                toggleBtn.innerHTML = '<i class="fas fa-caret-down"></i>';
+                toggleBtn.addEventListener('click', function() {
+                    var repliesEl = card.querySelector('.replies-container');
+                    if (repliesEl.classList.contains('expanded')) {
+                        repliesEl.classList.remove('expanded');
+                        toggleBtn.innerHTML = '<i class="fas fa-caret-down"></i>';
+                    } else {
+                        repliesEl.classList.add('expanded');
+                        toggleBtn.innerHTML = '<i class="fas fa-caret-up"></i>';
+                    }
+                });
+                header.appendChild(toggleBtn);
+            }
+
             card.appendChild(header);
 
             var body = document.createElement('div');
@@ -1808,6 +1863,9 @@
 
             var repliesContainer = document.createElement('div');
             repliesContainer.className = 'replies-container';
+            if (!hasReplies) {
+                repliesContainer.classList.add('expanded');
+            }
             card.appendChild(repliesContainer);
 
             return card;
@@ -1858,17 +1916,23 @@
 
             var replyBtn = document.createElement('button');
             replyBtn.className = 'comment-action-btn';
-            replyBtn.innerHTML = '<i class="fas fa-mail-reply"></i> Reply';
+            replyBtn.innerHTML = '<i class="fas fa-mail-reply"></i>';
+            replyBtn.style.cssText = 'background:var(--accent-color); color:#000; width:32px; height:32px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer;';
             replyBtn.addEventListener('click', function() {
                 toggleReplyBox(card, comment.id);
+                replyBtn.classList.add('btnMDYE');
+                setTimeout(function(){ replyBtn.classList.remove('btnMDYE'); }, 500);
             });
 
             var editBtn = document.createElement('button');
             editBtn.className = 'comment-action-btn';
-            editBtn.innerHTML = '<i class="fas fa-pencil"></i> Edit';
+            editBtn.innerHTML = '<i class="fas fa-pencil"></i>';
+            editBtn.style.cssText = 'background:rgba(255,255,255,0.05); color:var(--text-secondary); width:32px; height:32px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer;';
             editBtn.addEventListener('click', function() {
                 if (currentUser && currentUser.username === comment.username) {
                     enableEditMode(card, comment);
+                    editBtn.classList.add('btnMDYE');
+                    setTimeout(function(){ editBtn.classList.remove('btnMDYE'); }, 500);
                 }
             });
 
@@ -1877,80 +1941,6 @@
                 actions.appendChild(editBtn);
             }
             return actions;
-        }
-
-        function buildCommentCard(comment, allComments) {
-            var card = document.createElement('div');
-            card.className = 'comment-card';
-            card.setAttribute('data-id', comment.id);
-
-            var header = document.createElement('div');
-            header.className = 'comment-header';
-            var username = document.createElement('span');
-            username.className = 'comment-username';
-            username.textContent = comment.username;
-            var time = document.createElement('span');
-            time.className = 'comment-time';
-            time.textContent = formatCommentTime(comment.created_at);
-            header.appendChild(username);
-            header.appendChild(time);
-
-            var body = document.createElement('div');
-            body.className = 'comment-body';
-            body.textContent = comment.body;
-
-            card.appendChild(header);
-
-            if (comment.parent_id) {
-                var parentComment = allComments.find(function(c) { return c.id === comment.parent_id; });
-                if (parentComment) {
-                    var quote = document.createElement('div');
-                    quote.className = 'comment-quote';
-                    quote.textContent = parentComment.body;
-                    card.appendChild(quote);
-                }
-            }
-
-            card.appendChild(body);
-
-            var actions = document.createElement('div');
-            actions.className = 'comment-actions';
-
-            var replyBtn = document.createElement('button');
-            replyBtn.className = 'comment-action-btn';
-            replyBtn.innerHTML = '<i class="fas fa-mail-reply"></i> Reply';
-            replyBtn.addEventListener('click', function() {
-                toggleReplyBox(card, comment.id);
-            });
-
-            var editBtn = document.createElement('button');
-            editBtn.className = 'comment-action-btn';
-            editBtn.innerHTML = '<i class="fas fa-pencil"></i> Edit';
-            editBtn.addEventListener('click', function() {
-                if (currentUser && currentUser.username === comment.username) {
-                    enableEditMode(card, comment);
-                }
-            });
-
-            actions.appendChild(replyBtn);
-            if (currentUser && currentUser.username === comment.username) {
-                actions.appendChild(editBtn);
-            }
-            card.appendChild(actions);
-
-            var replies = allComments.filter(function(c) { return c.parent_id === comment.id; });
-            if (replies.length > 0) {
-                var repliesContainer = document.createElement('div');
-                replies.forEach(function(reply) {
-                    var replyItem = document.createElement('div');
-                    replyItem.className = 'comment-reply-item';
-                    replyItem.appendChild(buildCommentCard(reply, allComments));
-                    repliesContainer.appendChild(replyItem);
-                });
-                card.appendChild(repliesContainer);
-            }
-
-            return card;
         }
 
         function toggleReplyBox(card, parentId) {
@@ -2108,18 +2098,24 @@
             var articleContent = document.getElementById('articleContent');
             var section = document.createElement('div');
             section.className = 'comments-section';
-            section.innerHTML = '<h3 style="color:var(--accent-color); margin-bottom:1rem;">Comments</h3><div id="commentsList"></div>';
+            section.innerHTML = '<h3 style="color:var(--accent-color); margin-bottom:1rem;"><i class="fas fa-comment-alt"></i> Comments</h3><div id="commentsList"></div>';
             if (currentUser && authToken) {
                 var formDiv = document.createElement('div');
                 formDiv.style.marginTop = '1rem';
+                formDiv.style.position = 'relative';
+
                 var textarea = document.createElement('textarea');
                 textarea.id = 'mainCommentInput';
                 textarea.className = 'comment-input';
                 textarea.rows = 3;
                 textarea.placeholder = 'Write a comment...';
+                textarea.style.paddingRight = '52px';
+
                 var submitBtn = document.createElement('button');
-                submitBtn.className = 'comment-submit-btn';
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Post';
+                submitBtn.className = 'comment-submit-btn btnMDYE';
+                submitBtn.innerHTML = '<i class="fas fa-mail-forward"></i>';
+                submitBtn.style.cssText = 'position:absolute; bottom:8px; right:8px; border-radius:50px; width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; background:var(--accent-color); color:#000; border:none; cursor:pointer; font-size:1rem;';
+
                 submitBtn.addEventListener('click', function() {
                     var body = textarea.value.trim();
                     if (!body) return;
@@ -2128,6 +2124,7 @@
                         loadComments(slug);
                     });
                 });
+
                 formDiv.appendChild(textarea);
                 formDiv.appendChild(submitBtn);
                 section.appendChild(formDiv);
