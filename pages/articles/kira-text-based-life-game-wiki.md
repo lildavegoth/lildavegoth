@@ -5,7 +5,7 @@ image: "images/kira-text-based-life-wiki.webp"
 author: "lildavegoth"
 profile: "https://t.me/lildavegoth"
 description: "A full Text Based Life Kira game Wiki"
-categories: "Wiki, Game, Kira"
+categories: "Wiki, Games, Kira"
 ---
 Everything you need to know about Text Based Life Game by Kira on Discord
 
