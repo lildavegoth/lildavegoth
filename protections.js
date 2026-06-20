@@ -984,11 +984,19 @@
         setTimeout(initAllScrollbars, 100);
         setTimeout(initAllScrollbars, 500);
         
-        const observer = new MutationObserver(function() {
-            setTimeout(initAllScrollbars, 50);
-        });
-        
-        observer.observe(document.body, { childList: true, subtree: true });
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                const observer = new MutationObserver(function() {
+                    setTimeout(initAllScrollbars, 50);
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+            });
+        } else {
+            const observer = new MutationObserver(function() {
+                setTimeout(initAllScrollbars, 50);
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
         
         window.addEventListener('resize', function() {
             setTimeout(initAllScrollbars, 100);
