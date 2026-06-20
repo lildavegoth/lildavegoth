@@ -648,7 +648,7 @@
     </div>
 
     <script>
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzhH_T8T0THNdlXHlJClZMUw0tTyBpR-UPULn99v39IM-kdd8KonScAOKLGDEYRkcDn/exec';
+        const AUTH_API_URL = '/api/auth';
 
         let giveawayIframeLoaded = false;
 
@@ -666,21 +666,20 @@
         }
 
         async function signIn(username, password) {
-            const formData = new FormData();
-            formData.append('action', 'signIn');
-            formData.append('username', username);
-            formData.append('password', password);
-            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
+            const response = await fetch(AUTH_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'signIn', username, password })
+            });
             return await response.json();
         }
 
         async function signUp(username, email, password) {
-            const formData = new FormData();
-            formData.append('action', 'signUp');
-            formData.append('username', username);
-            formData.append('email', email);
-            formData.append('password', password);
-            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
+            const response = await fetch(AUTH_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'signUp', username, email, password })
+            });
             return await response.json();
         }
 
@@ -954,12 +953,14 @@
             try {
                 const result = await signIn(username, password);
                 if (result.success) {
+                    localStorage.setItem('currentUser', JSON.stringify(result.user));
+                    localStorage.setItem('authToken', result.token);
                     showUserInfo(result.user);
                 } else {
                     window.showMessage(result.error || 'Invalid credentials');
                 }
             } catch {
-                window.showMessage('Network error. Check Apps Script URL.');
+                window.showMessage('Network error. Please try again.');
             }
         });
 
@@ -996,12 +997,13 @@
                     window.showMessage('Username already exists');
                 }
             } catch {
-                window.showMessage('Network error. Check Apps Script URL.');
+                window.showMessage('Network error. Please try again.');
             }
         });
 
         document.getElementById('logoutBtn').addEventListener('click', function() {
             localStorage.removeItem('currentUser');
+            localStorage.removeItem('authToken');
             document.getElementById('userInfo').classList.remove('active');
             document.getElementById('signInForm').style.display = 'block';
             document.getElementById('signUpForm').style.display = 'none';
