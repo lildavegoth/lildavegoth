@@ -105,5 +105,15 @@ export default async (req, res) => {
         });
     }
 
+    if (action === 'admin-login') {
+        const { password: adminPassword } = payload;
+        if (adminPassword !== process.env.ADMIN_PASSWORD) {
+            return res.status(401).json({ error: 'Wrong password' });
+        }
+
+        const token = jwt.sign({ admin: true }, process.env.JWT_SECRET, { expiresIn: '30d' });
+        return res.status(200).json({ token });
+    }
+
     return res.status(400).json({ error: 'Unknown action' });
 };
