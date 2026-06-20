@@ -496,12 +496,11 @@
     
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', init);
+    const CONFIG = { useSpa: false, preloadPages: false, transitionSpeed: 300, cacheSize: 10 };
+    var currentPage = getCurrentPageId();
     
     function init() {
         console.log('FastNav initialized');
-        
-        // Extract current page ID from URL
-        currentPage = getCurrentPageId();
         
         if (CONFIG.useSpa) {
             setupSpaNavigation();
