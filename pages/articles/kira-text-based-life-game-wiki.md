@@ -7,8 +7,9 @@ profile: "https://t.me/lildavegoth"
 description: "A full Text Based Life Kira game Wiki"
 categories: "Wiki, Game, Kira"
 ---
-# Wiki of Kira Text-based Life game
-### General Constants
+Everything you need to know about Text Based Life Game by Kira on Discord
+
+# General Constants →
 
 | Constant | Value |
 |----------|-------|
@@ -29,7 +30,7 @@ categories: "Wiki, Game, Kira"
 
 ---
 
-# Upgrade Costs 
+# Upgrade Costs →
 
 | Upgrade | Cost |
 |---------|------|
@@ -45,7 +46,7 @@ categories: "Wiki, Game, Kira"
 
 ---
 
-# Workers & Hiring 
+# Workers & Hiring →
 
 | Worker                | Hire Cost | Charge / Payment                             |
 | --------------------- | --------- | -------------------------------------------- |
@@ -61,7 +62,7 @@ All workers can be **fired** from the Hire menu (no refund, you lose the worker)
 
 ---
 
-# Unlockables & Prices 
+# Unlockables & Prices →
 
 | Item | Price |
 |------|-------|
@@ -77,9 +78,9 @@ All workers can be **fired** from the Hire menu (no refund, you lose the worker)
 
 ---
 
-# Fishing 
+# Fishing →
 
-### Fish & Sell Values
+**Fish & Sell Values**
 
 | Fish                  | Value (coins)                                              |
 | --------------------- | ---------------------------------------------------------- |
@@ -98,7 +99,7 @@ All workers can be **fired** from the Hire menu (no refund, you lose the worker)
 | 🐉 Sea Dragon         | 1,800,000 – 2,000,000 (Village Market only)               |
 | 📦 Package            | Random coins (5 – 15)                                      |
 
-### Rod Level Requirements
+**Rod Level Requirements**
 
 | Rod Level | Unlocked Fish |
 |-----------|---------------|
@@ -109,9 +110,9 @@ All workers can be **fired** from the Hire menu (no refund, you lose the worker)
 
 ---
 
-# Mining 
+# Mining →
 
-### Mined Items
+**Mined Items**
 
 | Item | Sell Price Range (coins) |
 |------|--------------------------|
@@ -122,9 +123,9 @@ All workers can be **fired** from the Hire menu (no refund, you lose the worker)
 
 ---
 
-# Farming 
+# Farming →
 
-### Seeds
+**Seeds**
 
 | Seed | Price (coins) | Yield | Count | Duration (min) | Sell Each (coins) |
 |------|---------------|-------|-------|----------------|-------------------|
@@ -137,9 +138,9 @@ All workers can be **fired** from the Hire menu (no refund, you lose the worker)
 
 ---
 
-# Cooking & Bakery 
+# Cooking & Bakery →
 
-### Recipes
+**Recipes**
 
 | Dish | Ingredients | Sell Price (coins) |
 |------|-------------|-------------------|
@@ -152,9 +153,9 @@ When a Chef is hired, ingredients are cooked in bulk and the Chef charges 50 coi
 
 ---
 
-# Blacksmith 
+# Blacksmith →
 
-### Forged Items
+**Forged Items**
 
 | Item | Materials | Sell Price Range (coins) |
 |------|-----------|--------------------------|
@@ -164,9 +165,9 @@ When a Chef is hired, ingredients are cooked in bulk and the Chef charges 50 coi
 
 ---
 
-# Village Market (Players Market) 
+# Village Market (Players Market) →
 
-### Sellable Legendary Items & Emblem Rewards
+**Sellable Legendary Items & Emblem Rewards**
 
 | Item | Emblems Earned | Price Range (coins) |
 |------|----------------|---------------------|
@@ -179,9 +180,9 @@ Buyers see all individual listings with prices; pagination shows 10 per page.
 
 ---
 
-# Royal Halls (Emblems Trading) 
+# Royal Halls (Emblems Trading) →
 
-### Items (random daily, 3 per day – one‑time purchase each)
+**Items (random daily, 3 per day – one‑time purchase each)**
 
 | Item | Emblem Cost |
 |------|-------------|
@@ -195,7 +196,7 @@ Buyers see all individual listings with prices; pagination shows 10 per page.
 
 ---
 
-# Achievements 
+# Achievements →
 
 | Achievement | Requirement | Reward |
 |-------------|-------------|--------|
@@ -205,9 +206,9 @@ Buyers see all individual listings with prices; pagination shows 10 per page.
 
 ---
 
-# Daily Quests 
+# Daily Quests →
 
-### Quest Pool (5 appear daily, 3 selectable)
+**Quest Pool (5 appear daily, 3 selectable)**
 
 | Quest | Goal | Reward | Requirement |
 |-------|------|--------|-------------|
@@ -231,15 +232,15 @@ Refresh allowed once per day before selecting quests.
 
 ---
 
-# Adventure System 
+# Adventure System →
 
-### The World
+**The World**
 
 - A new random **map** is selected every day:  
   `Dark Forest`, `Crystal Caverns`, `Sunken Ruins`, `Haunted Battlefield`, `Dragon's Peak`.
 - The Adventure view shows today's map and a random enemy.
 
-### Player Stats
+**Player Stats**
 
 | Stat | Default |
 |------|---------|
@@ -251,7 +252,7 @@ You can adventure without gear, but **without** any gear, a "without a Gear!" wa
 
 ---
 
-### Equipment Slots & Eligible Items
+**Equipment Slots & Eligible Items**
 
 | Slot     | Allowed Items                                                    |
 | -------- | ---------------------------------------------------------------- |
@@ -265,7 +266,7 @@ You can adventure without gear, but **without** any gear, a "without a Gear!" wa
 
 ---
 
-### Pets
+**Pets**
 
 Pets are equipped in the **Gear** menu under the **Pet** slot.  
 If a pet is equipped, a special button appears in battle **after the Skill button**.
@@ -283,7 +284,7 @@ If a pet is equipped, a special button appears in battle **after the Skill butto
 
 ---
 
-### Battle Mechanics
+**Battle Mechanics**
 
 1. **Attack** – 15‑30 base damage (+8‑15 if Iron Sword equipped).  
 2. **Skill** – costs 30 Mana, deals 30‑55 base (+12‑20 if weapon).  
@@ -297,7 +298,7 @@ If a pet is equipped, a special button appears in battle **after the Skill butto
 
 After your action, the enemy attacks (10‑25 damage, reduced by shield/armor).
 
-### Buff Effects (from the Buff slot)
+**Buff Effects (from the Buff slot)**
 
 | Buff | Effect |
 |------|--------|
@@ -307,7 +308,7 @@ After your action, the enemy attacks (10‑25 damage, reduced by shield/armor).
 
 ---
 
-### After Victory – The Inn
+**After Victory – The Inn**
 
 After winning a fight, there is a **25% chance** to find a **Village Inn**.
 - The Innkeeper asks for **1,000 coins** to let you rest and restore:
@@ -319,14 +320,14 @@ After winning a fight, there is a **25% chance** to find a **Village Inn**.
 
 ---
 
-### Losing a Battle
+**Losing a Battle**
 
 If you lose a fight (or fail to flee):
 - You may **drop items from your inventory** (droppable items: cooked meals, forged weapons/armor). Up to 3 of a random droppable item can be lost.
 - Additionally, your equipped **Weapon** and **Armor** each have a **30% chance** to be **unequipped and lost**.
 - If nothing is lost, the message shows “Nothing”.
 
-### Enemies & Loot
+**Enemies & Loot**
 
 | Enemy | Health | Tier | Loot | Coins (from 💰 Coinsbag) |
 |-------|--------|------|------|--------------------------|
@@ -337,7 +338,7 @@ If you lose a fight (or fail to flee):
 
 All loot items appear in your inventory under `# Loots `.
 
-### Milestone Reward
+**Milestone Reward**
 
 After defeating **10 enemies** in a single exploration, you instantly receive:
 - **10,000 coins**
@@ -347,22 +348,22 @@ The counter resets, and you continue facing the next enemy.
 
 ---
 
-# Level System & Shop
+# Level System & Shop →
 
 You can check your own Level by using **/level** command, and this menu will appear:
 
 ```
-# Level [current level]
+# Level [current level] →
 **[current xp]xp — [target xp]xp**
 
-# Ranks 
+# Ranks →
 * Username (Level)
 ...
 ```
 
 - Ranks are paginated (5 per page) and ordered by level descending, then XP.
 
-### XP Gain
+**XP Gain**
 
 | Condition | XP Earned |
 |-----------|-----------|
@@ -373,7 +374,7 @@ You can check your own Level by using **/level** command, and this menu will app
 - XP is gained per chat message (bots ignored).
 - When leveling up, the target xp increases proportionally.
 
-### Level Shop
+**Level Shop**
 
 The **Level Shop** is accessible from the `/level` menu. Items change **daily at 06:00 (GMT+7)**.  
 Each item can only be purchased **once per account**.
