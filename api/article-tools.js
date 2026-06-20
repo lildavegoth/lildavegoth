@@ -312,122 +312,95 @@ ${content}`;
     // User‑authenticated comment action
     if (action === 'post-comment') {
         let decoded;
-        try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET);
-        } catch (e) {
-            return res.status(401).json({ error: 'Invalid token' });
-        }
+        try { decoded = jwt.verify(token, process.env.JWT_SECRET); } catch (e) { return res.status(401).json({ error: 'Invalid token' }); }
 
         let body;
-        try {
-            body = await getRawBody(req);
-        } catch {
-            return res.status(500).json({ error: 'Failed to read body' });
-        }
+        try { body = await getRawBody(req); } catch { return res.status(500).json({ error: 'Failed to read body' }); }
         let payload;
-        try {
-            payload = JSON.parse(body);
-        } catch {
-            return res.status(400).json({ error: 'Invalid JSON' });
-        }
+        try { payload = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid JSON' }); }
 
         const { article_slug, body: commentBody, parent_id } = payload;
         if (!article_slug || !commentBody) return res.status(400).json({ error: 'Missing fields' });
 
-        const { error } = await supabase
-            .from('comments')
-            .insert({
-                article_slug,
-                user_id: decoded.sub,
-                username: decoded.username,
-                body: commentBody,
-                parent_id: parent_id || null,
-            });
-
+        const { error } = await supabase.from('comments').insert({
+            article_slug, user_id: decoded.sub, username: decoded.username,
+            body: commentBody, parent_id: parent_id || null
+        });
         if (error) return res.status(500).json({ error: error.message });
-        notifyOwner(`New comment on ${article_slug}\nby ${decoded.username}: ${commentBody}\nRead: https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=${article_slug}`);
+
+        // Direct Telegram notification – no helper
+        fetch(`https://api.telegram.org/bot${process.env.KIRA_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: process.env.OWNER_TELEGRAM_ID,
+                text: `New comment on ${article_slug}\nby ${decoded.username}: ${commentBody}\nRead: https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=${article_slug}`
+            })
+        }).catch(()=>{});
+
         return res.status(200).json({ success: true });
     }
     
-        if (action === 'edit-comment') {
+    if (action === 'edit-comment') {
         let decoded;
-        try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET);
-        } catch (e) {
-            return res.status(401).json({ error: 'Invalid token' });
-        }
+        try { decoded = jwt.verify(token, process.env.JWT_SECRET); } catch (e) { return res.status(401).json({ error: 'Invalid token' }); }
+
         let body;
-        try {
-            body = await getRawBody(req);
-        } catch {
-            return res.status(500).json({ error: 'Failed to read body' });
-        }
+        try { body = await getRawBody(req); } catch { return res.status(500).json({ error: 'Failed to read body' }); }
         let payload;
-        try {
-            payload = JSON.parse(body);
-        } catch {
-            return res.status(400).json({ error: 'Invalid JSON' });
-        }
+        try { payload = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid JSON' }); }
+
         const { id, body: newBody } = payload;
         if (!id || !newBody) return res.status(400).json({ error: 'Missing fields' });
 
-        const { data: comment, error: fetchError } = await supabase
-            .from('comments')
-            .select('user_id')
-            .eq('id', id)
-            .single();
-
+        const { data: comment, error: fetchError } = await supabase.from('comments').select('user_id').eq('id', id).single();
         if (fetchError || !comment) return res.status(404).json({ error: 'Comment not found' });
         if (comment.user_id !== decoded.sub) return res.status(403).json({ error: 'Not your comment' });
 
-        const { error } = await supabase
-            .from('comments')
-            .update({ body: newBody })
-            .eq('id', id);
-
+        const { error } = await supabase.from('comments').update({ body: newBody }).eq('id', id);
         if (error) return res.status(500).json({ error: error.message });
-        notifyOwner(`Comment #${id} edited by ${decoded.username}: ${newBody}\nArticle: https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=...`);
+
+        // Direct Telegram notification
+        fetch(`https://api.telegram.org/bot${process.env.KIRA_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: process.env.OWNER_TELEGRAM_ID,
+                text: `Comment #${id} edited by ${decoded.username}: ${newBody}`
+            })
+        }).catch(()=>{});
+
         return res.status(200).json({ success: true });
     }
 
     if (action === 'delete-comment') {
         let decoded;
-        try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET);
-        } catch (e) {
-            return res.status(401).json({ error: 'Invalid token' });
-        }
+        try { decoded = jwt.verify(token, process.env.JWT_SECRET); } catch (e) { return res.status(401).json({ error: 'Invalid token' }); }
+
         let body;
-        try {
-            body = await getRawBody(req);
-        } catch {
-            return res.status(500).json({ error: 'Failed to read body' });
-        }
+        try { body = await getRawBody(req); } catch { return res.status(500).json({ error: 'Failed to read body' }); }
         let payload;
-        try {
-            payload = JSON.parse(body);
-        } catch {
-            return res.status(400).json({ error: 'Invalid JSON' });
-        }
+        try { payload = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid JSON' }); }
+
         const { id } = payload;
         if (!id) return res.status(400).json({ error: 'Missing comment id' });
 
-        const { data: comment, error: fetchError } = await supabase
-            .from('comments')
-            .select('user_id')
-            .eq('id', id)
-            .single();
-
+        const { data: comment, error: fetchError } = await supabase.from('comments').select('user_id').eq('id', id).single();
         if (fetchError || !comment) return res.status(404).json({ error: 'Comment not found' });
         if (comment.user_id !== decoded.sub) return res.status(403).json({ error: 'Not your comment' });
 
-        const { error } = await supabase
-            .from('comments')
-            .delete()
-            .eq('id', id);
-
+        const { error } = await supabase.from('comments').delete().eq('id', id);
         if (error) return res.status(500).json({ error: error.message });
-        notifyOwner(`Comment #${id} deleted by ${decoded.username}`);
+
+        fetch(`https://api.telegram.org/bot${process.env.KIRA_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: process.env.OWNER_TELEGRAM_ID,
+                text: `Comment #${id} deleted by ${decoded.username}`
+            })
+        }).catch(()=>{});
+
         return res.status(200).json({ success: true });
     }
 
