@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Storage | lildavegoth</title>
     <meta name="color-scheme" content="dark">
-    <script src="cordova.js"></script>
     <script src="protections.js"></script>
     <script src="notification.cssjs"></script>
     <link rel="stylesheet" href="media.css">
@@ -777,73 +776,18 @@
 
     <script>
         async function saveFile(content, filename, mimeType) {
-            return new Promise((resolve, reject) => {
-                if (window.cordova) {
-                    const writeFile = (dirEntry, isDownloads) => {
-                        dirEntry.getFile(filename, { create: true, exclusive: false }, (fileEntry) => {
-                            fileEntry.createWriter((writer) => {
-                                writer.onwriteend = () => {
-                                    const location = isDownloads ? 'Downloads' : 'app folder';
-                                    window.showMessage(`File saved to ${location}!`);
-                                    if (window.cordova.plugins && window.cordova.plugins.fileOpener2) {
-                                        cordova.plugins.fileOpener2.open(fileEntry.nativeURL, mimeType);
-                                    }
-                                    resolve();
-                                };
-                                writer.onerror = () => {
-                                    window.showMessage('Backup failed');
-                                    reject();
-                                };
-                                writer.write(content);
-                            }, () => {
-                                window.showMessage('Backup failed');
-                                reject();
-                            });
-                        }, () => {
-                            window.showMessage('Backup failed');
-                            reject();
-                        });
-                    };
-
-                    const saveToDownloads = () => {
-                        window.resolveLocalFileSystemURL(
-                            cordova.file.externalRootDirectory + 'Download/',
-                            (dir) => {
-                                writeFile(dir, true);
-                            },
-                            () => {
-                                window.resolveLocalFileSystemURL(
-                                    cordova.file.dataDirectory,
-                                    (dir) => {
-                                        writeFile(dir, false);
-                                    },
-                                    () => {
-                                        window.showMessage('Backup failed');
-                                        reject();
-                                    }
-                                );
-                            }
-                        );
-                    };
-
-                    if (document.readyState === 'complete' || (window.cordova && window.cordova.device)) {
-                        saveToDownloads();
-                    } else {
-                        document.addEventListener('deviceready', saveToDownloads);
-                    }
-                } else {
-                    const blob = new Blob([content], { type: mimeType });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    window.showMessage('Backup saved locally');
-                    resolve();
-                }
+            return new Promise((resolve) => {
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                window.showMessage('Backup saved locally');
+                resolve();
             });
         }
 
@@ -1204,7 +1148,6 @@
         }
 
         const DROPBOX_CLIENT_ID = '5630n4t14l8r80h';
-        const REDIRECT_URI = window.cordova ? 'com.kakoikiraku.home://oauth' : (window.location.origin + window.location.pathname);
         const DROPBOX_TOKEN_KEY = 'dropbox_tokens';
 
         function getDropboxTokens() {
@@ -1289,35 +1232,7 @@
                 code_challenge: challenge,
                 token_access_type: 'offline'
             });
-            if (window.cordova) {
-                const browser = cordova.InAppBrowser.open(authUrl, '_blank', 'location=no,hidden=no');
-                browser.addEventListener('loadstart', function (event) {
-                    if (event.url.startsWith(REDIRECT_URI)) {
-                        browser.close();
-                        const url = new URL(event.url);
-                        const code = url.searchParams.get('code');
-                        if (code) {
-                            handleOAuthCode(code, verifier);
-                        } else {
-                            window.showMessage('OAuth failed: no code', true);
-                        }
-                    }
-                });
-                browser.addEventListener('loaderror', function (event) {
-                    if (event.url && event.url.startsWith(REDIRECT_URI)) {
-                        browser.close();
-                        const url = new URL(event.url);
-                        const code = url.searchParams.get('code');
-                        if (code) {
-                            handleOAuthCode(code, verifier);
-                        } else {
-                            window.showMessage('OAuth failed: no code', true);
-                        }
-                    }
-                });
-            } else {
-                window.location.href = authUrl;
-            }
+            window.location.href = authUrl;
         }
 
         async function handleOAuthCode(code, verifier) {
@@ -1358,7 +1273,6 @@
                 await handleOAuthCode(code, verifier);
                 return;
             }
-            if (window.cordova) return;
         }
 
         async function uploadBackup() {
@@ -1725,15 +1639,8 @@
             };
         }
 
-        if (window.cordova) {
-            document.addEventListener('deviceready', function() {
-                document.getElementById('settingsBtn').addEventListener('click', () => openSettingsPopup());
-                handleOAuthRedirect();
-            });
-        } else {
-            document.getElementById('settingsBtn').addEventListener('click', () => openSettingsPopup());
+        document.getElementById('settingsBtn').addEventListener('click', () => openSettingsPopup());
             handleOAuthRedirect();
-        }
 
         let searchTimeout;
         function setupSearchDebounce() {
