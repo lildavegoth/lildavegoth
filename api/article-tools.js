@@ -40,15 +40,32 @@ export default async function handler(req, res) {
     if (!action) return res.status(400).json({ error: 'Missing action parameter' });
 
     const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: 'No token' });
-    const token = authHeader.split(' ')[1];
-    try {
-        jwt.verify(token, process.env.JWT_SECRET);
-    } catch (e) {
-        return res.status(401).json({ error: 'Invalid token' });
+
+    // Public actions – no token required
+    if (action === 'get-comments') {
+        const { slug } = req.query;
+        if (!slug) return res.status(400).json({ error: 'Missing slug' });
+        const { data, error } = await supabase
+            .from('comments')
+            .select('id, article_slug, user_id, username, body, created_at, parent_id')
+            .eq('article_slug', slug)
+            .order('created_at', { ascending: true });
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json(data);
     }
 
+    // Protected actions – require valid JWT
+    if (!authHeader) return res.status(401).json({ error: 'No token' });
+    const token = authHeader.split(' ')[1];
+
+    // Admin‑only actions (publisher functions)
     if (action === 'upload-image') {
+        try {
+            jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
         if (
             !req.headers['content-type'] ||
             !req.headers['content-type'].includes('multipart/form-data')
@@ -129,6 +146,12 @@ export default async function handler(req, res) {
     }
 
     if (action === 'publish') {
+        try {
+            jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
         let body;
         try {
             body = await getRawBody(req);
@@ -215,6 +238,12 @@ ${content}`;
     }
 
     if (action === 'delete') {
+        try {
+            jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
         let body;
         try {
             body = await getRawBody(req);
@@ -267,5 +296,44 @@ ${content}`;
         return;
     }
 
+    // User‑authenticated comment action
+    if (action === 'post-comment') {
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        let body;
+        try {
+            body = await getRawBody(req);
+        } catch {
+            return res.status(500).json({ error: 'Failed to read body' });
+        }
+        let payload;
+        try {
+            payload = JSON.parse(body);
+        } catch {
+            return res.status(400).json({ error: 'Invalid JSON' });
+        }
+
+        const { article_slug, body: commentBody, parent_id } = payload;
+        if (!article_slug || !commentBody) return res.status(400).json({ error: 'Missing fields' });
+
+        const { error } = await supabase
+            .from('comments')
+            .insert({
+                article_slug,
+                user_id: decoded.sub,
+                username: decoded.username,
+                body: commentBody,
+                parent_id: parent_id || null,
+            });
+
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ success: true });
+    }
+
     return res.status(400).json({ error: 'Invalid action' });
-}
+    }
