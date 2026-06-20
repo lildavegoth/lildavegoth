@@ -820,6 +820,16 @@
             line-height: 1.5;
             margin-bottom: 12px;
         }
+        
+        .comment-quote {
+            background: rgba(255,255,255,0.05);
+            border-left: 3px solid var(--accent-color);
+            border-radius: var(--radius-small);
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
 
         .comment-actions {
             display: flex;
@@ -1726,8 +1736,7 @@
 
         function renderComments(comments, container) {
             container.innerHTML = '';
-            var topLevel = comments.filter(function(c) { return !c.parent_id; });
-            topLevel.forEach(function(comment) {
+            comments.forEach(function(comment) {
                 container.appendChild(buildCommentCard(comment, comments));
             });
         }
@@ -1752,6 +1761,20 @@
             body.className = 'comment-body';
             body.textContent = comment.body;
 
+            card.appendChild(header);
+
+            if (comment.parent_id) {
+                var parentComment = allComments.find(function(c) { return c.id === comment.parent_id; });
+                if (parentComment) {
+                    var quote = document.createElement('div');
+                    quote.className = 'comment-quote';
+                    quote.textContent = parentComment.username + ': ' + parentComment.body;
+                    card.appendChild(quote);
+                }
+            }
+
+            card.appendChild(body);
+
             var actions = document.createElement('div');
             actions.className = 'comment-actions';
 
@@ -1775,19 +1798,7 @@
             if (currentUser && currentUser.username === comment.username) {
                 actions.appendChild(editBtn);
             }
-            card.appendChild(header);
-            card.appendChild(body);
             card.appendChild(actions);
-
-            var replies = allComments.filter(function(c) { return c.parent_id === comment.id; });
-            if (replies.length > 0) {
-                var repliesContainer = document.createElement('div');
-                repliesContainer.style.marginLeft = '30px';
-                replies.forEach(function(reply) {
-                    repliesContainer.appendChild(buildCommentCard(reply, allComments));
-                });
-                card.appendChild(repliesContainer);
-            }
 
             return card;
         }
