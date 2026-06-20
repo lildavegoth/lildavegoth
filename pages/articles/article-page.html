@@ -792,10 +792,14 @@
         }
         
         .comment-reply-item {
-            margin-left: 20px;
-            padding-left: 12px;
-            border-left: 2px solid var(--bg-dark);
+            margin-left: 28px;
             margin-top: 8px;
+        }
+
+        .comment-reply-item .comment-card {
+            background: none;
+            padding: 0;
+            margin: 0;
         }
 
         .comment-card.editing {
@@ -1742,10 +1746,137 @@
 
         function renderComments(comments, container) {
             container.innerHTML = '';
+
+            function getAllDescendantIds(rootId) {
+                var result = [];
+                var queue = [rootId];
+                while (queue.length > 0) {
+                    var currentId = queue.shift();
+                    comments.forEach(function(c) {
+                        if (c.parent_id === currentId) {
+                            result.push(c.id);
+                            queue.push(c.id);
+                        }
+                    });
+                }
+                return result;
+            }
+
             var topLevel = comments.filter(function(c) { return !c.parent_id; });
             topLevel.forEach(function(comment) {
-                container.appendChild(buildCommentCard(comment, comments));
+                var mainCard = buildMainCard(comment);
+                var allDescendantIds = getAllDescendantIds(comment.id);
+                var descendantComments = comments
+                    .filter(function(c) { return allDescendantIds.indexOf(c.id) !== -1; })
+                    .sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+
+                descendantComments.forEach(function(descendant) {
+                    var replyItem = document.createElement('div');
+                    replyItem.className = 'comment-reply-item';
+                    replyItem.appendChild(buildReplyCard(descendant, comments));
+                    mainCard.querySelector('.replies-container').appendChild(replyItem);
+                });
+
+                container.appendChild(mainCard);
             });
+        }
+
+        function buildMainCard(comment) {
+            var card = document.createElement('div');
+            card.className = 'comment-card';
+            card.setAttribute('data-id', comment.id);
+
+            var header = document.createElement('div');
+            header.className = 'comment-header';
+            var username = document.createElement('span');
+            username.className = 'comment-username';
+            username.textContent = comment.username;
+            var time = document.createElement('span');
+            time.className = 'comment-time';
+            time.textContent = formatCommentTime(comment.created_at);
+            header.appendChild(username);
+            header.appendChild(time);
+            card.appendChild(header);
+
+            var body = document.createElement('div');
+            body.className = 'comment-body';
+            body.textContent = comment.body;
+            card.appendChild(body);
+
+            var actions = buildActions(comment, card);
+            card.appendChild(actions);
+
+            var repliesContainer = document.createElement('div');
+            repliesContainer.className = 'replies-container';
+            card.appendChild(repliesContainer);
+
+            return card;
+        }
+
+        function buildReplyCard(comment, allComments) {
+            var card = document.createElement('div');
+            card.className = 'comment-card';
+            card.setAttribute('data-id', comment.id);
+
+            var header = document.createElement('div');
+            header.className = 'comment-header';
+            var username = document.createElement('span');
+            username.className = 'comment-username';
+            username.textContent = comment.username;
+            var time = document.createElement('span');
+            time.className = 'comment-time';
+            time.textContent = formatCommentTime(comment.created_at);
+            header.appendChild(username);
+            header.appendChild(time);
+
+            card.appendChild(header);
+
+            if (comment.parent_id) {
+                var parentComment = allComments.find(function(c) { return c.id === comment.parent_id; });
+                if (parentComment) {
+                    var quote = document.createElement('div');
+                    quote.className = 'comment-quote';
+                    quote.textContent = parentComment.body;
+                    card.appendChild(quote);
+                }
+            }
+
+            var body = document.createElement('div');
+            body.className = 'comment-body';
+            body.textContent = comment.body;
+            card.appendChild(body);
+
+            var actions = buildActions(comment, card);
+            card.appendChild(actions);
+
+            return card;
+        }
+
+        function buildActions(comment, card) {
+            var actions = document.createElement('div');
+            actions.className = 'comment-actions';
+
+            var replyBtn = document.createElement('button');
+            replyBtn.className = 'comment-action-btn';
+            replyBtn.innerHTML = '<i class="fas fa-mail-reply"></i> Reply';
+            replyBtn.addEventListener('click', function() {
+                toggleReplyBox(card, comment.id);
+            });
+
+            var editBtn = document.createElement('button');
+            editBtn.className = 'comment-action-btn';
+            editBtn.innerHTML = '<i class="fas fa-pencil"></i> Edit';
+            editBtn.addEventListener('click', function() {
+                if (currentUser && currentUser.username === comment.username) {
+                    enableEditMode(card, comment);
+                }
+            });
+
+            actions.appendChild(replyBtn);
+            if (currentUser && currentUser.username === comment.username) {
+                actions.appendChild(editBtn);
+            }
+            return actions;
         }
 
         function buildCommentCard(comment, allComments) {
