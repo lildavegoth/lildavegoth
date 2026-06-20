@@ -13,6 +13,19 @@ const BRANCH = 'homepage';
 const IMAGES_PATH = 'pages/articles/images';
 const ARTICLES_PATH = 'pages/articles';
 
+async function notifyOwner(text) {
+    try {
+        await fetch(`https://api.telegram.org/bot${process.env.KIRA_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: process.env.OWNER_TELEGRAM_ID,
+                text: text
+            })
+        });
+    } catch {}
+}
+
 async function getFileSha(filePath) {
     const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${filePath}?ref=${BRANCH}`;
     const res = await fetch(url, {
@@ -332,8 +345,91 @@ ${content}`;
             });
 
         if (error) return res.status(500).json({ error: error.message });
+        notifyOwner(`New comment on ${article_slug} by ${decoded.username}: ${commentBody}`);
+        return res.status(200).json({ success: true });
+    }
+    
+        if (action === 'edit-comment') {
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        let body;
+        try {
+            body = await getRawBody(req);
+        } catch {
+            return res.status(500).json({ error: 'Failed to read body' });
+        }
+        let payload;
+        try {
+            payload = JSON.parse(body);
+        } catch {
+            return res.status(400).json({ error: 'Invalid JSON' });
+        }
+        const { id, body: newBody } = payload;
+        if (!id || !newBody) return res.status(400).json({ error: 'Missing fields' });
+
+        const { data: comment, error: fetchError } = await supabase
+            .from('comments')
+            .select('user_id')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !comment) return res.status(404).json({ error: 'Comment not found' });
+        if (comment.user_id !== decoded.sub) return res.status(403).json({ error: 'Not your comment' });
+
+        const { error } = await supabase
+            .from('comments')
+            .update({ body: newBody })
+            .eq('id', id);
+
+        if (error) return res.status(500).json({ error: error.message });
+        notifyOwner(`Comment #${id} edited by ${decoded.username}: ${newBody}`);
+        return res.status(200).json({ success: true });
+    }
+
+    if (action === 'delete-comment') {
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        let body;
+        try {
+            body = await getRawBody(req);
+        } catch {
+            return res.status(500).json({ error: 'Failed to read body' });
+        }
+        let payload;
+        try {
+            payload = JSON.parse(body);
+        } catch {
+            return res.status(400).json({ error: 'Invalid JSON' });
+        }
+        const { id } = payload;
+        if (!id) return res.status(400).json({ error: 'Missing comment id' });
+
+        const { data: comment, error: fetchError } = await supabase
+            .from('comments')
+            .select('user_id')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !comment) return res.status(404).json({ error: 'Comment not found' });
+        if (comment.user_id !== decoded.sub) return res.status(403).json({ error: 'Not your comment' });
+
+        const { error } = await supabase
+            .from('comments')
+            .delete()
+            .eq('id', id);
+
+        if (error) return res.status(500).json({ error: error.message });
+        notifyOwner(`Comment #${id} deleted by ${decoded.username}`);
         return res.status(200).json({ success: true });
     }
 
     return res.status(400).json({ error: 'Invalid action' });
-    }
+}
