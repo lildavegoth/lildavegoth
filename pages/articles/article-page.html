@@ -254,7 +254,7 @@
 
         #articleContent hr {
             border: none;
-            height: 1px;
+            height: 2px;
             background-color: var(--bg-card);
             margin: 1.5rem 0;
         }
@@ -617,7 +617,8 @@
 
         .gallery-slides {
             display: flex;
-            transition: transform 0.3s ease;
+            transition: transform 0.0s;
+            will-change: transform;
         }
 
         .gallery-slide {
@@ -633,6 +634,8 @@
             border-radius: 0;
             margin: 0;
             object-fit: contain;
+            pointer-events: none;
+            user-select: none;
         }
 
         .gallery-dots {
@@ -789,7 +792,7 @@
             margin: 0.6rem 0;
             position: relative;
         }
-        
+
         .comment-reply-item {
             margin-left: 0;
             margin-top: 12px;
@@ -804,7 +807,7 @@
             padding: 0;
             margin: 0;
         }
-        
+
         .replies-container {
             max-height: 0;
             overflow: hidden;
@@ -830,7 +833,7 @@
         }
 
         .comment-card.editing {
-            background: #000;
+            background: var(--bg-card);
             border: 2px solid var(--bg-dark);
         }
 
@@ -858,7 +861,7 @@
             line-height: 1.5;
             margin-bottom: 12px;
         }
-        
+
         .comment-quote {
             background: rgba(255,255,255,0.05);
             border-radius: var(--radius-small);
@@ -929,7 +932,7 @@
             background: rgba(255,255,255,0.1);
             color: var(--text-primary);
         }
-        
+
         .comment-edit-delete {
             background: #C42833;
             color: #fff;
@@ -943,13 +946,14 @@
 
         .comment-reply-box {
             margin-top: 8px;
-            margin-left: 20px;
+            margin-left: 0;
+            position: relative;
         }
 
         .comment-input {
             width: 100%;
             background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid var(--accent-color);
             border-radius: var(--radius-small);
             color: var(--text-primary);
             padding: 12px;
@@ -962,7 +966,7 @@
             box-shadow: 0 0 0 2px rgba(193,252,50,0.15);
             outline: none;
         }
-        
+
         .comment-form:focus-within .comment-input {
             background: var(--accent-color);
             color: #000;
@@ -988,7 +992,7 @@
             justify-content: center;
             cursor: pointer;
             position: absolute;
-            bottom: 18px !important;
+            bottom: 12px;
             right: 12px;
             font-size: 1rem;
         }
@@ -996,6 +1000,11 @@
         .comment-submit-btn:disabled {
             opacity: 0.5;
             cursor: default;
+        }
+
+        .comment-form:focus-within .comment-submit-btn {
+            background: #000;
+            color: var(--accent-color);
         }
 
         .sign-in-prompt {
@@ -1092,7 +1101,7 @@
         .arrow-icon {
             font-size: 0.75em;
         }
-        
+
         .popup-footer {
             padding: var(--spacing-md);
             border-top: 1px solid rgba(255,255,255,0.1);
@@ -1235,7 +1244,7 @@
             <div id="articleContent" class="text"></div>
         </div>
     </div>
-    
+
     <div id="confirmDeletePopup" class="popup-overlay" style="display: none;">
         <div class="popup-content">
             <div class="popup-header">
@@ -1670,8 +1679,10 @@
                 var slidesEl = gallery.querySelector('.gallery-slides');
                 var dots = gallery.querySelectorAll('.gallery-dot');
                 var currentIndex = 0;
-                var touchStartX = 0;
-                var touchEndX = 0;
+                var startX = 0;
+                var currentX = 0;
+                var isDragging = false;
+                var dragOffset = 0;
 
                 function goToSlide(index) {
                     if (index < 0) index = 0;
@@ -1687,32 +1698,47 @@
                     });
                 }
 
-                dots.forEach(function(dot) {
-                    dot.addEventListener('click', function() {
-                        var index = parseInt(this.getAttribute('data-index'));
-                        goToSlide(index);
-                    });
-                });
+                function onTouchStart(e) {
+                    isDragging = true;
+                    startX = e.touches[0].clientX;
+                    slidesEl.style.transition = 'none';
+                }
 
-                gallery.querySelector('.gallery-viewport').addEventListener('touchstart', function(e) {
-                    touchStartX = e.changedTouches[0].screenX;
-                });
+                function onTouchMove(e) {
+                    if (!isDragging) return;
+                    currentX = e.touches[0].clientX;
+                    dragOffset = currentX - startX;
+                    var percentOffset = (dragOffset / gallery.clientWidth) * 100;
+                    slidesEl.style.transform = 'translateX(calc(-' + (currentIndex * 100) + '% + ' + percentOffset + '%))';
+                }
 
-                gallery.querySelector('.gallery-viewport').addEventListener('touchend', function(e) {
-                    touchEndX = e.changedTouches[0].screenX;
-                    handleSwipe();
-                });
+                function onTouchEnd() {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    slidesEl.style.transition = 'transform 0.3s ease';
 
-                function handleSwipe() {
-                    var diff = touchStartX - touchEndX;
-                    if (Math.abs(diff) > 40) {
-                        if (diff > 0) {
+                    if (Math.abs(dragOffset) > 40) {
+                        if (dragOffset < 0) {
                             goToSlide(currentIndex + 1);
                         } else {
                             goToSlide(currentIndex - 1);
                         }
+                    } else {
+                        goToSlide(currentIndex);
                     }
+                    dragOffset = 0;
                 }
+
+                gallery.addEventListener('touchstart', onTouchStart, { passive: true });
+                gallery.addEventListener('touchmove', onTouchMove, { passive: true });
+                gallery.addEventListener('touchend', onTouchEnd);
+                gallery.addEventListener('touchcancel', onTouchEnd);
+
+                dots.forEach(function(dot) {
+                    dot.addEventListener('click', function() {
+                        goToSlide(parseInt(this.getAttribute('data-index')));
+                    });
+                });
 
                 goToSlide(0);
             });
@@ -1915,7 +1941,7 @@
                 if (parentComment) {
                     var quote = document.createElement('div');
                     quote.className = 'comment-quote';
-                    quote.textContent = parentComment.body;
+                    quote.textContent = parentComment.username + ': ' + parentComment.body;
                     card.appendChild(quote);
                 }
             }
@@ -1972,13 +1998,15 @@
             }
             var replyBox = document.createElement('div');
             replyBox.className = 'comment-reply-box';
+            replyBox.style.position = 'relative';
             var textarea = document.createElement('textarea');
             textarea.className = 'comment-input';
             textarea.rows = 3;
             textarea.placeholder = 'Write a reply...';
+            textarea.style.paddingRight = '48px';
             var submitBtn = document.createElement('button');
             submitBtn.className = 'comment-submit-btn';
-            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Reply';
+            submitBtn.innerHTML = '<i class="fas fa-mail-forward"></i>';
             submitBtn.addEventListener('click', function() {
                 var body = textarea.value.trim();
                 if (!body) return;
@@ -1988,7 +2016,12 @@
             });
             replyBox.appendChild(textarea);
             replyBox.appendChild(submitBtn);
-            card.appendChild(replyBox);
+            var repliesContainer = card.querySelector('.replies-container');
+            if (repliesContainer) {
+                card.insertBefore(replyBox, repliesContainer);
+            } else {
+                card.appendChild(replyBox);
+            }
         }
 
         function enableEditMode(card, comment) {
@@ -2066,7 +2099,7 @@
                 window.showMessage(err.error || 'Failed to edit comment');
             }
         }
-        
+
         async function deleteComment(id) {
             if (!authToken) return;
             var res = await fetch('/api/article-tools?action=delete-comment', {
@@ -2082,7 +2115,7 @@
                 window.showMessage(err.error || 'Failed to delete comment');
             }
         }
-        
+
         var pendingDeleteId = null;
 
         function openConfirmPopup(commentId) {
@@ -2123,7 +2156,6 @@
             if (currentUser && authToken) {
                 var formDiv = document.createElement('div');
                 formDiv.className = 'comment-form';
-                formDiv.style.marginTop = '1rem';
                 formDiv.style.position = 'relative';
 
                 var textarea = document.createElement('textarea');
@@ -2136,6 +2168,7 @@
                 var submitBtn = document.createElement('button');
                 submitBtn.className = 'comment-submit-btn btnMDYE';
                 submitBtn.innerHTML = '<i class="fas fa-mail-forward"></i>';
+                submitBtn.style.cssText = 'position:absolute; bottom:12px; right:12px; width:36px; height:36px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer; font-size:1rem;';
 
                 submitBtn.addEventListener('click', function() {
                     var body = textarea.value.trim();
