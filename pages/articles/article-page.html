@@ -753,7 +753,7 @@
         .submission-btn-clicked {
             border-radius: 50px !important;
         }
-        
+
         .submission-buttons {
             display: flex;
             gap: 12px;
@@ -763,7 +763,7 @@
         .submission-buttons .submission-btn {
             flex: 1;
         }
-        
+
         .two-column-buttons {
             display: flex;
             gap: 12px;
@@ -776,6 +776,157 @@
             text-align: center;
             font-weight: bold;
             color: var(--accent-color);
+        }
+
+        .comments-section {
+            margin-top: 2rem;
+        }
+
+        .comment-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: 14px 20px;
+            margin: 0.6rem 0;
+            position: relative;
+        }
+
+        .comment-card.editing {
+            background: #000;
+            border: 2px solid var(--bg-dark);
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .comment-username {
+            font-weight: 600;
+            color: var(--accent-color);
+            font-size: 0.95rem;
+        }
+
+        .comment-time {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .comment-body {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .comment-actions {
+            display: flex;
+            gap: 16px;
+        }
+
+        .comment-action-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: var(--radius-small);
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .comment-action-btn:hover {
+            color: var(--accent-color);
+            background: rgba(193,252,50,0.1);
+        }
+
+        .comment-action-btn i {
+            font-size: 1rem;
+        }
+
+        .comment-edit-textarea {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            padding: 10px;
+            font-size: 0.95rem;
+            resize: none;
+            margin-bottom: 8px;
+        }
+
+        .comment-edit-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .comment-edit-save,
+        .comment-edit-cancel {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: var(--radius-small);
+            padding: 6px 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .comment-edit-cancel {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-primary);
+        }
+
+        .comment-reply-box {
+            margin-top: 8px;
+            margin-left: 20px;
+        }
+
+        .comment-input {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            padding: 12px;
+            font-size: 0.95rem;
+            resize: none;
+        }
+
+        .comment-submit-btn {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: var(--radius-small);
+            padding: 10px 20px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .comment-submit-btn:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        .sign-in-prompt {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-top: 1rem;
+        }
+
+        .sign-in-prompt a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 600;
         }
 
         @media (min-width: 720px) {
@@ -1410,7 +1561,7 @@
                 }
             });
         }
-        
+
         function processTwoColumnButtons(html) {
             html = html.replace(/<code>\s*\[([^\]]+)\]\(([^)]+)\)\s*\|\s*\[([^\]]+)\]\(([^)]+)\)\s*<\/code>/gi, function(match, text1, url1, text2, url2) {
                 return '<div class="two-column-buttons">' +
@@ -1419,6 +1570,233 @@
                     '</div>';
             });
             return html;
+        }
+
+        var currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        var authToken = localStorage.getItem('authToken');
+        var currentArticleSlug = '';
+
+        function formatCommentTime(dateString) {
+            var d = new Date(dateString);
+            var now = new Date();
+            var diff = Math.floor((now - d) / 1000);
+            if (diff < 60) return 'just now';
+            if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+            if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function renderComments(comments, container) {
+            container.innerHTML = '';
+            var topLevel = comments.filter(function(c) { return !c.parent_id; });
+            topLevel.forEach(function(comment) {
+                container.appendChild(buildCommentCard(comment, comments));
+            });
+        }
+
+        function buildCommentCard(comment, allComments) {
+            var card = document.createElement('div');
+            card.className = 'comment-card';
+            card.setAttribute('data-id', comment.id);
+
+            var header = document.createElement('div');
+            header.className = 'comment-header';
+            var username = document.createElement('span');
+            username.className = 'comment-username';
+            username.textContent = comment.username;
+            var time = document.createElement('span');
+            time.className = 'comment-time';
+            time.textContent = formatCommentTime(comment.created_at);
+            header.appendChild(username);
+            header.appendChild(time);
+
+            var body = document.createElement('div');
+            body.className = 'comment-body';
+            body.textContent = comment.body;
+
+            var actions = document.createElement('div');
+            actions.className = 'comment-actions';
+
+            var replyBtn = document.createElement('button');
+            replyBtn.className = 'comment-action-btn';
+            replyBtn.innerHTML = '<i class="fas fa-mail-reply"></i> Reply';
+            replyBtn.addEventListener('click', function() {
+                toggleReplyBox(card, comment.id);
+            });
+
+            var editBtn = document.createElement('button');
+            editBtn.className = 'comment-action-btn';
+            editBtn.innerHTML = '<i class="fas fa-pencil"></i> Edit';
+            editBtn.addEventListener('click', function() {
+                if (currentUser && currentUser.username === comment.username) {
+                    enableEditMode(card, comment);
+                }
+            });
+
+            actions.appendChild(replyBtn);
+            if (currentUser && currentUser.username === comment.username) {
+                actions.appendChild(editBtn);
+            }
+
+            card.appendChild(header);
+            card.appendChild(body);
+            card.appendChild(actions);
+
+            var replies = allComments.filter(function(c) { return c.parent_id === comment.id; });
+            if (replies.length > 0) {
+                var repliesContainer = document.createElement('div');
+                repliesContainer.style.marginLeft = '30px';
+                replies.forEach(function(reply) {
+                    repliesContainer.appendChild(buildCommentCard(reply, allComments));
+                });
+                card.appendChild(repliesContainer);
+            }
+
+            return card;
+        }
+
+        function toggleReplyBox(card, parentId) {
+            var existing = card.querySelector('.comment-reply-box');
+            if (existing) {
+                existing.remove();
+                return;
+            }
+            var replyBox = document.createElement('div');
+            replyBox.className = 'comment-reply-box';
+            var textarea = document.createElement('textarea');
+            textarea.className = 'comment-input';
+            textarea.rows = 3;
+            textarea.placeholder = 'Write a reply...';
+            var submitBtn = document.createElement('button');
+            submitBtn.className = 'comment-submit-btn';
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Reply';
+            submitBtn.addEventListener('click', function() {
+                var body = textarea.value.trim();
+                if (!body) return;
+                postComment(currentArticleSlug, body, parentId).then(function() {
+                    loadComments(currentArticleSlug);
+                });
+            });
+            replyBox.appendChild(textarea);
+            replyBox.appendChild(submitBtn);
+            card.appendChild(replyBox);
+        }
+
+        function enableEditMode(card, comment) {
+            card.classList.add('editing');
+            var bodyEl = card.querySelector('.comment-body');
+            var textarea = document.createElement('textarea');
+            textarea.className = 'comment-edit-textarea';
+            textarea.value = comment.body;
+            var actions = card.querySelector('.comment-actions');
+            var editActions = document.createElement('div');
+            editActions.className = 'comment-edit-actions';
+            var saveBtn = document.createElement('button');
+            saveBtn.className = 'comment-edit-save';
+            saveBtn.textContent = 'Save';
+            saveBtn.addEventListener('click', function() {
+                var newBody = textarea.value.trim();
+                if (!newBody) return;
+                editComment(comment.id, newBody).then(function() {
+                    loadComments(currentArticleSlug);
+                });
+            });
+            var cancelBtn = document.createElement('button');
+            cancelBtn.className = 'comment-edit-cancel';
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.addEventListener('click', function() {
+                card.classList.remove('editing');
+                bodyEl.style.display = '';
+                textarea.remove();
+                editActions.remove();
+                actions.style.display = '';
+            });
+            editActions.appendChild(saveBtn);
+            editActions.appendChild(cancelBtn);
+            bodyEl.style.display = 'none';
+            bodyEl.parentNode.insertBefore(textarea, bodyEl.nextSibling);
+            actions.style.display = 'none';
+            bodyEl.parentNode.insertBefore(editActions, actions.nextSibling);
+        }
+
+        async function postComment(slug, body, parentId) {
+            if (!authToken) return;
+            var res = await fetch('/api/article-tools?action=post-comment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken
+                },
+                body: JSON.stringify({ article_slug: slug, body: body, parent_id: parentId || null })
+            });
+            if (!res.ok) {
+                var err = await res.json();
+                alert(err.error || 'Failed to post comment');
+            }
+        }
+
+        async function editComment(id, body) {
+            if (!authToken) return;
+            var res = await fetch('/api/article-tools?action=edit-comment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken
+                },
+                body: JSON.stringify({ id: id, body: body })
+            });
+            if (!res.ok) {
+                var err = await res.json();
+                alert(err.error || 'Failed to edit comment');
+            }
+        }
+
+        async function loadComments(slug) {
+            var commentsList = document.getElementById('commentsList');
+            if (!commentsList) return;
+            try {
+                var res = await fetch('/api/article-tools?action=get-comments&slug=' + encodeURIComponent(slug));
+                if (res.ok) {
+                    var comments = await res.json();
+                    renderComments(comments, commentsList);
+                }
+            } catch (e) {}
+        }
+
+        function insertCommentsSection(slug) {
+            var articleContent = document.getElementById('articleContent');
+            var section = document.createElement('div');
+            section.className = 'comments-section';
+            section.innerHTML = '<h3 style="color:var(--accent-color); margin-bottom:1rem;">Comments</h3><div id="commentsList"></div>';
+            if (currentUser && authToken) {
+                var formDiv = document.createElement('div');
+                formDiv.style.marginTop = '1rem';
+                var textarea = document.createElement('textarea');
+                textarea.id = 'mainCommentInput';
+                textarea.className = 'comment-input';
+                textarea.rows = 3;
+                textarea.placeholder = 'Write a comment...';
+                var submitBtn = document.createElement('button');
+                submitBtn.className = 'comment-submit-btn';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Post';
+                submitBtn.addEventListener('click', function() {
+                    var body = textarea.value.trim();
+                    if (!body) return;
+                    postComment(slug, body, null).then(function() {
+                        textarea.value = '';
+                        loadComments(slug);
+                    });
+                });
+                formDiv.appendChild(textarea);
+                formDiv.appendChild(submitBtn);
+                section.appendChild(formDiv);
+            } else {
+                var prompt = document.createElement('div');
+                prompt.className = 'sign-in-prompt';
+                prompt.innerHTML = '<a href="../../account.html">Sign in</a> to leave a comment.';
+                section.appendChild(prompt);
+            }
+            articleContent.appendChild(section);
         }
 
         async function fetchAndShowMoreArticles(currentSlug) {
@@ -1629,6 +2007,8 @@
                 return;
             }
 
+            currentArticleSlug = slug;
+
             try {
                 var response = await fetch('/api/articles?slug=' + encodeURIComponent(slug) + '&_=' + Date.now());
                 if (!response.ok) throw new Error('Article not found');
@@ -1685,6 +2065,9 @@
                 dividerImg.alt = '';
                 dividerImg.className = 'divider';
                 document.getElementById('articleContent').appendChild(dividerImg);
+
+                insertCommentsSection(slug);
+                loadComments(slug);
 
                 setupHideToggles(document.getElementById('articleContent'));
                 document.getElementById('wordCount').textContent = article.wordCount + ' words';
