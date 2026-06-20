@@ -46,7 +46,7 @@ Everything you need to know about Text Based Life Game by Kira on Discord
 
 ---
 
-# Workers & Hiring →
+# Workers →
 
 | Worker                | Hire Cost | Charge / Payment                             |
 | --------------------- | --------- | -------------------------------------------- |
@@ -62,7 +62,7 @@ All workers can be **fired** from the Hire menu (no refund, you lose the worker)
 
 ---
 
-# Unlockables & Prices →
+# Unlockables →
 
 | Item | Price |
 |------|-------|
@@ -165,7 +165,8 @@ When a Chef is hired, ingredients are cooked in bulk and the Chef charges 50 coi
 
 ---
 
-# Village Market (Players Market) →
+# Village Market →
+(Player Market)
 
 **Sellable Legendary Items & Emblem Rewards**
 
@@ -180,7 +181,8 @@ Buyers see all individual listings with prices; pagination shows 10 per page.
 
 ---
 
-# Royal Halls (Emblems Trading) →
+# Royal Halls→
+(Emblems Trading)
 
 **Items (random daily, 3 per day – one‑time purchase each)**
 
@@ -348,7 +350,8 @@ The counter resets, and you continue facing the next enemy.
 
 ---
 
-# Level System & Shop →
+# Level & Shop →
+(This feature is still under maintenance)
 
 You can check your own Level by using **/level** command, and this menu will appear:
 
