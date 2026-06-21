@@ -99,46 +99,8 @@ async function doAction(index) {
         return { ok: true, meta: { name, url } };
     }
 
-    let blockItem = findMenuItem('^(Blokir|Block)$');
-    if (blockItem) {
-        blockItem.click();
-        await wait(800);
-
-        let dialog = null;
-        let tries = 0;
-        while (!dialog && tries < 15) {
-            dialog = document.querySelector('[role="dialog"], [aria-modal="true"]');
-            if (!dialog) await wait(500);
-            tries++;
-        }
-
-        if (dialog) {
-            const confirmBtn = qsa('button, [role="button"]', dialog).find(el =>
-                /block|blokir|confirm|konfirmasi|yes|ya|continue|lanjutkan|ok/i.test(txt(el))
-            );
-            if (confirmBtn) {
-                confirmBtn.scrollIntoView({ block: 'center' });
-                ['mousedown', 'mouseup', 'click'].forEach(type => {
-                    confirmBtn.dispatchEvent(new MouseEvent(type, {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window
-                    }));
-                });
-                await wait(1500);
-                closeOpenMenus();
-                return { ok: true, meta: { name, url } };
-            } else {
-                closeOpenMenus();
-                return { ok: false, reason: 'BlockConfirmNotFound' };
-            }
-        } else {
-            closeOpenMenus();
-            return { ok: false, reason: 'NoBlockDialog' };
-        }
-    }
-
-    return { ok: false, reason: 'NoActionFound' };
+    closeOpenMenus();
+    return { ok: false, reason: 'NoUnfollowItem' };
 }
 
 async function run() {
