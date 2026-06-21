@@ -73,6 +73,36 @@ async function waitForDialogToClose() {
     }
 }
 
+async function closeSuccessPopup() {
+    await wait(800);
+    let popup = null;
+    let tries = 0;
+    while (!popup && tries < 10) {
+        popup = qsa('[role="dialog"], [aria-modal="true"]').find(el =>
+            /anda memblokir|you blocked|blocked/i.test(txt(el))
+        );
+        if (!popup) await wait(400);
+        tries++;
+    }
+    if (popup) {
+        const closeBtn = qsa('button, [role="button"]', popup).find(el =>
+            /tutup|close|ok/i.test(txt(el))
+        );
+        if (closeBtn) {
+            closeBtn.scrollIntoView({ block: 'center' });
+            ['mousedown', 'mouseup', 'click'].forEach(type => {
+                closeBtn.dispatchEvent(new MouseEvent(type, {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                }));
+            });
+            await wait(600);
+        }
+        popup.style.display = 'none';
+    }
+}
+
 async function doAction(index) {
     closeOpenMenus();
 
@@ -112,6 +142,7 @@ async function doAction(index) {
 
         if (dialog) {
             await waitForDialogToClose();
+            await closeSuccessPopup();
             closeOpenMenus();
             return { ok: true, meta: { name, url } };
         } else {
