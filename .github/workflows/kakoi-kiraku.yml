@@ -385,35 +385,33 @@ jobs:
           FMT="${{ github.event.client_payload.format_id }}"
           mkdir -p downloads
 
-          # Try the requested format, then fall back to "best"
           yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
             -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL" || \
           yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github \
             -f "best" -o "downloads/%(title)s.%(ext)s" "$URL"
 
-          # Safely grab the downloaded file (handles spaces/emoji)
-          cd downloads
-          shopt -s nullglob
-          FILES=(*)
-          if [ ${#FILES[@]} -eq 0 ]; then
+          # Read the downloaded filename safely (handles spaces / emoji)
+          IFS= read -r -d '' FILE < <(find downloads -type f -print0)
+          if [ -z "$FILE" ]; then
             echo "No file downloaded"
             exit 1
           fi
-          FILE="${FILES[0]}"
+
           SIZE=$(stat -c%s "$FILE")
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
+          FILENAME=$(basename "$FILE")
 
           if [ "$SIZE" -lt 50000000 ]; then
             curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
               -F "chat_id=$CHAT_ID" \
               -F "document=@$FILE" \
-              -F "caption=$FILE"
+              -F "caption=$FILENAME"
             curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
               -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
           else
             rclone copy "$FILE" mirror_drive: -P
-            LINK=$(rclone link "mirror_drive:$FILE")
+            LINK=$(rclone link "mirror_drive:$FILENAME")
             curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
               -d "chat_id=$CHAT_ID" \
               -d "message_id=$PROGRESS_MSG_ID" \
