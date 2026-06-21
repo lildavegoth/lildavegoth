@@ -2255,6 +2255,61 @@
             setupGalleries(content);
             setupCardListInteractions(content);
         }
+        
+        async function fetchAndShowMoreArticles(currentSlug) {
+            var contentDiv = document.getElementById('articleContent');
+            if (!contentDiv) return;
+            try {
+                var res = await fetch('https://raw.githubusercontent.com/lildavegoth/lildavegoth/homepage/files/fetch/articles.json?t=' + Date.now());
+                if (!res.ok) return;
+                var allArticles = await res.json();
+                if (!Array.isArray(allArticles)) allArticles = allArticles.allArticles || [];
+                var otherArticles = allArticles.filter(function(a) {
+                    var slug = a.link.split('slug=')[1]?.split('&')[0];
+                    return slug !== currentSlug;
+                });
+                var shuffled = otherArticles.sort(function() { return 0.5 - Math.random(); });
+                var selected = shuffled.slice(0, 5);
+                if (selected.length === 0) return;
+
+                var scroll = document.createElement('div');
+                scroll.className = 'more-articles-scroll';
+
+                selected.forEach(function(article) {
+                    var card = document.createElement('div');
+                    card.className = 'more-article-card';
+                    var slug = article.link.split('slug=')[1]?.split('&')[0];
+                    var isBugNote = slug && slug.toLowerCase().includes('-bugnotes');
+
+                    if (isBugNote) {
+                        var iconWrap = document.createElement('div');
+                        iconWrap.className = 'more-article-img';
+                        iconWrap.style.cssText = 'display:flex;align-items:center;justify-content:center;background:rgba(90,90,90,0.3);color:var(--accent-color);font-size:20px;';
+                        var icon = document.createElement('i');
+                        icon.className = 'fas fa-bug';
+                        iconWrap.appendChild(icon);
+                        card.appendChild(iconWrap);
+                    } else {
+                        var img = document.createElement('img');
+                        img.className = 'more-article-img';
+                        img.src = article.image || 'images/default.webp';
+                        img.alt = '';
+                        card.appendChild(img);
+                    }
+
+                    var cardTitle = document.createElement('div');
+                    cardTitle.className = 'more-article-card-title';
+                    cardTitle.textContent = article.name;
+                    card.appendChild(cardTitle);
+                    card.addEventListener('click', function() {
+                        window.location.href = article.link;
+                    });
+                    scroll.appendChild(card);
+                });
+
+                contentDiv.appendChild(scroll);
+            } catch (e) {}
+        }
 
         function generateTableOfContents() {
             var content = document.getElementById('articleContent');
