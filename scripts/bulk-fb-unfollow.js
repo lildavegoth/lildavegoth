@@ -29,6 +29,9 @@ function inViewport(el) {
 function closeOpenMenus() {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     qsa('[role="menu"], [aria-modal="true"]').forEach(m => m.style.display = 'none');
+    qsa('[role="dialog"], .uiLayer, .uiOverlay').forEach(m => {
+        if (m.style) m.style.display = 'none';
+    });
 }
 
 function parseNameFromAria(el) {
@@ -66,6 +69,16 @@ function isFriend(container) {
 function findDirectFollowButton(container) {
     const btns = qsa('button', container);
     return btns.find(b => /^(follow|ikuti)$/i.test(txt(b)));
+}
+
+function findConfirmButton() {
+    const patterns = ['^(Blokir|Block|Konfirmasi|Confirm|OK|Ya|Yes)$', '^Lanjutkan$', '^Continue$'];
+    for (let pat of patterns) {
+        const btn = findMenuItem(pat);
+        if (btn) return btn;
+    }
+    const allBtns = qsa('button[role="button"], button, [role="button"]');
+    return allBtns.find(b => /blokir|block|konfirmasi|confirm|ok|ya|yes|lanjutkan|continue/i.test(txt(b)));
 }
 
 async function doAction(index) {
@@ -108,15 +121,25 @@ async function doAction(index) {
     let blockItem = findMenuItem('^(Blokir|Block)$');
     if (blockItem) {
         blockItem.click();
-        await wait(1200);
-        const confirmBlock = findMenuItem('^(Blokir|Block|Konfirmasi|Confirm|OK)$');
-        if (confirmBlock) {
-            confirmBlock.click();
-            await wait(1000);
+        await wait(2000);
+        let confirmBtn = findConfirmButton();
+        let retries = 0;
+        while (!confirmBtn && retries < 5) {
+            await wait(800);
+            confirmBtn = findConfirmButton();
+            retries++;
         }
-        closeOpenMenus();
-        console.log(`[#${index}] 🚫 BLOCK success: ${name || '(unknown)'}`);
-        return { ok: true, meta: { name, url } };
+        if (confirmBtn) {
+            confirmBtn.click();
+            await wait(1500);
+            closeOpenMenus();
+            console.log(`[#${index}] 🚫 BLOCK success: ${name || '(unknown)'}`);
+            return { ok: true, meta: { name, url } };
+        } else {
+            closeOpenMenus();
+            console.warn(`[#${index}] FAIL: Block confirmation not found`);
+            return { ok: false, reason: 'BlockConfirmNotFound' };
+        }
     }
 
     closeOpenMenus();
