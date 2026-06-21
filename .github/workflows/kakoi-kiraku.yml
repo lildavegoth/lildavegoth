@@ -358,10 +358,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - name: Install yt-dlp, ffmpeg and rclone
         run: |
           pip install yt-dlp
           sudo apt-get update && sudo apt-get install -y ffmpeg rclone
+
       - name: Configure rclone
         run: |
           export TOKEN='${{ secrets.GDRIVE_TOKEN }}'
@@ -375,6 +377,7 @@ jobs:
           token = $TOKEN
           root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
           EOF
+
       - name: Download with chosen format
         run: |
           echo "${{ secrets.YOUTUBE_COOKIES }}" > cookies.txt
@@ -382,24 +385,28 @@ jobs:
           FMT="${{ github.event.client_payload.format_id }}"
           mkdir -p downloads
           yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL"
-          echo "FILE=$(ls downloads)" >> $GITHUB_ENV
+          # Save the downloaded filename safely
+          find downloads -type f -print0 | xargs -0 -I {} basename "{}" > downloads/filename.txt
+
       - name: Check file size and deliver
         run: |
-          FILE="downloads/${{ env.FILE }}"
-          SIZE=$(stat -c%s "$FILE")
+          FILE=$(cat downloads/filename.txt)
+          FILE_PATH="downloads/$FILE"
+          SIZE=$(stat -c%s "$FILE_PATH")
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
+
           if [ "$SIZE" -lt 50000000 ]; then
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
               -F "chat_id=$CHAT_ID" \
-              -F "document=@$FILE" \
-              -F "caption=Downloaded: ${{ env.FILE }}"
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
+              -F "document=@$FILE_PATH" \
+              -F "caption=$FILE"
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
               -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
           else
-            rclone copy "$FILE" mirror_drive: -P
-            LINK=$(rclone link "mirror_drive:${{ env.FILE }}")
-            curl -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
+            rclone copy "$FILE_PATH" mirror_drive: -P
+            LINK=$(rclone link "mirror_drive:$FILE")
+            curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
               -d "chat_id=$CHAT_ID" \
               -d "message_id=$PROGRESS_MSG_ID" \
               -d "text=Download complete: $LINK"
