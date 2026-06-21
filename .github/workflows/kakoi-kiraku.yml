@@ -348,63 +348,36 @@ jobs:
             --data-urlencode "text=$TEXT" \
             -d "reply_markup=$REPLY_MARKUP"
 
-  download-media:
-    if: github.event_name == 'repository_dispatch' && github.event.action == 'download-media'
-    runs-on: ubuntu-latest
-    env:
-      KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
-    steps:
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install yt-dlp, ffmpeg and rclone
-        run: |
-          pip install yt-dlp
-          sudo apt-get update && sudo apt-get install -y ffmpeg rclone
-
-      - name: Configure rclone
-        run: |
-          export TOKEN='${{ secrets.GDRIVE_TOKEN }}'
-          mkdir -p ~/.config/rclone
-          cat > ~/.config/rclone/rclone.conf << EOF
-          [mirror_drive]
-          type = drive
-          scope = drive
-          client_id = ${{ secrets.GDRIVE_CLIENT_ID }}
-          client_secret = ${{ secrets.GDRIVE_CLIENT_SECRET }}
-          token = $TOKEN
-          root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
-          EOF
-
-      - name: Download with chosen format
+      - name: Download and deliver
         run: |
           echo "${{ secrets.YOUTUBE_COOKIES }}" > cookies.txt
           URL="${{ github.event.client_payload.url }}"
           FMT="${{ github.event.client_payload.format_id }}"
           mkdir -p downloads
           yt-dlp --cookies cookies.txt --js-runtimes node --remote-components ejs:github -f "$FMT" -o "downloads/%(title)s.%(ext)s" "$URL"
-          # Save the downloaded filename safely
-          find downloads -type f -print0 | xargs -0 -I {} basename "{}" > downloads/filename.txt
 
-      - name: Check file size and deliver
-        run: |
-          FILE=$(cat downloads/filename.txt)
-          FILE_PATH="downloads/$FILE"
-          SIZE=$(stat -c%s "$FILE_PATH")
+          # Safely capture the filename
+          cd downloads
+          shopt -s nullglob
+          FILES=(*)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No file downloaded"
+            exit 1
+          fi
+          FILE="${FILES[0]}"
+          SIZE=$(stat -c%s "$FILE")
           CHAT_ID="${{ github.event.client_payload.chat_id }}"
           PROGRESS_MSG_ID="${{ github.event.client_payload.progress_message_id }}"
 
           if [ "$SIZE" -lt 50000000 ]; then
             curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/sendDocument" \
               -F "chat_id=$CHAT_ID" \
-              -F "document=@$FILE_PATH" \
+              -F "document=@$FILE" \
               -F "caption=$FILE"
             curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/deleteMessage" \
               -d "chat_id=$CHAT_ID" -d "message_id=$PROGRESS_MSG_ID"
           else
-            rclone copy "$FILE_PATH" mirror_drive: -P
+            rclone copy "$FILE" mirror_drive: -P
             LINK=$(rclone link "mirror_drive:$FILE")
             curl -s -X POST "https://api.telegram.org/bot$KIRA_TOKEN/editMessageText" \
               -d "chat_id=$CHAT_ID" \
