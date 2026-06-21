@@ -28,7 +28,7 @@ function inViewport(el) {
 
 function closeOpenMenus() {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    qsa('[role="menu"], [aria-modal="true"], [role="dialog"], .uiLayer, .uiOverlay').forEach(m => {
+    qsa('[role="menu"], [role="dialog"], [aria-modal="true"], .uiLayer, .uiOverlay').forEach(m => {
         if (m.style) m.style.display = 'none';
     });
 }
@@ -115,17 +115,21 @@ async function doAction(index) {
     let blockItem = findMenuItem('^(Blokir|Block)$');
     if (blockItem) {
         blockItem.click();
-        await wait(2000);
+        console.log(`[#${index}] ⏳ Block clicked, waiting for confirmation...`);
+        await wait(3000);
+
         let confirmBtn = findConfirmButton();
         let retries = 0;
-        while (!confirmBtn && retries < 5) {
-            await wait(800);
+        while (!confirmBtn && retries < 8) {
+            await wait(600);
             confirmBtn = findConfirmButton();
             retries++;
         }
+
         if (confirmBtn) {
             confirmBtn.click();
-            await wait(1500);
+            console.log(`[#${index}] ✅ Confirmation clicked, waiting for dialog to close...`);
+            await wait(2000);
             closeOpenMenus();
             console.log(`[#${index}] 🚫 BLOCK success: ${name || '(unknown)'}`);
             return { ok: true, meta: { name, url } };
