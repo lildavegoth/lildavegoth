@@ -151,9 +151,48 @@
         }
 
         .word-count {
-            color: var(--text-secondary);
-            font-size: 15px;
-            margin: 0 0 20px 0;
+            display: inline-block;
+            background: var(--accent-color);
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1;
+            vertical-align: middle;
+        }
+
+        .info-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .info-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s;
+            line-height: 1;
+            vertical-align: middle;
+        }
+
+        .info-pill:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .info-pill i {
+            font-size: 14px;
         }
 
         #articleContent {
@@ -785,6 +824,10 @@
             margin-top: 2rem;
         }
 
+        .comments-section.hidden {
+            display: none;
+        }
+
         .comment-card {
             background: var(--bg-card);
             border-radius: var(--radius-medium);
@@ -1014,6 +1057,109 @@
             font-weight: 600;
         }
 
+        .tags-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 99999999;
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .tags-overlay.active {
+            display: flex;
+        }
+
+        .tags-overlay-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .tags-overlay-header h2 {
+            color: var(--accent-color);
+            font-size: 1.6rem;
+        }
+
+        .tags-overlay-close {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .tag-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: 14px 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .tag-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tag-card-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .tag-card-count {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-left: 8px;
+        }
+
+        .tag-card-caret {
+            color: var(--accent-color);
+            transition: transform 0.2s;
+        }
+
+        .tag-card.expanded .tag-card-caret {
+            transform: rotate(180deg);
+        }
+
+        .tag-articles {
+            display: none;
+            margin-top: 12px;
+        }
+
+        .tag-card.expanded .tag-articles {
+            display: block;
+        }
+
+        .tag-article-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+        }
+
+        .tag-article-item img {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .tag-article-item span {
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
         @media (min-width: 720px) {
             .main {
                 display: flex;
@@ -1235,7 +1381,16 @@
 
         <div class="content">
             <h1 id="articleTitle" class="title">Kakoi Kiraku</h1>
-            <p class="word-count" id="wordCount"></p>
+            <div class="info-bar">
+                <span class="word-count" id="wordCount">0 words</span>
+                <button class="info-pill" id="commentsToggleBtn">
+                    <i class="fas fa-comment-alt"></i>
+                    <span id="commentCountDisplay">0</span>
+                </button>
+                <button class="info-pill" id="tagsBtn">
+                    <i class="fas fa-tag"></i> Tags
+                </button>
+            </div>
             <div id="articleContent" class="text"></div>
         </div>
     </div>
@@ -1256,6 +1411,16 @@
                 <button class="btn-delete" id="confirmDeleteBtn">Delete</button>
             </div>
         </div>
+    </div>
+
+    <div class="tags-overlay" id="tagsOverlay">
+        <div class="tags-overlay-header">
+            <h2>Hey, Do you want to see other Articles based on this Article tags?</h2>
+            <button class="tags-overlay-close" onclick="closeTagsOverlay()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="tagsList"></div>
     </div>
 
     <script>
@@ -1803,6 +1968,7 @@
         var currentUser = JSON.parse(localStorage.getItem('currentUser'));
         var authToken = localStorage.getItem('authToken');
         var currentArticleSlug = '';
+        var allArticlesCache = null;
 
         function formatCommentTime(dateString) {
             var d = new Date(dateString);
@@ -2139,6 +2305,7 @@
                 if (res.ok) {
                     var comments = await res.json();
                     renderComments(comments, commentsList);
+                    document.getElementById('commentCountDisplay').textContent = comments.length;
                 }
             } catch (e) {}
         }
@@ -2146,7 +2313,7 @@
         function insertCommentsSection(slug) {
             var articleContent = document.getElementById('articleContent');
             var section = document.createElement('div');
-            section.className = 'comments-section';
+            section.className = 'comments-section hidden';
             section.innerHTML = '<h3 style="color:var(--accent-color); margin-bottom:1rem;"><i class="fas fa-comment-alt"></i> Comments</h3><div id="commentsList"></div>';
             if (currentUser && authToken) {
                 var formDiv = document.createElement('div');
@@ -2190,7 +2357,7 @@
             var contentDiv = document.getElementById('articleContent');
             if (!contentDiv) return;
             try {
-                var res = await fetch('https://raw.githubusercontent.com/lildavegoth/lildavegoth/homepage/files/fetch/articles.json?t=' + Date.now());
+                var res = await fetch('/api/articles-list?t=' + Date.now());
                 if (!res.ok) return;
                 var allArticles = await res.json();
                 if (!Array.isArray(allArticles)) allArticles = allArticles.allArticles || [];
@@ -2254,61 +2421,6 @@
             enhanceVideos(content);
             setupGalleries(content);
             setupCardListInteractions(content);
-        }
-        
-        async function fetchAndShowMoreArticles(currentSlug) {
-            var contentDiv = document.getElementById('articleContent');
-            if (!contentDiv) return;
-            try {
-                var res = await fetch('/api/articles-list?t=' + Date.now());
-                if (!res.ok) return;
-                var allArticles = await res.json();
-                if (!Array.isArray(allArticles)) allArticles = allArticles.allArticles || [];
-                var otherArticles = allArticles.filter(function(a) {
-                    var slug = a.link.split('slug=')[1]?.split('&')[0];
-                    return slug !== currentSlug;
-                });
-                var shuffled = otherArticles.sort(function() { return 0.5 - Math.random(); });
-                var selected = shuffled.slice(0, 5);
-                if (selected.length === 0) return;
-
-                var scroll = document.createElement('div');
-                scroll.className = 'more-articles-scroll';
-
-                selected.forEach(function(article) {
-                    var card = document.createElement('div');
-                    card.className = 'more-article-card';
-                    var slug = article.link.split('slug=')[1]?.split('&')[0];
-                    var isBugNote = slug && slug.toLowerCase().includes('-bugnotes');
-
-                    if (isBugNote) {
-                        var iconWrap = document.createElement('div');
-                        iconWrap.className = 'more-article-img';
-                        iconWrap.style.cssText = 'display:flex;align-items:center;justify-content:center;background:rgba(90,90,90,0.3);color:var(--accent-color);font-size:20px;';
-                        var icon = document.createElement('i');
-                        icon.className = 'fas fa-bug';
-                        iconWrap.appendChild(icon);
-                        card.appendChild(iconWrap);
-                    } else {
-                        var img = document.createElement('img');
-                        img.className = 'more-article-img';
-                        img.src = article.image || 'images/default.webp';
-                        img.alt = '';
-                        card.appendChild(img);
-                    }
-
-                    var cardTitle = document.createElement('div');
-                    cardTitle.className = 'more-article-card-title';
-                    cardTitle.textContent = article.name;
-                    card.appendChild(cardTitle);
-                    card.addEventListener('click', function() {
-                        window.location.href = article.link;
-                    });
-                    scroll.appendChild(card);
-                });
-
-                contentDiv.appendChild(scroll);
-            } catch (e) {}
         }
 
         function generateTableOfContents() {
@@ -2548,8 +2660,102 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             setupMoreShareButton();
+
+            var commentsBtn = document.getElementById('commentsToggleBtn');
+            if (commentsBtn) {
+                commentsBtn.addEventListener('click', function() {
+                    var section = document.querySelector('.comments-section');
+                    if (section) {
+                        section.classList.toggle('hidden');
+                    }
+                });
+            }
+
+            var tagsBtn = document.getElementById('tagsBtn');
+            if (tagsBtn) {
+                tagsBtn.addEventListener('click', openTagsOverlay);
+            }
+
             loadArticle();
         });
+
+        async function openTagsOverlay() {
+            var overlay = document.getElementById('tagsOverlay');
+            overlay.classList.add('active');
+            if (allArticlesCache) {
+                renderTagCards(allArticlesCache);
+                return;
+            }
+            try {
+                var res = await fetch('/api/articles-list?t=' + Date.now());
+                if (res.ok) {
+                    var articles = await res.json();
+                    allArticlesCache = Array.isArray(articles) ? articles : (articles.allArticles || []);
+                    renderTagCards(allArticlesCache);
+                }
+            } catch (e) {}
+        }
+
+        function closeTagsOverlay() {
+            document.getElementById('tagsOverlay').classList.remove('active');
+        }
+
+        function renderTagCards(articles) {
+            var categoryMap = {};
+            articles.forEach(function(article) {
+                var cats = (article.categories || '').split(',').map(function(c) { return c.trim(); }).filter(Boolean);
+                cats.forEach(function(cat) {
+                    if (!categoryMap[cat]) {
+                        categoryMap[cat] = [];
+                    }
+                    categoryMap[cat].push(article);
+                });
+            });
+
+            var tagsList = document.getElementById('tagsList');
+            tagsList.innerHTML = '';
+
+            Object.keys(categoryMap).sort().forEach(function(cat) {
+                var card = document.createElement('div');
+                card.className = 'tag-card';
+                card.innerHTML = `
+                    <div class="tag-card-header">
+                        <span>
+                            <span class="tag-card-title">${cat}</span>
+                            <span class="tag-card-count">${categoryMap[cat].length}</span>
+                        </span>
+                        <i class="fas fa-caret-down tag-card-caret"></i>
+                    </div>
+                    <div class="tag-articles"></div>
+                `;
+                card.addEventListener('click', function(e) {
+                    if (e.target.closest('.tag-article-item')) return;
+                    this.classList.toggle('expanded');
+                    if (this.classList.contains('expanded')) {
+                        var articlesDiv = this.querySelector('.tag-articles');
+                        if (articlesDiv.children.length === 0) {
+                            articlesDiv.innerHTML = categoryMap[cat].map(function(art) {
+                                var slug = art.link ? art.link.split('slug=')[1]?.split('&')[0] : art.slug;
+                                return `<div class="tag-article-item" data-slug="${slug}">
+                                    <img src="${art.image || 'images/default.webp'}" alt="">
+                                    <span>${art.name}</span>
+                                </div>`;
+                            }).join('');
+                            articlesDiv.querySelectorAll('.tag-article-item').forEach(function(item) {
+                                item.addEventListener('click', function(e) {
+                                    e.stopPropagation();
+                                    var slug = this.getAttribute('data-slug');
+                                    if (slug) {
+                                        window.location.href = 'article-page.html?slug=' + slug;
+                                    }
+                                });
+                            });
+                        }
+                    }
+                });
+                tagsList.appendChild(card);
+            });
+        }
     </script>
 </body>
 </html>
