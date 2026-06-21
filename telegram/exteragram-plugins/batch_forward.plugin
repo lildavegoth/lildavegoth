@@ -10,7 +10,7 @@ from ui.bulletin import BulletinHelper
 
 __name__ = "Batch Forward"
 __description__ = "Forwards any messages without limits, without sender name and supports for Bulk or Batch forwards! (.forward url).\nhttps://github.com/lildavegoth/lildavegoth"
-__version__ = "1.2.3"
+__version__ = "1.2.4"
 __id__ = "batch_forward"
 __author__ = "@lildavegoth"
 __icon__ = "kirakustickers/3"
@@ -62,7 +62,11 @@ class RestrictForward(BasePlugin):
             return HookResult(strategy=HookStrategy.CANCEL)
 
         rest = parts[1].strip()
-        links = re.findall(r'https?://t\.me/(?:c/)?[^/\s]+/\d+(?:/\d+)?(?:[?]\S+)?', rest)
+        # Updated regex: stop before next https:// or whitespace, allows query params like ?single
+        links = re.findall(
+            r'https?://t\.me/(?:c/)?[^/\s]+/\d+(?:/\d+)?(?:[?][^\s?]*)?(?=\s|$|https?://)',
+            rest
+        )
         if not links:
             self._show_error("No valid Telegram message link found.")
             return HookResult(strategy=HookStrategy.CANCEL)
@@ -120,7 +124,6 @@ class RestrictForward(BasePlugin):
                     return
 
                 if comment_id is not None:
-                    # Use the dedicated discussion-message API
                     self._handle_comment_direct(account, resolved_peer, comment_id, source_url, params, done_event)
                 else:
                     self._fetch_messages(account, resolved_peer, message_id, chat_object, source_url, params, done_event)
@@ -169,9 +172,6 @@ class RestrictForward(BasePlugin):
             self._show_error(f"Critical exception: {str(e)}")
             if done_event: done_event.set()
 
-    # -------------------------------------------------------------------------
-    # Comment forwarding – uses the official getDiscussionMessage API
-    # -------------------------------------------------------------------------
     def _handle_comment_direct(self, account, channel_peer, comment_id, source_url, params, done_event):
         TLRPC = find_class("org.telegram.tgnet.TLRPC")
         ConnectionsManager = find_class("org.telegram.tgnet.ConnectionsManager")
@@ -201,7 +201,6 @@ class RestrictForward(BasePlugin):
                     if self.done_event: self.done_event.set()
                     return
 
-                # The response contains a single message or an array of messages
                 messages = response.messages
                 if messages is None or messages.size() == 0:
                     self.plugin._show_error("Comment not found.")
@@ -227,9 +226,6 @@ class RestrictForward(BasePlugin):
 
         ConnectionsManager.getInstance(account).sendRequest(req, DiscussionMessageDelegate(self, account, source_url, params, done_event))
 
-    # -------------------------------------------------------------------------
-    # Original fetch + clone (unchanged)
-    # -------------------------------------------------------------------------
     def _fetch_messages(self, account, resolved_peer, message_id, chat_object, source_url, params, done_event):
         TLRPC = find_class("org.telegram.tgnet.TLRPC")
         ConnectionsManager = find_class("org.telegram.tgnet.ConnectionsManager")
@@ -314,9 +310,6 @@ class RestrictForward(BasePlugin):
 
         connections.sendRequest(msg_req, GetHistoryDelegate(self, account, resolved_peer, params, chat_object, source_url, done_event))
 
-    # -------------------------------------------------------------------------
-    # Shared clone helper (used by both comment and normal messages)
-    # -------------------------------------------------------------------------
     def _send_cloned_via_helper_static(self, account, msg_list, dest_peer, source_url, done_event):
         TLRPC = find_class("org.telegram.tgnet.TLRPC")
         ConnectionsManager = find_class("org.telegram.tgnet.ConnectionsManager")
@@ -456,9 +449,6 @@ class RestrictForward(BasePlugin):
 
         self._show_success("Message forwarded with source!")
 
-    # -------------------------------------------------------------------------
-    # Helper methods (unchanged)
-    # -------------------------------------------------------------------------
     def _get_dialog_id_from_peer(self, peer):
         if hasattr(peer, 'chat_id') and peer.chat_id != 0:
             return jlong(-peer.chat_id)
