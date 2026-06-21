@@ -65,30 +65,18 @@ function isFriend(container) {
     return texts.some(t => /friend|teman/i.test(t));
 }
 
-function findConfirmButton() {
-    const patterns = ['^(Blokir|Block|Konfirmasi|Confirm|OK|Ya|Yes)$', '^Lanjutkan$', '^Continue$'];
-    for (let pat of patterns) {
-        const btn = findMenuItem(pat);
-        if (btn) return btn;
-    }
-    const allBtns = qsa('button[role="button"], button, [role="button"]');
-    return allBtns.find(b => /blokir|block|konfirmasi|confirm|ok|ya|yes|lanjutkan|continue/i.test(txt(b)));
-}
-
 async function doAction(index) {
     closeOpenMenus();
 
     let btn = getOptionButtons().find(inViewport) || getOptionButtons()[0];
     if (!btn) {
         if (OPTIONS.autoScroll) window.scrollBy({ top: OPTIONS.scrollStep, behavior: 'smooth' });
-        console.warn(`[#${index}] SKIP: No option button found`);
         return { ok: false, reason: 'NoOptionButton' };
     }
 
     const container = btn.closest ? btn.closest('div[role="article"], div[data-ad-comet-preview]') : null;
     if (container && isFriend(container)) {
         btn.dataset._done = "1";
-        console.warn(`[#${index}] SKIP: Mutual friend`);
         return { ok: false, reason: 'FriendSkipped' };
     }
 
@@ -108,55 +96,56 @@ async function doAction(index) {
         const again = findMenuItem('^(Batal mengikuti|Berhenti Mengikuti|Berhenti mengikuti|Tak lagi mengikuti|Unfollow|Dejar de seguir|Ne plus suivre|Nicht mehr folgen)$');
         if (again) again.click();
         closeOpenMenus();
-        console.log(`[#${index}] ✅ UNFOLLOW success: ${name || '(unknown)'}`);
         return { ok: true, meta: { name, url } };
     }
 
     let blockItem = findMenuItem('^(Blokir|Block)$');
     if (blockItem) {
         blockItem.click();
-        console.log(`[#${index}] ⏳ Block clicked, waiting for confirmation...`);
-        await wait(3000);
+        await wait(800);
 
-        let confirmBtn = findConfirmButton();
-        let retries = 0;
-        while (!confirmBtn && retries < 8) {
-            await wait(600);
-            confirmBtn = findConfirmButton();
-            retries++;
+        let dialog = null;
+        let tries = 0;
+        while (!dialog && tries < 15) {
+            dialog = document.querySelector('[role="dialog"], [aria-modal="true"]');
+            if (!dialog) await wait(500);
+            tries++;
         }
 
-        if (confirmBtn) {
-            confirmBtn.click();
-            console.log(`[#${index}] ✅ Confirmation clicked, waiting for dialog to close...`);
-            await wait(2000);
-            closeOpenMenus();
-            console.log(`[#${index}] 🚫 BLOCK success: ${name || '(unknown)'}`);
-            return { ok: true, meta: { name, url } };
+        if (dialog) {
+            const confirmBtn = qsa('button, [role="button"]', dialog).find(el =>
+                /block|blokir|confirm|konfirmasi|yes|ya|continue|lanjutkan|ok/i.test(txt(el))
+            );
+            if (confirmBtn) {
+                confirmBtn.scrollIntoView({ block: 'center' });
+                ['mousedown', 'mouseup', 'click'].forEach(type => {
+                    confirmBtn.dispatchEvent(new MouseEvent(type, {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                    }));
+                });
+                await wait(1500);
+                closeOpenMenus();
+                return { ok: true, meta: { name, url } };
+            } else {
+                closeOpenMenus();
+                return { ok: false, reason: 'BlockConfirmNotFound' };
+            }
         } else {
             closeOpenMenus();
-            console.warn(`[#${index}] FAIL: Block confirmation not found`);
-            return { ok: false, reason: 'BlockConfirmNotFound' };
+            return { ok: false, reason: 'NoBlockDialog' };
         }
     }
 
-    console.warn(`[#${index}] FAIL: No Unfollow or Block found for ${name || '(unknown)'}`);
     return { ok: false, reason: 'NoActionFound' };
 }
 
 async function run() {
-    console.log('===== Bulk Unfollow Started =====');
-    console.log(`Max actions: ${OPTIONS.maxActions} | Delay: ${OPTIONS.delayMs}ms`);
-    console.log('Type "bulkStop()" to stop manually');
-
     for (let i = 1; i <= OPTIONS.maxActions; i++) {
-        if (window.__unfollowStopFlag) {
-            console.warn('===== Stopped by user =====');
-            break;
-        }
+        if (window.__unfollowStopFlag) break;
         await doAction(i);
         await wait(OPTIONS.delayMs);
     }
-    console.log('===== Bulk Unfollow Finished =====');
 }
 run();
