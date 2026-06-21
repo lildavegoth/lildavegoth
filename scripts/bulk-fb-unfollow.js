@@ -7,7 +7,7 @@ const OPTIONS = {
 };
 
 window.__unfollowStopFlag = false;
-window.stopUnfollow = () => { window.__unfollowStopFlag = true; };
+window.bulkStop = () => { window.__unfollowStopFlag = true; };
 
 function wait(ms) {
     return new Promise(r => setTimeout(r, ms));
