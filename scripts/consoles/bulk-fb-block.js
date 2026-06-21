@@ -72,12 +72,14 @@ async function doAction(index) {
     let btn = getOptionButtons().find(inViewport) || getOptionButtons()[0];
     if (!btn) {
         if (OPTIONS.autoScroll) window.scrollBy({ top: OPTIONS.scrollStep, behavior: 'smooth' });
+        console.log(`[#${index}] ❌ FAIL: No option button found`);
         return { ok: false, reason: 'NoOptionButton' };
     }
 
     const container = btn.closest ? btn.closest('div[role="article"], div[data-ad-comet-preview]') : null;
     if (container && isFriend(container)) {
         btn.dataset._done = "1";
+        console.log(`[#${index}] ⏭️ SKIP: Mutual friend`);
         return { ok: false, reason: 'FriendSkipped' };
     }
 
@@ -93,19 +95,29 @@ async function doAction(index) {
     let blockItem = findMenuItem('^(Blokir|Block)$');
     if (blockItem) {
         blockItem.click();
+        console.log(`[#${index}] ⏳ Block clicked – you have ${OPTIONS.blockWaitMs/1000}s to confirm and close popup manually`);
         await wait(OPTIONS.blockWaitMs);
         closeOpenMenus();
+        console.log(`[#${index}] ✅ BLOCK success: ${name || '(unknown)'}`);
         return { ok: true, meta: { name, url } };
     }
 
+    console.log(`[#${index}] ❌ FAIL: No Block item found`);
     return { ok: false, reason: 'NoBlockItem' };
 }
 
 async function run() {
+    console.log(`===== Bulk Block Started (max: ${OPTIONS.maxActions}) =====`);
+    console.log('Type "bulkStop()" to stop manually');
+
     for (let i = 1; i <= OPTIONS.maxActions; i++) {
-        if (window.__unfollowStopFlag) break;
+        if (window.__unfollowStopFlag) {
+            console.log('===== Stopped by user =====');
+            break;
+        }
         await doAction(i);
         await wait(OPTIONS.delayMs);
     }
+    console.log('===== Bulk Block Finished =====');
 }
 run();
