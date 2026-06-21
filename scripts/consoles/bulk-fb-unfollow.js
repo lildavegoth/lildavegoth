@@ -71,12 +71,14 @@ async function doAction(index) {
     let btn = getOptionButtons().find(inViewport) || getOptionButtons()[0];
     if (!btn) {
         if (OPTIONS.autoScroll) window.scrollBy({ top: OPTIONS.scrollStep, behavior: 'smooth' });
+        console.log(`[#${index}] ❌ FAIL: No option button found`);
         return { ok: false, reason: 'NoOptionButton' };
     }
 
     const container = btn.closest ? btn.closest('div[role="article"], div[data-ad-comet-preview]') : null;
     if (container && isFriend(container)) {
         btn.dataset._done = "1";
+        console.log(`[#${index}] ⏭️ SKIP: Mutual friend`);
         return { ok: false, reason: 'FriendSkipped' };
     }
 
@@ -96,18 +98,27 @@ async function doAction(index) {
         const again = findMenuItem('^(Batal mengikuti|Berhenti Mengikuti|Berhenti mengikuti|Tak lagi mengikuti|Unfollow|Dejar de seguir|Ne plus suivre|Nicht mehr folgen)$');
         if (again) again.click();
         closeOpenMenus();
+        console.log(`[#${index}] ✅ UNFOLLOW success: ${name || '(unknown)'}`);
         return { ok: true, meta: { name, url } };
     }
 
     closeOpenMenus();
+    console.log(`[#${index}] ❌ FAIL: No Unfollow item found`);
     return { ok: false, reason: 'NoUnfollowItem' };
 }
 
 async function run() {
+    console.log(`===== Bulk Unfollow Started (max: ${OPTIONS.maxActions}) =====`);
+    console.log('Type "bulkStop()" to stop manually');
+
     for (let i = 1; i <= OPTIONS.maxActions; i++) {
-        if (window.__unfollowStopFlag) break;
+        if (window.__unfollowStopFlag) {
+            console.log('===== Stopped by user =====');
+            break;
+        }
         await doAction(i);
         await wait(OPTIONS.delayMs);
     }
+    console.log('===== Bulk Unfollow Finished =====');
 }
 run();
