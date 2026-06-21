@@ -74,12 +74,14 @@ async function doAction(index) {
     let btn = getOptionButtons().find(inViewport) || getOptionButtons()[0];
     if (!btn) {
         if (OPTIONS.autoScroll) window.scrollBy({ top: OPTIONS.scrollStep, behavior: 'smooth' });
+        console.warn(`[#${index}] SKIP: No option button found`);
         return { ok: false, reason: 'NoOptionButton' };
     }
 
     const container = btn.closest ? btn.closest('div[role="article"], div[data-ad-comet-preview]') : null;
     if (container && isFriend(container)) {
         btn.dataset._done = "1";
+        console.warn(`[#${index}] SKIP: Mutual friend`);
         return { ok: false, reason: 'FriendSkipped' };
     }
 
@@ -99,16 +101,21 @@ async function doAction(index) {
         const again = findMenuItem('^(Batal mengikuti|Berhenti Mengikuti|Berhenti mengikuti|Tak lagi mengikuti|Unfollow|Dejar de seguir|Ne plus suivre|Nicht mehr folgen)$');
         if (again) again.click();
         closeOpenMenus();
+        console.log(`[#${index}] ✅ UNFOLLOW success: ${name || '(unknown)'}`);
         return { ok: true, meta: { name, url } };
     }
 
     let blockItem = findMenuItem('^(Blokir|Block)$');
     if (blockItem) {
         blockItem.click();
-        await wait(400);
+        await wait(1200);
         const confirmBlock = findMenuItem('^(Blokir|Block|Konfirmasi|Confirm|OK)$');
-        if (confirmBlock) confirmBlock.click();
+        if (confirmBlock) {
+            confirmBlock.click();
+            await wait(1000);
+        }
         closeOpenMenus();
+        console.log(`[#${index}] 🚫 BLOCK success: ${name || '(unknown)'}`);
         return { ok: true, meta: { name, url } };
     }
 
@@ -130,20 +137,31 @@ async function doAction(index) {
                 const again = findMenuItem('^(Batal mengikuti|Berhenti Mengikuti|Berhenti mengikuti|Tak lagi mengikuti|Unfollow|Dejar de seguir|Ne plus suivre|Nicht mehr folgen)$');
                 if (again) again.click();
                 closeOpenMenus();
+                console.log(`[#${index}] 🔄 FOLLOW→UNFOLLOW success: ${name || '(unknown)'}`);
                 return { ok: true, meta: { name, url } };
             }
         }
+        console.warn(`[#${index}] FAIL: Follow then unfollow failed`);
         return { ok: false, reason: 'FollowThenUnfollowFailed' };
     }
 
+    console.warn(`[#${index}] FAIL: No action found for ${name || '(unknown)'}`);
     return { ok: false, reason: 'NoActionFound' };
 }
 
 async function run() {
+    console.log('===== Bulk Unfollow Started =====');
+    console.log(`Max actions: ${OPTIONS.maxActions} | Delay: ${OPTIONS.delayMs}ms`);
+    console.log('Type "bulkStop()" to stop manually');
+
     for (let i = 1; i <= OPTIONS.maxActions; i++) {
-        if (window.__unfollowStopFlag) break;
+        if (window.__unfollowStopFlag) {
+            console.warn('===== Stopped by user =====');
+            break;
+        }
         await doAction(i);
         await wait(OPTIONS.delayMs);
     }
+    console.log('===== Bulk Unfollow Finished =====');
 }
 run();
