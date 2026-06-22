@@ -20,6 +20,86 @@ export default async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     if (req.method === 'OPTIONS') return res.status(200).end();
 
+    // ---------- Giveaway actions (query‑based) ----------
+    const ga = req.query.action;
+    if (ga) {
+        if (ga === 'getSettings') {
+            const { data, error } = await supabase
+                .from('giveaway_settings')
+                .select('*')
+                .eq('id', 1)
+                .single();
+            if (error) return res.status(500).json({ error: error.message });
+            return res.status(200).json({ success: true, settings: data });
+        }
+
+        if (ga === 'getParticipants') {
+            const { data, error } = await supabase
+                .from('giveaway_participants')
+                .select('*')
+                .order('joined_at', { ascending: false });
+            if (error) return res.status(500).json({ error: error.message });
+            return res.status(200).json({ success: true, participants: data });
+        }
+
+        if (ga === 'addParticipant') {
+            const dataParam = req.query.data;
+            if (!dataParam) return res.status(400).json({ error: 'Missing participant data' });
+            const participant = JSON.parse(decodeURIComponent(dataParam));
+            const { error } = await supabase
+                .from('giveaway_participants')
+                .insert({
+                    user_id: participant.id,
+                    username: participant.username,
+                    email: participant.email || '',
+                    joined_at: participant.joinedAt,
+                    timestamp: participant.timestamp
+                });
+            if (error) return res.status(500).json({ error: error.message });
+            return res.status(200).json({ success: true });
+        }
+
+        // Admin‑only actions
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ error: 'No token' });
+        const token = authHeader.split(' ')[1];
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        if (ga === 'updateSettings') {
+            const { field, value } = req.query;
+            if (!field || value === undefined) return res.status(400).json({ error: 'Missing field or value' });
+            const updateData = {};
+            if (field === 'maxParticipants') {
+                updateData.max_participants = parseInt(value, 10);
+            } else {
+                updateData[field] = value;
+            }
+            const { error } = await supabase
+                .from('giveaway_settings')
+                .update(updateData)
+                .eq('id', 1);
+            if (error) return res.status(500).json({ error: error.message });
+            return res.status(200).json({ success: true });
+        }
+
+        if (ga === 'clearParticipants') {
+            const { error } = await supabase
+                .from('giveaway_participants')
+                .delete()
+                .neq('user_id', '');
+            if (error) return res.status(500).json({ error: error.message });
+            return res.status(200).json({ success: true });
+        }
+
+        return res.status(400).json({ error: 'Unknown giveaway action' });
+    }
+
+    // ---------- Auth actions (JSON body) ----------
     let payload;
     try {
         const body = await getRawBody(req);
