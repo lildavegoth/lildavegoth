@@ -34,8 +34,13 @@ Cmd + Option + J
 	- For the first time, Developer Tools blocking you from pasting, you need to type this in Console first: `alow pasting`
 6.  Try to paste the Script again and Developer Tools will do the rest
 
+You can also use this script in **Friends List** and not in **Following List** only btw.
+
 # Scripts →
 `[Bulk Facebook Unfollow →](https://github.com/lildavegoth/lildavegoth/blob/homepage/scripts/consoles/bulk-fb-unfollow.js) | [Bulk Facebook Block →](https://github.com/lildavegoth/lildavegoth/blob/homepage/scripts/consoles/bulk-fb-block.js)`
+
+# Scripts by Me →
+- Bulk Facebook Block
 
 # Notes →
 - **If you see a notification inside console log telling you that the script is accessing your account or scam and even hack, don't worry, i don't access to your account at all, i only use your browser buttons to do auto actions and yes it can be the same meaning, but you can ask any genius AI about my script to found out is it trusted or not**
