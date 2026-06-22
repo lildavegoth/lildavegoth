@@ -42,20 +42,25 @@ export default async (req, res) => {
         }
 
         if (ga === 'addParticipant') {
-            const dataParam = req.query.data
-            if (!dataParam) return res.status(400).json({ error: 'Missing participant data' })
-            const participant = JSON.parse(decodeURIComponent(dataParam))
+            const dataParam = req.query.data;
+            if (!dataParam) return res.status(400).json({ error: 'Missing participant data' });
+            const participant = JSON.parse(decodeURIComponent(dataParam));
             const { error } = await supabase
                 .from('giveaway_participants')
-                .insert({
+                .upsert({
                     user_id: participant.id,
                     username: participant.username,
                     email: participant.email || '',
                     joined_at: participant.joinedAt,
                     timestamp: participant.timestamp
-                })
-            if (error) return res.status(500).json({ error: error.message })
-            return res.status(200).json({ success: true })
+                }, { onConflict: 'user_id' });
+            if (error) {
+                if (error.code === '23505') {
+                    return res.status(200).json({ success: false, message: 'Already joined' });
+                }
+                return res.status(500).json({ error: error.message });
+            }
+            return res.status(200).json({ success: true });
         }
 
         const authHeader = req.headers.authorization
