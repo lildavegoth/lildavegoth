@@ -555,40 +555,33 @@
         let currentUser = null;
         let isOnline = true;
         let isAdmin = false;
-        let adminIds = [];
 
         async function initGiveaway() {
             currentUser = window.authCheck ? window.authCheck.getCurrentUser() : null;
             await testConnection();
             await loadGiveawaySettings();
             await loadParticipants();
-            await loadAdmins();
             checkAdminStatus();
             updateUI();
             setupEventListeners();
             setInterval(() => {
                 loadGiveawaySettings();
                 loadParticipants();
-                loadAdmins();
             }, 10000);
         }
 
         async function testConnection() {
             try {
-                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=test&t=${Date.now()}`);
-                if (response.ok) {
-                    isOnline = true;
-                    window.showMessage('Connected to giveaway server');
-                }
+                const response = await fetch(`${API_URL}?action=getSettings&t=${Date.now()}`);
+                isOnline = response.ok;
             } catch (error) {
                 isOnline = false;
-                window.showMessage('Offline');
             }
         }
 
         async function loadGiveawaySettings() {
             try {
-                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getSettings&t=${Date.now()}`);
+                const response = await fetch(`${API_URL}?action=getSettings&t=${Date.now()}`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -608,7 +601,7 @@
 
         async function loadParticipants() {
             try {
-                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getParticipants&t=${Date.now()}`);
+                const response = await fetch(`${API_URL}?action=getParticipants&t=${Date.now()}`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -624,26 +617,6 @@
                     updateParticipantCount();
                 }
             }
-        }
-
-        async function loadAdmins() {
-            try {
-                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getAdmins&t=${Date.now()}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success) {
-                        adminIds = data.admins || [];
-                        localStorage.setItem('giveaway_admins', JSON.stringify(adminIds));
-                    }
-                }
-            } catch (error) {
-                const cached = localStorage.getItem('giveaway_admins');
-                if (cached) {
-                    adminIds = JSON.parse(cached);
-                }
-            }
-            checkAdminStatus();
-            updateUI();
         }
 
         function updateGiveawayDisplay() {
@@ -739,7 +712,7 @@
         }
 
         function checkAdminStatus() {
-            isAdmin = currentUser && (currentUser.username === 'lildavegoth' || adminIds.includes(currentUser.id));
+            isAdmin = currentUser && currentUser.username === 'lildavegoth';
         }
 
         async function joinGiveaway() {
@@ -776,7 +749,7 @@
             };
 
             try {
-                const url = `${GOOGLE_SCRIPT_URL}?action=addParticipant&data=${encodeURIComponent(JSON.stringify(participant))}`;
+                const url = `${API_URL}?action=addParticipant&data=${encodeURIComponent(JSON.stringify(participant))}`;
                 const response = await fetch(url);
                 const result = await response.json();
 
@@ -972,7 +945,6 @@
                 refreshBtn.addEventListener('click', async () => {
                     await loadGiveawaySettings();
                     await loadParticipants();
-                    await loadAdmins();
                     window.showMessage('Data updated');
                     refreshAdminPopup();
                 });
