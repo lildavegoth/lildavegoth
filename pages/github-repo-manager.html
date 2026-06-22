@@ -293,10 +293,6 @@
             cursor: pointer;
             flex: 1;
         }
-        
-        .md-anim-active {
-            animation: mdYeAnim 0.5s cubic-bezier(0.2, 0.0, 0, 1.0);
-        }
     </style>
 </head>
 <body>
@@ -326,9 +322,9 @@
             <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <button id="homeBtn" class="home-btn" onclick="navigateTo('')"><i class="fas fa-home"></i></button>
-                    <button id="backBtn" class="pill-btn btnMDYE" onclick="handleBackClick(this)"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button id="backBtn" class="pill-btn" onclick="pressAnim(this); goBack()"><i class="fas fa-arrow-left"></i> Back</button>
                 </div>
-                <button id="logoutBtn" class="settings-btn btn-logout btnMDYE" onclick="handleLogoutClick(this)"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                <button id="logoutBtn" class="settings-btn btn-logout" onclick="pressAnim(this); openLogoutPopup()"><i class="fas fa-sign-out-alt"></i> Logout</button>
             </div>
             <div id="breadcrumbText" style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:12px;"></div>
             <div class="files-grid" id="filesContainer"></div>
@@ -492,8 +488,11 @@
                 const config = getConfig();
                 items.forEach(item => {
                     if (item.type === 'tree') {
-                        const card = document.createElement('div');
+                        const folderUrl = `https://github.com/${config.owner}/${config.repo}/tree/${config.branch}/${item.path}`;
+                        const card = document.createElement('a');
                         card.className = 'file-card folder-item';
+                        card.href = folderUrl;
+                        card.target = '_blank';
                         card.innerHTML = `
                             <span class="file-name">
                                 <i class="fas fa-folder" style="color: var(--accent-color); width: 20px;"></i>
@@ -501,21 +500,9 @@
                             </span>
                             <span class="file-date">${item.lastDate}</span>
                         `;
-                        card.addEventListener('click', () => navigateTo(item.path + '/'));
-                        filesContainer.appendChild(card);
-                    } else {
-                        const url = `https://github.com/${config.owner}/${config.repo}/blob/${config.branch}/${item.path}`;
-                        const card = document.createElement('a');
-                        card.className = 'file-card';
-                        card.href = url;
-                        card.target = '_blank';
-                        card.innerHTML = `
-                            <span class="file-name">
-                                <i class="fas fa-file" style="color: var(--accent-color); width: 20px;"></i>
-                                ${item.path.split('/').pop()}
-                            </span>
-                            <span class="file-date">${item.lastDate}</span>
-                        `;
+                        card.addEventListener('touchstart', function(e) {
+                            e.stopPropagation();
+                        }, { passive: false });
                         filesContainer.appendChild(card);
                     }
                 });
@@ -576,23 +563,13 @@
             document.getElementById('universalPopup').style.display = 'none';
         }
         
-        function triggerMDAnim(el) {
-            el.classList.add('md-anim-active');
+        function pressAnim(el) {
+            el.classList.add('btnMDYE');
             setTimeout(function() {
-                el.classList.remove('md-anim-active');
+                el.classList.remove('btnMDYE');
             }, 500);
         }
-
-        function handleBackClick(btn) {
-            triggerMDAnim(btn);
-            goBack();
-        }
-
-        function handleLogoutClick(btn) {
-            triggerMDAnim(btn);
-            openLogoutPopup();
-        }
-
+        
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeUniversalPopup();
