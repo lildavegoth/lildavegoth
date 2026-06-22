@@ -512,8 +512,6 @@
             <button id="joinButton" class="tickets-btn">Join Giveaway</button>
             <button id="startButton" class="tickets-btn admin-only" style="background: var(--accent-color); color: black; margin-top: 12px;"><i class="fas fa-play"></i> Start Selection</button>
             <button id="adminPanelButton" class="tickets-btn admin-only" style="background: rgba(255,255,255,0.1); color: white; margin-top: 12px;">Admin Panel</button>
-            <button id="joinButton" class="tickets-btn">Join Giveaway</button>
-            <button id="adminPanelButton" class="tickets-btn admin-only" style="background: rgba(255,255,255,0.1); color: white; margin-top: 12px;">Admin Panel</button>
             <div id="winnerDisplay" class="winner-display">
                 <div style="color: var(--text-secondary); font-size: 1rem; margin-bottom: var(--spacing-sm);"><i class="fas fa-trophy"></i> CONGRATULATIONS TO OUR WINNER! <i class="fas fa-trophy"></i></div>
                 <div class="winner-name" id="winnerName">Loading...</div>
@@ -845,9 +843,12 @@
 
         async function updateSetting(field, value) {
             try {
-                const url = `${GOOGLE_SCRIPT_URL}?action=updateSettings&field=${field}&value=${encodeURIComponent(value)}`;
-                const response = await fetch(url);
-                const result = await response.json();
+                const res = await fetch(`${API_URL}?action=updateSettings&field=${field}&value=${encodeURIComponent(value)}`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')
+                    }
+                });
+                const result = await res.json();
                 if (result.success) {
                     giveawaySettings[field] = value;
                     updateGiveawayDisplay();
@@ -861,17 +862,15 @@
                 window.showMessage('Failed to update');
             }
         }
-        
-        const res = await fetch(`${API_URL}?action=updateSettings&field=${field}&value=${encodeURIComponent(value)}`, {
-            headers: {
-                'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')
-            }
-        });
 
         async function clearAllParticipants() {
             try {
-                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=clearParticipants`);
-                const result = await response.json();
+                const res = await fetch(`${API_URL}?action=clearParticipants`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')
+                    }
+                });
+                const result = await res.json();
                 if (result.success) {
                     giveawayParticipants = [];
                     updateParticipantCount();
@@ -885,12 +884,6 @@
                 window.showMessage('Failed to clear');
             }
         }
-        
-        const res = await fetch(`${API_URL}?action=clearParticipants`, {
-            headers: {
-                'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')
-            }
-        });
 
         function openPopup(type) {
             const popup = document.getElementById('universalPopup');
