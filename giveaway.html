@@ -423,7 +423,7 @@
             gap: 10px;
             margin-top: var(--spacing-md);
         }
-        
+
         .action-button {
             flex: 1;
             padding: 14px;
@@ -545,7 +545,6 @@
 
     <script>
         const API_URL = '/api/auth';
-
         let giveawayParticipants = [];
         let giveawaySettings = {
             status: 'active',
@@ -567,6 +566,7 @@
             setInterval(() => {
                 loadGiveawaySettings();
                 loadParticipants();
+                updateUI();
             }, 10000);
         }
 
@@ -585,7 +585,11 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
-                        giveawaySettings = data.settings;
+                        giveawaySettings = {
+                            status: data.settings.status,
+                            prize: data.settings.prize,
+                            maxParticipants: data.settings.max_participants
+                        };
                         updateGiveawayDisplay();
                         localStorage.setItem('giveaway_settings', JSON.stringify(giveawaySettings));
                     }
@@ -634,24 +638,6 @@
 
             if (badge) {
                 badge.textContent = giveawaySettings.status === 'active' ? 'ACTIVE' : 'PAUSED';
-                badge.style.borderColor = 'var(--accent-color)';
-                badge.style.color = 'var(--accent-color)';
-            }
-
-            const joinButton = document.getElementById('joinButton');
-            if (joinButton) {
-                if (giveawaySettings.status === 'inactive') {
-                    joinButton.disabled = true;
-                    joinButton.style.opacity = '0.5';
-                    joinButton.innerHTML = '<i class="fas fa-pause"></i> Giveaway Paused';
-                } else {
-                    if (!giveawayParticipants.some(p => p.id === currentUser?.id)) {
-                        joinButton.disabled = false;
-                        joinButton.style.opacity = '1';
-                        joinButton.innerHTML = 'Join Giveaway';
-                        joinButton.style.background = 'var(--accent-color)';
-                    }
-                }
             }
         }
 
@@ -674,9 +660,14 @@
             const adminPanelBtn = document.getElementById('adminPanelButton');
 
             if (!currentUser) {
-                joinButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In to Join';
-                joinButton.disabled = false;
-                if (startButton) startButton.disabled = true;
+                if (joinButton) {
+                    joinButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In to Join';
+                    joinButton.disabled = false;
+                    joinButton.style.background = 'var(--accent-color)';
+                    joinButton.style.color = '#000';
+                    joinButton.style.opacity = '1';
+                }
+                if (startButton) startButton.classList.remove('admin-visible');
                 if (adminPanelBtn) adminPanelBtn.classList.remove('admin-visible');
                 return;
             }
@@ -688,11 +679,19 @@
                 joinButton.disabled = true;
                 joinButton.style.background = 'rgba(255, 255, 255, 0.05)';
                 joinButton.style.color = '#fff';
+                joinButton.style.opacity = '0.5';
             } else if (giveawaySettings.status === 'active') {
                 joinButton.innerHTML = '<i class="fas fa-ticket-alt"></i> Join Giveaway';
                 joinButton.disabled = false;
                 joinButton.style.background = 'var(--accent-color)';
                 joinButton.style.color = '#000';
+                joinButton.style.opacity = '1';
+            } else {
+                joinButton.innerHTML = '<i class="fas fa-pause"></i> Giveaway Paused';
+                joinButton.disabled = true;
+                joinButton.style.background = 'rgba(255, 255, 255, 0.05)';
+                joinButton.style.color = '#fff';
+                joinButton.style.opacity = '0.5';
             }
 
             if (isAdmin && startButton) {
@@ -823,7 +822,11 @@
                 });
                 const result = await res.json();
                 if (result.success) {
-                    giveawaySettings[field] = value;
+                    if (field === 'maxParticipants') {
+                        giveawaySettings.maxParticipants = parseInt(value, 10);
+                    } else {
+                        giveawaySettings[field] = value;
+                    }
                     updateGiveawayDisplay();
                     window.showMessage(`${field} set to ${value}`);
                     localStorage.setItem('giveaway_settings', JSON.stringify(giveawaySettings));
