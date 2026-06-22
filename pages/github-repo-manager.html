@@ -360,9 +360,6 @@
         let fullTree = [];
         let childrenMap = {};
         let currentPath = '';
-        let longPressTimer;
-        let longPressStartX;
-        let longPressStartY;
 
         const loginSection = document.getElementById('loginSection');
         const repoContent = document.getElementById('repoContent');
@@ -502,9 +499,9 @@
                             <span class="file-date">${item.lastDate}</span>
                         `;
                         card.addEventListener('click', () => navigateTo(item.path + '/'));
-                        card.addEventListener('touchstart', function(e) { startLongPress(e, item); }, { passive: true });
-                        card.addEventListener('touchend', cancelLongPress);
-                        card.addEventListener('touchmove', cancelLongPress);
+                        card.addEventListener('contextmenu', function(e) {
+                            e.stopPropagation();
+                        });
                         filesContainer.appendChild(card);
                     } else {
                         const url = `https://github.com/${config.owner}/${config.repo}/blob/${config.branch}/${item.path}`;
@@ -586,19 +583,6 @@
             }, 500);
         }
         
-        function startLongPress(e, item) {
-            e.preventDefault();
-            longPressStartX = e.touches ? e.touches[0].clientX : e.clientX;
-            longPressStartY = e.touches ? e.touches[0].clientY : e.clientY;
-            longPressTimer = setTimeout(function() {
-                triggerNativeContext(longPressStartX, longPressStartY);
-            }, 800);
-        }
-
-        function cancelLongPress() {
-            clearTimeout(longPressTimer);
-        }
-
         function triggerNativeContext(x, y) {
             var event = new MouseEvent('contextmenu', {
                 bubbles: true,
