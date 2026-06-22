@@ -63,9 +63,8 @@ export default async (req, res) => {
         const authHeader = req.headers.authorization;
         if (!authHeader) return res.status(401).json({ error: 'No token' });
         const token = authHeader.split(' ')[1];
-        let decoded;
         try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET);
+            jwt.verify(token, process.env.JWT_SECRET);
         } catch (e) {
             return res.status(401).json({ error: 'Invalid token' });
         }
@@ -91,7 +90,7 @@ export default async (req, res) => {
             const { error } = await supabase
                 .from('giveaway_participants')
                 .delete()
-                .neq('user_id', '');
+                .gt('id', 0);
             if (error) return res.status(500).json({ error: error.message });
             return res.status(200).json({ success: true });
         }
