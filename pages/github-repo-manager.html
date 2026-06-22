@@ -49,7 +49,6 @@
             margin: 0 auto;
             padding: var(--spacing-md);
             position: relative;
-            min-height: calc(100vh - 90px);
         }
 
         .login-panel {
@@ -89,25 +88,6 @@
 
         .login-panel button:hover {
             background: var(--accent-dark);
-        }
-
-        .btn-icon {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
-            width: 42px;
-            height: 42px;
-            border-radius: var(--radius-medium);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 1.2rem;
-            transition: background 0.2s;
-        }
-
-        .btn-icon:hover {
-            background: rgba(193, 252, 50, 0.1);
         }
 
         .pill-btn {
@@ -150,6 +130,10 @@
         }
         .home-btn:active {
             transform: scale(0.9);
+        }
+        .home-btn i {
+            position: relative;
+            top: -2px;
         }
 
         .files-grid {
@@ -279,16 +263,13 @@
             width: 20px;
         }
 
-        .settings-btn.btn-refresh {
-            background: var(--accent-color);
-            color: #000;
-            border: none;
-        }
-
         .settings-btn.btn-logout {
             background: #C42833;
             color: white;
             border: none;
+            width: auto;
+            padding: 8px 16px;
+            font-size: 0.85rem;
         }
     </style>
 </head>
@@ -301,11 +282,9 @@
         <app-header class="fade-in">
             <div>
                 <h1 class="username">Github Repo Manager</h1>
-                <p class="tagline">Browse your repository files and open them directly on GitHub.</p>
+                <p class="tagline">Browse your repository files and open them directly on GitHub without waiting to loads every pages</p>
             </div>
         </app-header>
-
-        <button class="btn-icon" id="settingsBtn" title="Settings" style="display: none; margin-bottom: 20px;"><i class="fas fa-cog"></i></button>
 
         <div id="loginSection">
             <div class="login-panel">
@@ -318,9 +297,12 @@
         </div>
 
         <div id="repoContent" style="display: none;">
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                <button id="homeBtn" class="home-btn" onclick="navigateTo('')"><i class="fas fa-home"></i></button>
-                <button id="backBtn" class="pill-btn" onclick="goBack()"><i class="fas fa-arrow-left"></i> Back</button>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button id="homeBtn" class="home-btn" onclick="navigateTo('')"><i class="fas fa-home"></i></button>
+                    <button id="backBtn" class="pill-btn btnMDYE" onclick="goBack()"><i class="fas fa-arrow-left"></i> Back</button>
+                </div>
+                <button id="logoutBtn" class="settings-btn btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
             </div>
             <div id="breadcrumbText" style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:12px;"></div>
             <div class="files-grid" id="filesContainer"></div>
@@ -359,10 +341,8 @@
         const loginSection = document.getElementById('loginSection');
         const repoContent = document.getElementById('repoContent');
         const filesContainer = document.getElementById('filesContainer');
-        const settingsBtn = document.getElementById('settingsBtn');
 
         document.getElementById('loadRepoBtn').addEventListener('click', loadRepository);
-        settingsBtn.addEventListener('click', openSettingsPopup);
 
         loadSavedConfig();
         attemptAutoLogin();
@@ -415,7 +395,6 @@
             loginSection.style.display = 'none';
             repoContent.style.display = 'block';
             currentPath = '';
-            showAppControls();
 
             try {
                 const response = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/git/trees/${config.branch}?recursive=1&t=${Date.now()}`, {
@@ -437,15 +416,6 @@
         function resetToLogin() {
             loginSection.style.display = 'block';
             repoContent.style.display = 'none';
-            hideAppControls();
-        }
-
-        function showAppControls() {
-            settingsBtn.style.display = 'flex';
-        }
-
-        function hideAppControls() {
-            settingsBtn.style.display = 'none';
         }
 
         async function enrichDates(config) {
@@ -555,24 +525,9 @@
             renderCurrentFolder();
         }
 
-        function openSettingsPopup() {
-            const popup = document.getElementById('universalPopup');
-            document.getElementById('popupTitle').textContent = 'Settings';
-            document.getElementById('popupBody').innerHTML = `
-                <button class="settings-btn btn-refresh" id="refreshBtn"><i class="fas fa-sync-alt"></i> <strong>Refresh</strong></button>
-                <button class="settings-btn btn-logout" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> <strong>Logout</strong></button>
-            `;
-            document.getElementById('popupFooter').innerHTML = '';
-            popup.style.display = 'flex';
-
-            document.getElementById('refreshBtn').onclick = () => {
-                closeUniversalPopup();
-                loadRepository();
-            };
-            document.getElementById('logoutBtn').onclick = () => {
-                localStorage.removeItem('githubRepo');
-                location.reload();
-            };
+        function logout() {
+            localStorage.removeItem('githubRepo');
+            location.reload();
         }
 
         function closeUniversalPopup() {
