@@ -188,11 +188,10 @@
         }
 
         .winner-display {
-            background: var(--bg-card);
+            background: var(--bg-dark);
             border-radius: var(--radius-large);
-            padding: var(--spacing-xl);
+            padding: 32px 24px 24px;
             margin-top: 20px;
-            border: 2px solid rgba(193, 252, 50, 0.3);
             text-align: center;
             display: none;
             width: 100%;
@@ -467,6 +466,9 @@
         }
 
         async function joinGiveaway() {
+            const joinButton = document.getElementById('joinButton');
+            if (joinButton) joinButton.disabled = true;
+
             if (!currentUser) {
                 if (window.authCheck && window.authCheck.showSignInNotification) {
                     window.authCheck.showSignInNotification();
@@ -477,17 +479,20 @@
 
             if (giveawaySettings.status === 'inactive') {
                 window.showMessage('No Giveaway available for now');
+                updateUI();
                 return;
             }
 
             if (giveawayParticipants.length >= giveawaySettings.maxParticipants) {
                 window.showMessage('Maximum participants reached');
+                updateUI();
                 return;
             }
 
             const alreadyJoined = giveawayParticipants.some(p => p.id === currentUser.id);
             if (alreadyJoined) {
                 window.showMessage('You already joined');
+                updateUI();
                 return;
             }
 
@@ -511,6 +516,7 @@
                     window.showMessage('You are now in the giveaway');
                 } else {
                     window.showMessage('Error', result.message || 'Join failed');
+                    updateUI();
                 }
             } catch (error) {
                 window.showMessage('Saved locally, will sync later');
@@ -571,10 +577,19 @@
             const selectAgainButton = document.getElementById('selectAgainButton');
 
             if (joinButton) {
-                joinButton.addEventListener('click', joinGiveaway);
+                joinButton.addEventListener('click', function() {
+                    joinButton.disabled = true;
+                    joinButton.classList.add('btnMDYE');
+                    setTimeout(() => joinButton.classList.remove('btnMDYE'), 500);
+                    joinGiveaway().finally(() => updateUI());
+                });
             }
             if (startButton) {
-                startButton.addEventListener('click', selectWinner);
+                startButton.addEventListener('click', function() {
+                    startButton.classList.add('btnMDYE');
+                    setTimeout(() => startButton.classList.remove('btnMDYE'), 500);
+                    selectWinner();
+                });
             }
             if (selectAgainButton) {
                 selectAgainButton.addEventListener('click', () => {
