@@ -17,7 +17,7 @@ Android 16 by [NothingHere03](https://t.me/NothingHere03) Stock Kernel
 - new apps still delayed to be added in desktop (not app drawer)
 - sometimes, any app cannot be accessed at all, like it's refuses to be open (restart device to fix)
 - Bubble feature cannot be opened sometimes, like open from home screen and notification will not open the app in Bubble (restart system ui to fix)
-- Bubble can only open one app at a time (when you have 2 apps in Bubble, one of the app that not used will be killed by the system)
+- Bubble can only open one app at a time (when you have 2 apps in Bubble, one of the app that not used will be killed by the system, happens once for me and the other day it's fixed by itself, the app is just kinda buggy i guess)
 
 ---
 
