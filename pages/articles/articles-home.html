@@ -370,25 +370,6 @@
             gap: 12px;
         }
 
-        .category-tab {
-            padding: 8px 16px;
-            border-radius: 30px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s ease;
-        }
-
-        .category-tab.active {
-            background: var(--accent-color);
-            color: var(--bg-black);
-            border-color: var(--accent-color);
-        }
-
         .recommended-list {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -589,6 +570,13 @@
             .folder-pills {
                 display: none;
             }
+            
+            #sortButton {
+                border-top-left-radius: 50px;
+                border-bottom-left-radius: 50px;
+                border-top-right-radius: 20px;
+                border-bottom-right-radius: 20px;
+            }
 
             .mobile-categories-btn {
                 display: flex;
@@ -642,7 +630,8 @@
                 <div class="section-label">All Articles</div>
                 <div class="category-tabs-container">
                     <div class="folder-pills" id="categoryPills"></div>
-                    <button class="category-tab mobile-categories-btn" id="mobileCategoriesBtn">
+                    <button class="folder-pill" id="sortButton">Default Sorted</button>
+                    <button class="folder-pill mobile-categories-btn" id="mobileCategoriesBtn">
                         Categories <i class="fas fa-caret-down"></i>
                     </button>
                 </div>
@@ -690,6 +679,7 @@
         const trendingGrid = document.getElementById('highlight-grid');
         const recommendedList = document.getElementById('recommended-list');
         const categoryPills = document.getElementById('categoryPills');
+        const sortButton = document.getElementById('sortButton');
         const mobileCategoriesBtn = document.getElementById('mobileCategoriesBtn');
         const categoryPopup = document.getElementById('categoryPopup');
         const categoryPopupContent = document.getElementById('categoryPopupContent');
@@ -842,7 +832,6 @@
                 `<div class="folder-pill ${cat === activeCategory ? 'active' : ''}" data-category="${cat}">${cat}</div>`
             ).join('');
 
-            pillsHtml += '<div class="folder-pill" id="sortButton">Default Sorted</div>';
             categoryPills.innerHTML = pillsHtml;
 
             document.querySelectorAll('#categoryPills .folder-pill[data-category]').forEach(pill => {
@@ -855,17 +844,14 @@
                 });
             });
 
-            const sortBtn = document.getElementById('sortButton');
-            if (sortBtn) {
-                sortBtn.addEventListener('click', () => {
-                    currentSort = currentSort === 'default' ? 'az' : 'default';
-                    sortBtn.textContent = `${currentSort === 'default' ? 'Default' : 'A-Z'} Sorted`;
-                    renderRecommended(filterAndSortArticles());
-                });
-            }
-
             buildCategoryPopup(categories);
         }
+
+        sortButton.addEventListener('click', () => {
+            currentSort = currentSort === 'default' ? 'az' : 'default';
+            sortButton.textContent = `${currentSort === 'default' ? 'Default' : 'A-Z'} Sorted`;
+            renderRecommended(filterAndSortArticles());
+        });
 
         function updateMobileCategoryButton() {
             if (activeCategory === 'All') {
@@ -928,22 +914,7 @@
             categoryPopup.style.display = 'flex';
         }
 
-        function closeCategoryPopup() {
-            categoryPopup.style.display = 'none';
-        }
-
         mobileCategoriesBtn.addEventListener('click', openCategoryPopup);
-
-        categoryPopupContent.querySelectorAll('.category-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const cat = card.dataset.category;
-                activeCategory = (cat && cat !== 'undefined') ? cat : 'All';
-                categoryPopup.style.display = 'none';
-                buildCategoryTabs();
-                updateMobileCategoryButton();
-                renderRecommended(filterAndSortArticles());
-            });
-        });
 
         function updateSearchSuggestions() {
             searchableMetadata = [
