@@ -10,7 +10,7 @@ from ui.bulletin import BulletinHelper
 
 __name__ = "Batch Forward"
 __description__ = "Forwards any messages without limits, without sender name and supports for Bulk or Batch forwards! (.forward url).\nhttps://github.com/lildavegoth/lildavegoth"
-__version__ = "1.2.4"
+__version__ = "1.2.5"
 __id__ = "batch_forward"
 __author__ = "@lildavegoth"
 __icon__ = "kirakustickers/3"
@@ -62,11 +62,7 @@ class RestrictForward(BasePlugin):
             return HookResult(strategy=HookStrategy.CANCEL)
 
         rest = parts[1].strip()
-        # Updated regex: stop before next https:// or whitespace, allows query params like ?single
-        links = re.findall(
-            r'https?://t\.me/(?:c/)?[^/\s]+/\d+(?:/\d+)?(?:[?][^\s?]*)?(?=\s|$|https?://)',
-            rest
-        )
+        links = [link.strip() for link in re.split(r'(?=https://)', rest) if link.strip()]
         if not links:
             self._show_error("No valid Telegram message link found.")
             return HookResult(strategy=HookStrategy.CANCEL)
@@ -452,7 +448,7 @@ class RestrictForward(BasePlugin):
     def _get_dialog_id_from_peer(self, peer):
         if hasattr(peer, 'chat_id') and peer.chat_id != 0:
             return jlong(-peer.chat_id)
-        if hasattr(peer, 'channel_id') and peer.channel_id != 0:
+        if hasattr(peer, 'channel_id') and peer.chat_id != 0:
             return jlong(-peer.channel_id)
         if hasattr(peer, 'user_id') and peer.user_id != 0:
             return jlong(peer.user_id)
