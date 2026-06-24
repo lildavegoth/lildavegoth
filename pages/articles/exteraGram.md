@@ -58,7 +58,7 @@ This plugin has been updated with YouTube supported, that's why the name of plug
 3. Found it? Download it, and after it's downloaded, you'll be asked to **Install** the plugin, also with small detail: There's a checkbox to Enable plugin after installation, you can check it for faster enable without needed to open exteraGram Plugins menu
 4. Your downloaded Plugin is enabled already? Now read how to use your downloaded Plugin to be able to use it
 
-`[Confused? Let me explains by using my own Plugins instead.](^^^mypluginguides1show^^^)
+`[Confused? Let me explains by using my own Plugins instead.](^^^mypluginguides1show^^^)`
 
 ^^^plugins1hide^^^
 
