@@ -96,24 +96,6 @@
             stroke: white;
             margin-right: 4px;
         }
-        
-        .sidebar-menu-btn {
-            position: absolute;
-            bottom: 60px;
-            left: 16px;
-            z-index: 2;
-            background: #000;
-            color: #fff;
-            border: none;
-            border-radius: 999px;
-            padding: 6px 14px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
 
         .overlay-meta {
             position: absolute;
@@ -151,6 +133,24 @@
             background: var(--bg-card);
             color: #fff;
             margin-right: 5px;
+        }
+
+        .sidebar-menu-btn {
+            position: absolute;
+            bottom: 70px;
+            left: 16px;
+            background: #000;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .content {
@@ -1338,25 +1338,6 @@
             padding: var(--spacing-md);
         }
 
-        .popup-footer {
-            padding: var(--spacing-md);
-            border-top: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            gap: var(--spacing-sm);
-            justify-content: flex-end;
-        }
-
-        .btn-delete {
-            background: #C42833;
-            color: #fff;
-            border: none;
-            border-radius: var(--radius-small);
-            padding: 10px 20px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-        }
-
         .btn-cancel {
             background: rgba(255,255,255,0.1);
             color: var(--text-primary);
@@ -1387,10 +1368,10 @@
                         <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                     </svg>
                 </button>
+                <button id="sidebarMenuBtn" class="sidebar-menu-btn btnMDYE"><i class="fas fa-grip"></i> Sidebar Menu</button>
                 <div class="declaration-text">Shoyou-shadearu lildavegoth wa, ika no subete no kontentsu wa lildavegoth nomi ga sakusei shita monodeari, intaanetto-jou no kiji o kopii shite inai koto o koko ni sengen shimasu.</div>
-                <button class="sidebar-menu-btn btnMDYE" id="sidebarMenuBtn"><i class="fas fa-grip"></i> Menu</button>
                 <div class="overlay-meta">
-                    <a class="pill user-pill btnMDYE" id="telegramUser" href="https://t.me/lildavegoth" target="_blank" rel="noopener">
+                    <a class="pill user-pill btnMDYE" id="telegramUser" href="https://t.me/lildavegoth" target="_blank" rel="noopener"><i class="fas fa-arrow-right"></i> lildavegoth</a>
                     <span id="datePill" class="pill month-pill">Feb</span>
                 </div>
             </div>
@@ -1703,7 +1684,7 @@
                 wrapper.className = 'video-wrapper';
 
                 var video = document.createElement('video');
-                video.src = src;
+                video.setAttribute('data-src', src);
                 video.preload = 'none';
                 video.style.width = '100%';
                 video.style.display = 'block';
@@ -1764,7 +1745,7 @@
 
                 img.parentNode.replaceChild(wrapper, img);
 
-                var videoSrc = video.src;
+                var videoSrc = video.getAttribute('data-src');
                 if (!videoSrc.startsWith('http')) {
                     videoSrc = window.location.origin + (videoSrc.startsWith('/') ? videoSrc : '/' + videoSrc);
                 }
@@ -1810,6 +1791,9 @@
                 });
 
                 playBtn.addEventListener('click', function() {
+                    if (!video.src && video.getAttribute('data-src')) {
+                        video.src = video.getAttribute('data-src');
+                    }
                     if (video.paused) {
                         video.play();
                         playBtn.innerHTML = '<i class="fas fa-pause"></i>';
@@ -1977,8 +1961,8 @@
         function processTwoColumnButtons(html) {
             html = html.replace(/<code>\s*\[([^\]]+)\]\(([^)]+)\)\s*\|\s*\[([^\]]+)\]\(([^)]+)\)\s*<\/code>/gi, function(match, text1, url1, text2, url2) {
                 return '<div class="two-column-buttons">' +
-                    '<div class="btnMDYE card-list-item" data-url="' + url1 + '">' + text1 + '</div>' +
-                    '<div class="btnMDYE card-list-item" data-url="' + url2 + '">' + text2 + '</div>' +
+                    '<div class="card-list-item btnMDYE" data-url="' + url1 + '">' + text1 + '</div>' +
+                    '<div class="card-list-item btnMDYE" data-url="' + url2 + '">' + text2 + '</div>' +
                     '</div>';
             });
             return html;
@@ -2441,16 +2425,6 @@
             setupGalleries(content);
             setupCardListInteractions(content);
         }
-        
-        function setExternalLinks(container) {
-            var links = container.querySelectorAll('a');
-            links.forEach(function(link) {
-                if (!link.getAttribute('target')) {
-                    link.setAttribute('target', '_blank');
-                    link.setAttribute('rel', 'noopener noreferrer');
-                }
-            });
-        }
 
         function generateTableOfContents() {
             var content = document.getElementById('articleContent');
@@ -2632,8 +2606,14 @@
                 processed = processCardListBlocks(processed);
                 processed = processTwoColumnButtons(processed);
                 document.getElementById('articleContent').innerHTML = processed;
+
+                var allLinks = document.getElementById('articleContent').querySelectorAll('a');
+                allLinks.forEach(function(link) {
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer');
+                });
+
                 enhanceContent();
-                setExternalLinks(document.getElementById('articleContent'));
                 if (article.submission) {
                     var submissionHTML = '' +
                         '<div class="submission-buttons">' +
