@@ -138,7 +138,7 @@
         .sidebar-menu-btn {
             position: absolute;
             bottom: 50px;
-            left: 16px;
+            left: 18px;
             background: #000;
             color: #fff;
             padding: 6px 14px;
@@ -151,6 +151,56 @@
             display: flex;
             align-items: center;
             gap: 6px;
+        }
+        
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999999;
+            display: none;
+            background: rgba(0,0,0,0.7);
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
+        }
+        
+        .sidebar-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 75%;
+            max-width: 300px;
+            height: 100%;
+            background: var(--bg-black);
+            overflow-y: auto;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            padding: 20px;
+        }
+        
+        .sidebar-overlay.active .sidebar-panel {
+            transform: translateX(0);
+        }
+        
+        .sidebar-panel h3 {
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+        }
+        
+        .sidebar-panel .toc-list a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 8px 0;
+            font-size: 0.95rem;
+        }
+        
+        .sidebar-panel .toc-list a:hover {
+            color: var(--accent-color);
         }
 
         .content {
@@ -1209,7 +1259,7 @@
 
         .declaration-text {
             position: absolute;
-            bottom: 54px;
+            bottom: 59px;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
@@ -1427,6 +1477,13 @@
             </button>
         </div>
         <div id="tagsList"></div>
+    </div>
+    
+    <div class="sidebar-overlay" id="sidebarOverlay">
+        <div class="sidebar-panel" id="sidebarPanel">
+            <h3>Contents</h3>
+            <ul class="toc-list" id="sidebarTocList"></ul>
+        </div>
     </div>
 
     <script>
@@ -1692,6 +1749,10 @@
                 var video = document.createElement('video');
                 video.setAttribute('data-src', src);
                 video.preload = 'none';
+                video.poster = src;
+                wrapper.style.backgroundImage = 'url(' + src + ')';
+                wrapper.style.backgroundSize = 'cover';
+                wrapper.style.backgroundPosition = 'center';
                 video.style.width = '100%';
                 video.style.display = 'block';
                 video.style.borderRadius = 'var(--radius-medium) var(--radius-medium) 0 0';
@@ -1757,7 +1818,8 @@
                 }
 
                 fetch(videoSrc, { method: 'HEAD' })
-                    .then(function(response) {
+                .then(function(response) {
+                    if (!response.ok) throw new Error('not found');
                     var length = response.headers.get('Content-Length');
                     if (length && parseInt(length) > 0) {
                         var size = parseInt(length, 10);
@@ -1769,6 +1831,9 @@
                         sizeOverlay.textContent = '?';
                     }
                 })
+                .catch(function() {
+                    sizeOverlay.textContent = '?';
+                });
 
                 function formatTime(seconds) {
                     var mins = Math.floor(seconds / 60);
@@ -1965,6 +2030,8 @@
             var twoColBtns = container.querySelectorAll('.two-column-buttons .card-list-item');
             twoColBtns.forEach(function(btn) {
                 btn.addEventListener('click', function() {
+                    this.classList.remove('btnMDYE');
+                    void this.offsetWidth;
                     this.classList.add('btnMDYE');
                     setTimeout(() => this.classList.remove('btnMDYE'), 500);
                 });
@@ -2462,6 +2529,15 @@
                 listItem.appendChild(link);
                 tocList.appendChild(listItem);
             });
+            
+            var sidebarTocList = document.getElementById('sidebarTocList');
+            if (sidebarTocList) {
+                var cloneItem = listItem.cloneNode(true);
+                cloneItem.querySelector('a').addEventListener('click', function() {
+                    document.getElementById('sidebarOverlay').classList.remove('active');
+                });
+                sidebarTocList.appendChild(cloneItem);
+            }
         }
 
         function enhanceCodeBlocks() {
@@ -2688,6 +2764,8 @@
             if (commentsBtn) {
                 commentsBtn.addEventListener('click', function() {
                     var btn = this;
+                    btn.classList.remove('btnMDYE');
+                    void btn.offsetWidth;
                     btn.classList.add('btnMDYE');
                     setTimeout(function() { btn.classList.remove('btnMDYE'); }, 500);
                     var section = document.querySelector('.comments-section');
@@ -2703,20 +2781,34 @@
             }
             
             var sidebarBtn = document.getElementById('sidebarMenuBtn');
+            var sidebarOverlay = document.getElementById('sidebarOverlay');
+            
             if (sidebarBtn) {
                 sidebarBtn.addEventListener('click', function() {
-                    var toc = document.getElementById('tocContainer');
-                    if (toc) {
-                        toc.style.display = (toc.style.display === 'block') ? 'none' : 'block';
-                    }
+                    this.classList.remove('btnMDYE');
+                    void this.offsetWidth;
                     this.classList.add('btnMDYE');
                     setTimeout(() => this.classList.remove('btnMDYE'), 500);
+            
+                    if (sidebarOverlay) {
+                        sidebarOverlay.classList.toggle('active');
+                    }
+                });
+            }
+            
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.remove('active');
+                    }
                 });
             }
             
             var backBtn = document.querySelector('.back-btn');
             if (backBtn) {
                 backBtn.addEventListener('click', function(e) {
+                    this.classList.remove('btnMDYE');
+                    void this.offsetWidth;
                     this.classList.add('btnMDYE');
                     setTimeout(() => this.classList.remove('btnMDYE'), 500);
                 });
@@ -2725,6 +2817,8 @@
             var shareBtn = document.getElementById('shareBarBtn');
             if (shareBtn) {
                 shareBtn.addEventListener('click', function() {
+                    this.classList.remove('btnMDYE');
+                    void this.offsetWidth;
                     this.classList.add('btnMDYE');
                     setTimeout(() => this.classList.remove('btnMDYE'), 500);
                 });
@@ -2733,6 +2827,8 @@
             var userPill = document.getElementById('telegramUser');
             if (userPill) {
                 userPill.addEventListener('click', function() {
+                    this.classList.remove('btnMDYE');
+                    void this.offsetWidth;
                     this.classList.add('btnMDYE');
                     setTimeout(() => this.classList.remove('btnMDYE'), 500);
                 });
