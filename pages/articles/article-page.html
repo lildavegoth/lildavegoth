@@ -135,24 +135,6 @@
             margin-right: 5px;
         }
 
-        .sidebar-menu-btn {
-            position: absolute;
-            bottom: 50px;
-            left: 18px;
-            background: #000;
-            color: #fff;
-            padding: 6px 14px;
-            border-radius: 999px;
-            font-size: 14px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            z-index: 2;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
         .content {
             background: var(--bg-black);
             padding: 16px 20px;
@@ -1209,7 +1191,7 @@
 
         .declaration-text {
             position: absolute;
-            bottom: 59px;
+            bottom: 54px;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
@@ -1338,6 +1320,25 @@
             padding: var(--spacing-md);
         }
 
+        .popup-footer {
+            padding: var(--spacing-md);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            gap: var(--spacing-sm);
+            justify-content: flex-end;
+        }
+
+        .btn-delete {
+            background: #C42833;
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-small);
+            padding: 10px 20px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
         .btn-cancel {
             background: rgba(255,255,255,0.1);
             color: var(--text-primary);
@@ -1349,12 +1350,6 @@
             cursor: pointer;
             margin-right: 20px;
         }
-        
-        @media (min-width: 720px) {
-            .sidebar-menu-btn {
-                display: none;
-            }
-        }
     </style>
 </head>
 <body>
@@ -1362,10 +1357,10 @@
         <div class="left-column">
             <div class="image-container">
                 <img id="heroImage" src="images/kakoikiraku.webp" alt="" class="hero-image">
-                <a class="back-btn btnMDYE" href="articles-home.html">
+                <a class="back-btn" href="articles-home.html">
                     <i class="fas fa-arrow-left"></i>
                 </a>
-                <button class="share-btn btnMDYE" id="shareBarBtn">
+                <button class="share-btn" id="shareBarBtn">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="18" cy="5" r="3"></circle>
                         <circle cx="6" cy="12" r="3"></circle>
@@ -1374,10 +1369,9 @@
                         <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                     </svg>
                 </button>
-                <button id="sidebarMenuBtn" class="sidebar-menu-btn btnMDYE"><i class="fas fa-grip"></i></button>
                 <div class="declaration-text">Shoyou-shadearu lildavegoth wa, ika no subete no kontentsu wa lildavegoth nomi ga sakusei shita monodeari, intaanetto-jou no kiji o kopii shite inai koto o koko ni sengen shimasu.</div>
                 <div class="overlay-meta">
-                    <a class="pill user-pill btnMDYE" id="telegramUser" href="https://t.me/lildavegoth" target="_blank" rel="noopener"><i class="fas fa-arrow-right"></i> lildavegoth</a>
+                    <a class="pill user-pill" id="telegramUser" href="https://t.me/lildavegoth" target="_blank" rel="noopener"><i class="fas fa-arrow-right"></i> lildavegoth</a>
                     <span id="datePill" class="pill month-pill">Feb</span>
                 </div>
             </div>
@@ -1690,8 +1684,8 @@
                 wrapper.className = 'video-wrapper';
 
                 var video = document.createElement('video');
-                video.setAttribute('data-src', src);
-                video.preload = 'none';
+                video.src = src;
+                video.preload = 'metadata';
                 video.style.width = '100%';
                 video.style.display = 'block';
                 video.style.borderRadius = 'var(--radius-medium) var(--radius-medium) 0 0';
@@ -1751,24 +1745,25 @@
 
                 img.parentNode.replaceChild(wrapper, img);
 
-                var videoSrc = video.getAttribute('data-src');
+                var videoSrc = video.src;
                 if (!videoSrc.startsWith('http')) {
                     videoSrc = window.location.origin + (videoSrc.startsWith('/') ? videoSrc : '/' + videoSrc);
                 }
 
                 fetch(videoSrc, { method: 'HEAD' })
                     .then(function(response) {
-                    var length = response.headers.get('Content-Length');
-                    if (length && parseInt(length) > 0) {
-                        var size = parseInt(length, 10);
-                        var sizeText = size > 1048576
-                            ? (size / 1048576).toFixed(1) + ' MB'
-                            : (size / 1024).toFixed(1) + ' KB';
-                        sizeOverlay.textContent = sizeText;
-                    } else {
+                        var length = response.headers.get('Content-Length');
+                        if (length) {
+                            var size = parseInt(length, 10);
+                            var sizeText = size > 1048576
+                                ? (size / 1048576).toFixed(1) + ' MB'
+                                : (size / 1024).toFixed(1) + ' KB';
+                            sizeOverlay.textContent = sizeText;
+                        }
+                    })
+                    .catch(function() {
                         sizeOverlay.textContent = '?';
-                    }
-                })
+                    });
 
                 function formatTime(seconds) {
                     var mins = Math.floor(seconds / 60);
@@ -1796,9 +1791,6 @@
                 });
 
                 playBtn.addEventListener('click', function() {
-                    if (!video.src && video.getAttribute('data-src')) {
-                        video.src = video.getAttribute('data-src');
-                    }
                     if (video.paused) {
                         video.play();
                         playBtn.innerHTML = '<i class="fas fa-pause"></i>';
@@ -1961,23 +1953,13 @@
                     }
                 }
             });
-            
-            var twoColBtns = container.querySelectorAll('.two-column-buttons .card-list-item');
-            twoColBtns.forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    this.classList.remove('btnMDYE');
-                    void this.offsetWidth;
-                    this.classList.add('btnMDYE');
-                    setTimeout(() => this.classList.remove('btnMDYE'), 500);
-                });
-            });
         }
 
         function processTwoColumnButtons(html) {
             html = html.replace(/<code>\s*\[([^\]]+)\]\(([^)]+)\)\s*\|\s*\[([^\]]+)\]\(([^)]+)\)\s*<\/code>/gi, function(match, text1, url1, text2, url2) {
                 return '<div class="two-column-buttons">' +
-                    '<div class="card-list-item btnMDYE" data-url="' + url1 + '">' + text1 + '</div>' +
-                    '<div class="card-list-item btnMDYE" data-url="' + url2 + '">' + text2 + '</div>' +
+                    '<div class="card-list-item" data-url="' + url1 + '">' + text1 + '</div>' +
+                    '<div class="card-list-item" data-url="' + url2 + '">' + text2 + '</div>' +
                     '</div>';
             });
             return html;
@@ -2621,13 +2603,6 @@
                 processed = processCardListBlocks(processed);
                 processed = processTwoColumnButtons(processed);
                 document.getElementById('articleContent').innerHTML = processed;
-
-                var allLinks = document.getElementById('articleContent').querySelectorAll('a');
-                allLinks.forEach(function(link) {
-                    link.setAttribute('target', '_blank');
-                    link.setAttribute('rel', 'noopener noreferrer');
-                });
-
                 enhanceContent();
                 if (article.submission) {
                     var submissionHTML = '' +
@@ -2690,8 +2665,6 @@
             if (commentsBtn) {
                 commentsBtn.addEventListener('click', function() {
                     var btn = this;
-                    btn.classList.remove('btnMDYE');
-                    void btn.offsetWidth;
                     btn.classList.add('btnMDYE');
                     setTimeout(function() { btn.classList.remove('btnMDYE'); }, 500);
                     var section = document.querySelector('.comments-section');
@@ -2704,50 +2677,6 @@
             var tagsBtn = document.getElementById('tagsBtn');
             if (tagsBtn) {
                 tagsBtn.addEventListener('click', openTagsOverlay);
-            }
-            
-            var sidebarBtn = document.getElementById('sidebarMenuBtn');
-            if (sidebarBtn) {
-                sidebarBtn.addEventListener('click', function() {
-                    var toc = document.getElementById('tocContainer');
-                    if (toc) {
-                        toc.style.display = (toc.style.display === 'block') ? 'none' : 'block';
-                    }
-                    this.classList.remove('btnMDYE');
-                    void this.offsetWidth;
-                    this.classList.add('btnMDYE');
-                    setTimeout(() => this.classList.remove('btnMDYE'), 500);
-                });
-            }
-            
-            var backBtn = document.querySelector('.back-btn');
-            if (backBtn) {
-                backBtn.addEventListener('click', function(e) {
-                    this.classList.remove('btnMDYE');
-                    void this.offsetWidth;
-                    this.classList.add('btnMDYE');
-                    setTimeout(() => this.classList.remove('btnMDYE'), 500);
-                });
-            }
-            
-            var shareBtn = document.getElementById('shareBarBtn');
-            if (shareBtn) {
-                shareBtn.addEventListener('click', function() {
-                    this.classList.remove('btnMDYE');
-                    void this.offsetWidth;
-                    this.classList.add('btnMDYE');
-                    setTimeout(() => this.classList.remove('btnMDYE'), 500);
-                });
-            }
-            
-            var userPill = document.getElementById('telegramUser');
-            if (userPill) {
-                userPill.addEventListener('click', function() {
-                    this.classList.remove('btnMDYE');
-                    void this.offsetWidth;
-                    this.classList.add('btnMDYE');
-                    setTimeout(() => this.classList.remove('btnMDYE'), 500);
-                });
             }
 
             loadArticle();
