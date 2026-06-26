@@ -864,13 +864,12 @@
             });
         });
 
-        if (document.body) {
+    if (document.body) {
+        videoObserver.observe(document.body, { childList: true, subtree: true });
+    } else {
+        document.addEventListener('DOMContentLoaded', function() {
             videoObserver.observe(document.body, { childList: true, subtree: true });
-        } else {
-            document.addEventListener('DOMContentLoaded', function() {
-                videoObserver.observe(document.body, { childList: true, subtree: true });
-            });
-        }
-    })();
+        });
+    }
     
 })();
