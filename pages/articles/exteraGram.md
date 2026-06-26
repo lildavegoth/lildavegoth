@@ -84,6 +84,6 @@ You must download the Plugins file and upload it to your Telegram saved message 
 1. Download, Install and Enable **URL Cleaner** plugin
 2. Follow this video guides
 
-![URL Cleaner Guide Video](images/url-guide-gvideo.mp4)
+![URL Cleaner Guide Video](images/url-cleaner-gvideo.mp4)
 
 ^^^mypluginguides1hide^^^
