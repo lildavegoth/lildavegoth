@@ -200,7 +200,7 @@
                 var touchTimer = setTimeout(function() {
                     e.preventDefault();
                     showRightClickWarning(e);
-                }, 500);
+                }, 1000);
                 target.addEventListener('touchend', function() {
                     clearTimeout(touchTimer);
                 }, { once: true });
