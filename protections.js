@@ -350,7 +350,7 @@
             video.addEventListener('touchstart', function(e) {
                 longPressTimer = setTimeout(function() {
                     e.preventDefault();
-                }, 500);
+                }, 800);
             }, { passive: false });
             video.addEventListener('touchend', function() {
                 clearTimeout(longPressTimer);
