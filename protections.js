@@ -331,64 +331,47 @@
         });
     })();
 
-    (function() {
-        function preventVideoDownload(video) {
-            video.setAttribute('controlsList', 'nodownload');
-            video.setAttribute('disablepictureinpicture', 'true');
-            video.style.webkitTouchCallout = 'none';
-            video.style.webkitUserSelect = 'none';
-            video.style.userSelect = 'none';
-            video.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-                return false;
-            });
-            video.addEventListener('dragstart', function(e) {
-                e.preventDefault();
-                return false;
-            });
-            var longPressTimer;
-            video.addEventListener('touchstart', function(e) {
-                longPressTimer = setTimeout(function() {
-                    e.preventDefault();
-                }, 800);
-            }, { passive: false });
-            video.addEventListener('touchend', function() {
-                clearTimeout(longPressTimer);
-            });
-            video.addEventListener('touchmove', function() {
-                clearTimeout(longPressTimer);
-            });
-        }
+(function() {
+    function preventVideoDownload(video) {
+        video.setAttribute('controlsList', 'nodownload');
+        video.setAttribute('disablepictureinpicture', 'true');
+        video.style.webkitTouchCallout = 'none';
+        video.style.webkitUserSelect = 'none';
+        video.style.userSelect = 'none';
+        video.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        video.addEventListener('dragstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        // No touchstart prevention – back gesture works
+    }
 
-        function protectAllVideos() {
-            document.querySelectorAll('video').forEach(preventVideoDownload);
-        }
+    function protectAllVideos() {
+        document.querySelectorAll('video').forEach(preventVideoDownload);
+    }
 
-        document.addEventListener('DOMContentLoaded', protectAllVideos);
+    document.addEventListener('DOMContentLoaded', protectAllVideos);
 
-        var videoObserver = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                mutation.addedNodes.forEach(function(node) {
-                    if (node.tagName === 'VIDEO') {
-                        preventVideoDownload(node);
-                    } else if (node.querySelectorAll) {
-                        node.querySelectorAll('video').forEach(preventVideoDownload);
-                    }
-                });
+    var videoObserver = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.tagName === 'VIDEO') {
+                    preventVideoDownload(node);
+                } else if (node.querySelectorAll) {
+                    node.querySelectorAll('video').forEach(preventVideoDownload);
+                }
             });
         });
+    });
 
-        if (document.body) {
+    if (document.body) {
+        videoObserver.observe(document.body, { childList: true, subtree: true });
+    } else {
+        document.addEventListener('DOMContentLoaded', function() {
             videoObserver.observe(document.body, { childList: true, subtree: true });
-        } else {
-            document.addEventListener('DOMContentLoaded', function() {
-                videoObserver.observe(document.body, { childList: true, subtree: true });
-            });
-        }
-    })();
-
-    var selectionStyle = document.createElement('style');
-    selectionStyle.textContent = '::selection { color: #C1FC32 !important; } ::-moz-selection { color: #C1FC32 !important; } img.protected::selection, img.protected::-moz-selection { color: transparent !important; }';
-    document.head.appendChild(selectionStyle);
-
+        });
+    }
 })();
