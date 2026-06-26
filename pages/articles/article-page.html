@@ -135,6 +135,78 @@
             margin-right: 5px;
         }
 
+        .sidebar-menu-btn {
+            position: absolute;
+            bottom: 50px;
+            left: 18px;
+            background: #000;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999999;
+            visibility: hidden;
+            opacity: 0;
+            background: rgba(0,0,0,0.7);
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .sidebar-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .sidebar-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 75%;
+            max-width: 300px;
+            height: 100%;
+            background: var(--bg-black);
+            overflow-y: auto;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            padding: 20px;
+            border-radius: 0 20px 20px 0;
+        }
+        
+        .sidebar-overlay.active .sidebar-panel {
+            transform: translateX(0);
+        }
+        
+        .sidebar-panel h3 {
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+        }
+        
+        .sidebar-panel .toc-list a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 8px 0;
+            font-size: 0.95rem;
+        }
+        
+        .sidebar-panel .toc-list a:hover {
+            color: var(--accent-color);
+        }
+
         .content {
             background: var(--bg-black);
             padding: 16px 20px;
@@ -1171,10 +1243,10 @@
             }
 
             .image-container {
-                flex: 0 0 300px;
+                flex: 0 0 400px;
                 margin: 0;
                 max-width: none;
-                width: 300px;
+                width: 400px;
             }
 
             .table-of-contents {
@@ -1182,16 +1254,28 @@
             }
 
             .content {
-                flex: 1;
+                flex: 0 1 480px;
+                margin: 0 auto;
+                padding: 0 20px;
+                max-width: 480px;
+            }
+
+            .bug-note-header {
+                flex: 0 0 400px;
                 margin: 0;
-                padding: 0 2rem 0 0;
                 max-width: none;
+                width: 400px;
+            }
+
+            .sidebar-menu-btn {
+                display: none;
             }
         }
+        
 
         .declaration-text {
             position: absolute;
-            bottom: 54px;
+            bottom: 65px;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
@@ -1320,25 +1404,6 @@
             padding: var(--spacing-md);
         }
 
-        .popup-footer {
-            padding: var(--spacing-md);
-            border-top: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            gap: var(--spacing-sm);
-            justify-content: flex-end;
-        }
-
-        .btn-delete {
-            background: #C42833;
-            color: #fff;
-            border: none;
-            border-radius: var(--radius-small);
-            padding: 10px 20px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-        }
-
         .btn-cancel {
             background: rgba(255,255,255,0.1);
             color: var(--text-primary);
@@ -1357,10 +1422,10 @@
         <div class="left-column">
             <div class="image-container">
                 <img id="heroImage" src="images/kakoikiraku.webp" alt="" class="hero-image">
-                <a class="back-btn" href="articles-home.html">
+                <a class="back-btn btnMDYE" href="articles-home.html">
                     <i class="fas fa-arrow-left"></i>
                 </a>
-                <button class="share-btn" id="shareBarBtn">
+                <button class="share-btn btnMDYE" id="shareBarBtn">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="18" cy="5" r="3"></circle>
                         <circle cx="6" cy="12" r="3"></circle>
@@ -1369,9 +1434,10 @@
                         <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                     </svg>
                 </button>
+                <button id="sidebarMenuBtn" class="sidebar-menu-btn btnMDYE"><i class="fas fa-grip"></i></button>
                 <div class="declaration-text">Shoyou-shadearu lildavegoth wa, ika no subete no kontentsu wa lildavegoth nomi ga sakusei shita monodeari, intaanetto-jou no kiji o kopii shite inai koto o koko ni sengen shimasu.</div>
                 <div class="overlay-meta">
-                    <a class="pill user-pill" id="telegramUser" href="https://t.me/lildavegoth" target="_blank" rel="noopener"><i class="fas fa-arrow-right"></i> lildavegoth</a>
+                    <a class="pill user-pill btnMDYE" id="telegramUser" href="https://t.me/lildavegoth" target="_blank" rel="noopener"><i class="fas fa-arrow-right"></i> lildavegoth</a>
                     <span id="datePill" class="pill month-pill">Feb</span>
                 </div>
             </div>
@@ -1421,6 +1487,13 @@
             </button>
         </div>
         <div id="tagsList"></div>
+    </div>
+    
+    <div class="sidebar-overlay" id="sidebarOverlay">
+        <div class="sidebar-panel" id="sidebarPanel">
+            <h3>Contents</h3>
+            <ul class="toc-list" id="sidebarTocList"></ul>
+        </div>
     </div>
 
     <script>
@@ -1953,13 +2026,23 @@
                     }
                 }
             });
+            
+            var twoColBtns = container.querySelectorAll('.two-column-buttons .card-list-item');
+            twoColBtns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    this.classList.remove('btnMDYE');
+                    void this.offsetWidth;
+                    this.classList.add('btnMDYE');
+                    setTimeout(() => this.classList.remove('btnMDYE'), 500);
+                });
+            });
         }
 
         function processTwoColumnButtons(html) {
             html = html.replace(/<code>\s*\[([^\]]+)\]\(([^)]+)\)\s*\|\s*\[([^\]]+)\]\(([^)]+)\)\s*<\/code>/gi, function(match, text1, url1, text2, url2) {
                 return '<div class="two-column-buttons">' +
-                    '<div class="card-list-item" data-url="' + url1 + '">' + text1 + '</div>' +
-                    '<div class="card-list-item" data-url="' + url2 + '">' + text2 + '</div>' +
+                    '<div class="card-list-item btnMDYE" data-url="' + url1 + '">' + text1 + '</div>' +
+                    '<div class="card-list-item btnMDYE" data-url="' + url2 + '">' + text2 + '</div>' +
                     '</div>';
             });
             return html;
@@ -2432,7 +2515,25 @@
             tocContainer.innerHTML = '<h3>Contents</h3><ul class="toc-list"></ul>';
             var tocList = tocContainer.querySelector('.toc-list');
 
+            var sidebarTocList = document.getElementById('sidebarTocList');
+            if (sidebarTocList) sidebarTocList.innerHTML = '';
+
             headers.forEach(function(header, index) {
+                // Skip headings inside comments section
+                if (header.closest('.comments-section')) return;
+
+                // Skip headings inside hidden elements (display:none)
+                var parent = header.parentElement;
+                var hidden = false;
+                while (parent && parent !== document.body) {
+                    if (parent.style.display === 'none') {
+                        hidden = true;
+                        break;
+                    }
+                    parent = parent.parentElement;
+                }
+                if (hidden) return;
+
                 var level = parseInt(header.tagName[1]);
                 var text = header.textContent;
                 var id = 'heading-' + index + '-' + text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -2445,7 +2546,28 @@
                 link.textContent = text;
                 listItem.appendChild(link);
                 tocList.appendChild(listItem);
+
+                // Also add to sidebar
+                if (sidebarTocList) {
+                    var cloneItem = listItem.cloneNode(true);
+                    cloneItem.querySelector('a').addEventListener('click', function(e) {
+                        document.getElementById('sidebarOverlay').classList.remove('active');
+                    });
+                    sidebarTocList.appendChild(cloneItem);
+                }
             });
+        }
+        
+        function refreshTableOfContents() {
+            var tocContainer = document.getElementById('tocContainer');
+            if (tocContainer) {
+                tocContainer.innerHTML = '';
+            }
+            var sidebarTocList = document.getElementById('sidebarTocList');
+            if (sidebarTocList) {
+                sidebarTocList.innerHTML = '';
+            }
+            generateTableOfContents();
         }
 
         function enhanceCodeBlocks() {
@@ -2549,6 +2671,9 @@
                     setTimeout(function() {
                         toggle.classList.remove('data-toggle-slide');
                     }, 400);
+
+                    // Refresh TOC after toggle
+                    refreshTableOfContents();
                 });
             });
         }
@@ -2603,6 +2728,13 @@
                 processed = processCardListBlocks(processed);
                 processed = processTwoColumnButtons(processed);
                 document.getElementById('articleContent').innerHTML = processed;
+
+                var allLinks = document.getElementById('articleContent').querySelectorAll('a');
+                allLinks.forEach(function(link) {
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer');
+                });
+
                 enhanceContent();
                 if (article.submission) {
                     var submissionHTML = '' +
@@ -2651,7 +2783,7 @@
                     var tempFooter = document.createElement('div');
                     tempFooter.innerHTML = footerHTML;
                     document.getElementById('articleContent').appendChild(tempFooter);
-                    generateTableOfContents();
+                    refreshTableOfContents();
                 });
             } catch (error) {
                 document.getElementById('articleContent').innerHTML = '<p style="color:var(--accent-color);">Article could not be loaded or it has been deleted by the owner.</p>';
@@ -2665,6 +2797,8 @@
             if (commentsBtn) {
                 commentsBtn.addEventListener('click', function() {
                     var btn = this;
+                    btn.classList.remove('btnMDYE');
+                    void btn.offsetWidth;
                     btn.classList.add('btnMDYE');
                     setTimeout(function() { btn.classList.remove('btnMDYE'); }, 500);
                     var section = document.querySelector('.comments-section');
@@ -2677,6 +2811,60 @@
             var tagsBtn = document.getElementById('tagsBtn');
             if (tagsBtn) {
                 tagsBtn.addEventListener('click', openTagsOverlay);
+            }
+            
+            var sidebarBtn = document.getElementById('sidebarMenuBtn');
+            var sidebarOverlay = document.getElementById('sidebarOverlay');
+            
+            if (sidebarBtn) {
+                sidebarBtn.addEventListener('click', function() {
+                    this.classList.remove('btnMDYE');
+                    void this.offsetWidth;
+                    this.classList.add('btnMDYE');
+                    setTimeout(() => this.classList.remove('btnMDYE'), 500);
+            
+                    if (sidebarOverlay) {
+                        sidebarOverlay.classList.toggle('active');
+                    }
+                });
+            }
+            
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.remove('active');
+                    }
+                });
+            }
+            
+            var backBtn = document.querySelector('.back-btn');
+            if (backBtn) {
+                backBtn.addEventListener('click', function(e) {
+                    this.classList.remove('btnMDYE');
+                    void this.offsetWidth;
+                    this.classList.add('btnMDYE');
+                    setTimeout(() => this.classList.remove('btnMDYE'), 500);
+                });
+            }
+            
+            var shareBtn = document.getElementById('shareBarBtn');
+            if (shareBtn) {
+                shareBtn.addEventListener('click', function() {
+                    this.classList.remove('btnMDYE');
+                    void this.offsetWidth;
+                    this.classList.add('btnMDYE');
+                    setTimeout(() => this.classList.remove('btnMDYE'), 500);
+                });
+            }
+            
+            var userPill = document.getElementById('telegramUser');
+            if (userPill) {
+                userPill.addEventListener('click', function() {
+                    this.classList.remove('btnMDYE');
+                    void this.offsetWidth;
+                    this.classList.add('btnMDYE');
+                    setTimeout(() => this.classList.remove('btnMDYE'), 500);
+                });
             }
 
             loadArticle();
