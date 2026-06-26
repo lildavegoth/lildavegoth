@@ -158,11 +158,6 @@ self.addEventListener('fetch', event => {
 
     const url = new URL(event.request.url);
 
-    if (url.pathname.startsWith('/pages/articles/images/')) {
-        event.respondWith(fetch(event.request));
-        return;
-    }
-
     const requestPath = url.origin + url.pathname;
 
     if (STALE_WHILE_REVALIDATE_URLS.includes(requestPath)) {
@@ -179,6 +174,23 @@ self.addEventListener('fetch', event => {
                     })
                     .catch(() => {});
                 return cachedResponse || fetchPromise;
+            })
+        );
+        return;
+    }
+    
+    if (url.pathname.match(/\.(mp4|webm|ogg|png|jpg|jpeg|gif|webp|svg)$/i)) {
+        event.respondWith(
+            caches.open('media-cache-v1').then(function(cache) {
+                return cache.match(event.request).then(function(response) {
+                    if (response) {
+                        return response;
+                    }
+                    return fetch(event.request).then(function(networkResponse) {
+                        cache.put(event.request, networkResponse.clone());
+                        return networkResponse;
+                    });
+                });
             })
         );
         return;
