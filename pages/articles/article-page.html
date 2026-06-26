@@ -152,60 +152,6 @@
             align-items: center;
             gap: 6px;
         }
-        
-        .sidebar-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9999999;
-            visibility: hidden;
-            opacity: 0;
-            background: rgba(0,0,0,0.7);
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        
-        .sidebar-overlay.active {
-            visibility: visible;
-            opacity: 1;
-        }
-        
-        .sidebar-panel {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 75%;
-            max-width: 300px;
-            height: 100%;
-            background: var(--bg-black);
-            overflow-y: auto;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-            padding: 20px;
-            border-radius: 0 20px 20px 0;
-        }
-        
-        .sidebar-overlay.active .sidebar-panel {
-            transform: translateX(0);
-        }
-        
-        .sidebar-panel h3 {
-            color: var(--accent-color);
-            margin-bottom: 1rem;
-        }
-        
-        .sidebar-panel .toc-list a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            display: block;
-            padding: 8px 0;
-            font-size: 0.95rem;
-        }
-        
-        .sidebar-panel .toc-list a:hover {
-            color: var(--accent-color);
-        }
 
         .content {
             background: var(--bg-black);
@@ -1243,10 +1189,10 @@
             }
 
             .image-container {
-                flex: 0 0 400px;
+                flex: 0 0 300px;
                 margin: 0;
                 max-width: none;
-                width: 400px;
+                width: 300px;
             }
 
             .table-of-contents {
@@ -1254,28 +1200,16 @@
             }
 
             .content {
-                flex: 0 1 480px;
-                margin: 0 auto;
-                padding: 0 20px;
-                max-width: 480px;
-            }
-
-            .bug-note-header {
-                flex: 0 0 400px;
+                flex: 1;
                 margin: 0;
+                padding: 0 2rem 0 0;
                 max-width: none;
-                width: 400px;
-            }
-
-            .sidebar-menu-btn {
-                display: none;
             }
         }
-        
 
         .declaration-text {
             position: absolute;
-            bottom: 65px;
+            bottom: 59px;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
@@ -1415,6 +1349,12 @@
             cursor: pointer;
             margin-right: 20px;
         }
+        
+        @media (min-width: 720px) {
+            .sidebar-menu-btn {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1487,13 +1427,6 @@
             </button>
         </div>
         <div id="tagsList"></div>
-    </div>
-    
-    <div class="sidebar-overlay" id="sidebarOverlay">
-        <div class="sidebar-panel" id="sidebarPanel">
-            <h3>Contents</h3>
-            <ul class="toc-list" id="sidebarTocList"></ul>
-        </div>
     </div>
 
     <script>
@@ -1757,9 +1690,8 @@
                 wrapper.className = 'video-wrapper';
 
                 var video = document.createElement('video');
-                video.src = src;
-                video.poster = src;
-                video.preload = 'metadata';
+                video.setAttribute('data-src', src);
+                video.preload = 'none';
                 video.style.width = '100%';
                 video.style.display = 'block';
                 video.style.borderRadius = 'var(--radius-medium) var(--radius-medium) 0 0';
@@ -1819,14 +1751,13 @@
 
                 img.parentNode.replaceChild(wrapper, img);
 
-                var videoSrc = src;
+                var videoSrc = video.getAttribute('data-src');
                 if (!videoSrc.startsWith('http')) {
                     videoSrc = window.location.origin + (videoSrc.startsWith('/') ? videoSrc : '/' + videoSrc);
                 }
 
                 fetch(videoSrc, { method: 'HEAD' })
-                .then(function(response) {
-                    if (!response.ok) throw new Error('not found');
+                    .then(function(response) {
                     var length = response.headers.get('Content-Length');
                     if (length && parseInt(length) > 0) {
                         var size = parseInt(length, 10);
@@ -1838,9 +1769,6 @@
                         sizeOverlay.textContent = '?';
                     }
                 })
-                .catch(function() {
-                    sizeOverlay.textContent = '?';
-                });
 
                 function formatTime(seconds) {
                     var mins = Math.floor(seconds / 60);
@@ -1868,6 +1796,9 @@
                 });
 
                 playBtn.addEventListener('click', function() {
+                    if (!video.src && video.getAttribute('data-src')) {
+                        video.src = video.getAttribute('data-src');
+                    }
                     if (video.paused) {
                         video.play();
                         playBtn.innerHTML = '<i class="fas fa-pause"></i>';
@@ -2519,25 +2450,7 @@
             tocContainer.innerHTML = '<h3>Contents</h3><ul class="toc-list"></ul>';
             var tocList = tocContainer.querySelector('.toc-list');
 
-            var sidebarTocList = document.getElementById('sidebarTocList');
-            if (sidebarTocList) sidebarTocList.innerHTML = '';
-
             headers.forEach(function(header, index) {
-                // Skip headings inside comments section
-                if (header.closest('.comments-section')) return;
-
-                // Skip headings inside hidden elements (display:none)
-                var parent = header.parentElement;
-                var hidden = false;
-                while (parent && parent !== document.body) {
-                    if (parent.style.display === 'none') {
-                        hidden = true;
-                        break;
-                    }
-                    parent = parent.parentElement;
-                }
-                if (hidden) return;
-
                 var level = parseInt(header.tagName[1]);
                 var text = header.textContent;
                 var id = 'heading-' + index + '-' + text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -2550,28 +2463,7 @@
                 link.textContent = text;
                 listItem.appendChild(link);
                 tocList.appendChild(listItem);
-
-                // Also add to sidebar
-                if (sidebarTocList) {
-                    var cloneItem = listItem.cloneNode(true);
-                    cloneItem.querySelector('a').addEventListener('click', function(e) {
-                        document.getElementById('sidebarOverlay').classList.remove('active');
-                    });
-                    sidebarTocList.appendChild(cloneItem);
-                }
             });
-        }
-        
-        function refreshTableOfContents() {
-            var tocContainer = document.getElementById('tocContainer');
-            if (tocContainer) {
-                tocContainer.innerHTML = '';
-            }
-            var sidebarTocList = document.getElementById('sidebarTocList');
-            if (sidebarTocList) {
-                sidebarTocList.innerHTML = '';
-            }
-            generateTableOfContents();
         }
 
         function enhanceCodeBlocks() {
@@ -2675,9 +2567,6 @@
                     setTimeout(function() {
                         toggle.classList.remove('data-toggle-slide');
                     }, 400);
-
-                    // Refresh TOC after toggle
-                    refreshTableOfContents();
                 });
             });
         }
@@ -2787,7 +2676,7 @@
                     var tempFooter = document.createElement('div');
                     tempFooter.innerHTML = footerHTML;
                     document.getElementById('articleContent').appendChild(tempFooter);
-                    refreshTableOfContents();
+                    generateTableOfContents();
                 });
             } catch (error) {
                 document.getElementById('articleContent').innerHTML = '<p style="color:var(--accent-color);">Article could not be loaded or it has been deleted by the owner.</p>';
@@ -2818,26 +2707,16 @@
             }
             
             var sidebarBtn = document.getElementById('sidebarMenuBtn');
-            var sidebarOverlay = document.getElementById('sidebarOverlay');
-            
             if (sidebarBtn) {
                 sidebarBtn.addEventListener('click', function() {
+                    var toc = document.getElementById('tocContainer');
+                    if (toc) {
+                        toc.style.display = (toc.style.display === 'block') ? 'none' : 'block';
+                    }
                     this.classList.remove('btnMDYE');
                     void this.offsetWidth;
                     this.classList.add('btnMDYE');
                     setTimeout(() => this.classList.remove('btnMDYE'), 500);
-            
-                    if (sidebarOverlay) {
-                        sidebarOverlay.classList.toggle('active');
-                    }
-                });
-            }
-            
-            if (sidebarOverlay) {
-                sidebarOverlay.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        this.classList.remove('active');
-                    }
                 });
             }
             
