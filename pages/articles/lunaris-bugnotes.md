@@ -14,10 +14,11 @@ Android 16 by [NothingHere03](https://t.me/NothingHere03) Stock Kernel
 - album art in media player is truncated or not fully loaded (it may caused by the music player but i don't know and didn't try another music player app)
 ![Truncated](images/lunaris-bugnotes-truncated.webp)
 - icon in home screen desktop always gone after the screen is unlocked (turn on the screen), open any app in dock to fix it
-- new apps still delayed to be added in desktop (not app drawer)
+- new apps still delayed to be added in desktop and needs to restart launcher or system to make apps appear (not app drawer)
 - sometimes, any app cannot be accessed at all, like it's refuses to be open (restart device to fix)
 - Bubble feature cannot be opened sometimes, like open from home screen and notification will not open the app in Bubble (restart system ui to fix)
 - Bubble can only open one app at a time (when you have 2 apps in Bubble, one of the app that not used will be killed by the system, happens once for me and the other day it's fixed by itself, the app is just kinda buggy i guess)
+- apps in desktop is gone after the screen off (a while like 2-5 minutes), swipe up to show icons in dock and open any app and close again to make the other icon (outside dock) to be appear again
 
 ---
 
