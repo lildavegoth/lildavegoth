@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.7.3';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.7.4';
 const urlsToCache = [
     // Root
     '/',
