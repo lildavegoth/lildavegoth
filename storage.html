@@ -279,33 +279,8 @@
             display: none;
         }
 
-        .folders {
-            display: flex;
-            gap: 12px;
-            overflow-x: auto;
-            padding-bottom: 10px;
-            margin-bottom: 30px;
-        }
-
-        .folder-btn {
-            background: #222;
-            color: #aaa;
-            padding: 10px 20px;
-            border-radius: 30px;
-            border: none;
-            cursor: pointer;
-            white-space: nowrap;
-            font-size: 1rem;
-            transition: transform 0.1s ease;
-        }
-
-        .folder-btn:active {
-            transform: scale(0.95);
-        }
-
-        .folder-btn.active {
-            background: var(--accent-color);
-            color: #000;
+        .folder-pills {
+            margin-bottom: 40px;
         }
 
         .items-info {
@@ -398,6 +373,12 @@
             word-break: break-word;
             overflow-wrap: break-word;
             max-width: 100%;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .storage-value::-webkit-scrollbar {
+            display: none;
         }
 
         .card-footer {
@@ -621,15 +602,12 @@
             max-height: 50vh;
             padding-right: 8px;
             padding-bottom: 16px;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
         .folder-list::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .folder-list::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.3);
-            border-radius: 4px;
+            display: none;
         }
 
         .folder-card {
@@ -686,6 +664,36 @@
             font-size: 0.9rem;
         }
 
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .pagination-controls button {
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .pagination-controls button:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .page-number {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
         @media (max-width: 600px) {
             .folder-card {
                 padding: 14px 16px;
@@ -726,7 +734,7 @@
             <div class="search-suggestions" id="searchSuggestions"></div>
         </div>
 
-        <div class="folders" id="folders"></div>
+        <div class="folder-pills" id="folders"></div>
 
         <div class="items-info">
             <div id="itemsCount">0 items | 0B</div>
@@ -734,6 +742,8 @@
         </div>
 
         <div style="margin-top: -50px;" class="storage-container" id="storageContainer"></div>
+
+        <div id="paginationContainer"></div>
 
         <footer>
             <div class="social-links">
@@ -837,10 +847,12 @@
         ];
 
         const BACKUP_META_KEY = 'backupFileSizes';
+        const REDIRECT_URI = window.location.origin + window.location.pathname;
 
         let currentFolder = 'All';
         let pinnedItems = JSON.parse(localStorage.getItem('pinnedItems') || '[]');
         let tempFolders = [];
+        let allPage = 0;
 
         const avatarEl = document.getElementById('avatar');
         const usernameEl = document.getElementById('username');
@@ -917,13 +929,14 @@
             const foldersEl = document.getElementById('folders');
             foldersEl.innerHTML = '';
 
-            function addFolderButton(name) {
+            function addFolderButton(name, isFirst, isLast) {
                 const btn = document.createElement('button');
-                btn.className = 'folder-btn';
+                btn.className = 'folder-pill';
                 if (name === currentFolder) btn.classList.add('active');
                 btn.textContent = name;
                 btn.onclick = () => {
                     currentFolder = name;
+                    allPage = 0;
                     buildFolders();
                     buildCards();
                 };
@@ -938,7 +951,7 @@
             });
 
             const expandBtn = document.createElement('button');
-            expandBtn.className = 'folder-btn';
+            expandBtn.className = 'folder-pill';
             expandBtn.innerHTML = 'Expand';
             expandBtn.onclick = () => {
                 openFoldersPopup();
@@ -990,6 +1003,20 @@
                 if (!isPinned(a) && isPinned(b)) return 1;
                 return 0;
             });
+
+            let displayKeys = filtered;
+            let totalPages = 1;
+            let page = 0;
+
+            if (currentFolder === 'All') {
+                totalPages = Math.ceil(filtered.length / 7) || 1;
+                if (allPage >= totalPages) allPage = totalPages - 1;
+                if (allPage < 0) allPage = 0;
+                page = allPage;
+                const start = page * 7;
+                displayKeys = filtered.slice(start, start + 7);
+            }
+
             const container = document.getElementById('storageContainer');
             container.innerHTML = '';
             let totalSize = getTotalStorageSize();
@@ -1017,7 +1044,7 @@
             } else {
                 pill.style.background = 'var(--accent-color)';
                 pill.style.color = '#000';
-                filtered.forEach(key => {
+                displayKeys.forEach(key => {
                     let rawValue = localStorage.getItem(key);
                     let valueForDisplay = rawValue;
                     let isJSON = false;
@@ -1087,6 +1114,39 @@
                     }
                 });
             }
+
+            const paginationContainer = document.getElementById('paginationContainer');
+            paginationContainer.innerHTML = '';
+            if (currentFolder === 'All' && totalPages > 1) {
+                const pagDiv = document.createElement('div');
+                pagDiv.className = 'pagination-controls';
+                const prevBtn = document.createElement('button');
+                prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Previous';
+                prevBtn.disabled = page === 0;
+                prevBtn.onclick = () => {
+                    if (page > 0) {
+                        allPage--;
+                        buildCards();
+                    }
+                };
+                const pageLabel = document.createElement('span');
+                pageLabel.className = 'page-number';
+                pageLabel.textContent = `Page ${page + 1} of ${totalPages}`;
+                const nextBtn = document.createElement('button');
+                nextBtn.innerHTML = 'Next <i class="fas fa-chevron-right"></i>';
+                nextBtn.disabled = page >= totalPages - 1;
+                nextBtn.onclick = () => {
+                    if (page < totalPages - 1) {
+                        allPage++;
+                        buildCards();
+                    }
+                };
+                pagDiv.appendChild(prevBtn);
+                pagDiv.appendChild(pageLabel);
+                pagDiv.appendChild(nextBtn);
+                paginationContainer.appendChild(pagDiv);
+            }
+
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -1110,6 +1170,7 @@
         }
 
         document.getElementById('globalSearch').addEventListener('input', () => {
+            allPage = 0;
             buildCards();
         });
 
@@ -1468,6 +1529,7 @@
                         tempFolders.push(folderName);
                     }
                     currentFolder = folderName;
+                    allPage = 0;
                     closeFoldersPopup();
                     buildFolders();
                     buildCards();
@@ -1564,6 +1626,13 @@
             });
         }
 
+        function logoutDropbox() {
+            clearDropboxTokens();
+            window.showMessage('Dropbox disconnected');
+            closeUniversalPopup();
+            openSettingsPopup();
+        }
+
         function openSettingsPopup() {
             const popup = document.getElementById('universalPopup');
             const title = document.getElementById('popupTitle');
@@ -1591,6 +1660,7 @@
                     <h3>Danger Zone</h3>
                     <button class="clear-all-btn" id="popupResetAppData"><i class="fas fa-trash-alt"></i> Reset App Data</button>
                     <button class="clear-all-btn" id="popupDeleteBackups"><i class="fas fa-trash"></i> Delete Backups</button>
+                    <button class="clear-all-btn" id="popupDropboxLogout"><i class="fas fa-sign-out" style="color:white;"></i> Dropbox Logout</button>
                     <h3>Notes</h3>
                     <div class="guide-box">
                         <p><strong>Cloud Details</strong></p>
@@ -1598,7 +1668,7 @@
                     </div>
                     <div class="guide-box">
                         <p><strong>Delete Backups</strong></p>
-                        <p style="font-size: 0.8rem;">Delete Backups button will clear all the backed up JSON files inside your Dropbox entirely, but also Backup the newest JSON to the storage.</p>
+                        <p style="font-size: 0.8rem;">Delete Backups button will clear all the backed up JSON files inside your Dropbox entirely.</p>
                     </div>
                 </div>
             `;
@@ -1629,6 +1699,11 @@
                 closeUniversalPopup();
                 deleteBackups();
             });
+            document.getElementById('popupDropboxLogout').addEventListener('click', () => {
+                showConfirmPopup('Dropbox Logout', 'Disconnect Dropbox OAuth? You will need to reconnect to use cloud features.', () => {
+                    logoutDropbox();
+                });
+            });
             popup.style.display = 'flex';
         }
 
@@ -1640,7 +1715,7 @@
         }
 
         document.getElementById('settingsBtn').addEventListener('click', () => openSettingsPopup());
-            handleOAuthRedirect();
+        handleOAuthRedirect();
 
         let searchTimeout;
         function setupSearchDebounce() {
@@ -1679,6 +1754,7 @@
                             const folder = getFolderForKey(key);
                             if (folder !== currentFolder) {
                                 currentFolder = folder;
+                                allPage = 0;
                                 buildFolders();
                                 buildCards();
                             } else {
