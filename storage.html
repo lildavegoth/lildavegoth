@@ -39,9 +39,6 @@
             background-color: var(--bg-black);
             color: var(--text-primary);
             min-height: 100vh;
-            background-image:
-                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
-                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
             overflow-x: hidden;
             padding: var(--spacing-md) var(--spacing-md) 100px var(--spacing-md);
         }
@@ -1302,7 +1299,10 @@
                 code_challenge: challenge,
                 token_access_type: 'offline'
             });
-            window.location.href = authUrl;
+            const popup = window.open(authUrl, 'dropboxAuth', 'width=600,height=700');
+            if (!popup || popup.closed || typeof popup.closed == 'undefined') {
+                window.showMessage('Popup blocked – please allow popups for this site', true);
+            }
         }
 
         async function handleOAuthCode(code, verifier) {
@@ -1336,6 +1336,13 @@
         async function handleOAuthRedirect() {
             const params = new URLSearchParams(window.location.search);
             const code = params.get('code');
+            if (window.opener && window.opener !== window) {
+                if (code) {
+                    window.opener.postMessage({ type: 'dropboxOAuthCode', code: code }, window.location.origin);
+                }
+                window.close();
+                return;
+            }
             const verifier = sessionStorage.getItem('code_verifier');
             if (code && verifier) {
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -1846,6 +1853,17 @@
             }
             suggestionsContainer.style.display = 'block';
         }
+
+        window.addEventListener('message', function(event) {
+            if (event.origin !== window.location.origin) return;
+            if (event.data && event.data.type === 'dropboxOAuthCode') {
+                const verifier = sessionStorage.getItem('code_verifier');
+                if (verifier) {
+                    sessionStorage.removeItem('code_verifier');
+                    handleOAuthCode(event.data.code, verifier);
+                }
+            }
+        });
 
         setupSearchDebounce();
         initialize();
