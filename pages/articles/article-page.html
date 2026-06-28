@@ -1861,139 +1861,6 @@
             });
         }
 
-        function enhanceVideos(container) {
-            var images = container.querySelectorAll('img');
-            images.forEach(function(img) {
-                var src = img.getAttribute('src') || '';
-                var cleanSrc = src.split('?')[0];
-                var isVideo = /\.(mp4|webm|ogg)$/i.test(cleanSrc);
-                if (!isVideo) return;
-
-                var wrapper = document.createElement('div');
-                wrapper.className = 'video-wrapper';
-
-                var video = document.createElement('video');
-                video.src = src;
-                video.preload = 'metadata';
-                video.style.width = '100%';
-                video.style.display = 'block';
-                video.style.borderRadius = 'var(--radius-medium) var(--radius-medium) 0 0';
-                video.setAttribute('controlsList', 'nodownload');
-                video.setAttribute('disablepictureinpicture', 'true');
-                video.style.webkitTouchCallout = 'none';
-                video.style.webkitUserSelect = 'none';
-                video.style.userSelect = 'none';
-
-                video.addEventListener('contextmenu', function(e) {
-                    e.preventDefault();
-                    return false;
-                });
-
-                var longPressTimer;
-                video.addEventListener('touchstart', function(e) {
-                    longPressTimer = setTimeout(function() {
-                        e.preventDefault();
-                    }, 500);
-                }, { passive: false });
-                video.addEventListener('touchend', function() {
-                    clearTimeout(longPressTimer);
-                });
-                video.addEventListener('touchmove', function() {
-                    clearTimeout(longPressTimer);
-                });
-
-                var sizeOverlay = document.createElement('div');
-                sizeOverlay.className = 'video-overlay-size';
-                sizeOverlay.textContent = '...';
-
-                wrapper.appendChild(video);
-                wrapper.appendChild(sizeOverlay);
-
-                var controls = document.createElement('div');
-                controls.className = 'video-controls';
-
-                var playBtn = document.createElement('button');
-                playBtn.className = 'video-play-btn';
-                playBtn.innerHTML = '<i class="fas fa-play"></i>';
-
-                var progress = document.createElement('input');
-                progress.type = 'range';
-                progress.className = 'video-progress';
-                progress.min = 0;
-                progress.max = 100;
-                progress.value = 0;
-
-                var timeDisplay = document.createElement('span');
-                timeDisplay.className = 'video-time';
-                timeDisplay.textContent = '0:00 / 0:00';
-
-                controls.appendChild(playBtn);
-                controls.appendChild(progress);
-                controls.appendChild(timeDisplay);
-                wrapper.appendChild(controls);
-
-                img.parentNode.replaceChild(wrapper, img);
-
-                var videoSrc = img.src;
-                fetch(videoSrc, { method: 'HEAD' })
-                    .then(function(response) {
-                        var length = response.headers.get('Content-Length');
-                        if (length) {
-                            var size = parseInt(length, 10);
-                            var sizeText = size > 1048576
-                                ? (size / 1048576).toFixed(1) + ' MB'
-                                : (size / 1024).toFixed(1) + ' KB';
-                            sizeOverlay.textContent = sizeText;
-                        }
-                    })
-                    .catch(function() {
-                        sizeOverlay.textContent = '?';
-                    });
-
-                function formatTime(seconds) {
-                    var mins = Math.floor(seconds / 60);
-                    var secs = Math.floor(seconds % 60);
-                    return mins + ':' + (secs < 10 ? '0' : '') + secs;
-                }
-
-                function updateProgress() {
-                    var percent = (video.currentTime / video.duration) * 100;
-                    progress.value = percent;
-                    progress.style.background = 'linear-gradient(to right, var(--accent-color) ' + percent + '%, transparent ' + percent + '%)';
-                    timeDisplay.textContent = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
-                }
-
-                video.addEventListener('loadedmetadata', function() {
-                    progress.max = 100;
-                    updateProgress();
-                });
-
-                video.addEventListener('timeupdate', updateProgress);
-
-                progress.addEventListener('input', function() {
-                    var seekTime = (this.value / 100) * video.duration;
-                    video.currentTime = seekTime;
-                });
-
-                playBtn.addEventListener('click', function() {
-                    if (video.paused) {
-                        video.play();
-                        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-                        sizeOverlay.style.opacity = '0';
-                    } else {
-                        video.pause();
-                        playBtn.innerHTML = '<i class="fas fa-play"></i>';
-                        sizeOverlay.style.opacity = '1';
-                    }
-                });
-
-                video.addEventListener('ended', function() {
-                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
-                    sizeOverlay.style.opacity = '1';
-                });
-            });
-        }
-
         function processGalleryBlocks(html) {
             return html.replace(/:::\s*gallery\s*([\s\S]*?):::/g, function(_, content) {
                 var rendered = marked.parse(content.trim());
@@ -2164,7 +2031,8 @@
             var images = container.querySelectorAll('img');
             images.forEach(function(img) {
                 var src = img.getAttribute('src') || '';
-                var isVideo = /\.(mp4|webm|ogg)$/i.test(src);
+                var cleanSrc = src.split('?')[0];
+                var isVideo = /\.(mp4|webm|ogg)$/i.test(cleanSrc);
                 if (!isVideo) return;
 
                 var wrapper = document.createElement('div');
