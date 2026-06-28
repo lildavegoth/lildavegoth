@@ -35,7 +35,6 @@
             background-color: var(--bg-black);
             color: var(--text-primary);
             min-height: 100vh;
-            background-image: radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%), radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
             overflow-x: hidden;
         }
 
@@ -2038,29 +2037,41 @@
                 var wrapper = document.createElement('div');
                 wrapper.className = 'video-wrapper';
 
-                var videoContainer = document.createElement('div');
-                videoContainer.className = 'video-aspect-container';
-                videoContainer.style.position = 'relative';
-                videoContainer.style.width = '100%';
-                videoContainer.style.aspectRatio = '16 / 9';
-                videoContainer.style.background = '#000';
-                videoContainer.style.borderRadius = 'var(--radius-medium) var(--radius-medium) 0 0';
-                videoContainer.style.overflow = 'hidden';
-
                 var video = document.createElement('video');
                 video.src = src;
                 video.preload = 'metadata';
-                video.style.width = '100%';
-                video.style.height = '100%';
-                video.style.objectFit = 'contain';
-                video.style.display = 'block';
-                video.style.borderRadius = 'var(--radius-medium) var(--radius-medium) 0 0';
                 video.setAttribute('controlsList', 'nodownload');
                 video.setAttribute('disablepictureinpicture', 'true');
                 video.style.webkitTouchCallout = 'none';
                 video.style.webkitUserSelect = 'none';
                 video.style.userSelect = 'none';
 
+                var isLargeScreen = window.matchMedia('(min-width: 720px)').matches;
+
+                if (isLargeScreen) {
+                    var videoContainer = document.createElement('div');
+                    videoContainer.className = 'video-aspect-container';
+                    videoContainer.style.position = 'relative';
+                    videoContainer.style.width = '100%';
+                    videoContainer.style.aspectRatio = '16 / 9';
+                    videoContainer.style.background = '#000';
+                    videoContainer.style.borderRadius = 'var(--radius-medium) var(--radius-medium) 0 0';
+                    videoContainer.style.overflow = 'hidden';
+
+                    video.style.width = '100%';
+                    video.style.height = '100%';
+                    video.style.objectFit = 'contain';
+                    video.style.display = 'block';
+                    video.style.borderRadius = 'var(--radius-medium) var(--radius-medium) 0 0';
+
+                    videoContainer.appendChild(video);
+                    wrapper.appendChild(videoContainer);
+                } else {
+                    video.style.width = '100%';
+                    video.style.display = 'block';
+                    video.style.borderRadius = 'var(--radius-medium) var(--radius-medium) 0 0';
+                    wrapper.appendChild(video);
+                }
                 video.addEventListener('contextmenu', function(e) {
                     e.preventDefault();
                     return false;
@@ -2082,9 +2093,12 @@
                 var sizeOverlay = document.createElement('div');
                 sizeOverlay.className = 'video-overlay-size';
                 sizeOverlay.textContent = '...';
-                videoContainer.appendChild(video);
-                videoContainer.appendChild(sizeOverlay);
-                wrapper.appendChild(videoContainer);
+
+                if (isLargeScreen) {
+                    videoContainer.appendChild(sizeOverlay);
+                } else {
+                    wrapper.appendChild(sizeOverlay);
+                }
 
                 var controls = document.createElement('div');
                 controls.className = 'video-controls';
