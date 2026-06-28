@@ -24,3 +24,5 @@ That's all, pretty simple isn't it? I've been test this method on Android 13 and
 
 Are you confused to follow the instruction above? Try to watch this tutorial below
 ![WuWa Root Bypass](images/bypass-wuwa-root.mp4)
+
+I'm sorry if the video guides is more worst than the text guides, it's because this Article is knly reposted from the old Article.
