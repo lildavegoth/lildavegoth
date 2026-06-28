@@ -1229,6 +1229,30 @@
         function clearDropboxTokens() {
             localStorage.removeItem(DROPBOX_TOKEN_KEY);
         }
+        
+        async function pollForTokens(session) {
+            const maxAttempts = 120;
+            let attempts = 0;
+            const interval = setInterval(async () => {
+                attempts++;
+                if (attempts > maxAttempts) {
+                    clearInterval(interval);
+                    window.showMessage('Login timed out.', true);
+                    sessionStorage.removeItem('dropbox_poll_session');
+                    return;
+                }
+                try {
+                    const resp = await fetch('https://your-vercel-app.vercel.app/api/dropbox?action=tokens&session=' + session);
+                    const data = await resp.json();
+                    if (data.ready) {
+                        clearInterval(interval);
+                        sessionStorage.removeItem('dropbox_poll_session');
+                        setDropboxTokens(data.tokens);
+                        window.showMessage('Dropbox connected!');
+                    }
+                } catch (e) {}
+            }, 2000);
+        }
 
         async function getValidAccessToken() {
             let tokens = getDropboxTokens();
@@ -1288,21 +1312,10 @@
         }
 
         async function authenticateDropbox() {
-            const verifier = generateCodeVerifier();
-            const challenge = await generateCodeChallenge(verifier);
-            sessionStorage.setItem('code_verifier', verifier);
-            const authUrl = 'https://www.dropbox.com/oauth2/authorize?' + new URLSearchParams({
-                client_id: DROPBOX_CLIENT_ID,
-                response_type: 'code',
-                redirect_uri: REDIRECT_URI,
-                code_challenge_method: 'S256',
-                code_challenge: challenge,
-                token_access_type: 'offline'
-            });
-            const popup = window.open(authUrl, 'dropboxAuth', 'width=600,height=700');
-            if (!popup || popup.closed || typeof popup.closed == 'undefined') {
-                window.showMessage('Popup blocked – please allow popups for this site', true);
-            }
+            const session = crypto.randomUUID();
+            sessionStorage.setItem('dropbox_poll_session', session);
+            window.open('https://your-vercel-app.vercel.app/api/dropbox?action=login&session=' + session, '_blank');
+            pollForTokens(session);
         }
 
         async function handleOAuthCode(code, verifier) {
@@ -1336,13 +1349,6 @@
         async function handleOAuthRedirect() {
             const params = new URLSearchParams(window.location.search);
             const code = params.get('code');
-            if (window.opener && window.opener !== window) {
-                if (code) {
-                    window.opener.postMessage({ type: 'dropboxOAuthCode', code: code }, window.location.origin);
-                }
-                window.close();
-                return;
-            }
             const verifier = sessionStorage.getItem('code_verifier');
             if (code && verifier) {
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -1733,7 +1739,6 @@
         }
 
         document.getElementById('settingsBtn').addEventListener('click', () => openSettingsPopup());
-        handleOAuthRedirect();
 
         let searchTimeout;
         function setupSearchDebounce() {
@@ -1853,17 +1858,6 @@
             }
             suggestionsContainer.style.display = 'block';
         }
-
-        window.addEventListener('message', function(event) {
-            if (event.origin !== window.location.origin) return;
-            if (event.data && event.data.type === 'dropboxOAuthCode') {
-                const verifier = sessionStorage.getItem('code_verifier');
-                if (verifier) {
-                    sessionStorage.removeItem('code_verifier');
-                    handleOAuthCode(event.data.code, verifier);
-                }
-            }
-        });
 
         setupSearchDebounce();
         initialize();
