@@ -4,6 +4,7 @@ import matter from 'gray-matter';
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Content-Type', 'application/json');
 
     const { slug } = req.query;
     if (!slug) {
@@ -27,14 +28,16 @@ export default async function handler(req, res) {
         const { data: frontmatter, content } = matter(fileContent);
         const htmlContent = marked(content);
 
-        const cacheBuster = Date.now();
-        const updatedHtml = htmlContent.replace(
-            /(<img[^>]+src=["'])((?!https?:\/\/)[^"']+)(["'])/gi,
-            (match, prefix, src, suffix) => {
-                const separator = src.includes('?') ? '&' : '?';
-                return `${prefix}${src}${separator}t=${cacheBuster}${suffix}`;
-            }
-        );
+        let finalHtml = htmlContent;
+        try {
+            finalHtml = htmlContent.replace(
+                /(<img[^>]+src=["'])((?!https?:\/\/)[^"']+)(["'])/gi,
+                (match, prefix, src, suffix) => {
+                    const separator = src.includes('?') ? '&' : '?';
+                    return `${prefix}${src}${separator}t=${Date.now()}${suffix}`;
+                }
+            );
+        } catch (e) {}
 
         res.status(200).json({
           title: frontmatter.title || 'Untitled',
@@ -43,7 +46,7 @@ export default async function handler(req, res) {
           author: frontmatter.author || 'lildavegoth',
           profile: frontmatter.profile || 'https://t.me/lildavegoth',
           submission: frontmatter.submission === true || frontmatter.submission === 'true',
-          html: htmlContent,
+          html: finalHtml,
           wordCount: content.split(/\s+/).filter(w => /^[a-zA-Z0-9.,]+$/.test(w)).length,
         });
     } catch (error) {
