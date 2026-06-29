@@ -92,18 +92,9 @@
                 user-drag: none !important;
                 -webkit-user-select: none !important;
                 user-select: none !important;
+                pointer-events: none !important;
                 -webkit-touch-callout: none !important;
-                touch-action: none !important;
-            }
-            video.protected {
-                -webkit-touch-callout: none !important;
-                -webkit-user-select: none !important;
-                user-select: none !important;
-                -webkit-user-drag: none !important;
-                user-drag: none !important;
-                touch-action: none !important;
-                -webkit-user-callout: none !important;
-                -webkit-touch-callout: none !important;
+                touch-action: pan-y pinch-zoom !important;
             }
             img.clickable, img.allow-interaction, img[data-no-protect] {
                 pointer-events: auto !important;
@@ -132,7 +123,11 @@
                 if (img.classList.contains(EXCLUDED_CLASSES[i])) return false;
             }
             if (img.hasAttribute('data-no-protect')) return false;
-            return true;
+            var src = img.src.toLowerCase();
+            if (PROTECTED_FORMATS.test(src) || src.startsWith('data:image/') || src.startsWith('blob:')) {
+                return true;
+            }
+            return false;
         }
 
         function protectImage(img) {
@@ -141,7 +136,6 @@
             img.classList.add('protected');
             img.setAttribute('data-protected', 'true');
             img.setAttribute('draggable', 'false');
-            img.draggable = false;
             img.setAttribute('oncontextmenu', 'return false');
             img.setAttribute('ondragstart', 'return false');
         }
@@ -153,11 +147,6 @@
         document.addEventListener('contextmenu', function(e) {
             if (isExceptionPage()) return;
             var target = e.target;
-            if (target.tagName === 'VIDEO') {
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
-            }
             if (target.tagName === 'IMG' && target.classList.contains('protected')) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -169,12 +158,6 @@
                 return false;
             }
         }, true);
-        
-        document.addEventListener('touchstart', function(e) {
-            if (e.target.tagName === 'IMG' && e.target.classList.contains('protected')) {
-                e.preventDefault();
-            }
-        }, { capture: true, passive: false });
 
         document.addEventListener('dragstart', function(e) {
             if (isExceptionPage()) return;
@@ -209,6 +192,23 @@
                 return false;
             }
         });
+
+        document.addEventListener('touchstart', function(e) {
+            if (isExceptionPage()) return;
+            var target = e.target;
+            if (target.tagName === 'IMG' && target.classList.contains('protected')) {
+                var touchTimer = setTimeout(function() {
+                    e.preventDefault();
+                    showRightClickWarning(e);
+                }, 1000);
+                target.addEventListener('touchend', function() {
+                    clearTimeout(touchTimer);
+                }, { once: true });
+                target.addEventListener('touchmove', function() {
+                    clearTimeout(touchTimer);
+                }, { once: true });
+            }
+        }, { passive: false });
 
         function showRightClickWarning(event) {
             var img = event.target;
@@ -333,12 +333,8 @@
 
 (function() {
     function preventVideoDownload(video) {
-        video.classList.add('protected');
         video.setAttribute('controlsList', 'nodownload');
         video.setAttribute('disablepictureinpicture', 'true');
-        video.setAttribute('disableremoteplayback', 'true');
-        video.draggable = false;
-        video.setAttribute('playsinline', 'true');
         video.style.webkitTouchCallout = 'none';
         video.style.webkitUserSelect = 'none';
         video.style.userSelect = 'none';
@@ -350,13 +346,7 @@
             e.preventDefault();
             return false;
         });
-        video.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-        }, { passive: false });
-
-        video.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-        }, true);
+        // No touchstart prevention – back gesture works
     }
 
     function protectAllVideos() {
