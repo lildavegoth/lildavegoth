@@ -1445,20 +1445,58 @@
             }
         }
 
-        async function loadOwnedData() {
-            ownedDetails = {};
-            if (!currentUser) return;
+        async function loadProducts() {
+            document.getElementById('homeGrid').style.display = 'none';
+            document.getElementById('homeLoading').style.display = 'block';
+            document.getElementById('galleryLoading').style.display = 'block';
+
             try {
-                var { data, error } = await supabase.from('Store').select('id, owned');
+                var { data, error } = await supabase.from('Store').select('*');
                 if (error) throw error;
-                (data || []).forEach(function(row) {
-                    var owners = (row.owned || '').split(',').map(function(s) { return s.trim(); });
-                    if (owners.indexOf(currentUser.id) !== -1) {
-                        ownedDetails[row.id] = null;
+                var allData = (data || []).map(function(row) {
+                    var tags = (row.tags || '').split(',').map(function(s) { return s.trim(); });
+                    var isGallery = tags.indexOf('Gallery Item') !== -1;
+                    var paid = tags.indexOf('Paid') !== -1;
+                    var images = (row.images || '').split('\n').map(function(s) { return s.trim(); }).filter(Boolean);
+                    return {
+                        id: row.id,
+                        name: row.name,
+                        subtitle: row.subtitle || '',
+                        price: row.price || '$0.00',
+                        description: row.description || '',
+                        thumbnailImg: row.thumbnail_image || '',
+                        mainImg: row.main_image || '',
+                        scrollImage: row.main_image || '',
+                        category: row.category || '',
+                        published: row.published_date || '',
+                        isGallery: isGallery,
+                        paid: paid,
+                        images: images,
+                        storeId: row.id
+                    };
+                });
+                products = allData.filter(function(p) { return !p.isGallery; });
+                galleryItems = allData.filter(function(p) { return p.isGallery; });
+                galleryItems.forEach(function(gItem) {
+                    if (gItem.paid) {
+                        var p = {
+                            id: gItem.id,
+                            name: gItem.name,
+                            subtitle: gItem.subtitle || '',
+                            price: gItem.price || '$0.00',
+                            description: gItem.description || '',
+                            thumbnailImg: gItem.thumbnailImg,
+                            mainImg: gItem.mainImg,
+                            category: gItem.category || '',
+                            published: gItem.published || ''
+                        };
+                        products.push(p);
                     }
                 });
-            } catch (e) {}
-        }
+            } catch (e) {
+                products = [];
+                galleryItems = [];
+            }
 
             sortProducts();
             sortGalleryItems();
