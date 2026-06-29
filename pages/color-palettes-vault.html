@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <script src="../ui-icons.js"></script>
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+            min-height: calc(100vh - 90px);
+        }
+
+        .category-block {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .section-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: var(--spacing-sm);
+            display: inline-block;
+            cursor: pointer;
+            background: var(--accent-color);
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 50px;
+            transition: opacity 0.2s;
+        }
+
+        .section-label:hover {
+            opacity: 0.7;
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-auto-flow: column;
+            grid-template-rows: repeat(2, 1fr);
+            gap: var(--spacing-xs);
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            grid-auto-columns: calc((100% - var(--spacing-sm)) / 2);
+            padding-right: var(--spacing-sm);
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .grid-layout::-webkit-scrollbar {
+            display: none;
+        }
+
+        .card-item {
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm) var(--spacing-sm);
+            position: relative;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: stretch;
+            overflow: hidden;
+            scroll-snap-align: start;
+            user-select: none;
+            aspect-ratio: 3 / 4;
+            cursor: pointer;
+            margin-right: var(--spacing-xs);
+        }
+
+        .card-item h3 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            align-self: flex-end;
+            text-align: right;
+            line-height: 1.1;
+            white-space: normal;
+            word-break: break-word;
+            max-width: 100%;
+        }
+
+        .card-item p {
+            position: absolute;
+            bottom: var(--spacing-sm);
+            right: var(--spacing-sm);
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-align: right;
+            line-height: 1.4;
+            margin: 0;
+            width: max-content;
+            max-width: 100%;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .card-item.pill-animate {
+            overflow: visible;
+        }
+
+        @keyframes pillBounce {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(0.95);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .card-item.pill-animate {
+            animation: pillBounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .popup-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .close-popup:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .popup-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-sm) 0;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md);
+            flex-wrap: wrap;
+            flex-shrink: 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: var(--spacing-xl);
+            background: var(--bg-dark);
+            border-radius: var(--radius-large);
+            color: #fff;
+            font-size: 1rem;
+            min-height: 200px;
+            margin-top: var(--spacing-lg);
+        }
+
+        .fab-button {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            z-index: 9999;
+        }
+
+        .add-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            cursor: pointer;
+            margin: 8px 0;
+            transition: background 0.2s;
+            font-weight: 600;
+        }
+
+        .add-option:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .category-select-btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-card);
+            border: none;
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .delete-confirm-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999999999;
+        }
+
+        .delete-confirm-overlay.show {
+            display: flex;
+        }
+
+        .delete-confirm-window {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+            animation: popupIn 0.4s ease forwards;
+        }
+
+        @keyframes popupIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .delete-confirm-header {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .delete-confirm-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .delete-confirm-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .delete-confirm-footer {
+            display: flex;
+            gap: 8px;
+            margin-top: var(--spacing-md);
+        }
+
+        .delete-confirm-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: var(--radius-small);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .delete-confirm-btn.cancel {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .delete-confirm-btn.confirm {
+            background: #C42833;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+        <div class="container">
+             <a href="../index.html" class="back-link fade-in">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+            <app-header class="fade-in">
+                <div>
+                    <h1>Color Palettes Vault</h1>
+                    <p class="tagline">Save your own presets of colors to easier use and unlimited palettes storage</p>
+                </div>
+            </app-header>
+            <div id="mainContainer"></div>
+            <footer style="margin-bottom: 50px;">
+                <div class="social-links">
+                    <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                    <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+                </div>
+                <p>© 2026 lildavegoth | Color Palettes Vault</p>
+                <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">Conveys the Idea of a Protected and Inspiring Space for Creative Expression.</p>
+            </footer>
+        </div>
+
+    <button class="fab-button" id="fabNewBtn">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <div id="universalPopup" class="popup-overlay">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" onclick="closeUniversalPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="popup-body" id="popupContent"></div>
+        </div>
+    </div>
+
+    <div class="delete-confirm-overlay" id="deleteConfirmPopup">
+        <div class="delete-confirm-window">
+            <div class="delete-confirm-header">
+                <div class="delete-confirm-title">Delete</div>
+                <div class="delete-confirm-subtitle" id="deleteConfirmMessage">Are you sure you want to delete this?</div>
+            </div>
+            <div class="delete-confirm-footer">
+                <button class="delete-confirm-btn cancel" id="deleteCancelBtn">Cancel</button>
+                <button class="delete-confirm-btn confirm" id="deleteConfirmBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var STORAGE_KEY = 'colorVault';
+        var pendingDeleteAction = null;
+
+        function getVaultData() {
+            var data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : { categories: [] };
+        }
+
+        function saveVaultData(data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function getLuminance(hex) {
+            var r = parseInt(hex.slice(1, 3), 16) / 255;
+            var g = parseInt(hex.slice(3, 5), 16) / 255;
+            var b = parseInt(hex.slice(5, 7), 16) / 255;
+            var luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            return luminance;
+        }
+
+        function adjustTextColor(card) {
+            var bg = card.style.backgroundColor;
+            var rgb = bg.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (rgb) {
+                var hex = "#" + ((1 << 24) + (parseInt(rgb[1]) << 16) + (parseInt(rgb[2]) << 8) + parseInt(rgb[3])).toString(16).slice(1).toUpperCase();
+            } else {
+                hex = card.dataset.hex || '#000000';
+            }
+            var lum = getLuminance(hex);
+            var textColor = lum > 0.6 ? '#000000' : '#ffffff';
+            card.querySelector('h3').style.color = textColor;
+            card.querySelector('p').style.color = textColor;
+        }
+
+        function renderAll() {
+            var container = document.getElementById('mainContainer');
+            container.innerHTML = '';
+            var vault = getVaultData();
+            if (!vault.categories || vault.categories.length === 0) {
+                showPlaceholder();
+                return;
+            }
+            vault.categories.forEach(function(cat, catIndex) {
+                var block = document.createElement('div');
+                block.className = 'category-block';
+                block.dataset.catIndex = catIndex;
+                var label = document.createElement('span');
+                label.className = 'section-label';
+                label.textContent = cat.name;
+                label.onclick = function() { openCategoryRenamePopup(catIndex, label); };
+                block.appendChild(label);
+                if (cat.colors && cat.colors.length > 0) {
+                    var grid = document.createElement('div');
+                    grid.className = 'grid-layout';
+                    cat.colors.forEach(function(color, colorIndex) {
+                        var card = document.createElement('div');
+                        card.className = 'card-item';
+                        card.style.backgroundColor = color.hex;
+                        card.dataset.catIndex = catIndex;
+                        card.dataset.colorIndex = colorIndex;
+                        card.dataset.hex = color.hex;
+                        card.dataset.name = color.name;
+                        card.dataset.description = color.description;
+                        var h3 = document.createElement('h3');
+                        h3.textContent = color.name;
+                        var p = document.createElement('p');
+                        p.textContent = color.description;
+                        card.appendChild(h3);
+                        card.appendChild(p);
+                        grid.appendChild(card);
+                        adjustTextColor(card);
+                    });
+                    block.appendChild(grid);
+                }
+                container.appendChild(block);
+            });
+            attachCardEvents();
+            processAllCards();
+        }
+
+        function showPlaceholder() {
+            var container = document.getElementById('mainContainer');
+            container.innerHTML = '<div class="placeholder">There are no Colors in this Vault yet, add new by click on Add button. Click to edit card and double click to copy HEX color.</div>';
+        }
+
+        function processAllCards() {
+            document.querySelectorAll('.card-item p').forEach(function(p) {
+                var words = p.textContent.trim().split(/\s+/);
+                var groups = [];
+                for (var i = 0; i < words.length; i += 2) {
+                    groups.push(words.slice(i, i + 2).join(' '));
+                }
+                p.innerHTML = groups.join('<br>');
+            });
+        }
+
+        function attachCardEvents() {
+            var cards = document.querySelectorAll('.card-item');
+            cards.forEach(function(card) {
+                var clickTimeout = null;
+                card.addEventListener('click', function(e) {
+                    if (clickTimeout) {
+                        clearTimeout(clickTimeout);
+                        clickTimeout = null;
+                        applyPillAnimation(card);
+                        copyTextToClipboard(getCardHex(card));
+                    } else {
+                        clickTimeout = setTimeout(function() {
+                            clickTimeout = null;
+                            openCardEditPopup(card);
+                        }, 300);
+                    }
+                });
+            });
+        }
+
+        function copyTextToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function() {
+                    if (typeof window.showMessage === 'function') window.showMessage('Copied to clipboard');
+                }).catch(function() {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                if (typeof window.showMessage === 'function') window.showMessage('Copied to clipboard');
+            } catch (err) {}
+            document.body.removeChild(textArea);
+        }
+
+        function getCardHex(card) {
+            return card.dataset.hex || '#000000';
+        }
+
+        function applyPillAnimation(card) {
+            card.classList.add('pill-animate');
+            card.addEventListener('animationend', function handler() {
+                card.classList.remove('pill-animate');
+                card.removeEventListener('animationend', handler);
+            });
+        }
+
+        function openPopup(title, bodyHTML, actionsHTML) {
+            var popup = document.getElementById('universalPopup');
+            document.getElementById('popupTitle').textContent = title;
+            var content = document.getElementById('popupContent');
+            content.innerHTML = bodyHTML;
+            if (actionsHTML) {
+                var actionsDiv = document.createElement('div');
+                actionsDiv.className = 'modal-actions';
+                actionsDiv.innerHTML = actionsHTML;
+                content.parentNode.insertBefore(actionsDiv, content.nextSibling);
+            }
+            popup.classList.add('active');
+        }
+
+        function closeUniversalPopup() {
+            var popup = document.getElementById('universalPopup');
+            var existingActions = popup.querySelector('.modal-actions');
+            if (existingActions) existingActions.remove();
+            popup.classList.remove('active');
+        }
+
+        function showDeleteConfirmation(message, onConfirm) {
+            var popup = document.getElementById('deleteConfirmPopup');
+            document.getElementById('deleteConfirmMessage').textContent = message;
+            popup.classList.add('show');
+            pendingDeleteAction = onConfirm;
+        }
+
+        function hideDeleteConfirmation() {
+            document.getElementById('deleteConfirmPopup').classList.remove('show');
+            pendingDeleteAction = null;
+        }
+
+        document.getElementById('deleteConfirmBtn').addEventListener('click', function() {
+            if (pendingDeleteAction) {
+                pendingDeleteAction();
+                hideDeleteConfirmation();
+            }
+        });
+
+        document.getElementById('deleteCancelBtn').addEventListener('click', hideDeleteConfirmation);
+
+        document.getElementById('deleteConfirmPopup').addEventListener('click', function(e) {
+            if (e.target === this) hideDeleteConfirmation();
+        });
+
+        function openCategoryRenamePopup(catIndex, spanElement) {
+            var vault = getVaultData();
+            var currentName = vault.categories[catIndex].name;
+            var body = '<div style="padding: var(--spacing-md);">' +
+                '<label style="display:block; margin-bottom:4px; font-size:0.8rem; color:var(--text-secondary);">Category Name</label>' +
+                '<input type="text" id="categoryNameInput" value="' + currentName.replace(/"/g, '&quot;') + '" placeholder="Kakoi Kiraku" style="width:100%; padding:10px; background:var(--bg-card); border:none; border-radius:12px; color:var(--text-primary); font-size:1rem; margin-bottom:20px;">' +
+                '</div>';
+            var actions = '<button id="deleteCategoryBtn" style="background:#C42833; color:#fff; border:none; padding:12px 24px; border-radius:50px; font-weight:600; cursor:pointer;">Delete</button>' +
+                '<button id="saveCategoryBtn" style="background:var(--accent-color); color:#000; border:none; padding:12px 24px; border-radius:50px; font-weight:600; cursor:pointer;">Save</button>';
+            openPopup('Edit Category Name', body, actions);
+
+            document.getElementById('saveCategoryBtn').onclick = function() {
+                var newName = document.getElementById('categoryNameInput').value.trim();
+                if (newName) {
+                    vault.categories[catIndex].name = newName;
+                    saveVaultData(vault);
+                    renderAll();
+                }
+                closeUniversalPopup();
+            };
+
+            document.getElementById('deleteCategoryBtn').onclick = function() {
+                closeUniversalPopup();
+                showDeleteConfirmation('Delete the category "' + vault.categories[catIndex].name + '" and all its colors?', function() {
+                    vault.categories.splice(catIndex, 1);
+                    saveVaultData(vault);
+                    renderAll();
+                });
+            };
+        }
+
+        function openCardEditPopup(card) {
+            var vault = getVaultData();
+            var catIndex = parseInt(card.dataset.catIndex);
+            var colorIndex = parseInt(card.dataset.colorIndex);
+            var color = vault.categories[catIndex].colors[colorIndex];
+            var hex = color.hex;
+            var name = color.name;
+            var description = color.description;
+
+            var categories = vault.categories;
+            var currentCatName = categories[catIndex].name;
+
+            var body = '<div style="padding: var(--spacing-md); display:flex; flex-direction:column; gap:16px;">' +
+                '<div><label style="display:block; margin-bottom:4px; font-size:0.8rem; color:var(--text-secondary);">Category</label>' +
+                '<button id="editCardCategoryBtn" class="category-select-btn" data-catindex="' + catIndex + '">' +
+                '<span>' + currentCatName.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span><i class="fas fa-caret-down"></i></button></div>' +
+                '<div><label style="display:block; margin-bottom:4px; font-size:0.8rem; color:var(--text-secondary);">HEX Color</label>' +
+                '<input type="text" id="editHex" value="' + hex.replace(/"/g, '&quot;') + '" style="width:100%; padding:10px; background:var(--bg-card); border:none; border-radius:12px; color:var(--text-primary); font-size:1rem;"></div>' +
+                '<div><label style="display:block; margin-bottom:4px; font-size:0.8rem; color:var(--text-secondary);">Name</label>' +
+                '<input type="text" id="editName" value="' + name.replace(/"/g, '&quot;') + '" style="width:100%; padding:10px; background:var(--bg-card); border:none; border-radius:12px; color:var(--text-primary); font-size:1rem;"></div>' +
+                '<div><label style="display:block; margin-bottom:4px; font-size:0.8rem; color:var(--text-secondary);">Description</label>' +
+                '<textarea id="editDesc" style="width:100%; padding:10px; background:var(--bg-card); border:none; border-radius:12px; color:var(--text-primary); font-size:1rem; resize:none; height:80px;">' + description.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</textarea></div>' +
+                '</div>';
+            var actions = '<button id="deleteCardBtn" style="background:#C42833; color:#fff; border:none; padding:12px 24px; border-radius:50px; font-weight:600; cursor:pointer;">Delete</button>' +
+                '<button id="saveCardBtn" style="background:var(--accent-color); color:#000; border:none; padding:12px 24px; border-radius:50px; font-weight:600; cursor:pointer;">Save</button>';
+            openPopup('Edit Card', body, actions);
+
+            var selectedCatIndex = catIndex;
+            var categoryBtn = document.getElementById('editCardCategoryBtn');
+            categoryBtn.addEventListener('click', function() {
+                openCategorySelectPopup(function(chosenIndex) {
+                    selectedCatIndex = chosenIndex;
+                    categoryBtn.querySelector('span').textContent = vault.categories[chosenIndex].name;
+                });
+            });
+
+            document.getElementById('saveCardBtn').onclick = function() {
+                var newHex = document.getElementById('editHex').value.trim();
+                var newName = document.getElementById('editName').value.trim();
+                var newDesc = document.getElementById('editDesc').value.trim();
+                if (newName && newDesc) {
+                    if (selectedCatIndex !== catIndex) {
+                        var oldColor = vault.categories[catIndex].colors.splice(colorIndex, 1)[0];
+                        if (vault.categories[catIndex].colors.length === 0) {
+                            vault.categories.splice(catIndex, 1);
+                            if (selectedCatIndex > catIndex) selectedCatIndex--;
+                        }
+                        vault.categories[selectedCatIndex].colors.push({
+                            hex: newHex,
+                            name: newName,
+                            description: newDesc
+                        });
+                    } else {
+                        vault.categories[catIndex].colors[colorIndex] = {
+                            hex: newHex,
+                            name: newName,
+                            description: newDesc
+                        };
+                    }
+                    saveVaultData(vault);
+                    renderAll();
+                }
+                closeUniversalPopup();
+            };
+
+            document.getElementById('deleteCardBtn').onclick = function() {
+                closeUniversalPopup();
+                showDeleteConfirmation('Delete color "' + name + '" ?', function() {
+                    vault.categories[catIndex].colors.splice(colorIndex, 1);
+                    if (vault.categories[catIndex].colors.length === 0) {
+                        vault.categories.splice(catIndex, 1);
+                    }
+                    saveVaultData(vault);
+                    renderAll();
+                });
+            };
+        }
+
+        function openCategorySelectPopup(callback) {
+            var vault = getVaultData();
+            var categories = vault.categories;
+            var html = '<div style="padding: var(--spacing-md);">';
+            categories.forEach(function(cat, index) {
+                html += '<div class="add-option" data-index="' + index + '"><span>' + cat.name.replace(/"/g, '&quot;') + '</span></div>';
+            });
+            html += '</div>';
+            openPopup('Select Category', html);
+
+            var items = document.querySelectorAll('#popupContent .add-option');
+            items.forEach(function(item) {
+                item.addEventListener('click', function() {
+                    var idx = parseInt(item.dataset.index);
+                    closeUniversalPopup();
+                    callback(idx);
+                });
+            });
+        }
+
+        function openAddPopup() {
+            var html = '<div style="padding: var(--spacing-md);">' +
+                '<div class="add-option" id="addCategoryOption"><span>Category</span></div>' +
+                '<div class="add-option" id="addColorOption"><span>Color</span></div>' +
+                '</div>';
+            openPopup('Add New', html);
+
+            document.getElementById('addCategoryOption').onclick = function() {
+                closeUniversalPopup();
+                openAddCategoryPopup();
+            };
+            document.getElementById('addColorOption').onclick = function() {
+                closeUniversalPopup();
+                openAddColorPopup();
+            };
+        }
+
+        function openAddCategoryPopup() {
+            var body = '<div style="padding: var(--spacing-md);">' +
+                '<label style="display:block; margin-bottom:4px; font-size:0.8rem; color:var(--text-secondary);">Category Name</label>' +
+                '<input type="text" id="newCategoryInput" placeholder="Kakoi Kiraku" style="width:100%; padding:10px; background:var(--bg-card); border:none; border-radius:12px; color:var(--text-primary); font-size:1rem; margin-bottom:20px;">' +
+                '</div>';
+            var actions = '<button id="cancelCategoryBtn" style="background:transparent; color:var(--text-primary); border:1px solid rgba(255,255,255,0.2); padding:12px 24px; border-radius:50px; font-weight:600; cursor:pointer;">Cancel</button>' +
+                '<button id="saveNewCategoryBtn" style="background:var(--accent-color); color:#000; border:none; padding:12px 24px; border-radius:50px; font-weight:600; cursor:pointer;">Save</button>';
+            openPopup('Add Category', body, actions);
+
+            document.getElementById('saveNewCategoryBtn').onclick = function() {
+                var name = document.getElementById('newCategoryInput').value.trim();
+                if (name) {
+                    var vault = getVaultData();
+                    vault.categories.push({ name: name, colors: [] });
+                    saveVaultData(vault);
+                    renderAll();
+                }
+                closeUniversalPopup();
+            };
+            document.getElementById('cancelCategoryBtn').onclick = closeUniversalPopup;
+        }
+
+        function openAddColorPopup() {
+            var vault = getVaultData();
+            var categories = vault.categories;
+            if (categories.length === 0) {
+                window.showMessage('Please add a category first.');
+                return;
+            }
+            var selectedCatIndex = 0;
+            var categoryName = categories[0].name;
+            var body = '<div style="padding: var(--spacing-md); display:flex; flex-direction:column; gap:16px;">' +
+                '<div><label style="display:block; margin-bottom:4px; font-size:0.8rem; color:var(--text-secondary);">Category</label>' +
+                '<button id="addCardCategoryBtn" class="category-select-btn" data-catindex="0">' +
+                '<span>' + categoryName.replace(/"/g, '&quot;') + '</span><i class="fas fa-caret-down"></i></button></div>' +
+                '<div><label style="display:block; margin-bottom:4px; font-size:0.8rem; color:var(--text-secondary);">HEX Color</label>' +
+                '<input type="text" id="newHex" placeholder="#000000" style="width:100%; padding:10px; background:var(--bg-card); border:none; border-radius:12px; color:var(--text-primary); font-size:1rem;"></div>' +
+                '<div><label style="display:block; margin-bottom:4px; font-size:0.8rem; color:var(--text-secondary);">Name</label>' +
+                '<input type="text" id="newName" placeholder="Color name" style="width:100%; padding:10px; background:var(--bg-card); border:none; border-radius:12px; color:var(--text-primary); font-size:1rem;"></div>' +
+                '<div><label style="display:block; margin-bottom:4px; font-size:0.8rem; color:var(--text-secondary);">Description</label>' +
+                '<textarea id="newDesc" placeholder="Description" style="width:100%; padding:10px; background:var(--bg-card); border:none; border-radius:12px; color:var(--text-primary); font-size:1rem; resize:none; height:80px;"></textarea></div>' +
+                '</div>';
+            var actions = '<button id="cancelColorBtn" style="background:transparent; color:var(--text-primary); border:1px solid rgba(255,255,255,0.2); padding:12px 24px; border-radius:50px; font-weight:600; cursor:pointer;">Cancel</button>' +
+                '<button id="saveNewColorBtn" style="background:var(--accent-color); color:#000; border:none; padding:12px 24px; border-radius:50px; font-weight:600; cursor:pointer;">Save</button>';
+            openPopup('Add Color', body, actions);
+
+            var categoryBtn = document.getElementById('addCardCategoryBtn');
+            categoryBtn.addEventListener('click', function() {
+                openCategorySelectPopup(function(chosenIndex) {
+                    selectedCatIndex = chosenIndex;
+                    categoryBtn.querySelector('span').textContent = categories[chosenIndex].name;
+                });
+            });
+
+            document.getElementById('saveNewColorBtn').onclick = function() {
+                var hex = document.getElementById('newHex').value.trim();
+                var name = document.getElementById('newName').value.trim();
+                var desc = document.getElementById('newDesc').value.trim();
+                if (!name || !desc || !hex) return;
+                var vault = getVaultData();
+                vault.categories[selectedCatIndex].colors.push({
+                    hex: hex,
+                    name: name,
+                    description: desc
+                });
+                saveVaultData(vault);
+                renderAll();
+                closeUniversalPopup();
+            };
+            document.getElementById('cancelColorBtn').onclick = closeUniversalPopup;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            renderAll();
+
+            var fab = document.getElementById('fabNewBtn');
+            fab.addEventListener('click', function() {
+                fab.classList.add('btnMDYE');
+                fab.addEventListener('animationend', function handler() {
+                    fab.classList.remove('btnMDYE');
+                    fab.removeEventListener('animationend', handler);
+                });
+                openAddPopup();
+            });
+
+            document.getElementById('universalPopup').addEventListener('click', function(e) {
+                if (e.target === this) closeUniversalPopup();
+            });
+        });
+    </script>
+</body>
+</html>
