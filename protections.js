@@ -93,10 +93,6 @@
                 -webkit-user-select: none !important;
                 user-select: none !important;
                 -webkit-touch-callout: none !important;
-                pointer-events: none !important;
-                touch-action: manipulation !important;
-                -webkit-user-callout: none !important;
-                -webkit-touch-callout: none !important;
                 touch-action: none !important;
             }
             video.protected {
@@ -354,21 +350,9 @@
             e.preventDefault();
             return false;
         });
-        let pressTimer;
-
-        video.addEventListener('touchstart', function() {
-            pressTimer = setTimeout(function() {
-                video.blur();
-            }, 350);
-        }, { passive: true });
-
-        video.addEventListener('touchend', function() {
-            clearTimeout(pressTimer);
-        });
-
-        video.addEventListener('touchcancel', function() {
-            clearTimeout(pressTimer);
-        });
+        video.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+        }, { passive: false });
 
         video.addEventListener('contextmenu', function(e) {
             e.preventDefault();
