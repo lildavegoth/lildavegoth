@@ -195,6 +195,9 @@ export default async (req, res) => {
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password required' })
         }
+        if (!/^[a-zA-Z0-9]+$/.test(username)) {
+            return res.status(400).json({ error: 'Username can only contain letters and numbers' })
+        }
 
         const { data: existing } = await supabase
             .from('accounts')
