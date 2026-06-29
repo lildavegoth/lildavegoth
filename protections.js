@@ -122,11 +122,7 @@
                 if (img.classList.contains(EXCLUDED_CLASSES[i])) return false;
             }
             if (img.hasAttribute('data-no-protect')) return false;
-            var src = img.src.toLowerCase();
-            if (PROTECTED_FORMATS.test(src) || src.startsWith('data:image/') || src.startsWith('blob:')) {
-                return true;
-            }
-            return false;
+            return true;
         }
 
         function protectImage(img) {
@@ -335,9 +331,6 @@
         video.addEventListener('dragstart', function(e) {
             e.preventDefault();
             return false;
-        });
-        video.addEventListener('touchstart', function(e) {
-            e.preventDefault();
         });
     }
 
