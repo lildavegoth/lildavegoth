@@ -93,7 +93,13 @@
                 -webkit-user-select: none !important;
                 user-select: none !important;
                 -webkit-touch-callout: none !important;
-                touch-action: pan-y pinch-zoom !important;
+                touch-action: manipulation !important;
+            }
+            video.protected {
+                -webkit-touch-callout: none !important;
+                -webkit-user-select: none !important;
+                user-select: none !important;
+                touch-action: manipulation !important;
             }
             img.clickable, img.allow-interaction, img[data-no-protect] {
                 pointer-events: auto !important;
@@ -187,14 +193,6 @@
                 return false;
             }
         });
-
-        document.addEventListener('touchstart', function(e) {
-            if (isExceptionPage()) return;
-            var target = e.target;
-            if (target.tagName === 'IMG' && target.classList.contains('protected')) {
-                e.preventDefault();
-            }
-        }, { passive: false });
 
         function showRightClickWarning(event) {
             var img = event.target;
@@ -324,6 +322,7 @@
         video.style.webkitTouchCallout = 'none';
         video.style.webkitUserSelect = 'none';
         video.style.userSelect = 'none';
+        video.classList.add('protected');
         video.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             return false;
