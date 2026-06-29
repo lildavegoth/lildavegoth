@@ -92,7 +92,6 @@
                 user-drag: none !important;
                 -webkit-user-select: none !important;
                 user-select: none !important;
-                pointer-events: none !important;
                 -webkit-touch-callout: none !important;
                 touch-action: pan-y pinch-zoom !important;
             }
@@ -197,16 +196,7 @@
             if (isExceptionPage()) return;
             var target = e.target;
             if (target.tagName === 'IMG' && target.classList.contains('protected')) {
-                var touchTimer = setTimeout(function() {
-                    e.preventDefault();
-                    showRightClickWarning(e);
-                }, 1000);
-                target.addEventListener('touchend', function() {
-                    clearTimeout(touchTimer);
-                }, { once: true });
-                target.addEventListener('touchmove', function() {
-                    clearTimeout(touchTimer);
-                }, { once: true });
+                e.preventDefault();
             }
         }, { passive: false });
 
@@ -346,7 +336,9 @@
             e.preventDefault();
             return false;
         });
-        // No touchstart prevention – back gesture works
+        video.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+        });
     }
 
     function protectAllVideos() {
