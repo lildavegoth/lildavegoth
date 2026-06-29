@@ -93,7 +93,15 @@
                 -webkit-user-select: none !important;
                 user-select: none !important;
                 -webkit-touch-callout: none !important;
-                touch-action: pan-y pinch-zoom !important;
+                pointer-events: none !important;
+                touch-action: none !important;
+            }
+            video.protected {
+                -webkit-touch-callout: none !important;
+                -webkit-user-select: none !important;
+                user-select: none !important;
+                pointer-events: none !important;
+                touch-action: none !important;
             }
             img.clickable, img.allow-interaction, img[data-no-protect] {
                 pointer-events: auto !important;
@@ -320,6 +328,7 @@
         video.style.webkitTouchCallout = 'none';
         video.style.webkitUserSelect = 'none';
         video.style.userSelect = 'none';
+        video.classList.add('protected');
         video.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             return false;
