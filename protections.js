@@ -93,6 +93,7 @@
                 -webkit-user-select: none !important;
                 user-select: none !important;
                 -webkit-touch-callout: none !important;
+                pointer-events: none !important;
                 touch-action: manipulation !important;
             }
             video.protected {
@@ -322,7 +323,6 @@
         video.style.webkitTouchCallout = 'none';
         video.style.webkitUserSelect = 'none';
         video.style.userSelect = 'none';
-        video.classList.add('protected');
         video.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             return false;
@@ -331,6 +331,9 @@
             e.preventDefault();
             return false;
         });
+        video.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+        }, { passive: false });
     }
 
     function protectAllVideos() {
