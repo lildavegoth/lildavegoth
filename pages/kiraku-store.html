@@ -1175,7 +1175,10 @@
         </button>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        const supabase = window.supabase.createClient('YOUR_SUPABASE_URL', 'YOUR_SUPABASE_ANON_KEY');
+        
         window.showMessage = function(msg) {
             var notif = document.createElement('div');
             notif.textContent = msg;
@@ -1442,38 +1445,20 @@
             }
         }
 
-        async function loadProducts() {
-            document.getElementById('homeGrid').style.display = 'none';
-            document.getElementById('homeLoading').style.display = 'block';
-            document.getElementById('galleryLoading').style.display = 'block';
-
+        async function loadOwnedData() {
+            ownedDetails = {};
+            if (!currentUser) return;
             try {
-                var res = await fetch('/api/store?type=products');
-                if (res.ok) {
-                    var allData = await res.json();
-                    products = allData.filter(function(p) { return !p.isGallery; });
-                    galleryItems = allData.filter(function(p) { return p.isGallery; });
-                    galleryItems.forEach(function(gItem) {
-                        if (gItem.paid) {
-                            var p = {
-                                id: gItem.id,
-                                name: gItem.name,
-                                subtitle: gItem.subtitle || '',
-                                price: gItem.price || '$0.00',
-                                description: gItem.description || '',
-                                thumbnailImg: gItem.thumbnailImg,
-                                mainImg: gItem.mainImg || gItem.images[0],
-                                category: gItem.category || '',
-                                published: gItem.published || ''
-                            };
-                            products.push(p);
-                        }
-                    });
-                }
-            } catch (e) {
-                products = [];
-                galleryItems = [];
-            }
+                var { data, error } = await supabase.from('Store').select('id, owned');
+                if (error) throw error;
+                (data || []).forEach(function(row) {
+                    var owners = (row.owned || '').split(',').map(function(s) { return s.trim(); });
+                    if (owners.indexOf(currentUser.id) !== -1) {
+                        ownedDetails[row.id] = null;
+                    }
+                });
+            } catch (e) {}
+        }
 
             sortProducts();
             sortGalleryItems();
@@ -1486,20 +1471,14 @@
             ownedDetails = {};
             if (!currentUser) return;
             try {
-                var res = await fetch('/api/store?type=owned');
-                if (res.ok) {
-                    var data = await res.json();
-                    var userOwned = data[currentUser.id];
-                    if (Array.isArray(userOwned)) {
-                        userOwned.forEach(function(item) {
-                            if (typeof item === 'string') {
-                                ownedDetails[item] = null;
-                            } else if (item && item.id) {
-                                ownedDetails[item.id] = item.date || null;
-                            }
-                        });
+                var { data, error } = await supabase.from('Store').select('id, owned');
+                if (error) throw error;
+                (data || []).forEach(function(row) {
+                    var owners = (row.owned || '').split(',').map(function(s) { return s.trim(); });
+                    if (owners.indexOf(currentUser.id) !== -1) {
+                        ownedDetails[row.id] = null;
                     }
-                }
+                });
             } catch (e) {}
         }
 
