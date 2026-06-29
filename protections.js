@@ -95,12 +95,19 @@
                 -webkit-touch-callout: none !important;
                 pointer-events: none !important;
                 touch-action: manipulation !important;
+                -webkit-user-callout: none !important;
+                -webkit-touch-callout: none !important;
+                touch-action: none !important;
             }
             video.protected {
                 -webkit-touch-callout: none !important;
                 -webkit-user-select: none !important;
                 user-select: none !important;
-                touch-action: manipulation !important;
+                -webkit-user-drag: none !important;
+                user-drag: none !important;
+                touch-action: none !important;
+                -webkit-user-callout: none !important;
+                -webkit-touch-callout: none !important;
             }
             img.clickable, img.allow-interaction, img[data-no-protect] {
                 pointer-events: auto !important;
@@ -138,6 +145,7 @@
             img.classList.add('protected');
             img.setAttribute('data-protected', 'true');
             img.setAttribute('draggable', 'false');
+            img.draggable = false;
             img.setAttribute('oncontextmenu', 'return false');
             img.setAttribute('ondragstart', 'return false');
         }
@@ -149,6 +157,11 @@
         document.addEventListener('contextmenu', function(e) {
             if (isExceptionPage()) return;
             var target = e.target;
+            if (target.tagName === 'VIDEO') {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
             if (target.tagName === 'IMG' && target.classList.contains('protected')) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -160,6 +173,12 @@
                 return false;
             }
         }, true);
+        
+        document.addEventListener('touchstart', function(e) {
+            if (e.target.tagName === 'IMG' && e.target.classList.contains('protected')) {
+                e.preventDefault();
+            }
+        }, { capture: true, passive: false });
 
         document.addEventListener('dragstart', function(e) {
             if (isExceptionPage()) return;
@@ -318,8 +337,12 @@
 
 (function() {
     function preventVideoDownload(video) {
+        video.classList.add('protected');
         video.setAttribute('controlsList', 'nodownload');
         video.setAttribute('disablepictureinpicture', 'true');
+        video.setAttribute('disableremoteplayback', 'true');
+        video.draggable = false;
+        video.setAttribute('playsinline', 'true');
         video.style.webkitTouchCallout = 'none';
         video.style.webkitUserSelect = 'none';
         video.style.userSelect = 'none';
@@ -331,9 +354,25 @@
             e.preventDefault();
             return false;
         });
-        video.addEventListener('touchstart', function(e) {
+        let pressTimer;
+
+        video.addEventListener('touchstart', function() {
+            pressTimer = setTimeout(function() {
+                video.blur();
+            }, 350);
+        }, { passive: true });
+
+        video.addEventListener('touchend', function() {
+            clearTimeout(pressTimer);
+        });
+
+        video.addEventListener('touchcancel', function() {
+            clearTimeout(pressTimer);
+        });
+
+        video.addEventListener('contextmenu', function(e) {
             e.preventDefault();
-        }, { passive: false });
+        }, true);
     }
 
     function protectAllVideos() {
