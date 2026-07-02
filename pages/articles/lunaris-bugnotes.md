@@ -13,7 +13,7 @@ Android 16 by [NothingHere03](https://t.me/NothingHere03) Stock Kernel
 - limit charging is not like version 3.8 (in current version it's only limit the ampere to 1mA and not really stop the charging like in 3.8), i thought this was a bug and will be fixed soon
 - album art in media player is truncated or not fully loaded (it may caused by the music player but i don't know and didn't try another music player app)
 ![Truncated](images/lunaris-bugnotes-truncated.webp)
-- icon in home screen desktop always gone after the screen is unlocked using pin and not fingerprint, open any app to fix (and it's only the visual is gone, the app still there, you can click at the exact positions of icon to be able to open it)
+- app icons in home screen desktop gone after the screen is unlocked sometimes, open any app to fix (only app icons visual is gone, the app is still there, you can click at the exact positions of app icons to be able to open it)
 - new apps still delayed to be added in desktop and needs to restart launcher or system to make apps appear (not app drawer)
 - sometimes, any app cannot be accessed at all, like it's refuses to be open (restart device to fix)
 - Bubble feature cannot be opened sometimes, like open from home screen and notification will not open the app in Bubble (restart system ui to fix)
