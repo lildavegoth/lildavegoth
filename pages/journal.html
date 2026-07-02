@@ -267,6 +267,10 @@
             opacity: 0.85;
             transform: scale(1.02);
         }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
         .popup-overlay {
             position: fixed;
             top: 0;
@@ -279,6 +283,9 @@
             justify-content: center;
             z-index: 99999999;
             animation: fadeIn 0.3s ease;
+        }
+        .popup-overlay.fade-out {
+            animation: fadeOut 0.3s ease forwards;
         }
         .popup-content {
             background: var(--bg-card);
@@ -374,9 +381,7 @@
             font-size: 18px;
             cursor: pointer;
             transition: background 0.2s ease;
-        }
-        .popup-footer button:hover {
-            background: rgba(255, 255, 255, 0.2);
+            margin-bottom: 100px;
         }
         .popup-btn {
             flex: 1;
@@ -727,11 +732,11 @@
     <div id="universalPopup" class="popup-overlay">
         <div class="popup-content">
             <div class="popup-header">
-                <button class="close-popup btnMDYE" id="backBtnEditor">
+                <button class="close-popup" id="backBtnEditor">
                     <i class="fas fa-arrow-left"></i>
                 </button>
                 <span id="popupDateDisplay"></span>
-                <button class="save-popup-btn btnMDYE" id="saveBtnEditor" onclick="savePopup(currentEditingType)">
+                <button class="save-popup-btn" id="saveBtnEditor">
                     <i class="fas fa-check"></i>
                 </button>
             </div>
@@ -743,10 +748,10 @@
             <input type="file" id="popupImageInput" accept="image/*" onchange="handleImageUpload(this)" style="display:none;">
         </div>
         <div class="popup-footer">
-            <button class="btnMDYE" id="attachmentBtn" onclick="document.getElementById('popupImageInput').click()">
+            <button id="attachmentBtn" onclick="document.getElementById('popupImageInput').click()">
                 <i class="fas fa-paperclip"></i>
             </button>
-            <button class="btnMDYE" id="shareBtn" onclick="shareJournal()">
+            <button id="shareBtn" onclick="shareJournal()">
                 <i class="fas fa-share-alt"></i>
             </button>
         </div>
@@ -828,14 +833,9 @@
                 <button class="settings-btn-item reset-btn" id="resetBtn">
                     <i class="fas fa-trash-alt"></i> Reset All
                 </button>
-                <h3>Guides</h3>
                 <div class="guide-box">
                     <p><i class="fas fa-image" style="margin-right: 4px;"></i> <strong>Insert Image</strong></p>
-                    <p style="font-size: 0.8rem;">Use Base64 images in your journal contents. Convert any image using Image to Base64 tool, then paste the generated &lt;img&gt; tag into the journal content. Images will automatically resize to fit the card</p>
-                    <button class="settings-btn-item" style="border-radius: 12px; margin-top: 8px; text-align: left;" onclick="window.location.href='image-to-base64.html'">
-                        Open Image to Base64 Converter <i class="fas fa-external-link-alt"></i>
-                    </button>
-                    <p style="margin-top: 8px;">If you delete "✦ Image Here" text from any Journals, it will also delete the inserted image</p>
+                    <p style="font-size: 0.8rem;">This app using Base64 for image import, the Base64 codes will turned to "✦ Image Here", and if you delete "✦ Image Here" text from any Journals, it will also delete the inserted image.</p>
                 </div>
                 <div class="guide-box">
                     <p><i class="fas fa-calendar-week" style="margin-right: 4px;"></i> <strong>Date</strong></p>
@@ -844,7 +844,7 @@
                 <div class="guide-box">
                     <p><i class="fas fa-pencil-alt" style="margin-right: 4px;"></i> <strong>Edit</strong></p>
                     <p>Click on any Journal Title to change it's title, you can also
-                        click on the Open button to edit the journal</p>
+                        click on the Open button to edit the Journal</p>
                 </div>
             </div>
         </div>
@@ -958,6 +958,8 @@
 
             function triggerBtnMDYE(btn) {
                 if (btn) {
+                    btn.classList.remove('btnMDYE');
+                    void btn.offsetWidth;
                     btn.classList.add('btnMDYE');
                     setTimeout(() => btn.classList.remove('btnMDYE'), 500);
                 }
@@ -972,8 +974,11 @@
                 });
             }
 
-            document.addEventListener('DOMContentLoaded', attachMDYEListeners);
             attachMDYEListeners();
+
+            document.getElementById('saveBtnEditor').addEventListener('click', function() {
+                savePopup(currentEditingType);
+            });
 
             function renderTags(tags) {
                 const container = document.getElementById('popupTags');
@@ -1153,7 +1158,16 @@
                 document.querySelector('#confirmPopup h2').textContent = 'Confirm Delete';
             };
 
-            window.closeUniversalPopup = function() { document.getElementById('universalPopup').style.display = 'none'; };
+            window.closeUniversalPopup = function() {
+                const popup = document.getElementById('universalPopup');
+                if (!popup) return;
+                popup.classList.add('fade-out');
+                popup.addEventListener('animationend', function handler() {
+                    popup.removeEventListener('animationend', handler);
+                    popup.classList.remove('fade-out');
+                    popup.style.display = 'none';
+                });
+            };
             document.getElementById('backBtnEditor').addEventListener('click', closeUniversalPopup);
 
             function loadJournalForDate(dateStr) {
