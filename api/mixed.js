@@ -7,7 +7,8 @@ async function handlePinResolve(url) {
         headers: {
             'User-Agent': PIN_UA,
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5'
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Referer': 'https://www.pinterest.com/'
         }
     })
 
@@ -15,7 +16,10 @@ async function handlePinResolve(url) {
 
     const oembedUrl = `https://www.pinterest.com/oembed.json?url=${encodeURIComponent(pinPageUrl)}`
     const oembedResp = await fetch(oembedUrl, {
-        headers: { 'User-Agent': PIN_UA }
+        headers: {
+            'User-Agent': PIN_UA,
+            'Referer': 'https://www.pinterest.com/'
+        }
     })
 
     if (!oembedResp.ok) {
