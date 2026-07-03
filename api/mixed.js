@@ -13,7 +13,8 @@ export default async function handler(req, res) {
     const oembedResp = await fetch(oembedUrl)
 
     if (!oembedResp.ok) {
-      throw new Error(`oEmbed failed with status ${oembedResp.status}`)
+      const errorText = await oembedResp.text()
+      throw new Error(`oEmbed failed (${oembedResp.status}): ${errorText}`)
     }
 
     const oembedData = await oembedResp.json()
