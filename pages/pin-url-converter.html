@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pinterest Full‑Screen URL</title>
     <style>
         body {
@@ -40,34 +40,71 @@
 </head>
 <body>
     <h1>Pinterest Full‑Screen Image URL</h1>
-    <p>Paste a <code>pin.it</code> share link and get the 1200px image URL.</p>
+    <p>Paste a <code>pin.it</code> link or a full pin URL and get the 1200px image URL.</p>
 
     <input
         type="text"
         id="pinUrl"
-        placeholder="e.g. https://pin.it/7E5shSWIs"
+        placeholder="e.g. https://pin.it/7E5shSWIs or https://id.pinterest.com/pin/630855860345099260/"
         autofocus
     />
     <button id="fetchBtn">Fetch &amp; Copy URL</button>
 
     <div id="status"></div>
-    <img id="preview" alt="" style="display:none" />
+    <img id="preview" alt="" style="display:none">
 
     <script>
+        const CORS_PROXY = 'https://api.allorigins.win/raw?url='
+
         const input = document.getElementById('pinUrl')
         const button = document.getElementById('fetchBtn')
         const status = document.getElementById('status')
         const preview = document.getElementById('preview')
 
-        async function resolvePin(shortUrl) {
-            status.textContent = 'Resolving…'
-            const apiUrl = `/api/mixed?type=pin-resolve&url=${encodeURIComponent(shortUrl)}`
+        function extractImageFromHTML(html, baseUrl) {
+            const parser = new DOMParser()
+            const doc = parser.parseFromString(html, 'text/html')
 
-            const resp = await fetch(apiUrl)
-            const data = await resp.json()
+            const ogImage = doc.querySelector('meta[property="og:image"]')
+            if (ogImage && ogImage.content) {
+                let imgUrl = ogImage.content
+                return imgUrl.replace(/\/\d+x\//, '/1200x/')
+            }
 
-            if (!resp.ok) throw new Error(data.error || 'Unknown error')
-            return data.fullImageUrl
+            const jsonLd = doc.querySelector('script[type="application/ld+json"]')
+            if (jsonLd) {
+                try {
+                    const data = JSON.parse(jsonLd.textContent)
+                    if (data.image) {
+                        let imgUrl = typeof data.image === 'string' ? data.image : data.image.url
+                        if (imgUrl) return imgUrl.replace(/\/\d+x\//, '/1200x/')
+                    }
+                } catch {}
+            }
+
+            const pinImage = doc.querySelector('img[src*="i.pinimg.com"]')
+            if (pinImage) {
+                let imgUrl = pinImage.src
+                if (imgUrl) return imgUrl.replace(/\/\d+x\//, '/1200x/')
+            }
+
+            throw new Error('Could not find image in the pin page')
+        }
+
+        async function resolvePin(userInput) {
+            status.textContent = 'Fetching pin page…'
+
+            let targetUrl = userInput.trim()
+            const resp = await fetch(CORS_PROXY + encodeURIComponent(targetUrl))
+
+            if (!resp.ok) {
+                throw new Error(`Failed to fetch pin page (status ${resp.status})`)
+            }
+
+            const html = await resp.text()
+            const fullImageUrl = extractImageFromHTML(html, targetUrl)
+
+            return fullImageUrl
         }
 
         async function copyToClipboard(text) {
@@ -86,12 +123,11 @@
         }
 
         button.addEventListener('click', async () => {
-            const shortUrl = input.value.trim()
-            if (!shortUrl) return
+            const userInput = input.value.trim()
+            if (!userInput) return
 
             try {
-                const imageUrl = await resolvePin(shortUrl)
-
+                const imageUrl = await resolvePin(userInput)
                 preview.src = imageUrl
                 preview.style.display = 'block'
 
