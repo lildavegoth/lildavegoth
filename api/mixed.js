@@ -13,10 +13,18 @@ async function handlePinResolve(url) {
     }
 
     const firstResp = await fetch(url, {
-        redirect: 'follow',
-        headers: { 'User-Agent': PIN_UA }
+        redirect: 'manual',
+        headers: {
+            'User-Agent': PIN_UA,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5'
+        }
     })
-    const pinPageUrl = firstResp.url
+
+    let pinPageUrl = firstResp.headers.get('location')
+    if (!pinPageUrl) {
+        throw new Error('Could not resolve pin.it link (no redirect location)')
+    }
 
     const fallbackOembedUrl = `https://www.pinterest.com/oembed.json?url=${encodeURIComponent(pinPageUrl)}`
     const fallbackResp = await fetch(fallbackOembedUrl, {
