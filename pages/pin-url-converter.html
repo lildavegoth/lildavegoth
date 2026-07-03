@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pinterest Full‑Screen URL</title>
     <style>
         body {
@@ -45,29 +45,71 @@
     <input
         type="text"
         id="pinUrl"
-        placeholder="e.g. https://pin.it/7E5shSWIs or https://www.pinterest.com/pin/630855860345099260/"
+        placeholder="e.g. https://pin.it/7E5shSWIs"
         autofocus
     />
     <button id="fetchBtn">Fetch &amp; Copy URL</button>
 
     <div id="status"></div>
-    <img id="preview" alt="" style="display:none" />
+    <img id="preview" alt="" style="display:none">
 
     <script>
+        const CORS_PROXY = 'https://api.codetabs.com/v1/proxy?quest='
+
         const input = document.getElementById('pinUrl')
         const button = document.getElementById('fetchBtn')
         const status = document.getElementById('status')
         const preview = document.getElementById('preview')
 
-        async function resolvePin(shortUrl) {
-            status.textContent = 'Resolving…'
-            const apiUrl = `/api/mixed?type=pin-resolve&url=${encodeURIComponent(shortUrl)}`
+        function convertTo1200x(imageUrl) {
+            return imageUrl.replace(/\/\d+x\//, '/1200x/').replace(/\/originals\//, '/1200x/')
+        }
 
-            const resp = await fetch(apiUrl)
-            const data = await resp.json()
+        function extractImageFromHTML(html) {
+            const parser = new DOMParser()
+            const doc = parser.parseFromString(html, 'text/html')
 
-            if (!resp.ok) throw new Error(data.error || 'Unknown error')
-            return data.fullImageUrl
+            const ogImage = doc.querySelector('meta[property="og:image"]')
+            if (ogImage && ogImage.content) {
+                return convertTo1200x(ogImage.content)
+            }
+
+            const jsonLd = doc.querySelector('script[type="application/ld+json"]')
+            if (jsonLd) {
+                try {
+                    const data = JSON.parse(jsonLd.textContent)
+                    if (data.image) {
+                        let imgUrl = typeof data.image === 'string' ? data.image : data.image.url
+                        if (imgUrl) return convertTo1200x(imgUrl)
+                    }
+                } catch {}
+            }
+
+            const imgs = doc.querySelectorAll('img[src*="i.pinimg.com"]')
+            for (const img of imgs) {
+                if (img.src && img.src.includes('i.pinimg.com')) {
+                    return convertTo1200x(img.src)
+                }
+            }
+
+            throw new Error('Could not find image on the pin page')
+        }
+
+        async function resolvePin(userInput) {
+            status.textContent = 'Fetching pin page…'
+
+            const targetUrl = userInput.trim()
+            const proxyUrl = CORS_PROXY + encodeURIComponent(targetUrl)
+
+            const resp = await fetch(proxyUrl)
+            if (!resp.ok) {
+                throw new Error(`Failed to fetch pin page (status ${resp.status})`)
+            }
+
+            const html = await resp.text()
+            const fullImageUrl = extractImageFromHTML(html)
+
+            return fullImageUrl
         }
 
         async function copyToClipboard(text) {
@@ -86,12 +128,11 @@
         }
 
         button.addEventListener('click', async () => {
-            const shortUrl = input.value.trim()
-            if (!shortUrl) return
+            const userInput = input.value.trim()
+            if (!userInput) return
 
             try {
-                const imageUrl = await resolvePin(shortUrl)
-
+                const imageUrl = await resolvePin(userInput)
                 preview.src = imageUrl
                 preview.style.display = 'block'
 
