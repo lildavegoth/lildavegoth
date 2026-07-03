@@ -1,25 +1,56 @@
 const PIN_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 const TARGET_SIZE = '1200x'
 
+function decodePinItShort(shortCode) {
+    const alphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_'
+    let id = 0n
+    for (let i = 0; i < shortCode.length; i++) {
+        id = id * 64n + BigInt(alphabet.indexOf(shortCode[i]))
+    }
+    return id.toString()
+}
+
+function extractPinIdFromUrl(url) {
+    const pinItMatch = url.match(/pin\.it\/([A-Za-z0-9_-]+)/)
+    if (pinItMatch) {
+        return decodePinItShort(pinItMatch[1])
+    }
+
+    const pinMatch = url.match(/\/pin\/(\d+)/)
+    if (pinMatch) {
+        return pinMatch[1]
+    }
+
+    throw new Error('Could not extract pin ID from URL')
+}
+
 async function handlePinResolve(url) {
-    const oembedUrl = `https://www.pinterest.com/oembed.json?url=${encodeURIComponent(url)}`
-    const oembedResp = await fetch(oembedUrl, {
-        headers: { 'User-Agent': PIN_UA }
+    const pinId = extractPinIdFromUrl(url)
+
+    const apiUrl = `https://www.pinterest.com/resource/PinResource/get/?data=${encodeURIComponent(JSON.stringify({ options: { id: pinId, field_set_key: 'detailed' } }))}`
+
+    const apiResp = await fetch(apiUrl, {
+        headers: {
+            'User-Agent': PIN_UA,
+            'Accept': 'application/json',
+            'Referer': 'https://www.pinterest.com/'
+        }
     })
 
-    if (!oembedResp.ok) {
-        const errorText = await oembedResp.text()
-        throw new Error(`oEmbed failed (${oembedResp.status}): ${errorText}`)
+    if (!apiResp.ok) {
+        throw new Error(`PinResource API failed (${apiResp.status})`)
     }
 
-    const oembedData = await oembedResp.json()
-    const oembedImage = oembedData.image_url
+    const json = await apiResp.json()
+    const images = json.resource_response?.data?.images
 
-    if (!oembedImage) {
-        throw new Error('No image found in oEmbed response')
+    if (!images || !images.orig) {
+        throw new Error('No image found in PinResource response')
     }
 
-    const fullImageUrl = oembedImage.replace(/\/\d+x\//, `/${TARGET_SIZE}/`)
+    const origUrl = images.orig.url
+    const fullImageUrl = origUrl.replace(/\/originals\//, `/${TARGET_SIZE}/`)
+
     return { fullImageUrl }
 }
 
