@@ -42,13 +42,7 @@ async function handlePinResolve(url) {
     }
 
     const oembedData = await fallbackResp.json()
-    const oembedImage = oembedData.image_url
-    if (!oembedImage) {
-        throw new Error('No image found in oEmbed response')
-    }
-
-    const fullImageUrl = oembedImage.replace(/\/\d+x\//, `/${TARGET_SIZE}/`)
-    return { fullImageUrl }
+    return { debug: oembedData }
 }
 
 export default async function handler(req, res) {
