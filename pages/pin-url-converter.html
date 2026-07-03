@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pinterest Full‑Screen URL</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    input {
+      width: 100%;
+      padding: 0.7rem;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    button {
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    #status {
+      margin: 1rem 0;
+      color: #555;
+    }
+    img {
+      max-width: 100%;
+      margin-top: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .copied {
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pinterest Full‑Screen Image URL</h1>
+  <p>Paste a <code>pin.it</code> share link and get the 1200px image URL.</p>
+
+  <input
+    type="text"
+    id="pinUrl"
+    placeholder="e.g. https://pin.it/7E5shSWIs"
+    autofocus
+  />
+  <button id="fetchBtn">Fetch &amp; Copy URL</button>
+
+  <div id="status"></div>
+  <img id="preview" alt="" style="display:none" />
+
+  <script>
+    const input = document.getElementById('pinUrl')
+    const button = document.getElementById('fetchBtn')
+    const status = document.getElementById('status')
+    const preview = document.getElementById('preview')
+
+    async function resolvePin(shortUrl) {
+      status.textContent = 'Resolving…'
+      const apiUrl = `/api/mixed?url=${encodeURIComponent(shortUrl)}`
+
+      const resp = await fetch(apiUrl)
+      const data = await resp.json()
+
+      if (!resp.ok) throw new Error(data.error || 'Unknown error')
+      return data.fullImageUrl
+    }
+
+    async function copyToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text)
+        return true
+      } catch {
+        const textarea = document.createElement('textarea')
+        textarea.value = text
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+        return true
+      }
+    }
+
+    button.addEventListener('click', async () => {
+      const shortUrl = input.value.trim()
+      if (!shortUrl) return
+
+      try {
+        const imageUrl = await resolvePin(shortUrl)
+
+        preview.src = imageUrl
+        preview.style.display = 'block'
+
+        const copied = await copyToClipboard(imageUrl)
+        if (copied) {
+          status.innerHTML = `✅ <span class="copied">Copied!</span><br><small>${imageUrl}</small>`
+        }
+      } catch (err) {
+        status.textContent = `❌ Error: ${err.message}`
+        preview.style.display = 'none'
+      }
+    })
+
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') button.click()
+    })
+  </script>
+</body>
+</html>
