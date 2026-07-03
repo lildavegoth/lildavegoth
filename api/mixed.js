@@ -9,12 +9,7 @@ async function handlePinResolve(url) {
 
     if (oembedResp.ok) {
         const oembedData = await oembedResp.json()
-        const oembedImage = oembedData.image_url
-        if (!oembedImage) {
-            throw new Error('No image found in oEmbed response')
-        }
-        const fullImageUrl = oembedImage.replace(/\/\d+x\//, `/${TARGET_SIZE}/`)
-        return { fullImageUrl }
+        return { debug: oembedData }
     }
 
     const firstResp = await fetch(url, {
