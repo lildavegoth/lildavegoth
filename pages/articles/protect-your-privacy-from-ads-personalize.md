@@ -61,3 +61,12 @@ Unfortunately, there's nothing you can do to block or protect your privacy from 
 ![Google Privacy Menu](images/personalize-google-disable-1.webp)
 ![Google Privacy Menu Second](images/personalize-google-disable-2.webp)
 :::
+
+---
+
+**Plants vs Zombies Heroes**
+1. Open the game and go to settings
+2. Open Help & About menu
+![Plants vs Zombies Heroes Settings](images/personalize-pvzh-settings.webp)
+3. Disable them both
+![Plants vs Zombies Heroes Disable](images/personalize-pvzh-disable.webp)
