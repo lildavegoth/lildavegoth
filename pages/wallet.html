@@ -216,6 +216,13 @@
             line-height: 1.1;
         }
 
+        .goal-display {
+            font-size: 0.85rem;
+            opacity: 0.85;
+            margin-top: 2px;
+            color: var(--accent-color);
+        }
+
         .holder-name-display {
             font-size: 1rem;
             font-weight: 500;
@@ -239,8 +246,50 @@
             margin-bottom: 4px;
         }
 
-        .account-number-display {
+        .rotate-container {
+            position: relative;
+            height: 1.2em;
+            min-width: 100px;
+            display: inline-block;
+        }
+
+        .card-bottom-right {
+            transform: translateY(6px);
+        }
+
+        .rotate-account,
+        .rotate-goal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            opacity: 0;
+            transition: opacity 0.5s ease;
             font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .rotate-goal {
+            pointer-events: none;
+        }
+
+        .rotate-container.show-account .rotate-account {
+            opacity: 1;
+        }
+
+        .rotate-container.show-account .rotate-goal {
+            opacity: 0;
+        }
+
+        .rotate-container:not(.show-account) .rotate-account {
+            opacity: 0;
+        }
+
+        .rotate-container:not(.show-account) .rotate-goal {
+            opacity: 1;
+        }
+
+        .account-number-display {
             cursor: pointer;
             user-select: none;
         }
@@ -594,7 +643,7 @@
             outline: none;
             border-color: var(--accent-color);
         }
-        
+
         .form-select {
             width: 100%;
             padding: 12px;
@@ -697,28 +746,28 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
-        
+
         .search-suggestion-item {
             padding: 12px 16px;
             cursor: pointer;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             transition: all 0.2s ease;
         }
-        
+
         .search-suggestion-item:hover {
             background: rgba(193, 252, 50, 0.1);
         }
-        
+
         .search-suggestion-item:last-child {
             border-bottom: none;
         }
-        
+
         .suggestion-title {
             font-weight: 500;
             margin-bottom: 4px;
             color: var(--text-primary);
         }
-        
+
         .suggestion-description {
             font-size: 0.85rem;
             color: var(--text-secondary);
@@ -726,7 +775,7 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        
+
         .suggestion-category {
             display: inline-block;
             padding: 2px 8px;
@@ -736,7 +785,7 @@
             background: rgba(193, 252, 50, 0.1);
             color: var(--accent-color);
         }
-        
+
         .search-suggestions::-webkit-scrollbar {
             display: none;
         }
@@ -774,6 +823,46 @@
             display: flex;
             align-items: center;
             gap: 6px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #333;
+            transition: .3s;
+            border-radius: 24px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: var(--accent-color);
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
         }
     </style>
 </head>
@@ -987,6 +1076,35 @@
         </div>
     </div>
 
+    <div class="popup-overlay" id="goalModal">
+        <div class="popup-content" style="max-width: 400px;">
+            <div class="popup-header">
+                <h2><i class="fas fa-bullseye"></i> Set Savings Goal</h2>
+                <button class="close-popup" id="closeGoalModalBtn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="popup-body">
+                <div style="margin-top: 15px;" class="form-group">
+                    <label class="form-label" for="goalName">Goal Name</label>
+                    <input type="text" class="form-input" id="goalName" placeholder="e.g. New Laptop">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="goalAmount">Goal Amount</label>
+                    <input type="number" class="form-input" id="goalAmount" placeholder="0.00" step="0.01" min="0">
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; justify-content: space-between;">
+                    <label class="form-label" for="goalEnabledToggle" style="margin-bottom:0;">Enable Goal</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="goalEnabledToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn primary" id="saveGoalBtn"><i class="fas fa-save"></i> Save Goal</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         class MoneyTracker {
             constructor() {
@@ -995,6 +1113,7 @@
                 this.currentCardId = null;
                 this.editingCardId = null;
                 this.editingTransactionId = null;
+                this.editingGoalCardId = null;
                 
                 this.defaultCardImage = "../images/card.webp";
                 this.cardDesigns = [this.defaultCardImage];
@@ -1021,6 +1140,7 @@
                 this.renderTransactions();
                 this.setupSearch();
                 this.setupSwipeIndicator();
+                this.startRotateInterval();
             }
             
             loadData() {
@@ -1033,6 +1153,9 @@
                             if (!card.cardType) card.cardType = 'Standard';
                             if (!card.accountNumber) card.accountNumber = '';
                             if (!card.expiry) card.expiry = '';
+                            if (card.goal === undefined) card.goal = 0;
+                            if (card.goalName === undefined) card.goalName = '';
+                            if (card.goalEnabled === undefined) card.goalEnabled = false;
                         });
                     } else {
                         this.cards = [];
@@ -1081,6 +1204,7 @@
                 this.currentCardId = null;
                 this.editingCardId = null;
                 this.editingTransactionId = null;
+                this.editingGoalCardId = null;
                 this.createDefaultCard();
                 this.renderCards();
                 this.renderTransactions();
@@ -1100,7 +1224,10 @@
                     isActive: true,
                     cardType: 'Standard',
                     accountNumber: '',
-                    expiry: ''
+                    expiry: '',
+                    goal: 0,
+                    goalName: '',
+                    goalEnabled: false
                 };
                 
                 this.cards.push(defaultCard);
@@ -1120,7 +1247,10 @@
                     isActive: false,
                     cardType: cardType,
                     accountNumber: accountNumber.trim(),
-                    expiry: expiry.trim()
+                    expiry: expiry.trim(),
+                    goal: 0,
+                    goalName: '',
+                    goalEnabled: false
                 };
                 
                 this.cards.push(newCard);
@@ -1341,15 +1471,35 @@
                 let html = '';
                 this.cards.forEach(card => {
                     const stats = this.getCardStats(card.id);
-                    const bankingExtras = (card.cardType === 'Banking' && card.accountNumber) ? `
-                        <div class="card-bottom-right">
-                            <div class="expiry-display">${this.escapeHtml(card.expiry || '')}</div>
-                            <div class="account-number-display">
-                                <span class="account-masked">••••••••••••</span>
-                                <span class="account-plain" style="display:none;">${this.escapeHtml(card.accountNumber)}</span>
+                    const showGoal = card.goalEnabled && card.goal > 0;
+                    const goalTotal = this.formatMoney(card.goal, card.currency);
+                    const moneyLeft = Math.max(0, card.goal - card.balance);
+                    const goalLeft = this.formatMoney(moneyLeft, card.currency);
+                    const goalDisplayText = showGoal ? `${goalTotal} / ${goalLeft} left` : '';
+                    const goalNameText = card.goalName || 'Goal';
+                    
+                    let bankingExtras = '';
+                    if (card.cardType === 'Banking' && card.accountNumber) {
+                        bankingExtras = `
+                            <div class="card-bottom-right">
+                                <div class="expiry-display">${this.escapeHtml(card.expiry || '')}</div>
+                                <div class="rotate-container show-account">
+                                    <span class="rotate-account account-number-display">
+                                        <span class="account-masked">••••••••••••</span>
+                                        <span class="account-plain" style="display:none;">${this.escapeHtml(card.accountNumber)}</span>
+                                    </span>
+                                    <span class="rotate-goal">${this.escapeHtml(goalNameText)}</span>
+                                </div>
                             </div>
-                        </div>
-                    ` : '';
+                        `;
+                    } else {
+                        bankingExtras = `
+                            <div class="card-bottom-right">
+                                <div class="expiry-display">${this.escapeHtml(card.expiry || '')}</div>
+                                ${showGoal ? `<span class="rotate-goal" style="font-size:0.9rem;">${this.escapeHtml(goalNameText)}</span>` : ''}
+                            </div>
+                        `;
+                    }
                     
                     html += `
                         <div class="bank-card ${card.isActive ? 'active' : ''}" data-id="${card.id}">
@@ -1363,6 +1513,7 @@
                                 </div>
                                 <div class="net-balance">${this.formatMoney(stats.net, card.currency)}</div>
                                 <div class="main-balance">${this.formatMoney(card.balance, card.currency)}</div>
+                                ${showGoal ? `<div class="goal-display">${goalDisplayText}</div>` : ''}
                                 <div class="card-bottom">
                                     <div class="holder-name-display">${this.escapeHtml(card.holderName)}</div>
                                     ${bankingExtras}
@@ -1370,6 +1521,9 @@
                                 <div class="card-settings-menu" id="settings-menu-${card.id}">
                                     <div class="card-settings-item edit-card-item" data-id="${card.id}">
                                         <i class="fas fa-edit"></i> Edit Card
+                                    </div>
+                                    <div class="card-settings-item goal-card-item" data-id="${card.id}">
+                                        <i class="fas fa-bullseye"></i> Set Goal
                                     </div>
                                     <div class="card-settings-item delete delete-card-item" data-id="${card.id}">
                                         <i class="fas fa-trash"></i> Delete Card
@@ -1411,6 +1565,15 @@
                     });
                 });
                 
+                container.querySelectorAll('.goal-card-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const cardId = parseFloat(item.dataset.id);
+                        this.closeAllSettingsMenus();
+                        this.openGoalModal(cardId);
+                    });
+                });
+                
                 container.querySelectorAll('.delete-card-item').forEach(item => {
                     item.addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -1439,7 +1602,7 @@
             }
             
             attachAccountNumberListeners() {
-                document.querySelectorAll('.account-number-display').forEach(container => {
+                document.querySelectorAll('.rotate-account.account-number-display').forEach(container => {
                     container.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const masked = container.querySelector('.account-masked');
@@ -1578,6 +1741,39 @@
             closeCardModal() {
                 document.getElementById('cardModal').classList.remove('active');
                 this.editingCardId = null;
+            }
+            
+            openGoalModal(cardId) {
+                this.editingGoalCardId = cardId;
+                const modal = document.getElementById('goalModal');
+                const card = this.cards.find(c => c.id === cardId);
+                if (card) {
+                    document.getElementById('goalName').value = card.goalName || '';
+                    document.getElementById('goalAmount').value = card.goal || 0;
+                    document.getElementById('goalEnabledToggle').checked = card.goalEnabled || false;
+                }
+                modal.classList.add('active');
+            }
+            
+            closeGoalModal() {
+                document.getElementById('goalModal').classList.remove('active');
+                this.editingGoalCardId = null;
+            }
+            
+            saveGoal() {
+                const name = document.getElementById('goalName').value.trim();
+                const amount = document.getElementById('goalAmount').value;
+                const enabled = document.getElementById('goalEnabledToggle').checked;
+                const cardIndex = this.cards.findIndex(c => c.id === this.editingGoalCardId);
+                if (cardIndex !== -1) {
+                    this.cards[cardIndex].goalName = name;
+                    this.cards[cardIndex].goal = parseFloat(amount) || 0;
+                    this.cards[cardIndex].goalEnabled = enabled;
+                    this.saveData();
+                    this.renderCards();
+                    window.showMessage('Savings goal updated');
+                }
+                this.closeGoalModal();
             }
             
             openTransactionModal(transactionId = null) {
@@ -1758,6 +1954,14 @@
                 });
             }
             
+            startRotateInterval() {
+                setInterval(() => {
+                    document.querySelectorAll('.rotate-container').forEach(container => {
+                        container.classList.toggle('show-account');
+                    });
+                }, 10000);
+            }
+            
             setupEventListeners() {
                 document.getElementById('saveCardBtn').addEventListener('click', () => {
                     this.saveCard();
@@ -1871,12 +2075,21 @@
                     this.openTransactionModal();
                 });
                 
+                document.getElementById('saveGoalBtn').addEventListener('click', () => {
+                    this.saveGoal();
+                });
+                
+                document.getElementById('closeGoalModalBtn').addEventListener('click', () => {
+                    this.closeGoalModal();
+                });
+                
                 document.querySelectorAll('.popup-overlay').forEach(modal => {
                     modal.addEventListener('click', (e) => {
                         if (e.target === modal) {
                             modal.classList.remove('active');
                             if (modal.id === 'cardModal') this.closeCardModal();
                             if (modal.id === 'transactionModal') this.closeTransactionModal();
+                            if (modal.id === 'goalModal') this.closeGoalModal();
                         }
                     });
                 });
@@ -1888,6 +2101,7 @@
                         });
                         this.closeCardModal();
                         this.closeTransactionModal();
+                        this.closeGoalModal();
                     }
                 });
             }
