@@ -36,6 +36,7 @@ try {
 const MAX_DIRECT_MB = 0;
 
 const mirrorJobs = new Map();
+const pendingRenames = new Map();
 const fetchMessages = new Map();
 const pendingAdminAction = new Map();
 const pendingConnectAction = new Map();
@@ -53,6 +54,10 @@ function encryptToken(plain) {
         encrypted[i] = plainBytes[i] ^ key[i % key.length];
     }
     return encrypted.toString("base64");
+}
+
+function pendingKey(chatId, userId) {
+    return `${chatId}:${userId}`;
 }
 
 function buildHtml(text, entities) {
