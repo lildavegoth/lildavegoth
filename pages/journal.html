@@ -838,6 +838,7 @@
             let today = new Date();
             let todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
             let currentWeekStart = new Date(today);
+            let currentImageRefs = [];
             const day = today.getDay();
             currentWeekStart.setDate(today.getDate() - day);
 
@@ -927,7 +928,7 @@
                         for (const entry of dailyContents[date].additional) {
                             const cleanEntry = { ...entry };
                             let content = cleanEntry.content || '';
-                            const imgRegex = /<img[^>]+src="data:image\/[^"]*"[^>]*>/gi;
+                            const imgRegex = /<img[^>]+src="([^"]*)"[^>]*>/gi;
                             const replacements = [];
                             let match;
                             while ((match = imgRegex.exec(content)) !== null) {
@@ -1116,6 +1117,12 @@
                 } else {
                     currentTags = [];
                 }
+                const spanRegex = /<span data-img-id="([^"]+)"[^>]*>/g;
+                currentImageRefs = [];
+                let m;
+                while ((m = spanRegex.exec(originalContentForEdit)) !== null) {
+                    currentImageRefs.push(m[1]);
+                }
                 renderTags(currentTags);
             };
 
@@ -1272,6 +1279,7 @@
                     popup.classList.remove('fade-out');
                     popup.style.display = 'none';
                 });
+                currentImageRefs = [];
             };
             document.getElementById('backBtnEditor').addEventListener('click', closeUniversalPopup);
 
@@ -1297,13 +1305,24 @@
             }
 
             function imagesToPlaceholder(html) {
-                return html.replace(/<img[^>]*>/gi, '✦ Image Here');
+                html = html.replace(/<img[^>]*>/gi, '✦ Image Here');
+                html = html.replace(/<span data-img-id="[^"]*"[^>]*>✦ Image Here<\/span>/gi, '✦ Image Here');
+                return html;
             }
 
             function placeholderToImages(text, originalHtml) {
-                const imgTags = originalHtml.match(/<img[^>]*>/gi) || [];
-                let index = 0;
-                return text.replace(/✦ Image Here/g, () => imgTags[index++] || '✦ Image Here');
+                let refIndex = 0;
+                return text.replace(/✦ Image Here/g, () => {
+                    if (refIndex < currentImageRefs.length) {
+                        const imgId = currentImageRefs[refIndex++];
+                        return `<span data-img-id="${imgId}">✦ Image Here</span>`;
+                    }
+                    const imgTags = originalHtml.match(/<img[^>]*>/gi) || [];
+                    if (refIndex - currentImageRefs.length < imgTags.length) {
+                        return imgTags[refIndex++ - currentImageRefs.length];
+                    }
+                    return '✦ Image Here';
+                });
             }
 
             function createActionButtons(entryId, entryDate) {
