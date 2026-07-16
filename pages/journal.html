@@ -819,7 +819,7 @@
                 </button>
                 <div class="guide-box">
                     <p><i class="fas fa-image" style="margin-right: 4px;"></i> <strong>Insert Image</strong></p>
-                    <p style="font-size: 0.8rem;">This app using Base64 for image import, the Base64 codes will turned to "✦ Image Here", and if you delete "✦ Image Here" text from any Journals, it will also delete the inserted image.</p>
+                    <p style="font-size: 0.8rem;">Images are stored efficiently and replaced with a placeholder in the editor. Deleting the placeholder removes the image.</p>
                 </div>
                 <div class="guide-box">
                     <p><i class="fas fa-calendar-week" style="margin-right: 4px;"></i> <strong>Date</strong></p>
@@ -860,6 +860,55 @@
                 weekdaysContainer.appendChild(div);
             });
 
+            let dbReady = new Promise((resolve, reject) => {
+                const request = indexedDB.open('journalImagesDB', 1);
+                request.onupgradeneeded = function(e) {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('images')) {
+                        db.createObjectStore('images', { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = function(e) {
+                    resolve(e.target.result);
+                };
+                request.onerror = function(e) {
+                    reject(e.target.error);
+                };
+            });
+
+            async function storeImage(id, base64) {
+                const db = await dbReady;
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction('images', 'readwrite');
+                    const store = tx.objectStore('images');
+                    store.put({ id: id, data: base64 });
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                });
+            }
+
+            async function getImage(id) {
+                const db = await dbReady;
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction('images', 'readonly');
+                    const store = tx.objectStore('images');
+                    const req = store.get(id);
+                    req.onsuccess = () => resolve(req.result ? req.result.data : null);
+                    req.onerror = () => reject(req.error);
+                });
+            }
+
+            async function deleteImage(id) {
+                const db = await dbReady;
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction('images', 'readwrite');
+                    const store = tx.objectStore('images');
+                    store.delete(id);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                });
+            }
+
             let dailyContents = JSON.parse(localStorage.getItem('dailyJournalContents')) || {};
             if (!dailyContents[todayStr]) dailyContents[todayStr] = { additional: [] };
             let todayContent = dailyContents[todayStr];
@@ -869,11 +918,34 @@
                 if (entry.tags === undefined) entry.tags = [];
             });
 
-            function saveDaily() {
+            async function saveDaily() {
                 dailyContents[todayStr] = todayContent;
-                localStorage.setItem('dailyJournalContents', JSON.stringify(dailyContents));
+                const allContent = {};
+                for (const date of Object.keys(dailyContents)) {
+                    allContent[date] = { additional: [] };
+                    if (dailyContents[date].additional) {
+                        for (const entry of dailyContents[date].additional) {
+                            const cleanEntry = { ...entry };
+                            let content = cleanEntry.content || '';
+                            const imgRegex = /<img[^>]+src="data:image\/[^"]*"[^>]*>/gi;
+                            const replacements = [];
+                            let match;
+                            while ((match = imgRegex.exec(content)) !== null) {
+                                const imgId = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                                replacements.push({ imgId, src: match[1] });
+                                content = content.replace(match[0], `<span data-img-id="${imgId}">✦ Image Here</span>`);
+                            }
+                            cleanEntry.content = content;
+                            allContent[date].additional.push(cleanEntry);
+                            for (const r of replacements) {
+                                await storeImage(r.imgId, r.src);
+                            }
+                        }
+                    }
+                }
+                localStorage.setItem('dailyJournalContents', JSON.stringify(allContent));
                 updateDateIndicators();
-                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                if (showAllEntries) await renderAllEntries(); else await renderMyJournal();
             }
 
             let currentEditingId = null;
@@ -884,6 +956,7 @@
             let showAllEntries = false;
             let globalSearchEnabled = false;
             let currentTags = [];
+            let originalContentForEdit = '';
 
             const weekStrip = document.getElementById('weekStrip');
             const searchContainer = document.getElementById('searchContainer');
@@ -1031,9 +1104,9 @@
                 document.getElementById('popupDateDisplay').textContent = todayStr;
                 document.getElementById('popupTitleInput').value = title || '';
                 const textarea = document.getElementById('popupTextarea');
-                const convertedContent = imagesToPlaceholder(content || '');
-                textarea.value = convertedContent;
-                textarea.dataset.originalHtml = content || '';
+                originalContentForEdit = content || '';
+                const placeholderText = imagesToPlaceholder(content || '');
+                textarea.value = placeholderText;
                 popup.style.display = 'flex';
                 currentEditingType = type;
                 if (type.startsWith('additional-')) {
@@ -1046,24 +1119,22 @@
                 renderTags(currentTags);
             };
 
-            window.saveNewJournal = function() {
+            window.saveNewJournal = async function() {
                 const title = document.getElementById('journalTitleInput').value.trim();
                 if (!title) return;
                 const id = Date.now().toString();
                 todayContent.additional.push({ id, title, content: '', pinned: false, tags: [] });
-                saveDaily();
-                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                await saveDaily();
                 closeAddJournalPopup();
             };
 
             window.closeAddJournalPopup = function() { document.getElementById('addJournalPopup').style.display = 'none'; };
 
-            window.savePopup = function(type) {
+            window.savePopup = async function(type) {
                 const title = document.getElementById('popupTitleInput').value.trim();
                 const textarea = document.getElementById('popupTextarea');
                 const newValue = textarea.value;
-                const originalHtml = textarea.dataset.originalHtml || '';
-                const value = placeholderToImages(newValue, originalHtml);
+                const value = placeholderToImages(newValue, originalContentForEdit);
                 if (type.startsWith('additional-')) {
                     const id = type.split('-')[1];
                     const item = todayContent.additional.find(a => a.id === id);
@@ -1073,12 +1144,7 @@
                         item.tags = [...currentTags];
                     }
                 }
-                try {
-                    saveDaily();
-                } catch (e) {
-                    window.showMessage('Save failed: storage full. Use smaller images or clear old entries.');
-                }
-                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                await saveDaily();
                 closeUniversalPopup();
             };
 
@@ -1131,14 +1197,13 @@
                 input.value = '';
             };
 
-            window.togglePin = function(type) {
+            window.togglePin = async function(type) {
                 if (type.startsWith('additional-')) {
                     const id = type.split('-')[1];
                     const item = todayContent.additional.find(a => a.id === id);
                     if (item) {
                         item.pinned = !item.pinned;
-                        saveDaily();
-                        if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                        await saveDaily();
                         window.showMessage(item.pinned ? 'Journal pinned' : 'Journal unpinned');
                     }
                 }
@@ -1151,14 +1216,18 @@
                 document.getElementById('confirmPopup').style.display = 'flex';
             };
 
-            window.confirmDelete = function() {
+            window.confirmDelete = async function() {
                 if (pendingReset) {
                     localStorage.removeItem('dailyJournalContents');
+                    const db = await dbReady;
+                    const tx = db.transaction('images', 'readwrite');
+                    const store = tx.objectStore('images');
+                    store.clear();
                     dailyContents = {};
                     dailyContents[todayStr] = { additional: [] };
                     todayContent = dailyContents[todayStr];
                     renderWeek();
-                    if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                    if (showAllEntries) await renderAllEntries(); else await renderMyJournal();
                     window.showMessage('All data has been deleted');
                 } else if (pendingDelete) {
                     const date = pendingDelete.date;
@@ -1167,8 +1236,19 @@
                     if (dayData && dayData.additional) {
                         const index = dayData.additional.findIndex(a => a.id === id);
                         if (index !== -1) {
+                            const entry = dayData.additional[index];
+                            const imgIds = [];
+                            const content = entry.content || '';
+                            const spanRegex = /<span data-img-id="([^"]+)"[^>]*>/g;
+                            let m;
+                            while ((m = spanRegex.exec(content)) !== null) {
+                                imgIds.push(m[1]);
+                            }
+                            for (const imgId of imgIds) {
+                                await deleteImage(imgId);
+                            }
                             dayData.additional.splice(index, 1);
-                            saveDaily();
+                            await saveDaily();
                             window.showMessage('Journal deleted');
                         }
                     }
@@ -1217,11 +1297,11 @@
             }
 
             function imagesToPlaceholder(html) {
-                return html.replace(/<img[^>]*src="data:image\/[^"]*"[^>]*>/gi, '✦ Image Here');
+                return html.replace(/<img[^>]*>/gi, '✦ Image Here');
             }
 
             function placeholderToImages(text, originalHtml) {
-                const imgTags = originalHtml.match(/<img[^>]*src="data:image\/[^"]*"[^>]*>/gi) || [];
+                const imgTags = originalHtml.match(/<img[^>]*>/gi) || [];
                 let index = 0;
                 return text.replace(/✦ Image Here/g, () => imgTags[index++] || '✦ Image Here');
             }
@@ -1245,7 +1325,7 @@
                 return null;
             }
 
-            document.getElementById('journalCards').addEventListener('click', function(e) {
+            document.getElementById('journalCards').addEventListener('click', async function(e) {
                 const btn = e.target.closest('.action-btn');
                 if (!btn) return;
                 e.stopPropagation();
@@ -1261,8 +1341,7 @@
                     const entry = findEntry(date, id);
                     if (entry) {
                         entry.pinned = !entry.pinned;
-                        saveDaily();
-                        if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                        await saveDaily();
                         window.showMessage(entry.pinned ? 'Entry pinned' : 'Entry unpinned');
                     }
                 } else if (action === 'open') {
@@ -1273,7 +1352,7 @@
                 }
             });
 
-            function renderMyJournal() {
+            async function renderMyJournal() {
                 const container = document.getElementById('journalCards');
                 container.innerHTML = '';
                 const entries = todayContent.additional.slice();
@@ -1284,25 +1363,37 @@
                     placeholder.innerHTML = '<i class="fas fa-plus-circle"></i><p>Add your new Journal by click + button</p>';
                     container.appendChild(placeholder);
                 } else {
-                    entries.forEach(item => {
+                    for (const item of entries) {
                         const card = document.createElement('div');
                         card.className = 'journal-card';
                         const pinnedIcon = item.pinned ? '<i class="fas fa-thumbtack pin-indicator"></i>' : '';
                         const tagsHtml = (item.tags && item.tags.length)
                             ? `<div class="card-tags">${item.tags.map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('')}</div>`
                             : '';
-                        card.innerHTML = `<h3><span class="title-click" data-id="${item.id}">${escapeHtml(item.title)}</span> ${pinnedIcon}</h3>${tagsHtml}${item.content ? `<div class="journal-content">${item.content}</div>` : `<p>Start writing your reflection...</p>`}`;
+                        let restoredContent = item.content || '';
+                        const spanRegex = /<span data-img-id="([^"]+)"[^>]*>✦ Image Here<\/span>/g;
+                        let m;
+                        while ((m = spanRegex.exec(restoredContent)) !== null) {
+                            const imgId = m[1];
+                            const base64 = await getImage(imgId);
+                            if (base64) {
+                                restoredContent = restoredContent.replace(m[0], `<img src="${base64}" style="max-width:100%; height:auto; border-radius:12px; margin:12px auto; display:block;">`);
+                            } else {
+                                restoredContent = restoredContent.replace(m[0], '<span>✦ Image Here</span>');
+                            }
+                        }
+                        card.innerHTML = `<h3><span class="title-click" data-id="${item.id}">${escapeHtml(item.title)}</span> ${pinnedIcon}</h3>${tagsHtml}${restoredContent ? `<div class="journal-content">${restoredContent}</div>` : `<p>Start writing your reflection...</p>`}`;
                         card.appendChild(createActionButtons(item.id, todayStr));
                         card.querySelector('.title-click').addEventListener('click', (e) => {
                             e.stopPropagation();
                             openTitleEdit(item.id, item.title);
                         });
                         container.appendChild(card);
-                    });
+                    }
                 }
             }
 
-            function renderAllEntries() {
+            async function renderAllEntries() {
                 const container = document.getElementById('journalCards');
                 container.innerHTML = '';
                 const allEntries = [];
@@ -1325,7 +1416,7 @@
                     placeholder.innerHTML = '<i class="fas fa-plus-circle"></i><p>Add your new Journal by click + button</p>';
                     container.appendChild(placeholder);
                 } else {
-                    allEntries.forEach(entry => {
+                    for (const entry of allEntries) {
                         const card = document.createElement('div');
                         card.className = 'journal-card';
                         const dateDisplay = entry.date.split('-').slice(1).join('/');
@@ -1333,15 +1424,26 @@
                         const tagsHtml = (entry.tags && entry.tags.length)
                             ? `<div class="card-tags">${entry.tags.map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('')}</div>`
                             : '';
-                        card.innerHTML = `<h3><span class="title-click" data-id="${entry.id}">${escapeHtml(entry.title)}</span> ${pinnedIcon} <span style="font-size:12px; color:var(--accent-color);">${dateDisplay}</span></h3>${tagsHtml}${entry.content ? `<div class="journal-content">${entry.content}</div>` : `<p>Empty</p>`}`;
+                        let restoredContent = entry.content || '';
+                        const spanRegex = /<span data-img-id="([^"]+)"[^>]*>✦ Image Here<\/span>/g;
+                        let m;
+                        while ((m = spanRegex.exec(restoredContent)) !== null) {
+                            const imgId = m[1];
+                            const base64 = await getImage(imgId);
+                            if (base64) {
+                                restoredContent = restoredContent.replace(m[0], `<img src="${base64}" style="max-width:100%; height:auto; border-radius:12px; margin:12px auto; display:block;">`);
+                            } else {
+                                restoredContent = restoredContent.replace(m[0], '<span>✦ Image Here</span>');
+                            }
+                        }
+                        card.innerHTML = `<h3><span class="title-click" data-id="${entry.id}">${escapeHtml(entry.title)}</span> ${pinnedIcon} <span style="font-size:12px; color:var(--accent-color);">${dateDisplay}</span></h3>${tagsHtml}${restoredContent ? `<div class="journal-content">${restoredContent}</div>` : `<p>Empty</p>`}`;
                         card.appendChild(createActionButtons(entry.id, entry.date));
                         card.querySelector('.title-click').addEventListener('click', (e) => {
                             e.stopPropagation();
                             openTitleEdit(entry.id, entry.title);
                         });
-                        card.dataset.id = entry.id;
                         container.appendChild(card);
-                    });
+                    }
                 }
             }
 
@@ -1356,14 +1458,13 @@
                 document.getElementById('titleEditPopup').style.display = 'flex';
             }
 
-            window.saveTitleEdit = function() {
+            window.saveTitleEdit = async function() {
                 const newTitle = document.getElementById('titleEditInput').value.trim();
                 if (!newTitle || !currentTitleEditId) return;
                 const entry = todayContent.additional.find(a => a.id === currentTitleEditId);
                 if (entry) {
                     entry.title = newTitle;
-                    saveDaily();
-                    if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                    await saveDaily();
                 }
                 closeTitleEditPopup();
             };
@@ -1392,10 +1493,10 @@
 
             const toggleAll = document.getElementById('toggleAllEntries');
             toggleAll.checked = showAllEntries;
-            toggleAll.addEventListener('change', () => {
+            toggleAll.addEventListener('change', async () => {
                 showAllEntries = toggleAll.checked;
                 updateWeekVisibility();
-                if (showAllEntries) renderAllEntries(); else renderMyJournal();
+                if (showAllEntries) await renderAllEntries(); else await renderMyJournal();
             });
 
             const toggleSearch = document.getElementById('toggleGlobalSearch');
@@ -1484,7 +1585,9 @@
             });
 
             renderWeek();
-            if (showAllEntries) renderAllEntries(); else renderMyJournal();
+            (async () => {
+                if (showAllEntries) await renderAllEntries(); else await renderMyJournal();
+            })();
         })();
     </script>
 </body>
