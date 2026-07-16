@@ -846,6 +846,22 @@
         ];
 
         const BACKUP_META_KEY = 'backupFileSizes';
+        const IMAGES_DB_NAME = 'journalImagesDB';
+        const IMAGES_STORE_NAME = 'images';
+
+        function openImagesDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(IMAGES_DB_NAME, 1);
+                request.onupgradeneeded = function(e) {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(IMAGES_STORE_NAME)) {
+                        db.createObjectStore(IMAGES_STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = function(e) { resolve(e.target.result); };
+                request.onerror = function(e) { reject(e.target.error); };
+            });
+        }
         const REDIRECT_URI = window.location.origin + window.location.pathname;
 
         let currentFolder = 'All';
@@ -1413,6 +1429,36 @@
                     meta[path] = currentSize;
                     uploadedCount++;
                 }
+                try {
+                    const db = await openImagesDB();
+                    const images = await new Promise((resolve, reject) => {
+                        const tx = db.transaction(IMAGES_STORE_NAME, 'readonly');
+                        const store = tx.objectStore(IMAGES_STORE_NAME);
+                        const req = store.getAll();
+                        req.onsuccess = () => resolve(req.result || []);
+                        req.onerror = () => reject(req.error);
+                    });
+                    for (const img of images) {
+                        const path = '/Journal/Images/' + img.id + '.json';
+                        const content = JSON.stringify(img);
+                        const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Dropbox-API-Arg': JSON.stringify({ path: path, mode: 'overwrite' }),
+                                'Content-Type': 'application/octet-stream'
+                            },
+                            body: content
+                        });
+                        if (!resp.ok) {
+                            const errText = await resp.text();
+                            throw new Error(`Upload failed for image ${img.id}: ${errText}`);
+                        }
+                        meta[path] = content.length;
+                    }
+                } catch (e) {
+                    throw new Error('Image upload failed: ' + e.message);
+                }
                 localStorage.setItem(BACKUP_META_KEY, JSON.stringify(meta));
                 localStorage.setItem('lastCloudBackupDate', new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
                 clearInterval(interval);
@@ -1490,6 +1536,35 @@
                         if (!dlResp.ok) throw new Error(`Download failed for ${key}`);
                         const content = await dlResp.text();
                         localStorage.setItem(key, content);
+                    }
+                    const imageFiles = allFiles.filter(f => f.path_lower.startsWith('/journal/images/'));
+                    if (imageFiles.length > 0) {
+                        const db = await openImagesDB();
+                        const clearTx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
+                        clearTx.objectStore(IMAGES_STORE_NAME).clear();
+                        await new Promise((resolve, reject) => {
+                            clearTx.oncomplete = resolve;
+                            clearTx.onerror = reject;
+                        });
+                        const tx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
+                        const store = tx.objectStore(IMAGES_STORE_NAME);
+                        for (const file of imageFiles) {
+                            const dlResp = await fetch('https://content.dropboxapi.com/2/files/download', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Dropbox-API-Arg': JSON.stringify({ path: file.path_lower })
+                                }
+                            });
+                            if (!dlResp.ok) throw new Error(`Download failed for image ${file.name}`);
+                            const content = await dlResp.text();
+                            const imgData = JSON.parse(content);
+                            store.put(imgData);
+                        }
+                        await new Promise((resolve, reject) => {
+                            tx.oncomplete = resolve;
+                            tx.onerror = reject;
+                        });
                     }
                     clearInterval(interval);
                     progressBar.style.width = '100%';
@@ -1570,6 +1645,19 @@
                 const key = localStorage.key(i);
                 if (!excludedKeys.includes(key)) backup[key] = localStorage.getItem(key);
             }
+            try {
+                const db = await openImagesDB();
+                const images = await new Promise((resolve, reject) => {
+                    const tx = db.transaction(IMAGES_STORE_NAME, 'readonly');
+                    const store = tx.objectStore(IMAGES_STORE_NAME);
+                    const req = store.getAll();
+                    req.onsuccess = () => resolve(req.result || []);
+                    req.onerror = () => reject(req.error);
+                });
+                if (images.length > 0) {
+                    backup['__indexeddb_journal_images__'] = images;
+                }
+            } catch (e) {}
             const json = JSON.stringify(backup, null, 2);
             const filename = `kakoikiraku_local_backup_${new Date().toISOString().slice(0,10)}.json`;
             const mimeType = 'application/json';
@@ -1581,13 +1669,33 @@
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
-            input.onchange = (e) => {
+            input.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = async (event) => {
                     try {
                         const data = JSON.parse(event.target.result);
+                        const imageData = data['__indexeddb_journal_images__'];
+                        if (imageData && Array.isArray(imageData)) {
+                            const db = await openImagesDB();
+                            const clearTx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
+                            clearTx.objectStore(IMAGES_STORE_NAME).clear();
+                            await new Promise((resolve, reject) => {
+                                clearTx.oncomplete = resolve;
+                                clearTx.onerror = reject;
+                            });
+                            const tx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
+                            const store = tx.objectStore(IMAGES_STORE_NAME);
+                            for (const item of imageData) {
+                                store.put(item);
+                            }
+                            await new Promise((resolve, reject) => {
+                                tx.oncomplete = resolve;
+                                tx.onerror = reject;
+                            });
+                            delete data['__indexeddb_journal_images__'];
+                        }
                         showConfirmPopup('Local Restore', `Restore ${Object.keys(data).length} items? Current data will be overwritten.`, () => {
                             for (const [key, value] of Object.entries(data)) {
                                 localStorage.setItem(key, value);
