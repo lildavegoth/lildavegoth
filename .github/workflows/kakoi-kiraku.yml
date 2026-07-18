@@ -110,38 +110,38 @@ jobs:
           mkdir -p downloads
           if echo "$URL" | grep -qE '^https://t\.me/'; then
             python3 -c "
-import os, asyncio, re, tempfile, shutil
-import uvloop
-uvloop.install()
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
-from pyrogram import Client
+              import os, asyncio, re, tempfile, shutil
+              import uvloop
+              uvloop.install()
+              loop = asyncio.new_event_loop()
+              asyncio.set_event_loop(loop)
+              from pyrogram import Client
 
-BOT_TOKEN = os.environ['KIRA_TOKEN']
-API_ID = int(os.environ['API_ID'])
-API_HASH = os.environ['API_HASH']
-SESSION = os.environ['USER_SESSION_STRING']
-LINK = '${{ github.event.client_payload.download_url }}'
-FILENAME = '${{ github.event.client_payload.filename }}'
+              BOT_TOKEN = os.environ['KIRA_TOKEN']
+              API_ID = int(os.environ['API_ID'])
+              API_HASH = os.environ['API_HASH']
+              SESSION = os.environ['USER_SESSION_STRING']
+              LINK = '${{ github.event.client_payload.download_url }}'
+              FILENAME = '${{ github.event.client_payload.filename }}'
 
-async def main():
-    app = Client('session', api_id=API_ID, api_hash=API_HASH, session_string=SESSION, in_memory=True)
-    await app.start()
-    match = re.search(r't\.me/(?:c/)?([^/]+)/(\d+)', LINK)
-    if not match:
-        raise SystemExit('Invalid link')
-    chat_part, msg_id = match[1], int(match[2])
-    chat_id = int(chat_part) if chat_part.lstrip('-').isdigit() else chat_part
-    msg = await app.get_messages(chat_id, msg_id)
-    if not msg:
-        raise SystemExit('Message not found')
-    safe_name = FILENAME.replace('/', '_').replace(' ', '_')
-    dest = f'downloads/{safe_name}'
-    await msg.download(file_name=dest)
-    await app.stop()
+              async def main():
+                  app = Client('session', api_id=API_ID, api_hash=API_HASH, session_string=SESSION, in_memory=True)
+                  await app.start()
+                  match = re.search(r't\.me/(?:c/)?([^/]+)/(\d+)', LINK)
+                  if not match:
+                      raise SystemExit('Invalid link')
+                  chat_part, msg_id = match[1], int(match[2])
+                  chat_id = int(chat_part) if chat_part.lstrip('-').isdigit() else chat_part
+                  msg = await app.get_messages(chat_id, msg_id)
+                  if not msg:
+                      raise SystemExit('Message not found')
+                  safe_name = FILENAME.replace('/', '_').replace(' ', '_')
+                  dest = f'downloads/{safe_name}'
+                  await msg.download(file_name=dest)
+                  await app.stop()
 
-loop.run_until_complete(main())
-"
+              loop.run_until_complete(main())
+            "
           else
             wget --content-disposition -P downloads "$URL" || \
             curl -L -o "downloads/file" "$URL"
