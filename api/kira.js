@@ -580,27 +580,25 @@ bot.command("mirror", async (ctx) => {
     let filename = "Unknown";
     let fileSize = "Unknown";
 
-    if (!url.startsWith("https://t.me/")) {
-        try {
-            const headRes = await fetch(url, { method: "HEAD" });
-            if (headRes.ok) {
-                const disposition = headRes.headers.get("content-disposition");
-                if (disposition) {
-                    const match = disposition.match(/filename\*?=(?:UTF-8''|"")?(.+?)(?:;|$)/i);
-                    if (match) filename = match[1].replace(/"/g, "").trim();
-                }
-                if (filename === "Unknown") {
-                    const urlPath = new URL(url).pathname;
-                    filename = decodeURIComponent(urlPath.split("/").pop()) || "Unknown";
-                }
-                const cl = headRes.headers.get("content-length");
-                if (cl) {
-                    const mb = parseInt(cl, 10) / (1024 * 1024);
-                    fileSize = mb >= 1 ? `${mb.toFixed(0)}MB` : `${(mb * 1024).toFixed(0)}KB`;
-                }
+    try {
+        const headRes = await fetch(url, { method: "HEAD" });
+        if (headRes.ok) {
+            const disposition = headRes.headers.get("content-disposition");
+            if (disposition) {
+                const match = disposition.match(/filename\*?=(?:UTF-8''|"")?(.+?)(?:;|$)/i);
+                if (match) filename = match[1].replace(/"/g, "").trim();
             }
-        } catch {}
-    }
+            if (filename === "Unknown") {
+                const urlPath = new URL(url).pathname;
+                filename = decodeURIComponent(urlPath.split("/").pop()) || "Unknown";
+            }
+            const cl = headRes.headers.get("content-length");
+            if (cl) {
+                const mb = parseInt(cl, 10) / (1024 * 1024);
+                fileSize = mb >= 1 ? `${mb.toFixed(0)}MB` : `${(mb * 1024).toFixed(0)}KB`;
+            }
+        }
+    } catch {}
 
     const jobKey = Math.random().toString(36).slice(2, 10);
     mirrorJobs.set(jobKey, {
