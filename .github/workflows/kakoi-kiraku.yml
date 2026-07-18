@@ -594,7 +594,6 @@ jobs:
 
               if msg.photo or msg.video or msg.document or msg.audio:
                   if size_mb > 50:
-                      # store info in Supabase
                       requests.post(f'{SUPABASE_URL}/rest/v1/forward_info', headers={
                           'apikey': SUPABASE_KEY,
                           'Authorization': f'Bearer {SUPABASE_KEY}',
@@ -603,15 +602,15 @@ jobs:
                       }, json={'link': LINK, 'filename': filename, 'size_mb': size_mb})
 
                       import urllib.parse
+                      safe_callback = 'fwd_yes_' + urllib.parse.quote(LINK, safe='')
                       keyboard = {
                           'inline_keyboard': [[
-                              {'text': 'Yes', 'callback_data': f'fwd_yes_{urllib.parse.quote(LINK, safe="")}'},
+                              {'text': 'Yes', 'callback_data': safe_callback},
                               {'text': 'Cancel', 'callback_data': 'fwd_cancel'}
                           ]]
                       }
                       edit_message(f'File too large for Telegram (>{size_mb}MB). Mirror to Drive?', keyboard)
                   else:
-                      # download and send directly
                       path = await msg.download(in_memory=True)
                       media_type = 'document'
                       if msg.photo: media_type = 'photo'
