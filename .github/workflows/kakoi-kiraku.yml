@@ -398,17 +398,35 @@ jobs:
       API_ID: ${{ secrets.API_ID }}
       API_HASH: ${{ secrets.API_HASH }}
       USER_SESSION_STRING: ${{ secrets.USER_SESSION_STRING }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
-      - name: Install Python and dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq python3-pip
-          pip3 install pyrogram requests
+          sudo apt-get install -y -qq python3-pip rclone
+          pip3 install -U pyrogram tgcrypto uvloop requests
+
+      - name: Configure rclone
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [mirror_drive]
+          type = drive
+          scope = drive
+          client_id = ${{ secrets.GDRIVE_CLIENT_ID }}
+          client_secret = ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          token = ${{ secrets.GDRIVE_TOKEN }}
+          root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
+          EOF
 
       - name: Fetch and deliver restricted message
         run: |
           python3 -c "
-          import os, sys, asyncio, requests, re, traceback
+          import os, sys, asyncio, requests, re, subprocess, tempfile, traceback
+          import uvloop
+          uvloop.install()
+
           from pyrogram import Client
 
           BOT_TOKEN = os.environ['KIRA_TOKEN']
@@ -423,11 +441,14 @@ jobs:
               url = f'https://api.telegram.org/bot{BOT_TOKEN}/editMessageText'
               requests.post(url, json={'chat_id': CHAT_ID, 'message_id': MSG_ID, 'text': text})
 
+          def delete_progress():
+              requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/deleteMessage',
+                            json={'chat_id': CHAT_ID, 'message_id': MSG_ID})
+
           async def main():
               app = Client('session', api_id=API_ID, api_hash=API_HASH, session_string=SESSION, in_memory=True)
               await app.start()
 
-              # parse link
               match = re.search(r't\.me/(?:c/)?([^/]+)/(\d+)', LINK)
               if not match:
                   edit_message('Invalid link format.')
@@ -451,27 +472,41 @@ jobs:
                   return
 
               text = msg.text or msg.caption or ''
-              if msg.photo:
-                  path = await msg.download(in_memory=True)
-                  requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto',
-                                files={'photo': ('photo.jpg', path.getbuffer())},
-                                data={'chat_id': CHAT_ID, 'caption': text[:1024]})
-                  requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/deleteMessage',
-                                json={'chat_id': CHAT_ID, 'message_id': MSG_ID})
-              elif msg.video:
-                  path = await msg.download(in_memory=True)
-                  requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/sendVideo',
-                                files={'video': ('video.mp4', path.getbuffer())},
-                                data={'chat_id': CHAT_ID, 'caption': text[:1024]})
-                  requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/deleteMessage',
-                                json={'chat_id': CHAT_ID, 'message_id': MSG_ID})
-              elif msg.document:
-                  path = await msg.download(in_memory=True)
-                  requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/sendDocument',
-                                files={'document': (msg.document.file_name or 'file', path.getbuffer())},
-                                data={'chat_id': CHAT_ID, 'caption': text[:1024]})
-                  requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/deleteMessage',
-                                json={'chat_id': CHAT_ID, 'message_id': MSG_ID})
+
+              if msg.photo or msg.video or msg.document or msg.audio or msg.voice or msg.video_note:
+                  with tempfile.NamedTemporaryFile(delete=False, suffix='.bin') as tmp:
+                      path = await msg.download(file_name=tmp.name)
+                  file_name = path
+
+                  size = os.path.getsize(file_name)
+
+                  if size <= 50000000:
+                      media_type = 'document'
+                      if msg.photo: media_type = 'photo'
+                      elif msg.video: media_type = 'video'
+                      elif msg.audio: media_type = 'audio'
+                      elif msg.voice: media_type = 'voice'
+                      elif msg.video_note: media_type = 'video_note'
+
+                      curl_cmd = [
+                          'curl', '-s', '-X', 'POST',
+                          f'https://api.telegram.org/bot{BOT_TOKEN}/send{media_type.capitalize()}',
+                          '-F', f'chat_id={CHAT_ID}',
+                          '-F', f'{media_type}=@{file_name}',
+                          '-F', f'caption={text[:1024]}'
+                      ]
+                      subprocess.run(curl_cmd, check=False)
+                      delete_progress()
+                  else:
+                      rclone_cmd = ['rclone', 'copy', file_name, 'mirror_drive:', '-P']
+                      subprocess.run(rclone_cmd, check=False)
+                      link_proc = subprocess.run(['rclone', 'link', f'mirror_drive:{os.path.basename(file_name)}'],
+                                                 capture_output=True, text=True)
+                      drive_link = link_proc.stdout.strip()
+                      if not drive_link:
+                          drive_link = f'https://drive.google.com/drive/folders/${{ secrets.GDRIVE_FOLDER_ID }}'
+                      edit_message(f'File too large for Telegram (>{size//1048576}MB).\nDrive link: {drive_link}')
+                  os.unlink(file_name)
               elif text:
                   if len(text) > 4000:
                       edit_message(text[:4000])
