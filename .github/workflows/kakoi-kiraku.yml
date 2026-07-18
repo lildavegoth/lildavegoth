@@ -80,9 +80,17 @@ jobs:
       KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      API_ID: ${{ secrets.API_ID }}
+      API_HASH: ${{ secrets.API_HASH }}
+      USER_SESSION_STRING: ${{ secrets.USER_SESSION_STRING }}
     steps:
       - name: Install rclone
         run: sudo apt-get update && sudo apt-get install -y rclone
+      - name: Install Python and Pyrogram
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq python3-pip
+          pip3 install -U pyrogram tgcrypto uvloop
       - name: Configure rclone
         run: |
           export TOKEN='${{ secrets.GDRIVE_TOKEN }}'
@@ -100,8 +108,45 @@ jobs:
         run: |
           URL="${{ github.event.client_payload.download_url }}"
           mkdir -p downloads
-          wget --content-disposition -P downloads "$URL" || \
-          curl -L -o "downloads/file" "$URL"
+          if echo "$URL" | grep -qE '^https://t\.me/'; then
+            python3 -c "
+              import os, asyncio, re, tempfile, shutil
+              import uvloop
+              uvloop.install()
+              loop = asyncio.new_event_loop()
+              asyncio.set_event_loop(loop)
+              from pyrogram import Client
+
+              API_ID = int(os.environ['API_ID'])
+              API_HASH = os.environ['API_HASH']
+              SESSION = os.environ['USER_SESSION_STRING']
+              LINK = '${{ github.event.client_payload.download_url }}'
+
+              async def main():
+                  app = Client('session', api_id=API_ID, api_hash=API_HASH, session_string=SESSION, in_memory=True)
+                  await app.start()
+                  match = re.search(r't\.me/(?:c/)?([^/]+)/(\d+)', LINK)
+                  if not match:
+                      raise SystemExit('Invalid link')
+                  chat_part, msg_id = match[1], int(match[2])
+                  chat_id = int(chat_part) if chat_part.lstrip('-').isdigit() else chat_part
+                  msg = await app.get_messages(chat_id, msg_id)
+                  if not msg:
+                      raise SystemExit('Message not found')
+                  safe_name = '${{ github.event.client_payload.filename }}'
+                  if safe_name == 'Unknown' or not safe_name:
+                      safe_name = getattr(msg.video or msg.document or msg.audio, 'file_name', None) or 'file'
+                  safe_name = safe_name.replace('/', '_').replace(' ', '_')
+                  dest = f'downloads/{safe_name}'
+                  await msg.download(file_name=dest)
+                  await app.stop()
+
+              loop.run_until_complete(main())
+            "
+          else
+            wget --content-disposition -P downloads "$URL" || \
+            curl -L -o "downloads/file" "$URL"
+          fi
       - name: Rename to original filename if provided
         run: |
           FILENAME="${{ github.event.client_payload.filename }}"
