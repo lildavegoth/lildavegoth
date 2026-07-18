@@ -5,7 +5,7 @@ on:
     branches: [homepage]
   workflow_dispatch:
   repository_dispatch:
-    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image, delete-mirror, custom-image, forward-info]
+    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image, delete-mirror, custom-image]
   schedule:
     - cron: '0 0 * * *'
 
@@ -80,17 +80,9 @@ jobs:
       KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      API_ID: ${{ secrets.API_ID }}
-      API_HASH: ${{ secrets.API_HASH }}
-      USER_SESSION_STRING: ${{ secrets.USER_SESSION_STRING }}
     steps:
       - name: Install rclone
         run: sudo apt-get update && sudo apt-get install -y rclone
-      - name: Install Python and Pyrogram
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq python3-pip
-          pip3 install -U pyrogram tgcrypto uvloop
       - name: Configure rclone
         run: |
           export TOKEN='${{ secrets.GDRIVE_TOKEN }}'
@@ -108,44 +100,8 @@ jobs:
         run: |
           URL="${{ github.event.client_payload.download_url }}"
           mkdir -p downloads
-          if echo "$URL" | grep -qE '^https://t\.me/'; then
-            python3 -c "
-              import os, asyncio, re, tempfile, shutil
-              import uvloop
-              uvloop.install()
-              loop = asyncio.new_event_loop()
-              asyncio.set_event_loop(loop)
-              from pyrogram import Client
-
-              BOT_TOKEN = os.environ['KIRA_TOKEN']
-              API_ID = int(os.environ['API_ID'])
-              API_HASH = os.environ['API_HASH']
-              SESSION = os.environ['USER_SESSION_STRING']
-              LINK = '${{ github.event.client_payload.download_url }}'
-              FILENAME = '${{ github.event.client_payload.filename }}'
-
-              async def main():
-                  app = Client('session', api_id=API_ID, api_hash=API_HASH, session_string=SESSION, in_memory=True)
-                  await app.start()
-                  match = re.search(r't\.me/(?:c/)?([^/]+)/(\d+)', LINK)
-                  if not match:
-                      raise SystemExit('Invalid link')
-                  chat_part, msg_id = match[1], int(match[2])
-                  chat_id = int(chat_part) if chat_part.lstrip('-').isdigit() else chat_part
-                  msg = await app.get_messages(chat_id, msg_id)
-                  if not msg:
-                      raise SystemExit('Message not found')
-                  safe_name = FILENAME.replace('/', '_').replace(' ', '_')
-                  dest = f'downloads/{safe_name}'
-                  await msg.download(file_name=dest)
-                  await app.stop()
-
-              loop.run_until_complete(main())
-            "
-          else
-            wget --content-disposition -P downloads "$URL" || \
-            curl -L -o "downloads/file" "$URL"
-          fi
+          wget --content-disposition -P downloads "$URL" || \
+          curl -L -o "downloads/file" "$URL"
       - name: Rename to original filename if provided
         run: |
           FILENAME="${{ github.event.client_payload.filename }}"
@@ -231,7 +187,7 @@ jobs:
                 -d "text=$MSG"
             fi
           fi
-
+          
   delete-mirror:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'delete-mirror'
     runs-on: ubuntu-latest
@@ -433,113 +389,6 @@ jobs:
               -d "message_id=$PROGRESS_MSG_ID" \
               -d "text=Download complete: $LINK"
           fi
-
-  forward-info:
-    if: github.event_name == 'repository_dispatch' && github.event.action == 'forward-info'
-    runs-on: ubuntu-latest
-    env:
-      KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
-      API_ID: ${{ secrets.API_ID }}
-      API_HASH: ${{ secrets.API_HASH }}
-      USER_SESSION_STRING: ${{ secrets.USER_SESSION_STRING }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-    steps:
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq python3-pip
-          pip3 install -U pyrogram tgcrypto uvloop requests
-      - name: Fetch message info and decide
-        run: |
-          python3 -c "
-          import os, re, requests, asyncio, json
-          import uvloop
-          uvloop.install()
-          loop = asyncio.new_event_loop()
-          asyncio.set_event_loop(loop)
-          from pyrogram import Client
-
-          BOT_TOKEN = os.environ['KIRA_TOKEN']
-          API_ID = int(os.environ['API_ID'])
-          API_HASH = os.environ['API_HASH']
-          SESSION = os.environ['USER_SESSION_STRING']
-          LINK = '${{ github.event.client_payload.link }}'
-          CHAT_ID = '${{ github.event.client_payload.chat_id }}'
-          MSG_ID = ${{ github.event.client_payload.message_id }}
-          SUPABASE_URL = os.environ['SUPABASE_URL']
-          SUPABASE_KEY = os.environ['SUPABASE_SERVICE_ROLE_KEY']
-
-          def edit_message(text, reply_markup=None):
-              payload = {'chat_id': CHAT_ID, 'message_id': MSG_ID, 'text': text}
-              if reply_markup:
-                  payload['reply_markup'] = json.dumps(reply_markup)
-              requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/editMessageText', json=payload)
-
-          async def main():
-              app = Client('session', api_id=API_ID, api_hash=API_HASH, session_string=SESSION, in_memory=True)
-              await app.start()
-
-              match = re.search(r't\.me/(?:c/)?([^/]+)/(\d+)', LINK)
-              if not match:
-                  edit_message('Invalid link format.')
-                  await app.stop()
-                  return
-              chat_part, msg_id = match[1], int(match[2])
-              try:
-                  chat_id = int(chat_part) if chat_part.lstrip('-').isdigit() else chat_part
-              except:
-                  chat_id = chat_part
-
-              msg = await app.get_messages(chat_id, msg_id)
-              if not msg:
-                  edit_message('Message not found.')
-                  await app.stop()
-                  return
-
-              text = msg.text or msg.caption or ''
-              file_size = getattr(msg.video or msg.document or msg.audio, 'file_size', 0) or 0
-              size_mb = file_size // 1048576 if file_size else 0
-              filename = getattr(msg.video or msg.document or msg.audio, 'file_name', '') or 'file'
-
-              if msg.photo or msg.video or msg.document or msg.audio:
-                  if size_mb > 50:
-                      requests.post(f'{SUPABASE_URL}/rest/v1/forward_info', headers={
-                          'apikey': SUPABASE_KEY,
-                          'Authorization': f'Bearer {SUPABASE_KEY}',
-                          'Content-Type': 'application/json',
-                          'Prefer': 'return=minimal'
-                      }, json={'link': LINK, 'filename': filename, 'size_mb': size_mb})
-
-                      import urllib.parse
-                      safe_callback = 'fwd_yes_' + urllib.parse.quote(LINK, safe='')
-                      keyboard = {
-                          'inline_keyboard': [[
-                              {'text': 'Yes', 'callback_data': safe_callback},
-                              {'text': 'Cancel', 'callback_data': 'fwd_cancel'}
-                          ]]
-                      }
-                      edit_message(f'File too large for Telegram (>{size_mb}MB). Mirror to Drive?', keyboard)
-                  else:
-                      path = await msg.download(in_memory=True)
-                      media_type = 'document'
-                      if msg.photo: media_type = 'photo'
-                      elif msg.video: media_type = 'video'
-                      elif msg.audio: media_type = 'audio'
-                      requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/send{media_type.capitalize()}',
-                                    files={media_type: (filename, path.getbuffer())},
-                                    data={'chat_id': CHAT_ID, 'caption': text[:1024]})
-                      requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/deleteMessage',
-                                    json={'chat_id': CHAT_ID, 'message_id': MSG_ID})
-              elif text:
-                  edit_message(text[:4000])
-              else:
-                  edit_message('Unsupported media type.')
-
-              await app.stop()
-
-          loop.run_until_complete(main())
-          "
 
   restore-image:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'restore-image'
