@@ -423,9 +423,13 @@ jobs:
       - name: Fetch and deliver restricted message
         run: |
           python3 -c "
-          import os, sys, asyncio, requests, re, subprocess, tempfile, traceback
+          import os, sys, asyncio, requests, re, subprocess, tempfile
           import uvloop
           uvloop.install()
+
+          # Create the event loop before Pyrogram is imported
+          loop = asyncio.new_event_loop()
+          asyncio.set_event_loop(loop)
 
           from pyrogram import Client
 
@@ -504,7 +508,7 @@ jobs:
                                                  capture_output=True, text=True)
                       drive_link = link_proc.stdout.strip()
                       if not drive_link:
-                          drive_link = f'https://drive.google.com/drive/folders/${{ secrets.GDRIVE_FOLDER_ID }}'
+                          drive_link = 'https://drive.google.com/drive/folders/${{ secrets.GDRIVE_FOLDER_ID }}'
                       edit_message(f'File too large for Telegram (>{size//1048576}MB).\nDrive link: {drive_link}')
                   os.unlink(file_name)
               elif text:
@@ -517,7 +521,7 @@ jobs:
 
               await app.stop()
 
-          asyncio.run(main())
+          loop.run_until_complete(main())
           "
 
   restore-image:
