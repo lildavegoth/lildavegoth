@@ -689,8 +689,9 @@ bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
 async function startMirror(ctx, url, filename, destination) {
     const sentMsg = await ctx.reply("Mirroring…");
 
+    const isRestricted = url.startsWith("https://t.me/");
     const dispatchBody = {
-        event_type: "mirror",
+        event_type: isRestricted ? "mirror-restricted" : "mirror",
         client_payload: {
             chat_id: ctx.chat.id,
             message_id: sentMsg.message_id,
@@ -768,49 +769,6 @@ bot.command("download", async (ctx) => {
     }
 });
 
-bot.command("forward", async (ctx) => {
-    if (ctx.chat.type !== "private") return;
-    const text = ctx.message.text;
-    const parts = text.split(" ");
-    if (parts.length < 2) {
-        return ctx.reply("Usage: /forward <message link>\n\nExample:\n/forward https://t.me/c/123456/789");
-    }
-    const link = parts[1];
-    if (!link.startsWith("https://t.me/")) {
-        return ctx.reply("Invalid Telegram message link.");
-    }
-
-    const progressMsg = await ctx.reply("Fetching…");
-
-    const dispatchBody = {
-        event_type: "forward-restricted",
-        client_payload: {
-            chat_id: ctx.chat.id,
-            message_id: progressMsg.message_id,
-            link: link,
-        },
-    };
-
-    try {
-        const res = await fetch(
-            `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
-            {
-                method: "POST",
-                headers: {
-                    Authorization: `token ${process.env.GITHUB_PAT}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(dispatchBody),
-            }
-        );
-        if (!res.ok) {
-            await ctx.api.editMessageText(ctx.chat.id, progressMsg.message_id, "Dispatch failed.");
-        }
-    } catch (e) {
-        await ctx.api.editMessageText(ctx.chat.id, progressMsg.message_id, "Error: " + e.message);
-    }
-});
-
 bot.callbackQuery(/^dl_fmt_(.+)_(.+)$/, async (ctx) => {
     const formatId = ctx.match[1];
     const url = ctx.match[2];
@@ -849,6 +807,94 @@ bot.callbackQuery(/^dl_fmt_(.+)_(.+)$/, async (ctx) => {
     } catch (e) {
         await ctx.api.editMessageText(ctx.chat.id, progressMsg.message_id, "Download error: " + e.message);
     }
+});
+
+bot.command("forward", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+    const text = ctx.message.text;
+    const parts = text.split(" ");
+    if (parts.length < 2) {
+        return ctx.reply("Usage: /forward <message link>\n\nExample:\n/forward https://t.me/c/123456/789");
+    }
+    const link = parts[1];
+    if (!link.startsWith("https://t.me/")) {
+        return ctx.reply("Invalid Telegram message link.");
+    }
+
+    const progressMsg = await ctx.reply("Fetching info…");
+
+    const dispatchBody = {
+        event_type: "forward-info",
+        client_payload: {
+            chat_id: ctx.chat.id,
+            message_id: progressMsg.message_id,
+            link: link,
+        },
+    };
+
+    try {
+        const res = await fetch(
+            `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `token ${process.env.GITHUB_PAT}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(dispatchBody),
+            }
+        );
+        if (!res.ok) {
+            await ctx.api.editMessageText(ctx.chat.id, progressMsg.message_id, "Dispatch failed.");
+        }
+    } catch (e) {
+        await ctx.api.editMessageText(ctx.chat.id, progressMsg.message_id, "Error: " + e.message);
+    }
+});
+
+bot.callbackQuery(/^fwd_yes_(.+)$/, async (ctx) => {
+    const encodedLink = ctx.match[1];
+    const link = decodeURIComponent(encodedLink);
+
+    await ctx.answerCallbackQuery();
+    await ctx.deleteMessage();
+
+    const { data: info } = await supabase
+        .from("forward_info")
+        .select("filename, size_mb")
+        .eq("link", link)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    let filename = info?.filename || "file";
+    let fileSize = info?.size_mb || "Unknown";
+
+    const jobKey = Math.random().toString(36).slice(2, 10);
+    mirrorJobs.set(jobKey, {
+        url: link,
+        filename: filename,
+        fileSize: fileSize,
+        chatId: ctx.chat.id,
+        userId: ctx.from.id,
+    });
+
+    const keyboard = {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: "Yes", callback_data: `rename_yes_${jobKey}` },
+                    { text: "No", callback_data: `rename_no_${jobKey}` },
+                ],
+            ],
+        },
+    };
+
+    const promptMsg = await ctx.reply(
+        `File too large for Telegram (>${fileSize}MB).\nDo you want to rename before mirroring?`,
+        keyboard
+    );
+    mirrorJobs.get(jobKey).promptMessageId = promptMsg.message_id;
 });
 
 bot.command("imageedit", async (ctx) => {
