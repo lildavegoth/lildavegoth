@@ -5,7 +5,7 @@ on:
     branches: [homepage]
   workflow_dispatch:
   repository_dispatch:
-    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image, delete-mirror, custom-image]
+    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image, delete-mirror, custom-image, forward-restricted]
   schedule:
     - cron: '0 0 * * *'
 
@@ -389,6 +389,101 @@ jobs:
               -d "message_id=$PROGRESS_MSG_ID" \
               -d "text=Download complete: $LINK"
           fi
+
+  forward-restricted:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'forward-restricted'
+    runs-on: ubuntu-latest
+    env:
+      KIRA_TOKEN: ${{ secrets.KIRA_TOKEN }}
+      API_ID: ${{ secrets.API_ID }}
+      API_HASH: ${{ secrets.API_HASH }}
+      USER_SESSION_STRING: ${{ secrets.USER_SESSION_STRING }}
+    steps:
+      - name: Install Python and dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq python3-pip
+          pip3 install pyrogram requests
+
+      - name: Fetch and deliver restricted message
+        run: |
+          python3 -c "
+          import os, sys, asyncio, requests, re, traceback
+          from pyrogram import Client
+
+          BOT_TOKEN = os.environ['KIRA_TOKEN']
+          API_ID = int(os.environ['API_ID'])
+          API_HASH = os.environ['API_HASH']
+          SESSION = os.environ['USER_SESSION_STRING']
+          LINK = '${{ github.event.client_payload.link }}'
+          CHAT_ID = '${{ github.event.client_payload.chat_id }}'
+          MSG_ID = ${{ github.event.client_payload.message_id }}
+
+          def edit_message(text):
+              url = f'https://api.telegram.org/bot{BOT_TOKEN}/editMessageText'
+              requests.post(url, json={'chat_id': CHAT_ID, 'message_id': MSG_ID, 'text': text})
+
+          async def main():
+              app = Client('session', api_id=API_ID, api_hash=API_HASH, session_string=SESSION, in_memory=True)
+              await app.start()
+
+              # parse link
+              match = re.search(r't\.me/(?:c/)?([^/]+)/(\d+)', LINK)
+              if not match:
+                  edit_message('Invalid link format.')
+                  await app.stop()
+                  return
+              chat_part, msg_id = match[1], int(match[2])
+              try:
+                  chat_id = int(chat_part) if chat_part.lstrip('-').isdigit() else chat_part
+              except:
+                  chat_id = chat_part
+
+              try:
+                  msg = await app.get_messages(chat_id, msg_id)
+                  if not msg:
+                      edit_message('Message not found.')
+                      await app.stop()
+                      return
+              except Exception as e:
+                  edit_message(f'Error: {str(e)[:200]}')
+                  await app.stop()
+                  return
+
+              text = msg.text or msg.caption or ''
+              if msg.photo:
+                  path = await msg.download(in_memory=True)
+                  requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto',
+                                files={'photo': ('photo.jpg', path.getbuffer())},
+                                data={'chat_id': CHAT_ID, 'caption': text[:1024]})
+                  requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/deleteMessage',
+                                json={'chat_id': CHAT_ID, 'message_id': MSG_ID})
+              elif msg.video:
+                  path = await msg.download(in_memory=True)
+                  requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/sendVideo',
+                                files={'video': ('video.mp4', path.getbuffer())},
+                                data={'chat_id': CHAT_ID, 'caption': text[:1024]})
+                  requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/deleteMessage',
+                                json={'chat_id': CHAT_ID, 'message_id': MSG_ID})
+              elif msg.document:
+                  path = await msg.download(in_memory=True)
+                  requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/sendDocument',
+                                files={'document': (msg.document.file_name or 'file', path.getbuffer())},
+                                data={'chat_id': CHAT_ID, 'caption': text[:1024]})
+                  requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/deleteMessage',
+                                json={'chat_id': CHAT_ID, 'message_id': MSG_ID})
+              elif text:
+                  if len(text) > 4000:
+                      edit_message(text[:4000])
+                  else:
+                      edit_message(text)
+              else:
+                  edit_message('Unsupported media type.')
+
+              await app.stop()
+
+          asyncio.run(main())
+          "
 
   restore-image:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'restore-image'
