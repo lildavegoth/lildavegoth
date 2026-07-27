@@ -1,11 +1,10 @@
 (function() {
     var menuEl = null;
     var menuVisible = false;
-    var pendingSlash = false;
+    var targetTextarea = null;
 
     function createMenuElement() {
         var el = document.createElement('div');
-        el.className = 'slash-command-menu';
         el.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:280px; max-height:60vh; overflow-y:auto; background:rgba(22,22,24,0.95); border:1px solid rgba(255,255,255,0.15); border-radius:16px; padding:8px 0; z-index:9999999; display:none;';
         return el;
     }
@@ -39,8 +38,10 @@
             var item = document.createElement('div');
             item.style.cssText = 'display:flex; align-items:center; gap:12px; padding:10px 16px; cursor:pointer; color:var(--text-primary); font-size:0.95rem;';
             item.innerHTML = '<span style="width:24px;text-align:center;color:var(--accent-color);">' + cmd.icon + '</span>' + cmd.label;
-            item.addEventListener('click', function(e) {
+            item.addEventListener('mousedown', function(e) {
+                e.preventDefault();
                 e.stopPropagation();
+                removeTrailingSlash();
                 cmd.action();
                 hideMenu();
             });
@@ -63,33 +64,31 @@
             menuEl.style.display = 'none';
         }
         menuVisible = false;
-        pendingSlash = false;
     }
 
-    function isEditorActive() {
-        var editor = document.getElementById('editorContent');
-        return editor && document.activeElement === editor && document.getElementById('noteEditorPage').classList.contains('active');
-    }
-
-    function onKeyDown(e) {
-        if (!isEditorActive()) return;
-        if (e.key === '/' && !menuVisible) {
-            pendingSlash = true;
+    function removeTrailingSlash() {
+        if (!targetTextarea) return;
+        var val = targetTextarea.value;
+        if (val.charAt(val.length - 1) === '/') {
+            targetTextarea.value = val.slice(0, -1);
+            targetTextarea.dispatchEvent(new Event('input', { bubbles: true }));
         }
     }
 
-    function onInput(e) {
+    function onInput() {
         if (!isEditorActive()) return;
-        if (pendingSlash) {
+        var val = targetTextarea.value;
+        if (val.charAt(val.length - 1) === '/') {
             showMenu();
-            pendingSlash = false;
-        } else if (menuVisible) {
+        } else {
             hideMenu();
         }
     }
 
-    function onBlur() {
-        if (menuVisible) hideMenu();
+    function isEditorActive() {
+        if (!targetTextarea) return false;
+        return document.getElementById('noteEditorPage').classList.contains('active') &&
+               document.activeElement === targetTextarea;
     }
 
     function onEscape(e) {
@@ -108,11 +107,10 @@
             var toolbar = document.getElementById('richToolbar');
             if (toolbar) toolbar.style.display = 'none';
 
-            document.addEventListener('keydown', onKeyDown, true);
-            var textarea = document.getElementById('editorContent');
-            if (textarea) {
-                textarea.addEventListener('input', onInput);
-                textarea.addEventListener('blur', onBlur);
+            targetTextarea = document.getElementById('editorContent');
+            if (targetTextarea) {
+                targetTextarea.addEventListener('input', onInput);
+                targetTextarea.addEventListener('blur', hideMenu);
             }
             document.addEventListener('keydown', onEscape);
         }
