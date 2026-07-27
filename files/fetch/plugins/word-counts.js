@@ -1,6 +1,7 @@
 (function() {
     var plugin = {
         name: 'Word Count',
+        description: 'Counts words in the current note.',
         version: '1.0',
         init: function(app) {
             app.registerToolbarButton({
@@ -12,7 +13,7 @@
                     var note = app.getNotes().find(function(n) { return n.id === noteId; });
                     if (!note) return;
                     var words = note.content.split(/\s+/).filter(Boolean).length;
-                    alert('Word count: ' + words);
+                    window.showMessage('Word count: ' + words);
                 }
             });
         }
