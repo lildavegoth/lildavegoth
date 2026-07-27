@@ -706,75 +706,6 @@
             height: 22px;
         }
 
-        .floating-new-menu {
-            position: fixed;
-            bottom: 160px;
-            right: 20px;
-            display: flex;
-            gap: var(--spacing-sm);
-            background: rgba(22, 22, 24, 0.7);
-            backdrop-filter: blur(30px) saturate(180%);
-            -webkit-backdrop-filter: blur(30px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: var(--radius-medium);
-            padding: 10px;
-            z-index: 99999;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(20px);
-        }
-
-        .floating-new-menu.active {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .floating-new-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: var(--radius-small);
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            color: var(--accent-color);
-            padding: 0;
-        }
-
-        .floating-new-btn:hover {
-            background: rgba(193, 252, 50, 0.1);
-            border-color: rgba(193, 252, 50, 0.3);
-            color: var(--accent-color);
-        }
-
-        .floating-new-btn i {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-        }
-
-        .floating-menu-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 99998;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .floating-menu-overlay.active {
-            display: block;
-            opacity: 1;
-        }
-
         .editor-action-btn.move {
             color: var(--accent-color);
             border-color: rgba(193, 252, 50, 0.1);
@@ -1678,30 +1609,22 @@
             -webkit-user-drag: none !important;
         }
         
-        .fab-button {
-            position: fixed;
-            bottom: 90px;
-            right: 12px;
-            width: 50px;
-            height: 50px;
-            border-radius: var(--radius-small);
+        .add-note-btn {
             background: var(--accent-color);
+            color: var(--bg-black);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-small);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            z-index: 99999;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            font-size: 1rem;
+            transition: background 0.3s ease;
         }
-
-        .fab-button:hover {
+        .add-note-btn:hover {
             background: var(--accent-dark);
-        }
-        
-        .fab-button.active,
-        .fab-button:active {
-            background: var(--accent-color);
-            opacity: 1;
         }
     </style>
 </head>
@@ -1718,6 +1641,9 @@
             </div>
             <div class="section-header">
                 <h2 class="section-title">All Notes</h2>
+                <button class="add-note-btn" id="addNoteBtn" onclick="openAddPopup()">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
             <div class="search-container">
                 <div class="search-input-wrapper">
@@ -1914,19 +1840,10 @@
     </div>
 
     <div class="bottom-nav">
-        <div class="fab-button" id="fabButton" onclick="toggleFloatingMenu()">
-            <span class="icon icon-plus" style="color: #000000; font-size: 1.4rem;"></span>
-        </div>
         <button class="nav-button" data-page="home" onclick="switchPage('home')"><div class="nav-icon"><span class="icon icon-home"></span></div></button>
         <button class="nav-button" data-page="folders" onclick="switchPage('folders')"><div class="nav-icon"><span class="icon icon-folder"></span></div></button>
         <button class="nav-button" data-page="settings" onclick="switchPage('settings')"><div class="nav-icon"><span class="icon icon-settings"></span></div></button>
     </div>
-
-    <div class="floating-new-menu" id="floatingNewMenu">
-        <button class="floating-new-btn" data-type="note" onclick="createNewNote(); closeFloatingMenu();"><span class="icon icon-note"></span></button>
-        <button class="floating-new-btn" data-type="folder" onclick="openNewFolderPopup(); closeFloatingMenu();"><span class="icon icon-newfolder"></span></button>
-    </div>
-    <div class="floating-menu-overlay" id="floatingMenuOverlay"></div>
 
     <div class="folder-window" id="folderWindow">
         <div class="folder-window-header">
@@ -3056,27 +2973,12 @@
             else return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
         }
 
-        function toggleFloatingMenu() {
-            var floatingMenu = document.getElementById('floatingNewMenu');
-            var overlay = document.getElementById('floatingMenuOverlay');
-            var fabBtn = document.getElementById('fabButton');
-            floatingMenu.classList.toggle('active');
-            overlay.classList.toggle('active');
-            if (floatingMenu.classList.contains('active')) {
-                fabBtn.classList.add('active');
-                fabBtn.style.transform = 'rotate(45deg)';
-            } else {
-                fabBtn.classList.remove('active');
-                fabBtn.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        function closeFloatingMenu() {
-            document.getElementById('floatingNewMenu').classList.remove('active');
-            document.getElementById('floatingMenuOverlay').classList.remove('active');
-            var fabBtn = document.getElementById('fabButton');
-            fabBtn.classList.remove('active');
-            fabBtn.style.transform = 'rotate(0deg)';
+        function openAddPopup() {
+            document.getElementById('popupTitle').textContent = 'Add New';
+            document.getElementById('popupBody').innerHTML = 
+                '<button class="popup-btn primary" onclick="createNewNote(); closeUniversalPopup();" style="width:100%; margin-bottom:8px;"><i class="fas fa-sticky-note"></i> New Note</button>' +
+                '<button class="popup-btn primary" onclick="openNewFolderPopup(); closeUniversalPopup();" style="width:100%;"><i class="fas fa-folder"></i> New Folder</button>';
+            document.getElementById('universalPopup').style.display = 'flex';
         }
 
         function toggleReadingMode() {
@@ -3084,37 +2986,41 @@
             openNoteReadingMode(currentNoteId);
         }
 
-        function switchPage(page) {
-            var bottomNav = document.querySelector('.bottom-nav');
-            if (page === 'folder-notes') {
-                bottomNav.style.display = 'none';
-            } else {
-                bottomNav.style.display = '';
-            }
-        
-            var currentActivePage = document.querySelector('.page-section.active');
-            var targetPage = document.getElementById(page + '-page');
+        function switchPage(page, event) {
+            const currentActivePage = document.querySelector('.page-section.active');
+            const targetPage = document.getElementById(page + '-page');
+
             if (currentActivePage === targetPage) return;
-        
-            document.querySelectorAll('.nav-button').forEach(function(button) { button.classList.remove('active'); });
-            var activeButton = document.querySelector('.nav-button[data-page="' + page + '"]');
-            if (activeButton) {
-                activeButton.classList.add('active');
-            }
-        
+
+            document.querySelectorAll('.nav-button').forEach(button => {
+                button.classList.remove('active');
+                button.style.transform = 'scaleX(1)';
+                button.style.padding = '10px 20px';
+            });
+
+            const clickedButton = event.currentTarget;
+
             if (currentActivePage) {
                 currentActivePage.style.opacity = '0';
                 currentActivePage.style.visibility = 'hidden';
-                setTimeout(function() {
+
+                setTimeout(() => {
                     currentActivePage.classList.remove('active');
                     currentActivePage.style.height = '0';
                     currentActivePage.style.overflow = 'hidden';
+
                     targetPage.style.height = 'auto';
                     targetPage.style.overflow = 'visible';
                     targetPage.classList.add('active');
-                    setTimeout(function() {
+
+                    setTimeout(() => {
                         targetPage.style.opacity = '1';
                         targetPage.style.visibility = 'visible';
+
+                        clickedButton.classList.add('active');
+                        clickedButton.style.transform = 'scaleX(1.1)';
+                        clickedButton.style.padding = '10px 25px';
+
                         window.scrollTo(0, 0);
                     }, 50);
                 }, 300);
@@ -3124,6 +3030,11 @@
                 targetPage.classList.add('active');
                 targetPage.style.opacity = '1';
                 targetPage.style.visibility = 'visible';
+
+                clickedButton.classList.add('active');
+                clickedButton.style.transform = 'scaleX(1.1)';
+                clickedButton.style.padding = '10px 25px';
+
                 window.scrollTo(0, 0);
             }
         }
@@ -3520,13 +3431,6 @@
                 if (e.key === 'Tab' && document.getElementById('noteEditorPage').classList.contains('active')) { e.preventDefault(); e.shiftKey ? outdent() : indent(); }
                 if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
                 if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
-            });
-            document.getElementById('floatingMenuOverlay').addEventListener('click', closeFloatingMenu);
-            document.addEventListener('click', function(event) {
-                var floatingMenu = document.getElementById('floatingNewMenu');
-                if (floatingMenu && floatingMenu.classList.contains('active')) {
-                    if (!floatingMenu.contains(event.target) && !event.target.closest('#fabButton')) closeFloatingMenu();
-                }
             });
             document.getElementById('readingContent').addEventListener('click', async (e) => {
                 var button = e.target.closest('.copy-code-btn');
