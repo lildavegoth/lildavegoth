@@ -1,7 +1,6 @@
 (function() {
     var menuEl = null;
     var menuVisible = false;
-    var targetTextarea = null;
 
     function createMenuElement() {
         var el = document.createElement('div');
@@ -72,17 +71,29 @@
     }
 
     function removeTrailingSlash() {
-        if (!targetTextarea) return;
-        var val = targetTextarea.value;
+        var textarea = document.getElementById('editorContent');
+        if (!textarea) return;
+        var val = textarea.value;
         if (val.charAt(val.length - 1) === '/') {
-            targetTextarea.value = val.slice(0, -1);
-            targetTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+            textarea.value = val.slice(0, -1);
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
         }
     }
 
+    function isEditorActive() {
+        var textarea = document.getElementById('editorContent');
+        if (!textarea) return false;
+        return document.getElementById('noteEditorPage').classList.contains('active') &&
+               document.activeElement === textarea;
+    }
+
     function onInput() {
-        if (!isEditorActive()) return;
-        var val = targetTextarea.value;
+        if (!isEditorActive()) {
+            hideMenu();
+            return;
+        }
+        var textarea = document.getElementById('editorContent');
+        var val = textarea.value;
         if (val.charAt(val.length - 1) === '/') {
             showMenu();
         } else {
@@ -90,10 +101,8 @@
         }
     }
 
-    function isEditorActive() {
-        if (!targetTextarea) return false;
-        return document.getElementById('noteEditorPage').classList.contains('active') &&
-               document.activeElement === targetTextarea;
+    function onBlur() {
+        hideMenu();
     }
 
     function onEscape(e) {
@@ -112,10 +121,10 @@
             var toolbar = document.getElementById('richToolbar');
             if (toolbar) toolbar.style.display = 'none';
 
-            targetTextarea = document.getElementById('editorContent');
-            if (targetTextarea) {
-                targetTextarea.addEventListener('input', onInput);
-                targetTextarea.addEventListener('blur', hideMenu);
+            var textarea = document.getElementById('editorContent');
+            if (textarea) {
+                textarea.addEventListener('input', onInput);
+                textarea.addEventListener('blur', onBlur);
             }
             document.addEventListener('keydown', onEscape);
         }
