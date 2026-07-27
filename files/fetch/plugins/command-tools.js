@@ -1,6 +1,7 @@
 (function() {
     var menuEl = null;
     var menuVisible = false;
+    var pendingSlash = false;
 
     function createMenuElement() {
         var el = document.createElement('div');
@@ -73,9 +74,10 @@
     function removeTrailingSlash() {
         var textarea = document.getElementById('editorContent');
         if (!textarea) return;
-        var val = textarea.value;
-        if (val.charAt(val.length - 1) === '/') {
-            textarea.value = val.slice(0, -1);
+        var pos = textarea.selectionStart;
+        if (pos > 0 && textarea.value.charAt(pos - 1) === '/') {
+            textarea.value = textarea.value.slice(0, pos - 1) + textarea.value.slice(pos);
+            textarea.selectionStart = textarea.selectionEnd = pos - 1;
             textarea.dispatchEvent(new Event('input', { bubbles: true }));
         }
     }
@@ -87,15 +89,28 @@
                document.activeElement === textarea;
     }
 
+    function onKeyDown(e) {
+        if (!isEditorActive()) return;
+        if (e.key === '/') {
+            pendingSlash = true;
+        }
+    }
+
     function onInput() {
         if (!isEditorActive()) {
             hideMenu();
+            pendingSlash = false;
             return;
         }
         var textarea = document.getElementById('editorContent');
-        var val = textarea.value;
-        if (val.charAt(val.length - 1) === '/') {
-            showMenu();
+        if (pendingSlash) {
+            var pos = textarea.selectionStart;
+            if (pos > 0 && textarea.value.charAt(pos - 1) === '/') {
+                showMenu();
+            } else {
+                hideMenu();
+            }
+            pendingSlash = false;
         } else {
             hideMenu();
         }
@@ -103,6 +118,7 @@
 
     function onBlur() {
         hideMenu();
+        pendingSlash = false;
     }
 
     function onEscape(e) {
@@ -123,6 +139,7 @@
 
             var textarea = document.getElementById('editorContent');
             if (textarea) {
+                textarea.addEventListener('keydown', onKeyDown);
                 textarea.addEventListener('input', onInput);
                 textarea.addEventListener('blur', onBlur);
             }
