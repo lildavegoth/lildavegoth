@@ -189,33 +189,31 @@
             gap: 12px;
             margin-bottom: var(--spacing-xl);
         }
-
+        
         .folder-card {
-            background: var(--bg-card);
-            border-radius: var(--radius-medium);
-            padding: 12px;
-            transition: opacity 0.3s ease, border-color 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: none;
+            border: none;
+            padding: 8px;
             cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            aspect-ratio: 1/1;
-            justify-content: center;
             min-width: 0;
+            transition: opacity 0.3s ease;
         }
-
-        .folder-card:hover {
-            border-color: rgba(193, 252, 50, 0.3);
+        
+        .folder-card:hover .folder-icon {
+            color: var(--accent-color);
         }
-
+        
         .folder-icon {
             color: var(--accent-color);
-            font-size: 1.5rem;
+            font-size: 3rem;
             margin-bottom: 4px;
+            transition: color 0.3s ease;
         }
-
+        
         .folder-name {
             font-size: 0.95rem;
             font-weight: 600;
@@ -226,16 +224,16 @@
             max-width: 100%;
             white-space: nowrap;
         }
-
+        
         .folder-count {
             color: var(--text-secondary);
             font-size: 0.7rem;
         }
-
+        
         @media (max-width: 480px) {
             .folders-grid { gap: 8px; }
-            .folder-card { padding: 8px; }
-            .folder-icon { font-size: 1.2rem; }
+            .folder-card { padding: 6px; }
+            .folder-icon { font-size: 2.5rem; }
             .folder-name { font-size: 0.85rem; }
         }
 
@@ -1892,9 +1890,9 @@
     </div>
 
     <div class="bottom-nav">
-        <button class="nav-button" onclick="switchPage('home')"><div class="nav-icon"><span class="icon icon-home"></span></div></button>
+        <button class="nav-button" data-page="home" onclick="switchPage('home')"><div class="nav-icon"><span class="icon icon-home"></span></div></button>
         <button class="nav-button" id="bottomNewButton" onclick="toggleFloatingMenu()"><div class="nav-icon"><span style="height: 19px; width: 19px;" class="icon icon-plus"></span></div></button>
-        <button class="nav-button" onclick="switchPage('folders')"><div class="nav-icon"><span class="icon icon-folder"></span></div></button>
+        <button class="nav-button" data-page="folders" onclick="switchPage('folders')"><div class="nav-icon"><span class="icon icon-folder"></span></div></button>
     </div>
 
     <div class="floating-new-menu" id="floatingNewMenu">
@@ -2132,7 +2130,7 @@
             emptyState.style.display = 'none';
             foldersGrid.innerHTML = foldersData.map(folder => `
                 <div class="folder-card" onclick="openFolder(${folder.id})">
-                    <div class="folder-icon"><i class="${folder.icon}"></i></div>
+                    <div class="folder-icon"><i class="fas fa-folder"></i></div>
                     <h3 class="folder-name">${folder.name}</h3>
                     <p class="folder-count">${folder.noteCount} note${folder.noteCount !== 1 ? 's' : ''}</p>
                 </div>
@@ -2183,7 +2181,7 @@
 
         async function updateFolderName() {
             const newName = document.getElementById('popupFolderName').value.trim();
-            if (!newName) { window.showMessage('Folder name required', 'error'); return; }
+            if (!newName) { window.showMessage('Folder name required'); return; }
             const folder = foldersData.find(f => f.id === currentFolderId);
             if (folder) {
                 folder.name = newName;
@@ -2245,7 +2243,7 @@
 
         async function createFolderFromPopup() {
             const folderName = document.getElementById('popupFolderName').value.trim();
-            if (!folderName) { window.showMessage('Folder name required', 'error'); return; }
+            if (!folderName) { window.showMessage('Folder name required'); return; }
             const newFolder = { id: Date.now(), name: folderName, icon: 'fas fa-folder', noteCount: 0 };
             foldersData.unshift(newFolder);
             await saveFoldersToStorage();
@@ -2598,15 +2596,13 @@
                 var button = document.createElement('button');
                 button.className = 'copy-code-btn';
                 button.innerHTML = '<i class="far fa-copy"></i>';
-                button.addEventListener('click', async function(e) {
+                button.addEventListener('click', function(e) {
                     e.stopPropagation();
                     var code = codeElement ? codeElement.innerText : pre.innerText;
-                    try {
-                        await navigator.clipboard.writeText(code);
-                        button.innerHTML = '<i class="fas fa-check"></i>';
-                        button.classList.add('copied');
-                        setTimeout(() => { button.innerHTML = '<i class="far fa-copy"></i>'; button.classList.remove('copied'); }, 1500);
-                    } catch (err) {}
+                    copyTextToClipboard(code);
+                    button.innerHTML = '<i class="fas fa-check"></i>';
+                    button.classList.add('copied');
+                    setTimeout(function() { button.innerHTML = '<i class="far fa-copy"></i>'; button.classList.remove('copied'); }, 1500);
                 });
                 header.appendChild(button);
                 var contentDiv = document.createElement('div');
@@ -2801,7 +2797,7 @@
             document.body.style.overflow = 'auto';
             await saveNotesToStorage();
             closeUniversalPopup();
-            window.showMessage('Note deleted!', 'error');
+            window.showMessage('Note deleted!');
         }
 
         function renderEditorTags() {
@@ -3003,25 +2999,36 @@
         }
 
         function switchPage(page) {
+            var bottomNav = document.querySelector('.bottom-nav');
+            if (page === 'folder-notes') {
+                bottomNav.style.display = 'none';
+            } else {
+                bottomNav.style.display = '';
+            }
+        
             var currentActivePage = document.querySelector('.page-section.active');
             var targetPage = document.getElementById(page + '-page');
             if (currentActivePage === targetPage) return;
-            document.querySelectorAll('.nav-button').forEach(button => button.classList.remove('active'));
-            var clickedButton = event.currentTarget;
+        
+            document.querySelectorAll('.nav-button').forEach(function(button) { button.classList.remove('active'); });
+            var activeButton = document.querySelector('.nav-button[data-page="' + page + '"]');
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
+        
             if (currentActivePage) {
                 currentActivePage.style.opacity = '0';
                 currentActivePage.style.visibility = 'hidden';
-                setTimeout(() => {
+                setTimeout(function() {
                     currentActivePage.classList.remove('active');
                     currentActivePage.style.height = '0';
                     currentActivePage.style.overflow = 'hidden';
                     targetPage.style.height = 'auto';
                     targetPage.style.overflow = 'visible';
                     targetPage.classList.add('active');
-                    setTimeout(() => {
+                    setTimeout(function() {
                         targetPage.style.opacity = '1';
                         targetPage.style.visibility = 'visible';
-                        clickedButton.classList.add('active');
                         window.scrollTo(0, 0);
                     }, 50);
                 }, 300);
@@ -3031,7 +3038,6 @@
                 targetPage.classList.add('active');
                 targetPage.style.opacity = '1';
                 targetPage.style.visibility = 'visible';
-                clickedButton.classList.add('active');
                 window.scrollTo(0, 0);
             }
         }
@@ -3060,7 +3066,7 @@
         }
 
         async function exportAllMd() {
-            if (notesData.length === 0) { window.showMessage('No notes to export', 'error'); return; }
+            if (notesData.length === 0) { window.showMessage('No notes to export'); return; }
             var zip = new JSZip();
             for (var note of notesData) {
                 var filename = (note.title || 'Untitled') + '.md';
@@ -3299,6 +3305,35 @@
                 }
             });
         }
+        
+        function fallbackCopy(text) {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                if (typeof window.showMessage === 'function') window.showMessage('Copied to clipboard');
+            } catch (err) {}
+            document.body.removeChild(textArea);
+        }
+        
+        function copyTextToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    if (typeof window.showMessage === 'function') window.showMessage('Copied to clipboard');
+                }).catch(() => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
 
         function setupEventListeners() {
             document.getElementById('backToHome').addEventListener('click', closeNoteEditor);
@@ -3387,7 +3422,9 @@
             window.showMessage('All notes deleted!');
         }
 
-        init();
+        init().then(function() {
+            switchPage('home');
+        });
     </script>
 </body>
 </html>
