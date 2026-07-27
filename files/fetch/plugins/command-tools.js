@@ -1,7 +1,7 @@
 (function() {
     var menuEl = null;
     var menuVisible = false;
-    var pendingSlash = false;
+    var lastValue = '';
 
     function createMenuElement() {
         var el = document.createElement('div');
@@ -89,31 +89,38 @@
                document.activeElement === textarea;
     }
 
-    function onKeyDown(e) {
-        if (!isEditorActive()) return;
-        if (e.key === '/') {
-            pendingSlash = true;
-        }
-    }
-
     function onInput() {
         if (!isEditorActive()) {
-            pendingSlash = false;
+            lastValue = '';
+            hideMenu();
             return;
         }
         var textarea = document.getElementById('editorContent');
-        if (pendingSlash) {
-            var pos = textarea.selectionStart;
-            if (pos > 0 && textarea.value.charAt(pos - 1) === '/') {
+        var newValue = textarea.value;
+        var pos = textarea.selectionStart;
+
+        if (lastValue !== '' && pos > 0 && newValue.charAt(pos - 1) === '/') {
+            var expected = lastValue.slice(0, pos - 1) + '/' + lastValue.slice(pos - 1);
+            if (newValue === expected) {
                 showMenu();
             }
-            pendingSlash = false;
         }
+        lastValue = newValue;
+    }
+
+    function onFocus() {
+        var textarea = document.getElementById('editorContent');
+        if (textarea) lastValue = textarea.value;
+    }
+
+    function onBlur() {
+        lastValue = '';
+        hideMenu();
     }
 
     function onDocumentClick(e) {
         if (!menuVisible) return;
-        if (!menuEl || menuEl.contains(e.target)) return;
+        if (menuEl && menuEl.contains(e.target)) return;
         hideMenu();
     }
 
@@ -135,8 +142,9 @@
 
             var textarea = document.getElementById('editorContent');
             if (textarea) {
-                textarea.addEventListener('keydown', onKeyDown);
                 textarea.addEventListener('input', onInput);
+                textarea.addEventListener('focus', onFocus);
+                textarea.addEventListener('blur', onBlur);
             }
             document.addEventListener('click', onDocumentClick);
             document.addEventListener('keydown', onEscape);
