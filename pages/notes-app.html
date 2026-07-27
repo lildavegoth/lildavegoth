@@ -1936,7 +1936,38 @@
         </div>
     </div>
 
+    <script src="../files/fetch/Notes App/Plugins/word-count.js"></script>
     <script>
+        window.NotesApp = {
+            plugins: {
+                list: [],
+                _appReady: false,
+                register(plugin) {
+                    if (!plugin.name || !plugin.init) return;
+                    this.list.push(plugin);
+                    if (this._appReady) plugin.init(window.NotesApp);
+                }
+            },
+            on(event, callback) {
+                (this._listeners = this._listeners || {})[event] = (this._listeners[event] || []).concat(callback);
+            },
+            emit(event, ...args) {
+                (this._listeners?.[event] || []).forEach(fn => fn(...args));
+            },
+            getNotes() { return notesData; },
+            getCurrentNoteId() { return currentNoteId; },
+            registerToolbarButton(btn) {
+                const toolbar = document.getElementById('richToolbar');
+                if (!toolbar) return;
+                const el = document.createElement('button');
+                el.className = 'toolbar-btn';
+                el.innerHTML = btn.icon;
+                el.title = btn.tooltip || '';
+                el.addEventListener('click', btn.action);
+                toolbar.appendChild(el);
+            }
+        };
+
         const DB_NAME = 'NotesAppDB';
         const DB_VERSION = 2;
         let db = null;
@@ -2762,6 +2793,7 @@
                 note.content = newContent;
                 note.date = new Date().toISOString();
                 await saveNotesToStorage();
+                NotesApp.emit('note:save', note);
             }
         }
 
@@ -3423,6 +3455,9 @@
         }
 
         init().then(function() {
+            NotesApp.plugins._appReady = true;
+            NotesApp.plugins.list.forEach(p => p.init(NotesApp));
+            NotesApp.emit('app:ready');
             switchPage('home');
         });
     </script>
