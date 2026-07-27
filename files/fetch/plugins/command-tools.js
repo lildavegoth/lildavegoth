@@ -98,7 +98,6 @@
 
     function onInput() {
         if (!isEditorActive()) {
-            hideMenu();
             pendingSlash = false;
             return;
         }
@@ -107,18 +106,15 @@
             var pos = textarea.selectionStart;
             if (pos > 0 && textarea.value.charAt(pos - 1) === '/') {
                 showMenu();
-            } else {
-                hideMenu();
             }
             pendingSlash = false;
-        } else {
-            hideMenu();
         }
     }
 
-    function onBlur() {
+    function onDocumentClick(e) {
+        if (!menuVisible) return;
+        if (!menuEl || menuEl.contains(e.target)) return;
         hideMenu();
-        pendingSlash = false;
     }
 
     function onEscape(e) {
@@ -141,8 +137,8 @@
             if (textarea) {
                 textarea.addEventListener('keydown', onKeyDown);
                 textarea.addEventListener('input', onInput);
-                textarea.addEventListener('blur', onBlur);
             }
+            document.addEventListener('click', onDocumentClick);
             document.addEventListener('keydown', onEscape);
         }
     };
