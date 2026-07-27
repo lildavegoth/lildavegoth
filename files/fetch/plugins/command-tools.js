@@ -27,7 +27,12 @@
             { label: 'Undo', icon: '<i class="fas fa-undo"></i>', action: function() { window.undo(); } },
             { label: 'Redo', icon: '<i class="fas fa-redo"></i>', action: function() { window.redo(); } },
             { label: 'Clear', icon: '<i class="fas fa-eraser"></i>', action: function() { window.clearText(); } },
-            { label: 'Table', icon: '<i class="fas fa-table"></i>', action: function() { window.insertTable(); } }
+            { label: 'Table', icon: '<i class="fas fa-table"></i>', action: function() { window.insertTable(); } },
+            { label: 'Callout Note', icon: '<i class="fas fa-circle-info"></i>', action: function() { window.insertMarkdown('> [!note]\n> ', ''); } },
+            { label: 'Callout Warning', icon: '<i class="fas fa-triangle-exclamation"></i>', action: function() { window.insertMarkdown('> [!warning]\n> ', ''); } },
+            { label: 'Callout Tip', icon: '<i class="fas fa-lightbulb"></i>', action: function() { window.insertMarkdown('> [!tip]\n> ', ''); } },
+            { label: 'Custom Quote', icon: '<i class="fas fa-quote-right"></i>', action: function() { window.insertMarkdown('""\n', '\n""'); } },
+            { label: 'Code Block', icon: '<i class="fas fa-code"></i>', action: function() { window.insertMarkdown('```\n', '\n```'); } }
         ];
     }
 
