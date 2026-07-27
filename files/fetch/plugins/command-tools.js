@@ -5,7 +5,7 @@
 
     function createMenuElement() {
         var el = document.createElement('div');
-        el.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:280px; max-height:60vh; overflow-y:auto; background:rgba(22,22,24,0.95); border:1px solid rgba(255,255,255,0.15); border-radius:16px; padding:8px 0; z-index:9999999; display:none;';
+        el.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:280px; max-height:60vh; overflow-y:auto; background:rgba(22,22,24,1.0); border:1px solid rgba(255,255,255,0.15); border-radius:16px; padding:8px 0; z-index:9999999; display:none;';
         return el;
     }
 
@@ -99,7 +99,7 @@
         var newValue = textarea.value;
         var pos = textarea.selectionStart;
 
-        if (lastValue !== '' && pos > 0 && newValue.charAt(pos - 1) === '/') {
+        if (pos > 0 && newValue.charAt(pos - 1) === '/') {
             var expected = lastValue.slice(0, pos - 1) + '/' + lastValue.slice(pos - 1);
             if (newValue === expected) {
                 showMenu();
