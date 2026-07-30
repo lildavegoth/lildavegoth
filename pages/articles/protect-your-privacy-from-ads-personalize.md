@@ -70,3 +70,14 @@ Unfortunately, there's nothing you can do to block or protect your privacy from 
 ![Plants vs Zombies Heroes Settings](images/personalize-pvzh-settings.webp)
 3. Disable them both
 ![Plants vs Zombies Heroes Disable](images/personalize-pvzh-disable.webp)
+
+---
+
+**mo.co**
+1. Open the game and go to settings
+:::gallery
+![mo.co Home](images/personalize-moco-home.webp)
+![mo.co Settings](images/personalize-moco-settings.webp)
+:::
+2. Disable the option that i pointed
+![mo.co Disable](images/personalize-moco-disable.webp)
