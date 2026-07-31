@@ -29,7 +29,7 @@ Store all your private notes without a notes app!
 
 An updated version of Insta URL Cleaner plugin by [@ravana69](https://t.me/ravana69)
 
-This plugin has been updated with YouTube supported, that's why the name of plugin is changed.
+This plugin has been updated with bunch of other apps tracking supported, that's why the name of plugin is changed.
 
 # Guides →
 - `[Installations](^^^installations1show^^^)`
@@ -84,6 +84,6 @@ You must download the Plugins file and upload it to your Telegram saved message 
 1. Download, Install and Enable **URL Cleaner** plugin
 2. Follow this video guides
 
-![URL Cleaner Guide Video](images/url-cleaner-gvideo.mp4)
+![URL Cleaner Guide Video](images/url-guide-gvideo.mp4)
 
 ^^^mypluginguides1hide^^^
