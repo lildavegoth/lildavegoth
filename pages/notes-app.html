@@ -155,6 +155,7 @@
             margin-bottom: var(--spacing-xs);
             max-height: none;
             word-break: break-word;
+            overflow-wrap: anywhere;
         }
 
         .note-preview img {
@@ -164,6 +165,25 @@
             border-radius: var(--radius-small);
             display: block;
             margin: 4px 0;
+        }
+
+        .note-preview input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.2em;
+            height: 1.2em;
+            border: 2px solid var(--accent-color);
+            border-radius: 50%;
+            outline: none;
+            cursor: default;
+            vertical-align: middle;
+            margin-right: 0.5em;
+            background: transparent;
+        }
+
+        .note-preview input[type="checkbox"]:checked {
+            background: var(--accent-color);
+            box-shadow: inset 0 0 0 3px var(--bg-black);
         }
 
         .note-tags {
@@ -1851,6 +1871,7 @@
             <button class="toolbar-btn" title="Redo" onclick="redo()"><i class="fas fa-redo"></i></button>
             <button class="toolbar-btn" title="Clear" onclick="clearText()"><i class="fas fa-eraser"></i></button>
             <button class="toolbar-btn" title="Insert Table" onclick="insertTable()"><i class="fas fa-table"></i></button>
+            <button class="toolbar-btn" title="Word Count" onclick="countWords()"><i class="fas fa-font"></i></button>
         </div>
         <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
     </div>
@@ -2107,6 +2128,24 @@
             return [{ id: 1, name: 'Personal', icon: 'fas fa-user', noteCount: 0 }];
         }
 
+        function openNoteByTitle(title) {
+            var note = notesData.find(function(n) {
+                return n.title && n.title.trim().toLowerCase() === title.trim().toLowerCase();
+            });
+            if (note) {
+                openNoteReadingMode(note.id);
+            } else {
+                window.showMessage('Note not found: ' + title);
+            }
+        }
+
+        function enhanceWikiLinks(html) {
+            return html.replace(/\[\[([^\]]+)\]\]/g, function(match, title) {
+                var escaped = title.replace(/'/g, "\\'");
+                return '<a class="wiki-link" onclick="openNoteByTitle(\'' + escaped + '\')" style="color:var(--accent-color);cursor:pointer;text-decoration:underline;">' + title + '</a>';
+            });
+        }
+
         function renderNotes() {
             const notesGrid = document.getElementById('notesGrid');
             const emptyState = document.getElementById('emptyState');
@@ -2120,10 +2159,12 @@
                 let previewMd = note.content || 'No content';
                 previewMd = previewMd.replace(/!\[.*?\]\(attachment:[^)]+\)/g, '');
                 if (previewMd.length > 250) previewMd = previewMd.substring(0, 250) + '...';
+                let html = convertMarkdownToHTML(previewMd);
+                html = enhanceWikiLinks(html);
                 return `<div class="note-card" onclick="openNoteReadingMode(${note.id})">
                     <h3 class="note-title">${note.title || 'Untitled'}</h3>
                     <p class="note-date">${formatDate(note.date)}</p>
-                    <div class="note-preview">${convertMarkdownToHTML(previewMd)}</div>
+                    <div class="note-preview">${html}</div>
                     <div class="note-tags">
                         ${(note.tags || []).map(tag => `<span class="note-tag">${tag}</span>`).join('')}
                         ${note.folderId ? `<span class="note-tag" style="background: rgba(255, 255, 255, 0.1);">${getFolderName(note.folderId)}</span>` : ''}
@@ -2165,14 +2206,9 @@
             } else {
                 folderEmptyState.style.display = 'none';
                 folderNotesGrid.innerHTML = folderNotes.map(note => {
-                    let previewMd = note.content || 'No content';
-                    previewMd = previewMd.replace(/!\[.*?\]\(attachment:[^)]+\)/g, '');
-                    if (previewMd.length > 250) previewMd = previewMd.substring(0, 250) + '...';
-                    return `<div class="note-card" onclick="openNoteReadingMode(${note.id})">
+                    return `<div class="note-card" onclick="openNoteReadingMode(${note.id})" style="padding: 12px;">
                         <h3 class="note-title">${note.title || 'Untitled'}</h3>
                         <p class="note-date">${formatDate(note.date)}</p>
-                        <div class="note-preview">${convertMarkdownToHTML(previewMd)}</div>
-                        <div class="note-tags">${(note.tags || []).map(tag => `<span class="note-tag">${tag}</span>`).join('')}</div>
                     </div>`;
                 }).join('');
             }
@@ -2280,6 +2316,7 @@
             document.getElementById('readingDate').textContent = `Last edited: ${formatDate(note.date)}`;
             let html = await replaceAttachmentRefs(note.content);
             html = convertMarkdownToHTML(html);
+            html = enhanceWikiLinks(html);
             document.getElementById('readingContent').innerHTML = html;
             document.getElementById('readingMode').classList.add('active');
             document.body.style.overflow = 'hidden';
@@ -3441,6 +3478,13 @@
                 window.NotesApp.plugins.saveStates();
                 window.showMessage('Plugin ' + (checked ? 'enabled' : 'disabled') + '. Reload to apply.');
             }
+        }
+
+        function countWords() {
+            var textarea = document.getElementById('editorContent');
+            var text = textarea.value.trim();
+            var wordCount = text ? text.split(/\s+/).length : 0;
+            window.showMessage('Word count: ' + wordCount);
         }
 
         function setupEventListeners() {

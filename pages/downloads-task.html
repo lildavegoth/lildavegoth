@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Downloads Task | lildavegoth</title>
     <meta name="color-scheme" content="dark">
-    <script src="../cordova.js"></script>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="../ui-icons.js"></script>
     <style>
         :root {
@@ -459,6 +457,34 @@
 
         .folder-list-item:hover {
             background: rgba(193,252,50,0.1);
+        }
+        
+        .folder-option-btn {
+            display: block;
+            width: 100%;
+            padding: 14px 20px;
+            background: #1a1a1a;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            margin-bottom: 8px;
+        }
+
+        .folder-option-btn:hover {
+            background: rgba(193, 252, 50, 0.08);
+            border-color: rgba(193, 252, 50, 0.3);
+        }
+
+        .folder-option-btn.active {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: 600;
+            border-color: var(--accent-color);
         }
 
         .flex { display: flex; }
@@ -1410,12 +1436,14 @@
         function openFolderSelectPopup() {
             const listDiv = document.getElementById("folderSelectList")
             const folders = categories.filter(c => c !== "All").sort((a,b) => a.localeCompare(b))
+            const current = selectedCategoryForTask
             if (folders.length === 0) {
                 listDiv.innerHTML = `<div class="p-4 text-center text-zinc-500">No folders available</div>`
             } else {
                 let html = ""
                 folders.forEach(folder => {
-                    html += `<div class="folder-list-item" onclick="selectFolder('${folder}')">${folder}</div>`
+                    const isActive = folder === current ? ' active' : ''
+                    html += `<button class="folder-option-btn${isActive}" onclick="selectFolder('${folder.replace(/'/g, "\\'")}')">${folder}</button>`
                 })
                 listDiv.innerHTML = html
             }
@@ -1607,19 +1635,23 @@
             window.showMessage('All tasks cleared')
         }
 
-        const scrollBtn = document.getElementById('scrollTopBtn');
-
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 300) {
-                scrollBtn.classList.add('show');
-            } else {
-                scrollBtn.classList.remove('show');
+        (function attachScrollButton() {
+            var btn = document.getElementById('scrollTopBtn');
+            if (!btn) return;
+            function showHide() {
+                var top = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+                btn.classList.toggle('show', top > 300);
             }
-        });
-
-        scrollBtn.addEventListener('click', () => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
+            window.addEventListener('scroll', showHide, { passive: true });
+            btn.addEventListener('click', function() {
+                btn.classList.add('btnMDYE');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                btn.addEventListener('animationend', function() {
+                    btn.classList.remove('btnMDYE');
+                }, { once: true });
+            });
+            showHide();
+        })();
 
         function initUI() {
             if(categories.length === 1 && categories[0] === "All") {
