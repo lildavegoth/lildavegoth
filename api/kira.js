@@ -17,41 +17,6 @@ const supabase = createClient(
 const bot = new Bot(process.env.KIRA_TOKEN);
 await bot.init();
 
-bot.command("login", async (ctx) => {
-    if (ctx.chat.type !== "private") return;
-    const code = ctx.message.text.split(" ")[1];
-    if (!code) return ctx.reply("Usage: /login <code>\nGet the code from the gallery page.");
-
-    const userId = ctx.from.id;
-    const chatId = process.env.CHANNEL_ID;
-
-    try {
-        const memberUrl = `https://api.telegram.org/bot${process.env.KIRA_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${userId}`;
-        const memberResp = await fetch(memberUrl);
-        const memberData = await memberResp.json();
-        if (!memberData.ok || ["left", "kicked"].includes(memberData.result?.status)) {
-            return ctx.reply("You are not a member of the required channel.");
-        }
-    } catch (e) {
-        return ctx.reply("Failed to verify channel membership.");
-    }
-
-    const { error } = await supabase
-        .from("login_codes")
-        .upsert({
-            code: code,
-            user_id: userId,
-            username: ctx.from.username || "",
-            created_at: new Date().toISOString()
-        }, { onConflict: "code" });
-
-    if (error) {
-        return ctx.reply("Failed to store login code. Try again.");
-    }
-
-    return ctx.reply("Login code accepted. You can now close this chat and go back to the gallery.");
-});
-
 bot.on("channel_post", async (ctx) => {
     const msg = ctx.update.channel_post;
     if (!msg.chat) return;
@@ -250,6 +215,41 @@ bot.use(async (ctx, next) => {
         });
     }
     return next();
+});
+
+bot.command("login", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+    const code = ctx.message.text.split(" ")[1];
+    if (!code) return ctx.reply("Usage: /login <code>\nGet the code from the gallery page.");
+
+    const userId = ctx.from.id;
+    const chatId = process.env.CHANNEL_ID;
+
+    try {
+        const memberUrl = `https://api.telegram.org/bot${process.env.KIRA_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${userId}`;
+        const memberResp = await fetch(memberUrl);
+        const memberData = await memberResp.json();
+        if (!memberData.ok || ["left", "kicked"].includes(memberData.result?.status)) {
+            return ctx.reply("You are not a member of the required channel.");
+        }
+    } catch (e) {
+        return ctx.reply("Failed to verify channel membership.");
+    }
+
+    const { error } = await supabase
+        .from("login_codes")
+        .upsert({
+            code: code,
+            user_id: userId,
+            username: ctx.from.username || "",
+            created_at: new Date().toISOString()
+        }, { onConflict: "code" });
+
+    if (error) {
+        return ctx.reply("Failed to store login code. Try again.");
+    }
+
+    return ctx.reply("Login code accepted. You can now close this chat and go back to the gallery.");
 });
 
 bot.command("owner", async (ctx) => {
