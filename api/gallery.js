@@ -1,11 +1,15 @@
-import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export default async function handler(req, res) {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const path = url.pathname.replace(/^\/api\/gallery\/?/, "");
+    const action = req.query.action;
 
-    if (path === "auth" && req.method === "POST") {
+    if (action === "auth" && req.method === "POST") {
         const { code, redirect_uri } = req.body;
         if (!code || !redirect_uri) {
             res.status(400).json({ error: "Missing code or redirect_uri" });
@@ -58,7 +62,7 @@ export default async function handler(req, res) {
         return;
     }
 
-    if (path === "media" && req.method === "GET") {
+    if (action === "media" && req.method === "GET") {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
             res.status(401).json({ error: "Unauthorized" });
@@ -72,25 +76,46 @@ export default async function handler(req, res) {
             res.status(401).json({ error: "Invalid token" });
             return;
         }
+
         const channelId = process.env.CHANNEL_ID;
-        const listKey = "media:" + channelId + ":list";
-        const hashKey = "media:" + channelId;
         const limit = parseInt(req.query.limit) || 50;
-        const cursor = parseInt(req.query.cursor) || 0;
-        const ids = await kv.zrange(listKey, cursor, cursor + limit - 1, { rev: true });
-        const items = [];
-        for (const id of ids) {
-            const raw = await kv.hget(hashKey, id);
-            if (raw) items.push(JSON.parse(raw));
+        const page = parseInt(req.query.cursor) || 0;
+        const from = page * limit;
+        const to = from + limit - 1;
+
+        const { data: items, error } = await supabase
+            .from("gallery_media")
+            .select("*")
+            .eq("channel_id", channelId)
+            .order("date", { ascending: false })
+            .range(from, to);
+
+        if (error) {
+            res.status(500).json({ error: "Database error" });
+            return;
         }
-        const nextCursor = ids.length === limit ? cursor + limit : null;
-        res.json({ items, nextCursor });
+
+        const nextCursor = items.length === limit ? page + 1 : null;
+        const cleanItems = items.map(item => ({
+            id: item.message_id,
+            file_id: item.file_id,
+            file_unique_id: item.file_unique_id,
+            type: item.type,
+            mime_type: item.mime_type,
+            caption: item.caption,
+            date: item.date,
+        }));
+
+        res.json({ items: cleanItems, nextCursor });
         return;
     }
 
-    const fileMatch = path.match(/^file\/(.+)$/);
-    if (fileMatch && req.method === "GET") {
-        const fileId = fileMatch[1];
+    if (action === "file" && req.method === "GET") {
+        const fileId = req.query.file_id;
+        if (!fileId) {
+            res.status(400).json({ error: "Missing file_id" });
+            return;
+        }
         const fileUrl = `https://api.telegram.org/bot${process.env.KIRA_TOKEN}/getFile?file_id=${fileId}`;
         const tgResp = await fetch(fileUrl);
         const tgData = await tgResp.json();
