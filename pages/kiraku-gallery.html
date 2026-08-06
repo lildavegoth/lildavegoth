@@ -103,7 +103,7 @@
             if (code && state && state === savedState) {
                 localStorage.removeItem("oauth_state");
                 window.history.replaceState({}, document.title, window.location.pathname);
-                const resp = await fetch(API_BASE + "/auth", {
+                const resp = await fetch(API_BASE + "?action=auth", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
@@ -121,7 +121,7 @@
                 return;
             }
             if (token) {
-                const resp = await fetch(API_BASE + "/media?limit=1", {
+                const resp = await fetch(API_BASE + "?action=media&limit=1", {
                     headers: { "Authorization": "Bearer " + token }
                 });
                 if (resp.status === 401) {
@@ -150,10 +150,9 @@
         });
 
         async function loadMedia() {
-            const url = new URL(API_BASE + "/media", window.location.origin);
-            url.searchParams.set("limit", "30");
-            if (cursor !== null) url.searchParams.set("cursor", cursor);
-            const resp = await fetch(url, {
+            const params = new URLSearchParams({ action: "media", limit: "30" });
+            if (cursor !== null) params.set("cursor", cursor);
+            const resp = await fetch(API_BASE + "?" + params.toString(), {
                 headers: { "Authorization": "Bearer " + token }
             });
             const data = await resp.json();
@@ -165,7 +164,7 @@
             data.items.forEach(item => {
                 const card = document.createElement("div");
                 card.className = "card";
-                const fileUrl = API_BASE + "/file/" + item.file_id;
+                const fileUrl = API_BASE + "?action=file&file_id=" + item.file_id;
                 if (item.type === "photo") {
                     const img = document.createElement("img");
                     img.src = fileUrl;
