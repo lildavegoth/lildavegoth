@@ -12,23 +12,34 @@ export default async function handler(req, res) {
             return;
         }
 
-        const tokenUrl = "https://oauth.telegram.org/auth/get";
-        const resp = await fetch(tokenUrl, {
+        const tokenUrl = "https://oauth.telegram.org/auth/token";
+        const bodyParams = new URLSearchParams();
+        bodyParams.append("grant_type", "authorization_code");
+        bodyParams.append("client_id", process.env.CLIENT_ID);
+        bodyParams.append("client_secret", process.env.CLIENT_SECRET);
+        bodyParams.append("code", code);
+        bodyParams.append("redirect_uri", redirect_uri);
+
+        const tokenResp = await fetch(tokenUrl, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                bot_id: process.env.CLIENT_ID,
-                client_secret: process.env.CLIENT_SECRET,
-                code,
-                redirect_uri,
-            }),
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: bodyParams.toString(),
         });
-        const data = await resp.json();
-        if (!data.ok || !data.result || !data.result.user) {
-            res.status(403).json({ error: "Invalid code" });
+        const tokenData = await tokenResp.json();
+
+        if (!tokenData.id_token) {
+            res.status(403).json({ error: "Invalid code or token exchange failed" });
             return;
         }
-        const userId = data.result.user.id;
+
+        const idTokenParts = tokenData.id_token.split(".");
+        if (idTokenParts.length !== 3) {
+            res.status(403).json({ error: "Invalid id_token" });
+            return;
+        }
+        const payload = JSON.parse(Buffer.from(idTokenParts[1], "base64").toString("utf8"));
+        const userId = payload.sub;
+
         const chatId = process.env.CHANNEL_ID;
         const memberUrl = `https://api.telegram.org/bot${process.env.KIRA_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${userId}`;
         const memberResp = await fetch(memberUrl);
@@ -37,8 +48,9 @@ export default async function handler(req, res) {
             res.status(403).json({ error: "Not a member" });
             return;
         }
+
         const token = jwt.sign(
-            { userId, username: data.result.user.username || "" },
+            { userId, username: payload.username || "" },
             process.env.JWT_SECRET,
             { expiresIn: "7d" }
         );
