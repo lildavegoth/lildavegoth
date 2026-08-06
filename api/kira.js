@@ -17,6 +17,64 @@ const supabase = createClient(
 const bot = new Bot(process.env.KIRA_TOKEN);
 await bot.init();
 
+bot.on("channel_post", async (ctx) => {
+    const msg = ctx.update.channel_post;
+    if (!msg.chat) return;
+    const channelId = msg.chat.id.toString();
+    if (channelId !== process.env.CHANNEL_ID) return;
+
+    const messageId = msg.message_id;
+    const date = msg.date;
+    let fileId = null;
+    let fileUniqueId = null;
+    let type = null;
+    let mimeType = null;
+
+    if (msg.photo) {
+        const last = msg.photo[msg.photo.length - 1];
+        fileId = last.file_id;
+        fileUniqueId = last.file_unique_id;
+        type = "photo";
+    } else if (msg.video) {
+        fileId = msg.video.file_id;
+        fileUniqueId = msg.video.file_unique_id;
+        type = "video";
+        mimeType = msg.video.mime_type || "";
+    } else if (msg.audio) {
+        fileId = msg.audio.file_id;
+        fileUniqueId = msg.audio.file_unique_id;
+        type = "audio";
+        mimeType = msg.audio.mime_type || "";
+    } else if (msg.voice) {
+        fileId = msg.voice.file_id;
+        fileUniqueId = msg.voice.file_unique_id;
+        type = "voice";
+    } else if (msg.document) {
+        fileId = msg.document.file_id;
+        fileUniqueId = msg.document.file_unique_id;
+        type = "document";
+        mimeType = msg.document.mime_type || "";
+    }
+
+    if (!fileId) return;
+
+    const { error } = await supabase
+        .from("gallery_media")
+        .upsert({
+            channel_id: channelId,
+            message_id: messageId,
+            file_id: fileId,
+            file_unique_id: fileUniqueId,
+            type,
+            mime_type: mimeType,
+            caption: msg.caption || "",
+            date,
+        }, { onConflict: "channel_id, message_id" });
+
+    if (error) {
+    }
+});
+
 try {
     const { data: restartRow, error: restartErr } = await supabase
         .from("bot_config")
