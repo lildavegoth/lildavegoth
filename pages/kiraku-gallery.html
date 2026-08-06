@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #111;
+            color: #eee;
+        }
+        #login-container {
+            text-align: center;
+            margin-top: 100px;
+        }
+        #gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .card {
+            background: #222;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .card img,
+        .card video {
+            width: 100%;
+            display: block;
+        }
+        .card audio {
+            width: 100%;
+        }
+        .card a {
+            color: #8af;
+            text-decoration: none;
+            padding: 8px;
+            display: block;
+        }
+        #load-more {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 24px;
+            background: #333;
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-container">
+        <h2>Login with Telegram</h2>
+        <div id="telegram-login"></div>
+    </div>
+    <div id="gallery" style="display:none;"></div>
+    <button id="load-more" style="display:none;">Load more</button>
+
+    <script>
+        const BOT_USERNAME = "YourBotUsername";
+        const API_BASE = "/api/gallery";
+        let token = localStorage.getItem("tg_token");
+        let cursor = null;
+
+        if (token) {
+            showGallery();
+        } else {
+            loadTelegramWidget();
+        }
+
+        function loadTelegramWidget() {
+            const script = document.createElement("script");
+            script.src = "https://telegram.org/js/telegram-widget.js?22";
+            script.async = true;
+            script.setAttribute("data-telegram-login", BOT_USERNAME);
+            script.setAttribute("data-size", "large");
+            script.setAttribute("data-onauth", "onTelegramAuth(user)");
+            script.setAttribute("data-request-access", "write");
+            document.getElementById("telegram-login").appendChild(script);
+        }
+
+        window.onTelegramAuth = async function(user) {
+            const resp = await fetch(API_BASE + "/auth", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(user)
+            });
+            const data = await resp.json();
+            if (data.token) {
+                localStorage.setItem("tg_token", data.token);
+                token = data.token;
+                showGallery();
+            } else {
+                alert("Access denied. Make sure you are a member of the channel.");
+            }
+        };
+
+        function showGallery() {
+            document.getElementById("login-container").style.display = "none";
+            document.getElementById("gallery").style.display = "grid";
+            document.getElementById("load-more").style.display = "block";
+            loadMedia();
+            document.getElementById("load-more").addEventListener("click", loadMedia);
+        }
+
+        async function loadMedia() {
+            const url = new URL(API_BASE + "/media", window.location.origin);
+            url.searchParams.set("limit", "30");
+            if (cursor !== null) url.searchParams.set("cursor", cursor);
+            const resp = await fetch(url, {
+                headers: { "Authorization": "Bearer " + token }
+            });
+            const data = await resp.json();
+            if (!data.items || data.items.length === 0) {
+                document.getElementById("load-more").style.display = "none";
+                return;
+            }
+            const gallery = document.getElementById("gallery");
+            data.items.forEach(item => {
+                const card = document.createElement("div");
+                card.className = "card";
+                const fileUrl = API_BASE + "/file/" + item.file_id;
+                if (item.type === "photo") {
+                    const img = document.createElement("img");
+                    img.src = fileUrl;
+                    img.loading = "lazy";
+                    card.appendChild(img);
+                } else if (item.type === "video") {
+                    const video = document.createElement("video");
+                    video.src = fileUrl;
+                    video.controls = true;
+                    card.appendChild(video);
+                } else if (item.type === "audio" || item.type === "voice") {
+                    const audio = document.createElement("audio");
+                    audio.src = fileUrl;
+                    audio.controls = true;
+                    card.appendChild(audio);
+                } else {
+                    const a = document.createElement("a");
+                    a.href = fileUrl;
+                    a.target = "_blank";
+                    a.textContent = "View file";
+                    card.appendChild(a);
+                }
+                gallery.appendChild(card);
+            });
+            cursor = data.nextCursor;
+            if (!cursor) {
+                document.getElementById("load-more").style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
