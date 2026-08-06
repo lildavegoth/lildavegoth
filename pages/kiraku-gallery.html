@@ -16,6 +16,15 @@
             text-align: center;
             margin-top: 100px;
         }
+        #login-btn {
+            background: #2AABEE;
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
         #gallery {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -56,49 +65,53 @@
 <body>
     <div id="login-container">
         <h2>Login with Telegram</h2>
-        <div id="telegram-login"></div>
+        <button id="login-btn">Login via Telegram</button>
     </div>
     <div id="gallery" style="display:none;"></div>
     <button id="load-more" style="display:none;">Load more</button>
 
     <script>
-        const BOT_USERNAME = "purekira_bot";
+        const CLIENT_ID = "8611480465";
+        const REDIRECT_URI = window.location.origin + "/";
         const API_BASE = "/api/gallery";
         let token = localStorage.getItem("tg_token");
         let cursor = null;
 
-        if (token) {
-            showGallery();
-        } else {
-            loadTelegramWidget();
+        function generateState() {
+            const state = Math.random().toString(36).substring(2, 15);
+            localStorage.setItem("oauth_state", state);
+            return state;
         }
 
-        function loadTelegramWidget() {
-            const script = document.createElement("script");
-            script.src = "https://telegram.org/js/telegram-widget.js?22";
-            script.async = true;
-            script.setAttribute("data-telegram-login", BOT_USERNAME);
-            script.setAttribute("data-size", "large");
-            script.setAttribute("data-onauth", "onTelegramAuth(user)");
-            script.setAttribute("data-request-access", "write");
-            document.getElementById("telegram-login").appendChild(script);
-        }
+        async function checkAuth() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get("code");
+            const state = params.get("state");
+            const savedState = localStorage.getItem("oauth_state");
 
-        window.onTelegramAuth = async function(user) {
-            const resp = await fetch(API_BASE + "/auth", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(user)
-            });
-            const data = await resp.json();
-            if (data.token) {
-                localStorage.setItem("tg_token", data.token);
-                token = data.token;
-                showGallery();
-            } else {
-                alert("Access denied. Make sure you are a member of the channel.");
+            if (code && state && state === savedState) {
+                localStorage.removeItem("oauth_state");
+                window.history.replaceState({}, document.title, window.location.pathname);
+                const resp = await fetch(API_BASE + "/auth", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
+                });
+                const data = await resp.json();
+                if (data.token) {
+                    localStorage.setItem("tg_token", data.token);
+                    token = data.token;
+                    showGallery();
+                } else {
+                    alert("Login failed or you are not a member of the channel.");
+                    document.getElementById("login-container").style.display = "block";
+                }
+                return;
             }
-        };
+            if (token) {
+                showGallery();
+            }
+        }
 
         function showGallery() {
             document.getElementById("login-container").style.display = "none";
@@ -107,6 +120,12 @@
             loadMedia();
             document.getElementById("load-more").addEventListener("click", loadMedia);
         }
+
+        document.getElementById("login-btn").addEventListener("click", () => {
+            const state = generateState();
+            const authUrl = `https://oauth.telegram.org/auth?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=openid&state=${state}`;
+            window.location.href = authUrl;
+        });
 
         async function loadMedia() {
             const url = new URL(API_BASE + "/media", window.location.origin);
@@ -154,6 +173,8 @@
                 document.getElementById("load-more").style.display = "none";
             }
         }
+
+        checkAuth();
     </script>
 </body>
 </html>
