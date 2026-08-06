@@ -6,29 +6,21 @@ export default async function handler(req, res) {
     const path = url.pathname.replace(/^\/api\/gallery\/?/, "");
 
     if (path === "auth" && req.method === "POST") {
-        const { code, redirect_uri } = req.body;
-        if (!code || !redirect_uri) {
-            res.status(400).json({ error: "Missing code or redirect_uri" });
+        const { hash, ...data } = req.body;
+        const secret = crypto
+            .createHash("sha256")
+            .update(process.env.KIRA_TOKEN)
+            .digest();
+        const checkString = Object.keys(data)
+            .sort()
+            .map((k) => `${k}=${data[k]}`)
+            .join("\n");
+        const hmac = crypto.createHmac("sha256", secret).update(checkString).digest("hex");
+        if (hmac !== hash) {
+            res.status(403).json({ error: "Invalid hash" });
             return;
         }
-
-        const tokenUrl = "https://oauth.telegram.org/auth/get";
-        const resp = await fetch(tokenUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                bot_id: process.env.CLIENT_ID,
-                client_secret: process.env.CLIENT_SECRET,
-                code,
-                redirect_uri,
-            }),
-        });
-        const data = await resp.json();
-        if (!data.ok || !data.result || !data.result.user) {
-            res.status(403).json({ error: "Invalid code" });
-            return;
-        }
-        const userId = data.result.user.id;
+        const userId = data.id;
         const chatId = process.env.CHANNEL_ID;
         const memberUrl = `https://api.telegram.org/bot${process.env.KIRA_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${userId}`;
         const memberResp = await fetch(memberUrl);
@@ -38,7 +30,7 @@ export default async function handler(req, res) {
             return;
         }
         const token = jwt.sign(
-            { userId, username: data.result.user.username || "" },
+            { userId, username: data.username || "" },
             process.env.JWT_SECRET,
             { expiresIn: "7d" }
         );
