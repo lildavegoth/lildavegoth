@@ -75,23 +75,38 @@ export default async function handler(req, res) {
         return res.json({ items: cleanItems, nextCursor });
     }
 
-    if (action === "file" && req.method === "GET") {
-        const fileId = req.query.file_id;
-        if (!fileId) return res.status(400).json({ error: "Missing file_id" });
+if (action === "file" && req.method === "GET") {
+    const fileId = req.query.file_id;
+    if (!fileId) {
+        return res.status(400).json({ error: "Missing file_id" });
+    }
 
+    if (!process.env.KIRA_TOKEN) {
+        return res.status(500).json({ error: "Server misconfiguration: missing KIRA_TOKEN" });
+    }
+
+    try {
         const fileUrl = `https://api.telegram.org/bot${process.env.KIRA_TOKEN}/getFile?file_id=${fileId}`;
         const tgResp = await fetch(fileUrl);
+        if (!tgResp.ok) {
+            return res.status(404).end();
+        }
         const tgData = await tgResp.json();
-        if (!tgData.ok) return res.status(404).end();
-
+        if (!tgData.ok) {
+            return res.status(404).end();
+        }
         const filePath = tgData.result.file_path;
         const downloadUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${filePath}`;
         const fileResp = await fetch(downloadUrl);
+        if (!fileResp.ok) {
+            return res.status(502).end();
+        }
+
         res.setHeader("Content-Type", fileResp.headers.get("content-type") || "application/octet-stream");
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
         fileResp.body.pipe(res);
-        return;
+    } catch (err) {
+        return res.status(500).json({ error: "File proxy error: " + err.message });
     }
-
-    return res.status(404).json({ error: "Not found" });
+    return;
 }
