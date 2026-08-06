@@ -56,7 +56,10 @@ bot.on("channel_post", async (ctx) => {
         mimeType = msg.document.mime_type || "";
     }
 
-    if (!fileId) return;
+    if (!fileId) {
+        await ctx.api.sendMessage(process.env.OWNER_TELEGRAM_ID, "New post without media in gallery channel, ignoring.");
+        return;
+    }
 
     const { error } = await supabase
         .from("gallery_media")
@@ -72,6 +75,9 @@ bot.on("channel_post", async (ctx) => {
         }, { onConflict: "channel_id, message_id" });
 
     if (error) {
+        await ctx.api.sendMessage(process.env.OWNER_TELEGRAM_ID, "FAILED to store gallery media: " + error.message);
+    } else {
+        await ctx.api.sendMessage(process.env.OWNER_TELEGRAM_ID, `Stored ${type} from channel post ${messageId}`);
     }
 });
 
