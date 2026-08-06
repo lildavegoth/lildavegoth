@@ -25,6 +25,10 @@
             font-size: 16px;
             cursor: pointer;
         }
+        #error-msg {
+            color: #ff6b6b;
+            margin-top: 16px;
+        }
         #gallery {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -66,6 +70,7 @@
     <div id="login-container">
         <h2>Login with Telegram</h2>
         <button id="login-btn">Login via Telegram</button>
+        <div id="error-msg"></div>
     </div>
     <div id="gallery" style="display:none;"></div>
     <button id="load-more" style="display:none;">Load more</button>
@@ -81,6 +86,12 @@
             const state = Math.random().toString(36).substring(2, 15);
             localStorage.setItem("oauth_state", state);
             return state;
+        }
+
+        function showError(msg) {
+            const el = document.getElementById("error-msg");
+            el.textContent = msg;
+            el.style.display = "block";
         }
 
         async function checkAuth() {
@@ -103,13 +114,23 @@
                     token = data.token;
                     showGallery();
                 } else {
-                    alert("Login failed or you are not a member of the channel.");
+                    showError(data.error || "Unknown error. Are you a member of the channel?");
                     document.getElementById("login-container").style.display = "block";
                 }
                 return;
             }
             if (token) {
-                showGallery();
+                const resp = await fetch(API_BASE + "/media?limit=1", {
+                    headers: { "Authorization": "Bearer " + token }
+                });
+                if (resp.status === 401) {
+                    localStorage.removeItem("tg_token");
+                    token = null;
+                    document.getElementById("login-container").style.display = "block";
+                    showError("Session expired. Please login again.");
+                } else {
+                    showGallery();
+                }
             }
         }
 
