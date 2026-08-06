@@ -52,14 +52,17 @@ bot.on("channel_post", async (ctx) => {
     } else if (msg.document) {
         fileId = msg.document.file_id;
         fileUniqueId = msg.document.file_unique_id;
-        type = "document";
         mimeType = msg.document.mime_type || "";
+        if (mimeType.startsWith("image/")) {
+            type = "photo";      // treat image documents as photos
+        } else if (mimeType.startsWith("video/")) {
+            type = "video";      // treat video documents as videos
+        } else {
+            type = "document";
+        }
     }
 
-    if (!fileId) {
-        await ctx.api.sendMessage(process.env.OWNER_TELEGRAM_ID, "New post without media in gallery channel, ignoring.");
-        return;
-    }
+    if (!fileId) return;
 
     const { error } = await supabase
         .from("gallery_media")
