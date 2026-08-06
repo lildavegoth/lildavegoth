@@ -220,20 +220,26 @@ bot.use(async (ctx, next) => {
 bot.command("login", async (ctx) => {
     if (ctx.chat.type !== "private") return;
     const code = ctx.message.text.split(" ")[1];
-    if (!code) return ctx.reply("Usage: /login <code>\nGet the code from the gallery page.");
+    if (!code) return ctx.reply("Usage: /login <code>");
 
     const userId = ctx.from.id;
     const chatId = process.env.CHANNEL_ID;
 
+    if (!chatId) {
+        return ctx.reply("ERROR: CHANNEL_ID environment variable is not set.");
+    }
+
+    const memberUrl = `https://api.telegram.org/bot${process.env.KIRA_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${userId}`;
     try {
-        const memberUrl = `https://api.telegram.org/bot${process.env.KIRA_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${userId}`;
         const memberResp = await fetch(memberUrl);
         const memberData = await memberResp.json();
+        await ctx.reply("DEBUG:\nChannel ID used: " + chatId + "\nAPI response: " + JSON.stringify(memberData, null, 2));
+
         if (!memberData.ok || ["left", "kicked"].includes(memberData.result?.status)) {
             return ctx.reply("You are not a member of the required channel.");
         }
     } catch (e) {
-        return ctx.reply("Failed to verify channel membership.");
+        return ctx.reply("Network error: " + e.message);
     }
 
     const { error } = await supabase
@@ -246,10 +252,10 @@ bot.command("login", async (ctx) => {
         }, { onConflict: "code" });
 
     if (error) {
-        return ctx.reply("Failed to store login code. Try again.");
+        return ctx.reply("Failed to store login code: " + error.message);
     }
 
-    return ctx.reply("Login code accepted. You can now close this chat and go back to the gallery.");
+    return ctx.reply("Login code accepted.");
 });
 
 bot.command("owner", async (ctx) => {
