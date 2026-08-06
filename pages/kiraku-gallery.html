@@ -16,18 +16,17 @@
             text-align: center;
             margin-top: 100px;
         }
-        #login-btn {
-            background: #2AABEE;
-            color: white;
-            border: none;
-            padding: 12px 28px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
+        #login-code {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 12px;
+            background: #333;
+            border-radius: 6px;
+            display: inline-block;
         }
-        #error-msg {
-            color: #ff6b6b;
-            margin-top: 16px;
+        #login-instructions {
+            margin: 10px 0 20px;
         }
         #gallery {
             display: grid;
@@ -69,93 +68,55 @@
 <body>
     <div id="login-container">
         <h2>Login with Telegram</h2>
-        <button id="login-btn">Login via Telegram</button>
-        <div id="error-msg"></div>
+        <p id="login-instructions">Send this code to <strong>@purekira_bot</strong> in a private chat:</p>
+        <div id="login-code"></div>
+        <p>Waiting for confirmation...</p>
     </div>
     <div id="gallery" style="display:none;"></div>
     <button id="load-more" style="display:none;">Load more</button>
 
     <script>
-        const CLIENT_ID = "8611480465";
-        const REDIRECT_URI = "https://kakoi-kiraku-home.vercel.app/pages/kiraku-gallery.html";
         const API_BASE = "/api/gallery";
         let token = localStorage.getItem("tg_token");
         let cursor = null;
 
-        function generateState() {
-            const state = Math.random().toString(36).substring(2, 15);
-            localStorage.setItem("oauth_state", state);
-            return state;
+        async function checkToken() {
+            if (!token) return false;
+            const resp = await fetch(API_BASE + "?action=media&limit=1", {
+                headers: { "Authorization": "Bearer " + token }
+            });
+            return resp.status === 200;
         }
 
-        function showError(msg) {
-            const el = document.getElementById("error-msg");
-            el.textContent = msg;
-            el.style.display = "block";
+        function generateLoginCode() {
+            return Math.random().toString(36).substring(2, 10);
         }
 
-        async function checkAuth() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get("code");
-            const state = urlParams.get("state");
-            const savedState = localStorage.getItem("oauth_state");
+        async function pollLogin(code) {
+            const resp = await fetch(API_BASE + "?action=poll&code=" + code);
+            if (resp.status === 404) return null;
+            const data = await resp.json();
+            return data.token || null;
+        }
 
-            if (code && state && state === savedState) {
-                localStorage.removeItem("oauth_state");
-                window.history.replaceState({}, document.title, window.location.pathname);
-
-                let resp;
-                try {
-                    resp = await fetch(API_BASE + "?action=auth", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
-                    });
-                } catch (e) {
-                    alert("Network error during auth: " + e.message);
-                    return;
-                }
-
-                let data;
-                try {
-                    data = await resp.json();
-                } catch (e) {
-                    alert("Auth endpoint did not return JSON. Status: " + resp.status + ". Check server logs.");
-                    return;
-                }
-
-                if (data.token) {
-                    localStorage.setItem("tg_token", data.token);
-                    token = data.token;
-                    showGallery();
-                } else {
-                    alert("Login failed. Server response: " + JSON.stringify(data, null, 2));
-                    showError(data.error || "Unknown error. Are you a member of the channel?");
-                    document.getElementById("login-container").style.display = "block";
-                }
+        async function init() {
+            if (token && (await checkToken())) {
+                showGallery();
                 return;
             }
+            document.getElementById("login-container").style.display = "block";
+            const code = generateLoginCode();
+            document.getElementById("login-code").textContent = code;
 
-            if (token) {
-                let resp;
-                try {
-                    resp = await fetch(API_BASE + "?action=media&limit=1", {
-                        headers: { "Authorization": "Bearer " + token }
-                    });
-                } catch (e) {
-                    alert("Network error checking token: " + e.message);
-                    return;
-                }
-
-                if (resp.status === 401) {
-                    localStorage.removeItem("tg_token");
-                    token = null;
-                    document.getElementById("login-container").style.display = "block";
-                    showError("Session expired. Please login again.");
-                } else {
+            const interval = setInterval(async () => {
+                const newToken = await pollLogin(code);
+                if (newToken) {
+                    clearInterval(interval);
+                    localStorage.setItem("tg_token", newToken);
+                    token = newToken;
                     showGallery();
                 }
-            }
+            }, 2000);
         }
 
         function showGallery() {
@@ -166,38 +127,17 @@
             document.getElementById("load-more").addEventListener("click", loadMedia);
         }
 
-        document.getElementById("login-btn").addEventListener("click", () => {
-            const state = generateState();
-            const authUrl = `https://oauth.telegram.org/auth?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=openid&state=${state}`;
-            window.location.href = authUrl;
-        });
-
         async function loadMedia() {
             const params = new URLSearchParams({ action: "media", limit: "30" });
             if (cursor !== null) params.set("cursor", cursor);
-            let resp;
-            try {
-                resp = await fetch(API_BASE + "?" + params.toString(), {
-                    headers: { "Authorization": "Bearer " + token }
-                });
-            } catch (e) {
-                alert("Network error loading media: " + e.message);
-                return;
-            }
-
-            let data;
-            try {
-                data = await resp.json();
-            } catch (e) {
-                alert("Media endpoint returned non-JSON. Status: " + resp.status);
-                return;
-            }
-
+            const resp = await fetch(API_BASE + "?" + params.toString(), {
+                headers: { "Authorization": "Bearer " + token }
+            });
+            const data = await resp.json();
             if (!data.items || data.items.length === 0) {
                 document.getElementById("load-more").style.display = "none";
                 return;
             }
-
             const gallery = document.getElementById("gallery");
             data.items.forEach(item => {
                 const card = document.createElement("div");
@@ -233,7 +173,7 @@
             }
         }
 
-        checkAuth();
+        init();
     </script>
 </body>
 </html>
