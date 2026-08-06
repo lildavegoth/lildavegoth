@@ -95,35 +95,58 @@
         }
 
         async function checkAuth() {
-            const params = new URLSearchParams(window.location.search);
-            const code = params.get("code");
-            const state = params.get("state");
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get("code");
+            const state = urlParams.get("state");
             const savedState = localStorage.getItem("oauth_state");
 
             if (code && state && state === savedState) {
                 localStorage.removeItem("oauth_state");
                 window.history.replaceState({}, document.title, window.location.pathname);
-                const resp = await fetch(API_BASE + "?action=auth", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
-                });
-                const data = await resp.json();
+
+                let resp;
+                try {
+                    resp = await fetch(API_BASE + "?action=auth", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
+                    });
+                } catch (e) {
+                    alert("Network error during auth: " + e.message);
+                    return;
+                }
+
+                let data;
+                try {
+                    data = await resp.json();
+                } catch (e) {
+                    alert("Auth endpoint did not return JSON. Status: " + resp.status + ". Check server logs.");
+                    return;
+                }
+
                 if (data.token) {
                     localStorage.setItem("tg_token", data.token);
                     token = data.token;
                     showGallery();
                 } else {
-                    alert("Auth failed. Server says: " + JSON.stringify(data));
+                    alert("Login failed. Server response: " + JSON.stringify(data, null, 2));
                     showError(data.error || "Unknown error. Are you a member of the channel?");
                     document.getElementById("login-container").style.display = "block";
                 }
                 return;
             }
+
             if (token) {
-                const resp = await fetch(API_BASE + "?action=media&limit=1", {
-                    headers: { "Authorization": "Bearer " + token }
-                });
+                let resp;
+                try {
+                    resp = await fetch(API_BASE + "?action=media&limit=1", {
+                        headers: { "Authorization": "Bearer " + token }
+                    });
+                } catch (e) {
+                    alert("Network error checking token: " + e.message);
+                    return;
+                }
+
                 if (resp.status === 401) {
                     localStorage.removeItem("tg_token");
                     token = null;
@@ -152,14 +175,29 @@
         async function loadMedia() {
             const params = new URLSearchParams({ action: "media", limit: "30" });
             if (cursor !== null) params.set("cursor", cursor);
-            const resp = await fetch(API_BASE + "?" + params.toString(), {
-                headers: { "Authorization": "Bearer " + token }
-            });
-            const data = await resp.json();
+            let resp;
+            try {
+                resp = await fetch(API_BASE + "?" + params.toString(), {
+                    headers: { "Authorization": "Bearer " + token }
+                });
+            } catch (e) {
+                alert("Network error loading media: " + e.message);
+                return;
+            }
+
+            let data;
+            try {
+                data = await resp.json();
+            } catch (e) {
+                alert("Media endpoint returned non-JSON. Status: " + resp.status);
+                return;
+            }
+
             if (!data.items || data.items.length === 0) {
                 document.getElementById("load-more").style.display = "none";
                 return;
             }
+
             const gallery = document.getElementById("gallery");
             data.items.forEach(item => {
                 const card = document.createElement("div");
