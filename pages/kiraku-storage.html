@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="../media.css">
     <script src="../ui-icons.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/telegram@2.26.16/dist/telegram.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/telegram@2.26.16/dist/telegram.min.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -61,14 +61,6 @@
         button {
             border: 0;
             cursor: pointer;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: var(--spacing-md);
-            position: relative;
-            min-height: calc(100vh - 90px);
         }
 
         .app {
@@ -482,7 +474,8 @@
         }
 
         .delete-button,
-        .edit-button {
+        .edit-button,
+        .move-button {
             padding: 7px 9px;
             color: #ff6b6b;
             background: transparent;
@@ -490,11 +483,13 @@
         }
 
         .delete-button:hover,
-        .edit-button:hover {
+        .edit-button:hover,
+        .move-button:hover {
             background: rgba(255, 107, 107, 0.1);
         }
 
-        .edit-button {
+        .edit-button,
+        .move-button {
             color: var(--accent-color);
         }
 
@@ -772,7 +767,7 @@
                     <i class="fa-solid fa-desktop"></i>
                 </button>
                 <button class="version-button" type="button">
-                    v3.0
+                    v4.0
                     <span class="version-dot"></span>
                 </button>
             </div>
@@ -792,7 +787,7 @@
 
             <div class="sidebar-separator"></div>
 
-            <span class="example-label">Organize with hashtags</span>
+            <span class="example-label">Single channel storage</span>
 
             <div class="category-title">
                 <h2 class="section-title">Example</h2>
@@ -801,19 +796,19 @@
             <div class="example-list">
                 <div class="example-folder">
                     <i class="fa-solid fa-folder"></i>
-                    <span>#General</span>
+                    <span>Folder One</span>
                 </div>
                 <div class="example-folder">
                     <i class="fa-solid fa-folder"></i>
-                    <span>#Work</span>
+                    <span>Folder Two</span>
                 </div>
                 <div class="example-folder">
                     <i class="fa-solid fa-folder"></i>
-                    <span>#Personal</span>
+                    <span>Folder Three</span>
                 </div>
                 <div class="example-folder">
                     <i class="fa-solid fa-folder"></i>
-                    <span>#Ideas</span>
+                    <span>Folder Four</span>
                 </div>
             </div>
 
@@ -836,9 +831,9 @@
 
             <section class="empty-state" id="emptyState">
                 <div class="empty-card">
-                    <div class="logo">TG</div>
+                    <div class="logo">KS</div>
                     <h1>Kiraku Storage</h1>
-                    <p>Advanced Saved Messages organizer using real Telegram Cloud.</p>
+                    <p>Organize your files in a single Telegram channel.</p>
                     <div class="login-form" id="loginForm">
                         <input class="field" id="apiId" placeholder="API ID" autocomplete="off">
                         <input class="field" id="apiHash" placeholder="API Hash" autocomplete="off">
@@ -863,6 +858,12 @@
                                 Submit Password
                             </button>
                         </div>
+                        <div id="channelGroup" class="hidden">
+                            <input class="field" id="channelInput" placeholder="Channel ID or @username" autocomplete="off">
+                            <button class="primary-button" id="saveChannelButton" type="button">
+                                Save Channel
+                            </button>
+                        </div>
                         <button class="secondary-button hidden" id="cancelLoginButton" type="button">
                             Cancel
                         </button>
@@ -878,9 +879,13 @@
                         <p id="folderMeta">Loading...</p>
                     </div>
                     <div class="workspace-actions">
-                        <button class="primary-button" id="addNoteButton" type="button">
+                        <button class="primary-button" id="uploadButton" type="button">
+                            <i class="fa-solid fa-upload"></i>
+                            Upload File
+                        </button>
+                        <button class="secondary-button" id="addNoteButton" type="button">
                             <i class="fa-solid fa-plus"></i>
-                            Add note
+                            Add Note
                         </button>
                         <button class="secondary-button" id="disconnectButton" type="button">
                             <i class="fa-solid fa-right-from-bracket"></i>
@@ -889,6 +894,7 @@
                     </div>
                 </header>
                 <div class="items" id="items"></div>
+                <input type="file" id="fileInput" class="hidden">
             </section>
         </main>
     </div>
@@ -896,7 +902,7 @@
     <dialog class="modal" id="folderModal">
         <form id="folderForm">
             <h2>New folder</h2>
-            <input class="field" id="folderName" maxlength="40" placeholder="Folder name (will become #hashtag)" autocomplete="off" required>
+            <input class="field" id="folderName" maxlength="40" placeholder="Folder name" autocomplete="off" required>
             <div class="modal-actions">
                 <button type="button" id="cancelFolder">Cancel</button>
                 <button class="primary-button" type="submit">Create</button>
@@ -909,11 +915,23 @@
             <h2 id="noteModalTitle">Add note</h2>
             <input class="field" id="noteTitle" maxlength="80" placeholder="Title" autocomplete="off">
             <textarea class="field" id="noteText" maxlength="5000" placeholder="Text" required></textarea>
-            <input type="hidden" id="noteMessageId">
+            <input type="hidden" id="noteItemId">
             <input type="hidden" id="noteFolder">
             <div class="modal-actions">
                 <button type="button" id="cancelNote">Cancel</button>
                 <button class="primary-button" type="submit">Save</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog class="modal" id="moveModal">
+        <form id="moveForm">
+            <h2>Move to folder</h2>
+            <select class="field" id="moveFolderSelect" required></select>
+            <input type="hidden" id="moveItemId">
+            <div class="modal-actions">
+                <button type="button" id="cancelMove">Cancel</button>
+                <button class="primary-button" type="submit">Move</button>
             </div>
         </form>
     </dialog>
@@ -931,12 +949,14 @@
     </div>
 
     <script>
-        const tgSessionKey = 'tgstorage-session';
+        const dbName = 'kiraku-storage';
+        let db;
         let client = null;
         let currentUser = null;
-        let messages = [];
-        let folders = ['general'];
-        let selectedFolder = 'general';
+        let channelId = null;
+        let folders = [];
+        let files = [];
+        let selectedFolder = null;
         let phoneCodeHash = '';
         let phoneNumber = '';
 
@@ -954,14 +974,18 @@
             items: document.getElementById('items'),
             folderModal: document.getElementById('folderModal'),
             noteModal: document.getElementById('noteModal'),
+            moveModal: document.getElementById('moveModal'),
             folderForm: document.getElementById('folderForm'),
             noteForm: document.getElementById('noteForm'),
+            moveForm: document.getElementById('moveForm'),
             folderName: document.getElementById('folderName'),
             noteTitle: document.getElementById('noteTitle'),
             noteText: document.getElementById('noteText'),
-            noteMessageId: document.getElementById('noteMessageId'),
+            noteItemId: document.getElementById('noteItemId'),
             noteFolder: document.getElementById('noteFolder'),
             noteModalTitle: document.getElementById('noteModalTitle'),
+            moveFolderSelect: document.getElementById('moveFolderSelect'),
+            moveItemId: document.getElementById('moveItemId'),
             loginForm: document.getElementById('loginForm'),
             apiId: document.getElementById('apiId'),
             apiHash: document.getElementById('apiHash'),
@@ -973,62 +997,167 @@
             passwordGroup: document.getElementById('passwordGroup'),
             password: document.getElementById('password'),
             passwordButton: document.getElementById('passwordButton'),
+            channelGroup: document.getElementById('channelGroup'),
+            channelInput: document.getElementById('channelInput'),
+            saveChannelButton: document.getElementById('saveChannelButton'),
             cancelLoginButton: document.getElementById('cancelLoginButton'),
             loginNote: document.getElementById('loginNote'),
             guideButton: document.getElementById('guideButton'),
+            uploadButton: document.getElementById('uploadButton'),
+            addNoteButton: document.getElementById('addNoteButton'),
+            disconnectButton: document.getElementById('disconnectButton'),
+            fileInput: document.getElementById('fileInput'),
             universalPopup: document.getElementById('universalPopup'),
             popupTitle: document.getElementById('popupTitle'),
             popupContent: document.getElementById('popupContent')
         };
 
         function escapeHtml(value) {
-            return String(value).replace(/[&<>"']/g, character => {
-                const entities = {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#039;'
-                };
-                return entities[character];
+            return String(value).replace(/[&<>"']/g, char => {
+                const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+                return entities[char];
             });
         }
 
-        function extractHashtags(text) {
-            const matches = text.match(/#[\w]+/g) || [];
-            return matches.map(tag => tag.substring(1).toLowerCase());
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(dbName, 1);
+                req.onupgradeneeded = event => {
+                    db = event.target.result;
+                    if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', { keyPath: 'key' });
+                    if (!db.objectStoreNames.contains('folders')) db.createObjectStore('folders', { keyPath: 'id' });
+                    if (!db.objectStoreNames.contains('files')) db.createObjectStore('files', { keyPath: 'id' });
+                };
+                req.onsuccess = event => { db = event.target.result; resolve(); };
+                req.onerror = event => reject(event.target.error);
+            });
         }
 
-        function getFolderFromText(text) {
-            const tags = extractHashtags(text);
-            if (tags.length > 0) {
-                const knownFolder = folders.find(folder => folder !== 'general' && tags.includes(folder));
-                if (knownFolder) return knownFolder;
-                return 'general';
-            }
-            return 'general';
+        async function dbGet(storeName, key) {
+            const tx = db.transaction(storeName, 'readonly');
+            const store = tx.objectStore(storeName);
+            const req = store.get(key);
+            return new Promise((resolve, reject) => {
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
         }
 
-        function getTitleAndBody(text) {
-            const lines = text.split('\n');
-            if (lines.length > 1) {
-                const title = lines[0].replace(/^#\w+\s*/, '');
-                const body = lines.slice(1).join('\n');
-                return { title, body };
-            }
-            return { title: '', body: text.replace(/^#\w+\s*/, '') };
+        async function dbPut(storeName, value) {
+            const tx = db.transaction(storeName, 'readwrite');
+            const store = tx.objectStore(storeName);
+            store.put(value);
+            return new Promise((resolve, reject) => {
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
         }
 
-        function formatNoteText(title, text, folder) {
-            let folderTag = '';
-            if (folder && folder !== 'general') {
-                folderTag = '#' + folder + ' ';
+        async function dbDelete(storeName, key) {
+            const tx = db.transaction(storeName, 'readwrite');
+            const store = tx.objectStore(storeName);
+            store.delete(key);
+            return new Promise((resolve, reject) => {
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function dbGetAll(storeName) {
+            const tx = db.transaction(storeName, 'readonly');
+            const store = tx.objectStore(storeName);
+            const req = store.getAll();
+            return new Promise((resolve, reject) => {
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function loadFromDB() {
+            await openDB();
+            const channelSetting = await dbGet('settings', 'channel');
+            if (channelSetting) channelId = channelSetting.value;
+            folders = await dbGetAll('folders');
+            files = await dbGetAll('files');
+            if (folders.length === 0) {
+                selectedFolder = null;
+            } else {
+                selectedFolder = folders[0].id;
             }
-            return (title ? title + '\n' : '') + (text || '');
+        }
+
+        async function saveChannelToDB(id) {
+            channelId = id;
+            await dbPut('settings', { key: 'channel', value: id });
+        }
+
+        async function addFolderToDB(folder) {
+            folders.push(folder);
+            await dbPut('folders', folder);
+        }
+
+        async function deleteFolderFromDB(folderId) {
+            folders = folders.filter(f => f.id !== folderId);
+            await dbDelete('folders', folderId);
+            files = files.filter(f => f.folderId !== folderId);
+            for (const f of files) await dbDelete('files', f.id);
+        }
+
+        async function addFileToDB(file) {
+            files.push(file);
+            await dbPut('files', file);
+        }
+
+        async function updateFileFolder(fileId, newFolderId) {
+            const file = files.find(f => f.id === fileId);
+            if (file) {
+                file.folderId = newFolderId;
+                await dbPut('files', file);
+            }
+        }
+
+        async function deleteFileFromDB(fileId) {
+            files = files.filter(f => f.id !== fileId);
+            await dbDelete('files', fileId);
+        }
+
+        function getFolderById(id) {
+            return folders.find(f => f.id === id) || null;
+        }
+
+        function getFilesForFolder(folderId) {
+            return files.filter(f => f.folderId === folderId);
+        }
+
+        function showLogin() {
+            elements.emptyState.classList.remove('hidden');
+            elements.workspace.classList.add('hidden');
+            elements.loginForm.classList.remove('hidden');
+            elements.codeGroup.classList.add('hidden');
+            elements.passwordGroup.classList.add('hidden');
+            elements.channelGroup.classList.add('hidden');
+            elements.cancelLoginButton.classList.add('hidden');
+            elements.loginNote.textContent = 'Enter your Telegram API credentials and phone number. We never store passwords or codes. Session is stored locally in your browser.';
+        }
+
+        function showChannelSetup() {
+            elements.emptyState.classList.remove('hidden');
+            elements.workspace.classList.add('hidden');
+            elements.loginForm.classList.add('hidden');
+            elements.channelGroup.classList.remove('hidden');
+            elements.cancelLoginButton.classList.remove('hidden');
+            elements.loginNote.textContent = 'You are logged in. Now enter your Telegram channel ID or username where all files will be stored.';
+        }
+
+        function showWorkspace() {
+            elements.emptyState.classList.add('hidden');
+            elements.workspace.classList.remove('hidden');
+            render();
         }
 
         async function initClient() {
-            const session = localStorage.getItem(tgSessionKey);
+            await loadFromDB();
+            const session = localStorage.getItem('tgSessionKey');
             if (!session) {
                 showLogin();
                 return;
@@ -1038,7 +1167,7 @@
                 const apiId = parseInt(localStorage.getItem('tgApiId'));
                 const apiHash = localStorage.getItem('tgApiHash');
                 if (!apiId || !apiHash) {
-                    localStorage.removeItem(tgSessionKey);
+                    localStorage.removeItem('tgSessionKey');
                     showLogin();
                     return;
                 }
@@ -1046,208 +1175,19 @@
                 client = new TelegramClient(new TelegramSession(session), apiId, apiHash, { connectionRetries: 2 });
                 await client.connect();
                 currentUser = await client.getMe();
-                await loadMessages();
-                showWorkspace();
+                if (channelId) {
+                    showWorkspace();
+                } else {
+                    showChannelSetup();
+                }
             } catch (error) {
-                localStorage.removeItem(tgSessionKey);
+                localStorage.removeItem('tgSessionKey');
                 showLogin();
                 alert('Session expired or invalid. Please login again.');
             }
         }
 
-        function showLogin() {
-            elements.emptyState.classList.remove('hidden');
-            elements.workspace.classList.add('hidden');
-            elements.loginForm.classList.remove('hidden');
-            elements.codeGroup.classList.add('hidden');
-            elements.passwordGroup.classList.add('hidden');
-            elements.cancelLoginButton.classList.add('hidden');
-            elements.loginNote.textContent = 'Enter your Telegram API credentials and phone number. We never store passwords or codes. Session is stored locally in your browser.';
-        }
-
-        function showWorkspace() {
-            elements.emptyState.classList.add('hidden');
-            elements.workspace.classList.remove('hidden');
-            render();
-        }
-
-        async function loadMessages() {
-            if (!client || !currentUser) return;
-
-            const result = await client.getMessages('me', { limit: 100 });
-            messages = result.filter(msg => msg.message && !msg.media).map(msg => ({
-                id: msg.id,
-                text: msg.message,
-                date: msg.date
-            }));
-
-            const hashtags = new Set();
-            messages.forEach(msg => {
-                const tags = extractHashtags(msg.text);
-                tags.forEach(tag => hashtags.add(tag));
-            });
-
-            folders = ['general', ...Array.from(hashtags).filter(tag => tag !== 'general')];
-            if (!folders.includes(selectedFolder)) {
-                selectedFolder = 'general';
-            }
-            render();
-        }
-
-        function renderFolders() {
-            elements.folderList.innerHTML = folders.map(folder => {
-                const active = folder === selectedFolder ? 'active' : '';
-                const count = messages.filter(msg => getFolderFromText(msg.text) === folder).length;
-                const countHtml = count ? `<span class="folder-count">${count}</span>` : '';
-                return `
-                    <button class="folder-item ${active}" type="button" data-folder="${folder}">
-                        <span class="folder-icon">
-                            <i class="fa-solid fa-folder"></i>
-                        </span>
-                        <span class="folder-name">${escapeHtml(folder.charAt(0).toUpperCase() + folder.slice(1))}</span>
-                        ${countHtml}
-                    </button>
-                `;
-            }).join('');
-
-            elements.folderList.querySelectorAll('[data-folder]').forEach(button => {
-                button.addEventListener('click', () => {
-                    selectedFolder = button.dataset.folder;
-                    render();
-                    closeSidebar();
-                });
-            });
-
-            elements.selection.textContent = selectedFolder.charAt(0).toUpperCase() + selectedFolder.slice(1);
-        }
-
-        function renderWorkspace() {
-            const folderMessages = messages.filter(msg => getFolderFromText(msg.text) === selectedFolder);
-
-            elements.folderTitle.textContent = selectedFolder.charAt(0).toUpperCase() + selectedFolder.slice(1);
-            elements.mobileTitle.textContent = selectedFolder.charAt(0).toUpperCase() + selectedFolder.slice(1);
-            elements.folderMeta.textContent = folderMessages.length
-                ? `${folderMessages.length} item${folderMessages.length === 1 ? '' : 's'}`
-                : 'Empty';
-
-            if (!folderMessages.length) {
-                elements.items.innerHTML = `
-                    <div class="empty-folder">
-                        <i class="fa-regular fa-folder-open"></i>
-                        <div>No saved messages in this folder.</div>
-                    </div>
-                `;
-                return;
-            }
-
-            elements.items.innerHTML = folderMessages.map(msg => {
-                const { title, body } = getTitleAndBody(msg.text);
-                return `
-                    <article class="item">
-                        ${title ? `<div class="item-title">${escapeHtml(title)}</div>` : ''}
-                        <div class="item-text">${escapeHtml(body)}</div>
-                        <div class="item-footer">
-                            <button class="edit-button" type="button" data-message-id="${msg.id}">
-                                <i class="fa-solid fa-pen"></i>
-                                Edit
-                            </button>
-                            <button class="delete-button" type="button" data-message-id="${msg.id}">
-                                <i class="fa-solid fa-trash"></i>
-                                Delete
-                            </button>
-                        </div>
-                    </article>
-                `;
-            }).join('');
-
-            elements.items.querySelectorAll('.edit-button').forEach(button => {
-                button.addEventListener('click', () => {
-                    const messageId = Number(button.dataset.messageId);
-                    const msg = messages.find(m => m.id === messageId);
-                    if (msg) {
-                        const { title, body } = getTitleAndBody(msg.text);
-                        elements.noteModalTitle.textContent = 'Edit note';
-                        elements.noteTitle.value = title;
-                        elements.noteText.value = body;
-                        elements.noteMessageId.value = messageId;
-                        elements.noteFolder.value = getFolderFromText(msg.text);
-                        elements.noteModal.showModal();
-                    }
-                });
-            });
-
-            elements.items.querySelectorAll('.delete-button').forEach(button => {
-                button.addEventListener('click', async () => {
-                    const messageId = Number(button.dataset.messageId);
-                    if (confirm('Delete this message?')) {
-                        try {
-                            await client.deleteMessages('me', [messageId], { revoke: true });
-                            messages = messages.filter(m => m.id !== messageId);
-                            render();
-                        } catch (error) {
-                            alert('Failed to delete message: ' + error.message);
-                        }
-                    }
-                });
-            });
-        }
-
-        function render() {
-            renderFolders();
-            renderWorkspace();
-        }
-
-        function closeSidebar() {
-            elements.sidebar.classList.remove('open');
-            elements.sidebarOverlay.classList.remove('open');
-        }
-
-        function openSidebar() {
-            elements.sidebar.classList.add('open');
-            elements.sidebarOverlay.classList.add('open');
-        }
-
-        function openGuidePopup() {
-            const guideHTML = `
-                <h3>Welcome to Kiraku Storage</h3>
-                <p>This app allows you to organize your Telegram Saved Messages into folders using hashtags.</p>
-                <h3>Setup Instructions</h3>
-                <ul>
-                    <li>Go to <strong>my.telegram.org</strong> and log in with your Telegram account.</li>
-                    <li>Click on <strong>API development tools</strong> and fill out the form if required.</li>
-                    <li>You will receive an <strong>API ID</strong> and <strong>API Hash</strong>. Enter them in the login form above.</li>
-                    <li>Enter your phone number in international format (e.g., +1234567890).</li>
-                    <li>Click <strong>Send Code</strong>. Telegram will send a verification code to your app or SMS.</li>
-                    <li>Enter the code, and if you have two-step verification enabled, enter your password.</li>
-                    <li>After login, your Saved Messages will be loaded and organized by hashtags.</li>
-                </ul>
-                <h3>How to Use</h3>
-                <ul>
-                    <li>Create a new folder by clicking the <strong>+</strong> button in the sidebar. The folder name will become a hashtag (e.g., "Work" becomes #Work).</li>
-                    <li>Add a note by clicking <strong>Add note</strong>. Use the folder selector (the selected folder is pre-filled) or type a hashtag manually in the text (e.g., #Work).</li>
-                    <li>Notes are stored as messages in your Telegram Saved Messages. The first line becomes the title, and the rest becomes the body.</li>
-                    <li>Edit or delete notes directly from the interface. Changes are synced to Telegram.</li>
-                    <li>Click <strong>Logout</strong> to disconnect and remove the session from this browser.</li>
-                </ul>
-                <h3>Important Notes</h3>
-                <ul>
-                    <li>Your API credentials and session are stored only in your browser's local storage. We do not have a server.</li>
-                    <li>Never share your API credentials or session with anyone.</li>
-                    <li>This app uses the GramJS library to interact with Telegram. It is a third-party library but runs entirely on your device.</li>
-                </ul>
-            `;
-            elements.popupTitle.textContent = 'Guide';
-            elements.popupContent.innerHTML = guideHTML;
-            elements.universalPopup.style.display = 'flex';
-        }
-
-        function closeUniversalPopup() {
-            elements.universalPopup.style.display = 'none';
-        }
-
-        elements.guideButton.addEventListener('click', openGuidePopup);
-
-        elements.sendCodeButton.addEventListener('click', async () => {
+        async function sendCode() {
             const apiId = parseInt(elements.apiId.value.trim());
             const apiHash = elements.apiHash.value.trim();
             phoneNumber = elements.phoneNumber.value.trim();
@@ -1272,9 +1212,9 @@
                 alert('Failed to send code: ' + error.message);
                 client = null;
             }
-        });
+        }
 
-        elements.loginButton.addEventListener('click', async () => {
+        async function loginWithCode() {
             const code = elements.phoneCode.value.trim();
             if (!code) {
                 alert('Please enter the code.');
@@ -1297,9 +1237,9 @@
                     alert('Login failed: ' + error.message);
                 }
             }
-        });
+        }
 
-        elements.passwordButton.addEventListener('click', async () => {
+        async function loginWithPassword() {
             const password = elements.password.value;
             if (!password) {
                 alert('Please enter your password.');
@@ -1316,35 +1256,319 @@
             } catch (error) {
                 alert('Password verification failed: ' + error.message);
             }
-        });
-
-        elements.cancelLoginButton.addEventListener('click', () => {
-            if (client) {
-                client.disconnect();
-                client = null;
-            }
-            showLogin();
-        });
+        }
 
         async function afterLogin() {
             const session = client.session.save();
-            localStorage.setItem(tgSessionKey, session);
+            localStorage.setItem('tgSessionKey', session);
             currentUser = await client.getMe();
-            await loadMessages();
-            showWorkspace();
+            if (channelId) {
+                showWorkspace();
+            } else {
+                showChannelSetup();
+            }
         }
 
-        elements.disconnectButton.addEventListener('click', async () => {
+        async function saveChannel() {
+            const channel = elements.channelInput.value.trim();
+            if (!channel) {
+                alert('Please enter a channel ID or username.');
+                return;
+            }
+
+            try {
+                await saveChannelToDB(channel);
+                showWorkspace();
+            } catch (error) {
+                alert('Failed to save channel: ' + error.message);
+            }
+        }
+
+        async function logout() {
             if (client) {
                 await client.disconnect();
                 client = null;
             }
-            localStorage.removeItem(tgSessionKey);
-            messages = [];
-            folders = ['general'];
-            selectedFolder = 'general';
+            localStorage.removeItem('tgSessionKey');
+            channelId = null;
+            folders = [];
+            files = [];
+            selectedFolder = null;
+            await dbDelete('settings', 'channel');
+            showLogin();
+        }
+
+        async function createFolder(name) {
+            try {
+                const sent = await client.sendMessage(channelId, { message: name });
+                const folder = {
+                    id: sent.id.toString(),
+                    name: name,
+                    messageId: sent.id
+                };
+                await addFolderToDB(folder);
+                selectedFolder = folder.id;
+                render();
+            } catch (error) {
+                alert('Failed to create folder: ' + error.message);
+            }
+        }
+
+        async function uploadFile(file) {
+            if (!selectedFolder) {
+                alert('Please select a folder first.');
+                return;
+            }
+            try {
+                const sent = await client.sendFile(channelId, { file, caption: '' });
+                const fileRecord = {
+                    id: sent.id.toString(),
+                    folderId: selectedFolder,
+                    messageId: sent.id,
+                    type: 'file',
+                    fileName: file.name,
+                    fileSize: file.size,
+                    mimeType: file.type || 'application/octet-stream'
+                };
+                await addFileToDB(fileRecord);
+                render();
+            } catch (error) {
+                alert('Failed to upload file: ' + error.message);
+            }
+        }
+
+        async function saveNote(title, text, folderId, itemId) {
+            try {
+                let finalText = title ? title + '\n' + text : text;
+                if (itemId) {
+                    const fileRecord = files.find(f => f.id === itemId);
+                    if (fileRecord) {
+                        await client.editMessage(channelId, {
+                            message: fileRecord.messageId,
+                            text: finalText
+                        });
+                        fileRecord.text = finalText;
+                        fileRecord.fileName = title || 'Note';
+                        await dbPut('files', fileRecord);
+                    }
+                } else {
+                    const sent = await client.sendMessage(channelId, { message: finalText });
+                    const fileRecord = {
+                        id: sent.id.toString(),
+                        folderId: folderId,
+                        messageId: sent.id,
+                        type: 'text',
+                        text: finalText,
+                        fileName: title || 'Note'
+                    };
+                    await addFileToDB(fileRecord);
+                }
+                render();
+            } catch (error) {
+                alert('Failed to save note: ' + error.message);
+            }
+        }
+
+        async function deleteItem(itemId) {
+            const item = files.find(f => f.id === itemId);
+            if (!item) return;
+            if (confirm('Delete this item?')) {
+                try {
+                    await client.deleteMessages(channelId, [item.messageId], { revoke: true });
+                    await deleteFileFromDB(itemId);
+                    render();
+                } catch (error) {
+                    alert('Failed to delete item: ' + error.message);
+                }
+            }
+        }
+
+        async function moveItem(itemId, newFolderId) {
+            if (itemId === newFolderId) return;
+            await updateFileFolder(itemId, newFolderId);
+            render();
+        }
+
+        function renderFolders() {
+            elements.folderList.innerHTML = folders.map(folder => {
+                const active = folder.id === selectedFolder ? 'active' : '';
+                const count = getFilesForFolder(folder.id).length;
+                return `
+                    <button class="folder-item ${active}" type="button" data-folder-id="${folder.id}">
+                        <span class="folder-icon"><i class="fa-solid fa-folder"></i></span>
+                        <span class="folder-name">${escapeHtml(folder.name)}</span>
+                        <span class="folder-count">${count}</span>
+                    </button>
+                `;
+            }).join('');
+
+            elements.folderList.querySelectorAll('[data-folder-id]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectedFolder = btn.dataset.folderId;
+                    render();
+                    closeSidebar();
+                });
+            });
+
+            const selFolder = getFolderById(selectedFolder);
+            elements.selection.textContent = selFolder ? selFolder.name : 'None';
+        }
+
+        function renderWorkspace() {
+            if (!selectedFolder) {
+                elements.folderTitle.textContent = 'No folder';
+                elements.folderMeta.textContent = 'Create a folder first';
+                elements.items.innerHTML = `<div class="empty-folder"><i class="fa-regular fa-folder-open"></i><div>No folders created.</div></div>`;
+                return;
+            }
+
+            const folder = getFolderById(selectedFolder);
+            if (!folder) {
+                selectedFolder = folders[0]?.id || null;
+                if (!selectedFolder) {
+                    renderWorkspace();
+                    return;
+                }
+                renderFolders();
+                renderWorkspace();
+                return;
+            }
+
+            elements.folderTitle.textContent = folder.name;
+            elements.mobileTitle.textContent = folder.name;
+            const folderFiles = getFilesForFolder(selectedFolder);
+            elements.folderMeta.textContent = folderFiles.length
+                ? `${folderFiles.length} item${folderFiles.length === 1 ? '' : 's'}`
+                : 'Empty';
+
+            if (!folderFiles.length) {
+                elements.items.innerHTML = `<div class="empty-folder"><i class="fa-regular fa-folder-open"></i><div>No files in this folder.</div></div>`;
+                return;
+            }
+
+            elements.items.innerHTML = folderFiles.map(item => {
+                if (item.type === 'text') {
+                    return `
+                        <article class="item">
+                            <div class="item-title">${escapeHtml(item.fileName || 'Note')}</div>
+                            <div class="item-text">${escapeHtml(item.text || '')}</div>
+                            <div class="item-footer">
+                                <button class="edit-button" data-item-id="${item.id}"><i class="fa-solid fa-pen"></i> Edit</button>
+                                <button class="move-button" data-item-id="${item.id}"><i class="fa-solid fa-arrow-right"></i> Move</button>
+                                <button class="delete-button" data-item-id="${item.id}"><i class="fa-solid fa-trash"></i> Delete</button>
+                            </div>
+                        </article>
+                    `;
+                } else {
+                    return `
+                        <article class="item">
+                            <div class="item-title">${escapeHtml(item.fileName || 'File')}</div>
+                            <div class="item-text">Size: ${(item.fileSize / 1024).toFixed(1)} KB</div>
+                            <div class="item-footer">
+                                <button class="move-button" data-item-id="${item.id}"><i class="fa-solid fa-arrow-right"></i> Move</button>
+                                <button class="delete-button" data-item-id="${item.id}"><i class="fa-solid fa-trash"></i> Delete</button>
+                            </div>
+                        </article>
+                    `;
+                }
+            }).join('');
+
+            elements.items.querySelectorAll('.edit-button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const itemId = btn.dataset.itemId;
+                    const item = files.find(f => f.id === itemId);
+                    if (item && item.type === 'text') {
+                        const lines = item.text.split('\n');
+                        elements.noteModalTitle.textContent = 'Edit note';
+                        elements.noteTitle.value = lines[0] || '';
+                        elements.noteText.value = lines.slice(1).join('\n') || '';
+                        elements.noteItemId.value = itemId;
+                        elements.noteFolder.value = item.folderId;
+                        elements.noteModal.showModal();
+                    }
+                });
+            });
+
+            elements.items.querySelectorAll('.move-button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const itemId = btn.dataset.itemId;
+                    elements.moveItemId.value = itemId;
+                    elements.moveFolderSelect.innerHTML = folders
+                        .filter(f => f.id !== itemId)
+                        .map(f => `<option value="${f.id}">${escapeHtml(f.name)}</option>`)
+                        .join('');
+                    elements.moveModal.showModal();
+                });
+            });
+
+            elements.items.querySelectorAll('.delete-button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    deleteItem(btn.dataset.itemId);
+                });
+            });
+        }
+
+        function render() {
+            renderFolders();
+            renderWorkspace();
+        }
+
+        function closeSidebar() {
+            elements.sidebar.classList.remove('open');
+            elements.sidebarOverlay.classList.remove('open');
+        }
+
+        function openSidebar() {
+            elements.sidebar.classList.add('open');
+            elements.sidebarOverlay.classList.add('open');
+        }
+
+        function openGuidePopup() {
+            const guideHTML = `
+                <h3>Welcome to Kiraku Storage</h3>
+                <p>This app organizes all your files in a single Telegram channel.</p>
+                <h3>Setup Instructions</h3>
+                <ul>
+                    <li>Go to <strong>my.telegram.org</strong> and log in.</li>
+                    <li>Click <strong>API development tools</strong> and get your <strong>API ID</strong> and <strong>API Hash</strong>.</li>
+                    <li>Enter those credentials and your phone number above, then click Send Code.</li>
+                    <li>After login, enter your Telegram channel ID or username (e.g., @myChannel).</li>
+                    <li>All files and folder markers will be sent to that channel.</li>
+                </ul>
+                <h3>Using Folders</h3>
+                <ul>
+                    <li>Create a folder by clicking the <strong>+</strong> button.</li>
+                    <li>Each folder is represented by a text message in the channel containing the folder name.</li>
+                    <li>Upload files into the currently selected folder.</li>
+                    <li>Move files between folders using the Move button – only the database is updated, not the channel message.</li>
+                </ul>
+                <h3>Important</h3>
+                <ul>
+                    <li>Your API credentials and session are stored only in your browser.</li>
+                    <li>Never share your API credentials or session.</li>
+                    <li>If you delete a file from the app, it will also be removed from the channel.</li>
+                </ul>
+            `;
+            elements.popupTitle.textContent = 'Guide';
+            elements.popupContent.innerHTML = guideHTML;
+            elements.universalPopup.style.display = 'flex';
+        }
+
+        function closeUniversalPopup() {
+            elements.universalPopup.style.display = 'none';
+        }
+
+        elements.guideButton.addEventListener('click', openGuidePopup);
+        elements.sendCodeButton.addEventListener('click', sendCode);
+        elements.loginButton.addEventListener('click', loginWithCode);
+        elements.passwordButton.addEventListener('click', loginWithPassword);
+        elements.saveChannelButton.addEventListener('click', saveChannel);
+        elements.cancelLoginButton.addEventListener('click', () => {
+            if (client) { client.disconnect(); client = null; }
             showLogin();
         });
+
+        elements.disconnectButton.addEventListener('click', logout);
 
         elements.newFolderButton.addEventListener('click', () => {
             elements.folderName.value = '';
@@ -1354,80 +1578,65 @@
 
         elements.folderForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const name = elements.folderName.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+            const name = elements.folderName.value.trim();
             if (!name) return;
-            if (folders.includes(name)) {
-                alert('Folder already exists.');
-                return;
-            }
-            folders.push(name);
-            selectedFolder = name;
+            await createFolder(name);
             elements.folderModal.close();
-            render();
+        });
+
+        elements.uploadButton.addEventListener('click', () => {
+            elements.fileInput.click();
+        });
+
+        elements.fileInput.addEventListener('change', async () => {
+            const file = elements.fileInput.files[0];
+            if (file) {
+                await uploadFile(file);
+                elements.fileInput.value = '';
+            }
         });
 
         elements.addNoteButton.addEventListener('click', () => {
+            if (!selectedFolder) {
+                alert('Please create a folder first.');
+                return;
+            }
             elements.noteModalTitle.textContent = 'Add note';
             elements.noteTitle.value = '';
             elements.noteText.value = '';
-            elements.noteMessageId.value = '';
+            elements.noteItemId.value = '';
             elements.noteFolder.value = selectedFolder;
             elements.noteModal.showModal();
-            elements.noteTitle.focus();
         });
 
         elements.noteForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const title = elements.noteTitle.value.trim();
             const text = elements.noteText.value.trim();
-            const folder = elements.noteFolder.value || selectedFolder;
-            const messageId = elements.noteMessageId.value;
-
-            if (!text) {
-                alert('Text cannot be empty.');
-                return;
-            }
-
-            const finalText = formatNoteText(title, text, folder);
-
-            try {
-                if (messageId) {
-                    await client.editMessage('me', {
-                        message: parseInt(messageId),
-                        text: finalText
-                    });
-                    const msgIndex = messages.findIndex(m => m.id === parseInt(messageId));
-                    if (msgIndex !== -1) {
-                        messages[msgIndex].text = finalText;
-                    }
-                } else {
-                    const sent = await client.sendMessage('me', { message: finalText });
-                    messages.unshift({
-                        id: sent.id,
-                        text: finalText,
-                        date: sent.date
-                    });
-                }
-
-                elements.noteModal.close();
-                await loadMessages();
-                render();
-            } catch (error) {
-                alert('Failed to save note: ' + error.message);
-            }
-        });
-
-        elements.cancelFolder.addEventListener('click', () => {
-            elements.folderModal.close();
-        });
-
-        elements.cancelNote.addEventListener('click', () => {
+            const folderId = elements.noteFolder.value || selectedFolder;
+            const itemId = elements.noteItemId.value;
+            if (!text) { alert('Text cannot be empty.'); return; }
+            await saveNote(title, text, folderId, itemId);
             elements.noteModal.close();
         });
 
+        elements.moveForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const itemId = elements.moveItemId.value;
+            const newFolderId = elements.moveFolderSelect.value;
+            await moveItem(itemId, newFolderId);
+            elements.moveModal.close();
+        });
+
+        elements.cancelFolder.addEventListener('click', () => elements.folderModal.close());
+        elements.cancelNote.addEventListener('click', () => elements.noteModal.close());
+        elements.cancelMove.addEventListener('click', () => elements.moveModal.close());
+
         elements.clearSelection.addEventListener('click', () => {
-            selectedFolder = 'general';
-            render();
+            if (folders.length) {
+                selectedFolder = folders[0].id;
+                render();
+            }
         });
 
         elements.accountButton.addEventListener('click', () => {
@@ -1439,7 +1648,7 @@
         });
 
         elements.settingsButton.addEventListener('click', () => {
-            alert('Settings: API credentials are stored locally. Session is encrypted with GramJS.');
+            alert('Settings: API credentials and session are stored locally.');
         });
 
         elements.devicesButton.addEventListener('click', () => {
@@ -1454,9 +1663,7 @@
         elements.sidebarOverlay.addEventListener('click', closeSidebar);
 
         window.addEventListener('resize', () => {
-            if (window.innerWidth > 760) {
-                closeSidebar();
-            }
+            if (window.innerWidth > 760) closeSidebar();
         });
 
         initClient();
