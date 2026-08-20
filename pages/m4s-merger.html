@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +8,8 @@
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
     <script src="../ui-icons.js"></script>
+    <script src="/scripts/ffmpeg/ffmpeg.min.js"></script>
+    <title>M4S Merger Tool - Merge Video and Audio Streams</title>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -25,6 +27,20 @@
             --spacing-md: 24px;
             --spacing-lg: 32px;
             --spacing-xl: 48px;
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-300: #cbd5e1;
+            --slate-400: #94a3b8;
+            --slate-500: #64748b;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+            --slate-950: #020617;
+            --brand-500: #0ea5e9;
+            --brand-600: #0284c7;
+            --brand-400: #38bdf8;
         }
 
         * {
@@ -33,14 +49,19 @@
             box-sizing: border-box;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
         }
 
         body {
-            background-color: var(--bg-black);
-            color: var(--text-primary);
+            background-color: var(--slate-950);
+            color: var(--slate-200);
             min-height: 100vh;
             overflow-x: hidden;
             padding-bottom: 90px;
+            font-synthesis: none;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         .container {
@@ -49,199 +70,967 @@
             padding: var(--spacing-md);
             position: relative;
             min-height: calc(100vh - 90px);
-        }
-
-        .card {
-            background-color: var(--bg-card);
-            border-radius: var(--radius-medium);
-            padding: var(--spacing-md);
-            margin-bottom: var(--spacing-md);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: var(--spacing-sm);
-            color: var(--accent-color);
-        }
-
-        .subtitle {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin-bottom: var(--spacing-md);
-        }
-
-        .file-input-group {
             display: flex;
             flex-direction: column;
-            gap: var(--spacing-sm);
-            margin-bottom: var(--spacing-md);
+            align-items: center;
+            padding-top: var(--spacing-xl);
         }
 
-        .file-label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-bottom: var(--spacing-xs);
-        }
-
-        input[type="file"] {
-            display: block;
+        .header {
             width: 100%;
-            padding: var(--spacing-xs) var(--spacing-sm);
-            background-color: var(--bg-dark);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: var(--radius-small);
-            color: var(--text-primary);
-            font-size: 0.9rem;
+            max-width: 1024px;
+            margin-bottom: var(--spacing-xl);
+            position: relative;
+            z-index: 10;
+            text-align: center;
         }
 
-        button {
-            background-color: var(--accent-color);
-            color: var(--bg-black);
+        .theme-toggle-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px;
+            border-radius: 16px;
+            background-color: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(8px);
+        }
+
+        .theme-toggle button {
+            background: none;
             border: none;
-            border-radius: var(--radius-small);
-            padding: var(--spacing-sm) var(--spacing-md);
-            font-size: 1rem;
-            font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s;
-            margin-top: var(--spacing-sm);
-        }
-
-        button:hover {
-            background-color: var(--accent-dark);
-        }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .status {
-            margin-top: var(--spacing-md);
-            padding: var(--spacing-sm);
-            border-radius: var(--radius-small);
-            background-color: var(--bg-dark);
-            min-height: 60px;
+            padding: 8px 10px;
+            border-radius: 12px;
+            color: var(--slate-400);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .theme-toggle button:hover {
+            background-color: var(--slate-800);
+            color: var(--brand-400);
+        }
+
+        .divider-vertical {
+            width: 1px;
+            height: 20px;
+            background-color: var(--slate-700);
+            margin: 0 4px;
+        }
+
+        .logo-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-md);
+            border-radius: var(--radius-medium);
+            background-color: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .logo-icon svg {
+            width: 40px;
+            height: 40px;
+            stroke: var(--brand-500);
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--slate-900);
+            margin-bottom: var(--spacing-md);
+            letter-spacing: -0.02em;
+            background: linear-gradient(to bottom, #ffffff, var(--slate-400));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.125rem;
+            color: var(--slate-400);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .main-card {
+            width: 100%;
+            max-width: 1024px;
+            background-color: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(51, 65, 85, 0.8);
+            border-radius: 24px;
+            padding: var(--spacing-xl);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            position: relative;
+            z-index: 10;
+        }
+
+        .drop-zones {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        @media (max-width: 768px) {
+            .drop-zones {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--slate-700);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            transition: all 0.2s;
+            background-color: rgba(15, 23, 42, 0.5);
+        }
+
+        .drop-zone:hover {
+            border-color: var(--slate-500);
+        }
+
+        .zone-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-sm);
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+            padding-bottom: var(--spacing-sm);
+        }
+
+        .zone-title {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .zone-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--slate-800);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--brand-500);
+        }
+
+        .zone-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .zone-name {
+            font-weight: 600;
+            color: var(--slate-200);
+        }
+
+        .zone-count {
+            font-size: 0.75rem;
+            color: var(--slate-500);
+        }
+
+        .clear-btn {
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            border-radius: 8px;
+            background-color: var(--slate-800);
+            border: 1px solid var(--slate-700);
+            color: var(--slate-400);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .clear-btn:hover {
+            background-color: var(--slate-700);
+            color: white;
+        }
+
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            background-color: rgba(2, 6, 23, 0.3);
+            border-radius: 8px;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .file-check {
+            color: var(--brand-500);
+            flex-shrink: 0;
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--slate-300);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-size {
+            font-size: 0.75rem;
+            color: var(--slate-500);
+        }
+
+        .remove-file-btn {
+            background: none;
+            border: none;
+            color: var(--slate-400);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            opacity: 0;
+        }
+
+        .file-item:hover .remove-file-btn {
+            opacity: 1;
+        }
+
+        .remove-file-btn:hover {
+            color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        .add-more {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-xs);
+            border-radius: 12px;
+            border: 1px dashed var(--slate-700);
+            background-color: rgba(15, 23, 42, 0.3);
+            font-size: 0.875rem;
+            color: var(--slate-500);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .add-more:hover {
+            color: var(--brand-400);
+            border-color: var(--brand-500);
+        }
+
+        .add-more svg {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.2s;
+        }
+
+        .add-more:hover svg {
+            transform: scale(1.1);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .progress-section {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: var(--slate-800);
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--brand-500);
+            box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
+            transition: width 0.3s ease-out;
+            border-radius: 9999px;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: row;
+            gap: var(--spacing-md);
+            align-items: center;
+            justify-content: space-between;
+            padding-top: var(--spacing-md);
+            border-top: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        .settings-display {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: 12px;
+            background-color: rgba(2, 6, 23, 0.5);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .settings-icon {
+            color: var(--slate-400);
+        }
+
+        .settings-text {
+            font-size: 1rem;
+            color: var(--slate-300);
+            font-weight: 500;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+            min-width: 160px;
+        }
+
+        .btn-secondary {
+            background-color: var(--slate-800);
+            color: var(--slate-300);
+            border: 1px solid var(--slate-700);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--slate-700);
+            color: white;
+        }
+
+        .btn-success {
+            background-color: #059669;
+            color: white;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        }
+
+        .btn-success:hover {
+            background-color: #047857;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .logs-section {
+            margin-top: var(--spacing-xl);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(51, 65, 85, 0.8);
+        }
+
+        .logs-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-sm) var(--spacing-md);
+            background-color: rgba(15, 23, 42, 0.5);
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .logs-title {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: 0.875rem;
+            font-weight: bold;
+            color: var(--slate-400);
+        }
+
+        .logs-title svg {
+            width: 16px;
+            height: 16px;
+            color: var(--brand-500);
+        }
+
+        .logs-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--slate-800);
+            border: 1px solid var(--slate-700);
+        }
+
+        .logs-body {
+            max-height: 280px;
+            overflow-y: auto;
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: 0.875rem;
+            line-height: 1.7;
+            background-color: rgba(2, 6, 23, 0.7);
+        }
+
+        .log-entry {
+            display: flex;
+            gap: var(--spacing-md);
+            padding: 2px 0;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .log-entry:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .log-time {
+            color: var(--slate-600);
+            font-family: monospace;
+            font-size: 0.75rem;
+            padding-top: 2px;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .log-message {
+            color: var(--slate-300);
             word-break: break-all;
         }
 
-        .download-link {
-            display: inline-block;
-            margin-top: var(--spacing-sm);
-            color: var(--accent-color);
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9rem;
+        .log-success {
+            color: #10b981;
         }
 
-        .download-link:hover {
-            text-decoration: underline;
+        .info-note {
+            margin-top: var(--spacing-md);
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: 12px;
+            background-color: rgba(15, 23, 42, 0.3);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            color: var(--slate-500);
+            font-size: 0.875rem;
+        }
+
+        .info-note svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            margin-top: 2px;
+            color: var(--slate-400);
+        }
+
+        .footer {
+            margin-top: var(--spacing-xl);
+            text-align: center;
+            color: var(--slate-600);
+            font-size: 0.875rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .footer-links {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .footer-links a {
+            color: var(--slate-500);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--brand-400);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="card">
-            <div class="title">M4S to MP4 Merger</div>
-            <div class="subtitle">Select video and audio M4S files, then merge them into a single MP4 file.</div>
-            <div class="file-input-group">
-                <label class="file-label" for="videoFile">Video M4S file:</label>
-                <input type="file" id="videoFile" accept=".m4s">
+        <header class="header">
+            <div class="theme-toggle-bar">
+                <div class="theme-toggle">
+                    <button id="themeSystemBtn" aria-label="System theme">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="20" height="14" x="2" y="3" rx="2"></rect>
+                            <line x1="8" x2="16" y1="21" y2="21"></line>
+                            <line x1="12" x2="12" y1="17" y2="21"></line>
+                        </svg>
+                    </button>
+                    <div class="divider-vertical"></div>
+                    <button id="themeToggleBtn" aria-label="Toggle language">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m5 8 6 6"></path>
+                            <path d="m4 14 6-6 2-3"></path>
+                            <path d="M2 5h12"></path>
+                            <path d="M7 2h1"></path>
+                            <path d="m22 22-5-10-5 10"></path>
+                            <path d="M14 18h6"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
-            <div class="file-input-group">
-                <label class="file-label" for="audioFile">Audio M4S file:</label>
-                <input type="file" id="audioFile" accept=".m4s">
+            <div class="logo-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"></path>
+                    <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"></path>
+                    <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"></path>
+                </svg>
             </div>
-            <button id="mergeBtn" disabled>Merge Files</button>
-            <div class="status" id="status">Select both files to begin.</div>
-            <div id="downloadContainer"></div>
-        </div>
+            <h1 class="title">M4S Merger GUI</h1>
+            <p class="subtitle">Merge segmented .m4s video and audio streams instantly in your browser. No installation required.</p>
+        </header>
+
+        <main class="main-card">
+            <div class="drop-zones">
+                <div class="drop-zone" id="videoZone">
+                    <input type="file" id="videoInput" accept=".m4s,.mp4" multiple>
+                    <div class="zone-header">
+                        <div class="zone-title">
+                            <div class="zone-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path>
+                                    <path d="M14 2v5a1 1 0 0 0 1 1h5"></path>
+                                    <path d="M15.033 13.44a.647.647 0 0 1 0 1.12l-4.065 2.352a.645.645 0 0 1-.968-.56v-4.704a.645.645 0 0 1 .967-.56z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="zone-name">Video Stream (.m4s)</p>
+                                <p class="zone-count" id="videoCount">0 files</p>
+                            </div>
+                        </div>
+                        <button class="clear-btn" id="clearVideoBtn">Clear</button>
+                    </div>
+                    <div class="file-list" id="videoFileList"></div>
+                    <div class="add-more" id="addVideoBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14"></path>
+                            <path d="M12 5v14"></path>
+                        </svg>
+                        <span>Add more</span>
+                    </div>
+                </div>
+
+                <div class="drop-zone" id="audioZone">
+                    <input type="file" id="audioInput" accept=".m4s,.m4a,.mp3" multiple>
+                    <div class="zone-header">
+                        <div class="zone-title">
+                            <div class="zone-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 6.835V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-.343"></path>
+                                    <path d="M14 2v5a1 1 0 0 0 1 1h5"></path>
+                                    <path d="M2 19a2 2 0 0 1 4 0v1a2 2 0 0 1-4 0v-4a6 6 0 0 1 12 0v4a2 2 0 0 1-4 0v-1a2 2 0 0 1 4 0"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="zone-name">Audio Stream (.m4s)</p>
+                                <p class="zone-count" id="audioCount">0 files</p>
+                            </div>
+                        </div>
+                        <button class="clear-btn" id="clearAudioBtn">Clear</button>
+                    </div>
+                    <div class="file-list" id="audioFileList"></div>
+                    <div class="add-more" id="addAudioBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14"></path>
+                            <path d="M12 5v14"></path>
+                        </svg>
+                        <span>Add more</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <div class="settings-display">
+                    <svg class="settings-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 17H5"></path>
+                        <path d="M19 7h-9"></path>
+                        <circle cx="17" cy="17" r="3"></circle>
+                        <circle cx="7" cy="7" r="3"></circle>
+                    </svg>
+                    <span class="settings-text">Format: Copy Codec (Fast) · Multi-segment supported</span>
+                </div>
+                <div style="display: flex; gap: var(--spacing-md); justify-content: flex-end; flex: 1;">
+                    <button class="btn btn-secondary" id="startOverBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                            <path d="M21 3v5h-5"></path>
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                            <path d="M8 16H3v5"></path>
+                        </svg>
+                        Start Over
+                    </button>
+                    <button class="btn btn-success" id="mergeBtn" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 15V3"></path>
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <path d="m7 10 5 5 5-5"></path>
+                        </svg>
+                        Merge Files
+                    </button>
+                </div>
+            </div>
+
+            <div class="logs-section">
+                <div class="logs-header">
+                    <div class="logs-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 19h8"></path>
+                            <path d="m4 17 6-6-6-6"></path>
+                        </svg>
+                        <span>PROCESS LOGS</span>
+                    </div>
+                    <div class="logs-dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+                <div class="logs-body" id="logsBody">
+                    <div class="log-entry">
+                        <span class="log-time">--:--:--</span>
+                        <span class="log-message">Ready to merge. Select files to begin.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-note">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" x2="12" y1="8" y2="12"></line>
+                    <line x1="12" x2="12.01" y1="16" y2="16"></line>
+                </svg>
+                <p>Files are processed entirely within your browser using WebAssembly. Your media is never uploaded to any server. Large files may require significant RAM.</p>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-links">
+                <span>M4S Merger GUI</span>
+                <span style="background-color: var(--slate-800); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; color: var(--slate-400);">v1.0.0</span>
+                <span>© 2026</span>
+            </div>
+            <div style="opacity: 0.7;">
+                <p>Created by <strong>Zheyuan (Max) Kong</strong></p>
+                <a href="https://github.com/MaxMiksa/M4S-Merger-Tools-Web.git" target="_blank" rel="noopener noreferrer" style="color: var(--slate-500); text-decoration: none;">https://github.com/MaxMiksa/M4S-Merger-Tools-Web.git</a>
+            </div>
+        </footer>
     </div>
 
-    <script src="scripts/ffmpeg/ffmpeg.min.js"></script>
     <script>
-        const videoInput = document.getElementById('videoFile');
-        const audioInput = document.getElementById('audioFile');
+        const videoInput = document.getElementById('videoInput');
+        const audioInput = document.getElementById('audioInput');
+        const videoFileList = document.getElementById('videoFileList');
+        const audioFileList = document.getElementById('audioFileList');
+        const videoCount = document.getElementById('videoCount');
+        const audioCount = document.getElementById('audioCount');
+        const clearVideoBtn = document.getElementById('clearVideoBtn');
+        const clearAudioBtn = document.getElementById('clearAudioBtn');
+        const addVideoBtn = document.getElementById('addVideoBtn');
+        const addAudioBtn = document.getElementById('addAudioBtn');
         const mergeBtn = document.getElementById('mergeBtn');
-        const statusDiv = document.getElementById('status');
-        const downloadContainer = document.getElementById('downloadContainer');
+        const startOverBtn = document.getElementById('startOverBtn');
+        const progressFill = document.getElementById('progressFill');
+        const logsBody = document.getElementById('logsBody');
+        const themeSystemBtn = document.getElementById('themeSystemBtn');
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
 
+        let videoFiles = [];
+        let audioFiles = [];
         let ffmpegInstance = null;
-        let videoFile = null;
-        let audioFile = null;
+
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getTime() {
+            const now = new Date();
+            return now.toTimeString().split(' ')[0];
+        }
+
+        function addLog(message, isSuccess = false) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'log-time';
+            timeSpan.textContent = getTime();
+            const msgSpan = document.createElement('span');
+            msgSpan.className = 'log-message';
+            if (isSuccess) msgSpan.classList.add('log-success');
+            msgSpan.textContent = message;
+            entry.appendChild(timeSpan);
+            entry.appendChild(msgSpan);
+            logsBody.appendChild(entry);
+            logsBody.scrollTop = logsBody.scrollHeight;
+        }
+
+        function updateFileList(zone, files) {
+            const listEl = zone === 'video' ? videoFileList : audioFileList;
+            const countEl = zone === 'video' ? videoCount : audioCount;
+            listEl.innerHTML = '';
+            files.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <span class="file-check">✓</span>
+                    <div class="file-info">
+                        <p class="file-name">${file.name}</p>
+                        <p class="file-size">${formatSize(file.size)}</p>
+                    </div>
+                    <button class="remove-file-btn" data-index="${index}" aria-label="Remove file">✕</button>
+                `;
+                const removeBtn = item.querySelector('.remove-file-btn');
+                removeBtn.addEventListener('click', () => {
+                    files.splice(index, 1);
+                    updateFileList(zone, files);
+                    updateMergeButton();
+                });
+                listEl.appendChild(item);
+            });
+            countEl.textContent = `${files.length} file${files.length !== 1 ? 's' : ''}`;
+        }
+
+        function updateMergeButton() {
+            mergeBtn.disabled = videoFiles.length === 0 || audioFiles.length === 0;
+        }
+
+        function resetApp() {
+            videoFiles = [];
+            audioFiles = [];
+            videoInput.value = '';
+            audioInput.value = '';
+            updateFileList('video', videoFiles);
+            updateFileList('audio', audioFiles);
+            progressFill.style.width = '0%';
+            logsBody.innerHTML = `<div class="log-entry">
+                <span class="log-time">${getTime()}</span>
+                <span class="log-message">Ready to merge. Select files to begin.</span>
+            </div>`;
+            mergeBtn.disabled = true;
+        }
 
         videoInput.addEventListener('change', (e) => {
-            videoFile = e.target.files[0];
-            checkFiles();
+            const newFiles = Array.from(e.target.files);
+            videoFiles = videoFiles.concat(newFiles);
+            updateFileList('video', videoFiles);
+            updateMergeButton();
         });
 
         audioInput.addEventListener('change', (e) => {
-            audioFile = e.target.files[0];
-            checkFiles();
+            const newFiles = Array.from(e.target.files);
+            audioFiles = audioFiles.concat(newFiles);
+            updateFileList('audio', audioFiles);
+            updateMergeButton();
         });
 
-        function checkFiles() {
-            if (videoFile && audioFile) {
-                mergeBtn.disabled = false;
-                statusDiv.textContent = 'Ready to merge.';
-            } else {
-                mergeBtn.disabled = true;
-                statusDiv.textContent = 'Select both files to begin.';
-            }
-            downloadContainer.innerHTML = '';
-        }
+        clearVideoBtn.addEventListener('click', () => {
+            videoFiles = [];
+            videoInput.value = '';
+            updateFileList('video', videoFiles);
+            updateMergeButton();
+            addLog('Video files cleared.');
+        });
+
+        clearAudioBtn.addEventListener('click', () => {
+            audioFiles = [];
+            audioInput.value = '';
+            updateFileList('audio', audioFiles);
+            updateMergeButton();
+            addLog('Audio files cleared.');
+        });
+
+        addVideoBtn.addEventListener('click', () => {
+            videoInput.click();
+        });
+
+        addAudioBtn.addEventListener('click', () => {
+            audioInput.click();
+        });
+
+        startOverBtn.addEventListener('click', resetApp);
 
         mergeBtn.addEventListener('click', async () => {
-            if (!videoFile || !audioFile) return;
+            if (videoFiles.length === 0 || audioFiles.length === 0) return;
             mergeBtn.disabled = true;
-            statusDiv.textContent = 'Loading FFmpeg...';
-            downloadContainer.innerHTML = '';
+            progressFill.style.width = '0%';
+            addLog('Initializing process...');
 
             try {
                 if (!ffmpegInstance) {
+                    addLog('Loading FFmpeg Core (WASM)... This may take a moment first time.');
                     const { createFFmpeg, fetchFile } = FFmpeg;
                     ffmpegInstance = createFFmpeg({
-                        corePath: 'scripts/ffmpeg/ffmpeg-core.js',
+                        corePath: '/scripts/ffmpeg/ffmpeg-core.js',
                         log: false
                     });
+                    ffmpegInstance.setProgress(({ ratio }) => {
+                        progressFill.style.width = `${Math.round(ratio * 100)}%`;
+                    });
                     await ffmpegInstance.load();
+                    addLog('✓ FFmpeg Core Loaded Successfully', true);
                 }
 
-                statusDiv.textContent = 'Writing files to memory...';
-                ffmpegInstance.FS('writeFile', 'video.m4s', await FFmpeg.fetchFile(videoFile));
-                ffmpegInstance.FS('writeFile', 'audio.m4s', await FFmpeg.fetchFile(audioFile));
+                addLog(`Reading ${videoFiles.length} video file(s) and ${audioFiles.length} audio file(s)...`);
 
-                statusDiv.textContent = 'Merging files...';
-                await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
+                const workingDir = '/input';
+                ffmpegInstance.FS('mkdir', workingDir);
 
-                statusDiv.textContent = 'Reading output file...';
-                const data = ffmpegInstance.FS('readFile', 'output.mp4');
+                for (let i = 0; i < videoFiles.length; i++) {
+                    const file = videoFiles[i];
+                    addLog(`Writing video file ${i + 1}: ${file.name}`);
+                    ffmpegInstance.FS('writeFile', `${workingDir}/video_${i}.m4s`, await FFmpeg.fetchFile(file));
+                }
+
+                for (let i = 0; i < audioFiles.length; i++) {
+                    const file = audioFiles[i];
+                    addLog(`Writing audio file ${i + 1}: ${file.name}`);
+                    ffmpegInstance.FS('writeFile', `${workingDir}/audio_${i}.m4s`, await FFmpeg.fetchFile(file));
+                }
+
+                addLog('Preparing concatenation...');
+
+                if (videoFiles.length > 1) {
+                    let listContent = '';
+                    for (let i = 0; i < videoFiles.length; i++) {
+                        listContent += `file '${workingDir}/video_${i}.m4s'\n`;
+                    }
+                    ffmpegInstance.FS('writeFile', `${workingDir}/video_list.txt`, listContent);
+                    addLog('Concatenating video segments...');
+                    await ffmpegInstance.run('-f', 'concat', '-safe', '0', '-i', `${workingDir}/video_list.txt`, '-c', 'copy', `${workingDir}/video_merged.m4s`);
+                } else {
+                    ffmpegInstance.FS('rename', `${workingDir}/video_0.m4s`, `${workingDir}/video_merged.m4s`);
+                }
+
+                if (audioFiles.length > 1) {
+                    let listContent = '';
+                    for (let i = 0; i < audioFiles.length; i++) {
+                        listContent += `file '${workingDir}/audio_${i}.m4s'\n`;
+                    }
+                    ffmpegInstance.FS('writeFile', `${workingDir}/audio_list.txt`, listContent);
+                    addLog('Concatenating audio segments...');
+                    await ffmpegInstance.run('-f', 'concat', '-safe', '0', '-i', `${workingDir}/audio_list.txt`, '-c', 'copy', `${workingDir}/audio_merged.m4s`);
+                } else {
+                    ffmpegInstance.FS('rename', `${workingDir}/audio_0.m4s`, `${workingDir}/audio_merged.m4s`);
+                }
+
+                addLog('Merging video and audio into MP4...');
+                await ffmpegInstance.run('-i', `${workingDir}/video_merged.m4s`, '-i', `${workingDir}/audio_merged.m4s`, '-c', 'copy', `${workingDir}/output.mp4`);
+
+                addLog('Reading output file...');
+                const data = ffmpegInstance.FS('readFile', `${workingDir}/output.mp4`);
                 const blob = new Blob([data.buffer], { type: 'video/mp4' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = 'merged.mp4';
-                link.textContent = 'Download merged MP4';
-                link.className = 'download-link';
-                downloadContainer.appendChild(link);
-                statusDiv.textContent = 'Merge complete.';
-                ffmpegInstance.FS('unlink', 'video.m4s');
-                ffmpegInstance.FS('unlink', 'audio.m4s');
-                ffmpegInstance.FS('unlink', 'output.mp4');
+                link.download = `merged_${Date.now()}.mp4`;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                addLog('✓ Merge completed successfully!', true);
+                progressFill.style.width = '100%';
+
+                ffmpegInstance.FS('unlink', `${workingDir}/output.mp4`);
+                for (let i = 0; i < videoFiles.length; i++) {
+                    ffmpegInstance.FS('unlink', `${workingDir}/video_${i}.m4s`);
+                }
+                for (let i = 0; i < audioFiles.length; i++) {
+                    ffmpegInstance.FS('unlink', `${workingDir}/audio_${i}.m4s`);
+                }
+                if (videoFiles.length > 1) {
+                    ffmpegInstance.FS('unlink', `${workingDir}/video_list.txt`);
+                    ffmpegInstance.FS('unlink', `${workingDir}/video_merged.m4s`);
+                }
+                if (audioFiles.length > 1) {
+                    ffmpegInstance.FS('unlink', `${workingDir}/audio_list.txt`);
+                    ffmpegInstance.FS('unlink', `${workingDir}/audio_merged.m4s`);
+                }
+                ffmpegInstance.FS('rmdir', workingDir);
             } catch (error) {
-                statusDiv.textContent = 'Error: ' + error.message;
+                addLog(`Error: ${error.message}`);
+                progressFill.style.width = '0%';
             } finally {
                 mergeBtn.disabled = false;
+                updateMergeButton();
             }
         });
+
+        themeSystemBtn.addEventListener('click', () => {
+            addLog('Theme system toggled.');
+        });
+
+        themeToggleBtn.addEventListener('click', () => {
+            addLog('Language toggle clicked.');
+        });
+
+        resetApp();
     </script>
 </body>
 </html>
