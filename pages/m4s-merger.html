@@ -1,37 +1,30 @@
 <!DOCTYPE html>
-<html lang="en" class="dark" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M4S Merger Tool - Free Online Video/Audio Merger</title>
-    <meta name="description" content="Merge segmented .m4s video and audio streams directly in your browser. No installation required.">
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <script src="../ui-icons.js"></script>
     <style>
         :root {
-            --brand-500: #0ea5e9;
-            --brand-600: #0284c7;
-            --brand-400: #38bdf8;
-            --slate-50: #f8fafc;
-            --slate-100: #f1f5f9;
-            --slate-200: #e2e8f0;
-            --slate-300: #cbd5e1;
-            --slate-400: #94a3b8;
-            --slate-500: #64748b;
-            --slate-600: #475569;
-            --slate-700: #334155;
-            --slate-800: #1e293b;
-            --slate-900: #0f172a;
-            --slate-950: #020617;
-            --white: #ffffff;
-            --black: #000000;
-            --emerald-500: #10b981;
-            --emerald-600: #059669;
-            --red-500: #ef4444;
-            --red-50: #fef2f2;
-            --sky-200: #bae6fd;
-            --indigo-100: #e0e7ff;
-            --indigo-900: #312e81;
-            --bg-brand-glow: rgba(14, 165, 233, 0.05);
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
         }
 
         * {
@@ -43,1311 +36,212 @@
         }
 
         body {
-            background-color: var(--slate-950);
-            color: var(--slate-200);
+            background-color: var(--bg-black);
+            color: var(--text-primary);
             min-height: 100vh;
-            transition: background-color 0.3s, color 0.3s;
+            overflow-x: hidden;
+            padding-bottom: 90px;
         }
 
-        body.light {
-            background-color: var(--slate-50);
-            color: var(--slate-800);
-        }
-
-        .selection-brand {
-            background-color: var(--brand-500);
-            color: var(--white);
-        }
-
-        .app-container {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 3rem 1rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .glow {
-            position: absolute;
-            pointer-events: none;
-            border-radius: 50%;
-            filter: blur(120px);
-            z-index: 0;
-        }
-
-        .glow-top {
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 1000px;
-            height: 600px;
-            background: var(--bg-brand-glow);
-        }
-
-        .glow-bottom-left {
-            bottom: 0;
-            left: 0;
-            width: 800px;
-            height: 600px;
-            background: rgba(49, 46, 129, 0.1);
-        }
-
-        .glow-top-light {
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 1000px;
-            height: 600px;
-            background: rgba(186, 230, 253, 0.2);
-        }
-
-        .glow-bottom-right-light {
-            bottom: 0;
-            right: 0;
-            width: 800px;
-            height: 600px;
-            background: rgba(224, 231, 255, 0.4);
-        }
-
-        .header {
-            width: 100%;
-            max-width: 1024px;
-            margin-bottom: 4rem;
-            position: relative;
-            z-index: 10;
-        }
-
-        .header-top {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 2rem;
-        }
-
-        .theme-toggle-group {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.375rem;
-            border-radius: 1rem;
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(226, 232, 240, 0.5);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            backdrop-filter: blur(8px);
-            transition: all 0.3s;
-        }
-
-        body.light .theme-toggle-group {
-            background: rgba(255, 255, 255, 0.8);
-            border-color: rgba(226, 232, 240, 0.5);
-        }
-
-        body.dark .theme-toggle-group {
-            background: rgba(15, 23, 42, 0.8);
-            border-color: rgba(30, 41, 59, 0.5);
-        }
-
-        .icon-btn {
-            padding: 0.625rem;
-            border-radius: 0.75rem;
-            color: var(--slate-500);
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        body.light .icon-btn:hover {
-            background: var(--slate-100);
-            color: var(--brand-600);
-        }
-
-        body.dark .icon-btn:hover {
-            background: var(--slate-800);
-            color: var(--brand-400);
-        }
-
-        .divider {
-            width: 1px;
-            height: 1.25rem;
-            background: var(--slate-200);
-            margin: 0 0.25rem;
-        }
-
-        body.dark .divider {
-            background: var(--slate-700);
-        }
-
-        .header-center {
-            text-align: center;
-            padding-top: 0.5rem;
-        }
-
-        .logo-box {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-            border-radius: 1rem;
-            background: var(--white);
-            border: 1px solid var(--slate-200);
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-
-        body.dark .logo-box {
-            background: rgba(15, 23, 42, 0.5);
-            border-color: rgba(30, 41, 59, 0.5);
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
-        }
-
-        .main-title {
-            font-size: 3rem;
-            font-weight: 800;
-            line-height: 1.2;
-            color: var(--slate-900);
-            margin-bottom: 1.5rem;
-            letter-spacing: -0.02em;
-        }
-
-        body.dark .main-title {
-            background: linear-gradient(to bottom, #ffffff, #e2e8f0, #94a3b8);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .subtitle {
-            font-size: 1.125rem;
-            color: var(--slate-600);
-            max-width: 36rem;
+        .container {
+            max-width: 1200px;
             margin: 0 auto;
-            line-height: 1.6;
-        }
-
-        body.dark .subtitle {
-            color: var(--slate-400);
-        }
-
-        .main {
-            width: 100%;
-            max-width: 1024px;
+            padding: var(--spacing-md);
             position: relative;
-            z-index: 10;
+            min-height: calc(100vh - 90px);
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.6);
-            border: 1px solid rgba(226, 232, 240, 0.6);
-            border-radius: 1.5rem;
-            padding: 2rem;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-            transition: background 0.3s;
+            background-color: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        body.dark .card {
-            background: rgba(15, 23, 42, 0.5);
-            border-color: rgba(30, 41, 59, 1);
-            box-shadow: none;
-            backdrop-filter: blur(24px);
-        }
-
-        .dropzones {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        @media (min-width: 768px) {
-            .dropzones {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        .dropzone {
-            border: 1px solid var(--slate-200);
-            border-radius: 1rem;
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            transition: all 0.2s;
-            background: rgba(255, 255, 255, 0.5);
-            backdrop-filter: blur(24px);
-        }
-
-        body.dark .dropzone {
-            background: rgba(15, 23, 42, 0.5);
-            border-color: var(--slate-800);
-        }
-
-        .dropzone:hover {
-            border-color: var(--slate-300);
-        }
-
-        body.dark .dropzone:hover {
-            border-color: var(--slate-700);
-        }
-
-        .dropzone-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-            border-bottom: 1px solid var(--slate-200);
-            padding-bottom: 1rem;
-        }
-
-        body.dark .dropzone-header {
-            border-color: rgba(30, 41, 59, 0.5);
-        }
-
-        .dropzone-header-left {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .icon-circle {
-            padding: 0.625rem;
-            border-radius: 9999px;
-            background: var(--slate-100);
-            color: var(--brand-500);
-            border: 1px solid rgba(0,0,0,0.05);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        body.dark .icon-circle {
-            background: rgba(30, 41, 59, 0.5);
-            border-color: rgba(255,255,255,0.05);
-        }
-
-        .dropzone-title {
+        .title {
+            font-size: 1.5rem;
             font-weight: 600;
-            color: var(--slate-700);
-            font-size: 0.95rem;
+            margin-bottom: var(--spacing-sm);
+            color: var(--accent-color);
         }
 
-        body.dark .dropzone-title {
-            color: var(--slate-200);
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
         }
 
-        .dropzone-subtitle {
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: var(--slate-500);
-            margin-top: 0.125rem;
-        }
-
-        .clear-btn {
-            font-size: 0.75rem;
-            padding: 0.375rem 0.75rem;
-            border-radius: 0.5rem;
-            background: var(--slate-100);
-            color: var(--slate-500);
-            border: 1px solid var(--slate-200);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        body.dark .clear-btn {
-            background: rgba(30, 41, 59, 0.5);
-            color: var(--slate-400);
-            border-color: rgba(30, 41, 59, 0.5);
-        }
-
-        .clear-btn:hover {
-            background: var(--slate-200);
-            color: var(--slate-700);
-        }
-
-        body.dark .clear-btn:hover {
-            background: var(--slate-800);
-            color: var(--white);
-        }
-
-        .file-list {
+        .file-input-group {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
-            max-height: 240px;
-            overflow-y: auto;
-            padding-right: 0.25rem;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
         }
 
-        .file-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            background: var(--white);
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            border: 1px solid var(--slate-200);
-            transition: all 0.2s;
-        }
-
-        body.dark .file-item {
-            background: rgba(2, 6, 23, 0.3);
-            border-color: rgba(30, 41, 59, 0.5);
-        }
-
-        .file-item:hover {
-            border-color: var(--slate-300);
-        }
-
-        body.dark .file-item:hover {
-            border-color: var(--slate-700);
-        }
-
-        .file-icon {
-            color: var(--brand-500);
-            flex-shrink: 0;
-        }
-
-        .file-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .file-name {
-            font-weight: 500;
-            font-size: 0.875rem;
-            color: var(--slate-700);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        body.dark .file-name {
-            color: var(--slate-300);
-        }
-
-        .file-size {
-            font-size: 0.75rem;
-            color: var(--slate-500);
-        }
-
-        .remove-file-btn {
-            padding: 0.375rem;
-            border-radius: 0.375rem;
-            color: var(--slate-400);
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            opacity: 0;
-            transition: all 0.2s;
-        }
-
-        .file-item:hover .remove-file-btn {
-            opacity: 1;
-        }
-
-        .remove-file-btn:hover {
-            color: var(--red-500);
-            background: var(--red-50);
-        }
-
-        body.dark .remove-file-btn:hover {
-            background: rgba(239, 68, 68, 0.1);
-        }
-
-        .add-more-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0.75rem;
-            border-radius: 0.75rem;
-            border: 1px dashed var(--slate-300);
-            background: var(--slate-50);
-            font-size: 0.875rem;
-            color: var(--slate-500);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        body.dark .add-more-btn {
-            border-color: var(--slate-800);
-            background: rgba(15, 23, 42, 0.3);
-        }
-
-        .add-more-btn:hover {
-            color: var(--brand-600);
-            border-color: var(--brand-300);
-            background: var(--slate-100);
-        }
-
-        body.dark .add-more-btn:hover {
-            color: var(--brand-400);
-            border-color: rgba(14, 165, 233, 0.3);
-            background: rgba(30, 41, 59, 0.5);
-        }
-
-        .progress-section {
-            width: 100%;
-        }
-
-        .progress-bar-outer {
-            width: 100%;
-            background: var(--slate-200);
-            border-radius: 9999px;
-            height: 0.5rem;
-            overflow: hidden;
-        }
-
-        body.dark .progress-bar-outer {
-            background: rgba(30, 41, 59, 0.5);
-        }
-
-        .progress-bar-inner {
-            height: 100%;
-            background: var(--brand-500);
-            transition: width 0.3s ease-out;
-            box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
-        }
-
-        .action-row {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-            align-items: center;
-            justify-content: space-between;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--slate-200);
-        }
-
-        body.dark .action-row {
-            border-color: rgba(30, 41, 59, 0.5);
-        }
-
-        @media (min-width: 1280px) {
-            .action-row {
-                flex-direction: row;
-            }
-        }
-
-        .format-info {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1.25rem;
-            border-radius: 0.75rem;
-            background: var(--slate-50);
-            border: 1px solid var(--slate-200);
-            width: 100%;
-        }
-
-        body.dark .format-info {
-            background: rgba(2, 6, 23, 0.5);
-            border-color: rgba(30, 41, 59, 0.5);
-        }
-
-        .settings-icon {
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            background: var(--white);
-            color: var(--slate-500);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-
-        body.dark .settings-icon {
-            background: var(--slate-800);
-            color: var(--slate-400);
-        }
-
-        .format-text {
-            font-size: 1rem;
-            font-weight: 500;
-            color: var(--slate-600);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        body.dark .format-text {
-            color: var(--slate-300);
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 1rem;
-            width: 100%;
-            justify-content: flex-end;
-        }
-
-        .btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 1rem 1.5rem;
-            border-radius: 0.75rem;
-            border: 1px solid transparent;
-            font-weight: 600;
-            font-size: 1.125rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            min-width: 160px;
-        }
-
-        .btn-start-over {
-            background: var(--slate-100);
-            color: var(--slate-700);
-            border-color: var(--slate-200);
-        }
-
-        body.dark .btn-start-over {
-            background: rgba(30, 41, 59, 0.5);
-            color: var(--slate-300);
-            border-color: rgba(30, 41, 59, 0.5);
-        }
-
-        .btn-start-over:hover {
-            background: var(--slate-200);
-            color: var(--slate-900);
-            transform: scale(1.02);
-        }
-
-        body.dark .btn-start-over:hover {
-            background: var(--slate-800);
-            color: var(--white);
-        }
-
-        .btn-download {
-            background: var(--emerald-600);
-            color: var(--white);
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 10px 15px -3px rgba(5, 150, 105, 0.2);
-            text-decoration: none;
-        }
-
-        .btn-download:hover {
-            background: var(--emerald-500);
-            transform: scale(1.02);
-        }
-
-        .btn-download:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
-
-        .logs-section {
-            margin-top: 3rem;
-        }
-
-        .logs-container {
-            border-radius: 0.75rem;
-            overflow: hidden;
-            border: 1px solid var(--slate-200);
-            background: var(--white);
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        body.dark .logs-container {
-            border-color: var(--slate-800);
-            background: var(--slate-950);
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .logs-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem 1.25rem;
-            background: var(--slate-50);
-            border-bottom: 1px solid var(--slate-200);
-            backdrop-filter: blur(8px);
-        }
-
-        body.dark .logs-header {
-            background: rgba(15, 23, 42, 0.5);
-            border-color: rgba(30, 41, 59, 0.5);
-        }
-
-        .logs-title {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 0.875rem;
-            font-weight: 700;
-            color: var(--slate-600);
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
-
-        body.dark .logs-title {
-            color: var(--slate-400);
-        }
-
-        .logs-title svg {
-            color: var(--brand-500);
-        }
-
-        .logs-dots {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .dot {
-            width: 0.625rem;
-            height: 0.625rem;
-            border-radius: 9999px;
-            background: var(--slate-200);
-            border: 1px solid var(--slate-300);
-        }
-
-        body.dark .dot {
-            background: var(--slate-800);
-            border-color: rgba(30, 41, 59, 0.5);
-        }
-
-        .logs-body {
-            padding: 1.25rem;
-            overflow-y: auto;
-            max-height: 280px;
-            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-            font-size: 0.875rem;
-            line-height: 1.6;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .log-entry {
-            display: flex;
-            gap: 1rem;
-            padding: 0 0.5rem;
-            transition: background 0.2s;
-            border-radius: 0.25rem;
-        }
-
-        .log-entry:hover {
-            background: var(--slate-50);
-        }
-
-        body.dark .log-entry:hover {
-            background: rgba(255,255,255,0.05);
-        }
-
-        .log-time {
-            color: var(--slate-400);
-            font-size: 0.75rem;
-            flex-shrink: 0;
-            padding-top: 0.25rem;
-            user-select: none;
-        }
-
-        body.dark .log-time {
-            color: var(--slate-600);
-        }
-
-        .log-message {
-            word-break: break-all;
-            font-weight: 500;
-            color: var(--slate-700);
-        }
-
-        body.dark .log-message {
-            color: var(--slate-300);
-        }
-
-        .log-message.success {
-            color: var(--emerald-600);
-        }
-
-        body.dark .log-message.success {
-            color: var(--emerald-400);
-        }
-
-        .log-message.error {
-            color: var(--red-500);
-        }
-
-        .info-note {
-            margin-top: 1.5rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            font-size: 0.875rem;
-            color: var(--slate-500);
-            background: var(--slate-50);
-            border: 1px solid var(--slate-200);
-            border-radius: 0.75rem;
-            padding: 1.25rem;
-        }
-
-        body.dark .info-note {
-            color: var(--slate-500);
-            background: rgba(15, 23, 42, 0.3);
-            border-color: rgba(30, 41, 59, 0.5);
-        }
-
-        .footer {
-            margin-top: 4rem;
-            padding-bottom: 2rem;
-            text-align: center;
-            color: var(--slate-500);
-            font-size: 0.875rem;
-            position: relative;
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        body.dark .footer {
-            color: var(--slate-600);
-        }
-
-        .footer-brand {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            opacity: 0.8;
-            transition: opacity 0.2s;
-        }
-
-        .footer-brand:hover {
-            opacity: 1;
-        }
-
-        .footer-version {
-            font-size: 0.75rem;
-            background: var(--slate-200);
-            padding: 0.125rem 0.375rem;
-            border-radius: 0.25rem;
-            color: var(--slate-500);
-        }
-
-        body.dark .footer-version {
-            background: var(--slate-800);
-            color: var(--slate-400);
-        }
-
-        .footer-links {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.75rem;
-            opacity: 0.6;
-            transition: opacity 0.2s;
-        }
-
-        .footer-links:hover {
-            opacity: 0.9;
-        }
-
-        .footer-link {
-            color: var(--slate-700);
-            text-decoration: none;
-        }
-
-        body.dark .footer-link {
-            color: var(--slate-400);
-        }
-
-        .footer-link:hover {
-            color: var(--brand-600);
-            text-decoration: underline;
-            text-underline-offset: 4px;
-        }
-
-        body.dark .footer-link:hover {
-            color: var(--brand-400);
-        }
-
-        .hidden {
-            display: none;
+        .file-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
         }
 
         input[type="file"] {
-            display: none;
+            display: block;
+            width: 100%;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background-color: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: var(--bg-black);
+            border: none;
+            border-radius: var(--radius-small);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: var(--spacing-sm);
+        }
+
+        button:hover {
+            background-color: var(--accent-dark);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: var(--spacing-md);
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-small);
+            background-color: var(--bg-dark);
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-align: center;
+            word-break: break-all;
+        }
+
+        .download-link {
+            display: inline-block;
+            margin-top: var(--spacing-sm);
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .download-link:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
-<body class="dark">
-    <div class="app-container">
-        <div class="glow glow-top"></div>
-        <div class="glow glow-bottom-left"></div>
-        <div class="glow glow-top-light hidden"></div>
-        <div class="glow glow-bottom-right-light hidden"></div>
-
-        <header class="header">
-            <div class="header-top">
-                <div class="theme-toggle-group">
-                    <button class="icon-btn" id="themeToggle" aria-label="Toggle Theme" title="Toggle Theme">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <rect width="20" height="14" x="2" y="3" rx="2"></rect>
-                            <line x1="8" x2="16" y1="21" y2="21"></line>
-                            <line x1="12" x2="12" y1="17" y2="21"></line>
-                        </svg>
-                    </button>
-                    <div class="divider"></div>
-                    <button class="icon-btn" id="langToggle" aria-label="Toggle Language" title="中文 / English">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="m5 8 6 6"></path>
-                            <path d="m4 14 6-6 2-3"></path>
-                            <path d="M2 5h12"></path>
-                            <path d="M7 2h1"></path>
-                            <path d="m22 22-5-10-5 10"></path>
-                            <path d="M14 18h6"></path>
-                        </svg>
-                    </button>
-                </div>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="title">M4S to MP4 Merger</div>
+            <div class="subtitle">Select video and audio M4S files, then merge them into a single MP4 file.</div>
+            <div class="file-input-group">
+                <label class="file-label" for="videoFile">Video M4S file:</label>
+                <input type="file" id="videoFile" accept=".m4s">
             </div>
-            <div class="header-center">
-                <div class="logo-box">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--brand-500);">
-                        <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"></path>
-                        <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"></path>
-                        <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"></path>
-                    </svg>
-                </div>
-                <h1 class="main-title">M4S Merger GUI</h1>
-                <p class="subtitle">Merge segmented .m4s video and audio streams instantly in your browser. No installation required.</p>
+            <div class="file-input-group">
+                <label class="file-label" for="audioFile">Audio M4S file:</label>
+                <input type="file" id="audioFile" accept=".m4s">
             </div>
-        </header>
-
-        <main class="main">
-            <div class="card">
-                <div class="dropzones">
-                    <div class="dropzone" id="videoDropzone">
-                        <input type="file" accept=".m4s,.mp4" multiple id="videoInput" class="hidden">
-                        <div class="dropzone-header">
-                            <div class="dropzone-header-left">
-                                <div class="icon-circle">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path>
-                                        <path d="M14 2v5a1 1 0 0 0 1 1h5"></path>
-                                        <path d="M15.033 13.44a.647.647 0 0 1 0 1.12l-4.065 2.352a.645.645 0 0 1-.968-.56v-4.704a.645.645 0 0 1 .967-.56z"></path>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <p class="dropzone-title">Video Stream (.m4s)</p>
-                                    <p class="dropzone-subtitle" id="videoFileCount">0 files</p>
-                                </div>
-                            </div>
-                            <button class="clear-btn" id="clearVideo">Clear</button>
-                        </div>
-                        <div class="file-list" id="videoFileList"></div>
-                        <button class="add-more-btn" id="addVideoBtn">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M5 12h14"></path>
-                                <path d="M12 5v14"></path>
-                            </svg>
-                            <span>Add more</span>
-                        </button>
-                    </div>
-
-                    <div class="dropzone" id="audioDropzone">
-                        <input type="file" accept=".m4s,.m4a,.mp3" multiple id="audioInput" class="hidden">
-                        <div class="dropzone-header">
-                            <div class="dropzone-header-left">
-                                <div class="icon-circle">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M4 6.835V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-.343"></path>
-                                        <path d="M14 2v5a1 1 0 0 0 1 1h5"></path>
-                                        <path d="M2 19a2 2 0 0 1 4 0v1a2 2 0 0 1-4 0v-4a6 6 0 0 1 12 0v4a2 2 0 0 1-4 0v-1a2 2 0 0 1 4 0"></path>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <p class="dropzone-title">Audio Stream (.m4s)</p>
-                                    <p class="dropzone-subtitle" id="audioFileCount">0 files</p>
-                                </div>
-                            </div>
-                            <button class="clear-btn" id="clearAudio">Clear</button>
-                        </div>
-                        <div class="file-list" id="audioFileList"></div>
-                        <button class="add-more-btn" id="addAudioBtn">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M5 12h14"></path>
-                                <path d="M12 5v14"></path>
-                            </svg>
-                            <span>Add more</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="progress-section">
-                    <div class="progress-bar-outer">
-                        <div class="progress-bar-inner" id="progressBar" style="width: 0%;"></div>
-                    </div>
-                </div>
-
-                <div class="action-row">
-                    <div class="format-info">
-                        <div class="settings-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14 17H5"></path>
-                                <path d="M19 7h-9"></path>
-                                <circle cx="17" cy="17" r="3"></circle>
-                                <circle cx="7" cy="7" r="3"></circle>
-                            </svg>
-                        </div>
-                        <span class="format-text">Format: Copy Codec (Fast) · Multi-segment supported</span>
-                    </div>
-                    <div class="action-buttons">
-                        <button class="btn btn-start-over" id="startOverBtn">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-                                <path d="M21 3v5h-5"></path>
-                                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-                                <path d="M8 16H3v5"></path>
-                            </svg>
-                            Start Over
-                        </button>
-                        <a href="#" id="downloadBtn" class="btn btn-download" download="merged.mp4" disabled>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 15V3"></path>
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <path d="m7 10 5 5 5-5"></path>
-                            </svg>
-                            Download MP4
-                        </a>
-                    </div>
-                </div>
-
-                <div class="logs-section">
-                    <div class="logs-container">
-                        <div class="logs-header">
-                            <div class="logs-title">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--brand-500);">
-                                    <path d="M12 19h8"></path>
-                                    <path d="m4 17 6-6-6-6"></path>
-                                </svg>
-                                <span>Process Logs</span>
-                            </div>
-                            <div class="logs-dots">
-                                <div class="dot"></div>
-                                <div class="dot"></div>
-                            </div>
-                        </div>
-                        <div class="logs-body" id="logsBody">
-                            <div class="log-entry">
-                                <span class="log-time"></span>
-                                <span class="log-message">Initializing process...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="info-note">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--slate-400); flex-shrink: 0; margin-top: 0.125rem;">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" x2="12" y1="8" y2="12"></line>
-                        <line x1="12" x2="12.01" y1="16" y2="16"></line>
-                    </svg>
-                    <p>Files are processed entirely within your browser using WebAssembly. Your media is never uploaded to any server. Large files may require significant RAM.</p>
-                </div>
-            </div>
-        </main>
-
-        <footer class="footer">
-            <div class="footer-brand">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--brand-500);">
-                    <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
-                    <path d="M20 2v4"></path>
-                    <path d="M22 4h-4"></path>
-                    <circle cx="4" cy="20" r="2"></circle>
-                </svg>
-                <span>M4S Merger GUI</span>
-                <span class="footer-version">v1.0.0</span>
-                <span>© 2026</span>
-            </div>
-            <div class="footer-links">
-                <p>Created by <strong>Zheyuan (Max) Kong</strong></p>
-                <a href="https://github.com/MaxMiksa/M4S-Merger-Tools-Web.git" target="_blank" rel="noopener noreferrer" class="footer-link">https://github.com/MaxMiksa/M4S-Merger-Tools-Web.git</a>
-            </div>
-        </footer>
+            <button id="mergeBtn" disabled>Merge Files</button>
+            <div class="status" id="status">Select both files to begin.</div>
+            <div id="downloadContainer"></div>
+        </div>
     </div>
 
+    <script src="scripts/ffmpeg/ffmpeg.min.js"></script>
     <script>
-        (function() {
-            const videoInput = document.getElementById('videoInput');
-            const audioInput = document.getElementById('audioInput');
-            const videoFileList = document.getElementById('videoFileList');
-            const audioFileList = document.getElementById('audioFileList');
-            const videoFileCount = document.getElementById('videoFileCount');
-            const audioFileCount = document.getElementById('audioFileCount');
-            const clearVideoBtn = document.getElementById('clearVideo');
-            const clearAudioBtn = document.getElementById('clearAudio');
-            const addVideoBtn = document.getElementById('addVideoBtn');
-            const addAudioBtn = document.getElementById('addAudioBtn');
-            const startOverBtn = document.getElementById('startOverBtn');
-            const downloadBtn = document.getElementById('downloadBtn');
-            const progressBar = document.getElementById('progressBar');
-            const logsBody = document.getElementById('logsBody');
-            const themeToggle = document.getElementById('themeToggle');
+        const videoInput = document.getElementById('videoFile');
+        const audioInput = document.getElementById('audioFile');
+        const mergeBtn = document.getElementById('mergeBtn');
+        const statusDiv = document.getElementById('status');
+        const downloadContainer = document.getElementById('downloadContainer');
 
-            let videoFiles = [];
-            let audioFiles = [];
-            let ffmpeg = null;
-            let isMerging = false;
+        let ffmpegInstance = null;
+        let videoFile = null;
+        let audioFile = null;
 
-            function formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        videoInput.addEventListener('change', (e) => {
+            videoFile = e.target.files[0];
+            checkFiles();
+        });
+
+        audioInput.addEventListener('change', (e) => {
+            audioFile = e.target.files[0];
+            checkFiles();
+        });
+
+        function checkFiles() {
+            if (videoFile && audioFile) {
+                mergeBtn.disabled = false;
+                statusDiv.textContent = 'Ready to merge.';
+            } else {
+                mergeBtn.disabled = true;
+                statusDiv.textContent = 'Select both files to begin.';
             }
+            downloadContainer.innerHTML = '';
+        }
 
-            function formatTime() {
-                return new Date().toTimeString().split(' ')[0];
-            }
+        mergeBtn.addEventListener('click', async () => {
+            if (!videoFile || !audioFile) return;
+            mergeBtn.disabled = true;
+            statusDiv.textContent = 'Loading FFmpeg...';
+            downloadContainer.innerHTML = '';
 
-            function addLog(message, type) {
-                const entry = document.createElement('div');
-                entry.className = 'log-entry';
-                const timeSpan = document.createElement('span');
-                timeSpan.className = 'log-time';
-                timeSpan.textContent = formatTime();
-                const msgSpan = document.createElement('span');
-                msgSpan.className = 'log-message';
-                if (type === 'success') msgSpan.classList.add('success');
-                if (type === 'error') msgSpan.classList.add('error');
-                msgSpan.textContent = message;
-                entry.appendChild(timeSpan);
-                entry.appendChild(msgSpan);
-                logsBody.appendChild(entry);
-                logsBody.scrollTop = logsBody.scrollHeight;
-            }
-
-            function updateFileLists() {
-                videoFileList.innerHTML = '';
-                videoFiles.forEach((file, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'file-item';
-                    item.innerHTML = `
-                        <div class="file-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <path d="m9 12 2 2 4-4"></path>
-                            </svg>
-                        </div>
-                        <div class="file-info">
-                            <p class="file-name">${file.name}</p>
-                            <p class="file-size">${formatFileSize(file.size)}</p>
-                        </div>
-                        <button class="remove-file-btn" data-index="${index}" aria-label="Remove file">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M18 6 6 18"></path>
-                                <path d="m6 6 12 12"></path>
-                            </svg>
-                        </button>
-                    `;
-                    item.querySelector('.remove-file-btn').addEventListener('click', () => {
-                        videoFiles.splice(index, 1);
-                        updateFileLists();
+            try {
+                if (!ffmpegInstance) {
+                    const { createFFmpeg, fetchFile } = FFmpeg;
+                    ffmpegInstance = createFFmpeg({
+                        corePath: 'scripts/ffmpeg/ffmpeg-core.js',
+                        log: false
                     });
-                    videoFileList.appendChild(item);
-                });
-                videoFileCount.textContent = videoFiles.length + ' file' + (videoFiles.length !== 1 ? 's' : '');
-
-                audioFileList.innerHTML = '';
-                audioFiles.forEach((file, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'file-item';
-                    item.innerHTML = `
-                        <div class="file-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <path d="m9 12 2 2 4-4"></path>
-                            </svg>
-                        </div>
-                        <div class="file-info">
-                            <p class="file-name">${file.name}</p>
-                            <p class="file-size">${formatFileSize(file.size)}</p>
-                        </div>
-                        <button class="remove-file-btn" data-index="${index}" aria-label="Remove file">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M18 6 6 18"></path>
-                                <path d="m6 6 12 12"></path>
-                            </svg>
-                        </button>
-                    `;
-                    item.querySelector('.remove-file-btn').addEventListener('click', () => {
-                        audioFiles.splice(index, 1);
-                        updateFileLists();
-                    });
-                    audioFileList.appendChild(item);
-                });
-                audioFileCount.textContent = audioFiles.length + ' file' + (audioFiles.length !== 1 ? 's' : '');
-
-                updateDownloadState();
-            }
-
-            function updateDownloadState() {
-                if (videoFiles.length > 0 && audioFiles.length > 0 && !isMerging) {
-                    downloadBtn.disabled = false;
-                } else {
-                    downloadBtn.disabled = true;
+                    await ffmpegInstance.load();
                 }
+
+                statusDiv.textContent = 'Writing files to memory...';
+                ffmpegInstance.FS('writeFile', 'video.m4s', await FFmpeg.fetchFile(videoFile));
+                ffmpegInstance.FS('writeFile', 'audio.m4s', await FFmpeg.fetchFile(audioFile));
+
+                statusDiv.textContent = 'Merging files...';
+                await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
+
+                statusDiv.textContent = 'Reading output file...';
+                const data = ffmpegInstance.FS('readFile', 'output.mp4');
+                const blob = new Blob([data.buffer], { type: 'video/mp4' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'merged.mp4';
+                link.textContent = 'Download merged MP4';
+                link.className = 'download-link';
+                downloadContainer.appendChild(link);
+                statusDiv.textContent = 'Merge complete.';
+                ffmpegInstance.FS('unlink', 'video.m4s');
+                ffmpegInstance.FS('unlink', 'audio.m4s');
+                ffmpegInstance.FS('unlink', 'output.mp4');
+            } catch (error) {
+                statusDiv.textContent = 'Error: ' + error.message;
+            } finally {
+                mergeBtn.disabled = false;
             }
-
-            function clearAll() {
-                videoFiles = [];
-                audioFiles = [];
-                videoInput.value = '';
-                audioInput.value = '';
-                updateFileLists();
-                downloadBtn.href = '#';
-                downloadBtn.disabled = true;
-                progressBar.style.width = '0%';
-                logsBody.innerHTML = `
-                    <div class="log-entry">
-                        <span class="log-time"></span>
-                        <span class="log-message">Initializing process...</span>
-                    </div>
-                `;
-                if (ffmpeg) {
-                    try {
-                        ffmpeg.exit();
-                    } catch (e) {}
-                    ffmpeg = null;
-                }
-                isMerging = false;
-            }
-
-            videoInput.addEventListener('change', (e) => {
-                const files = Array.from(e.target.files);
-                files.forEach(file => videoFiles.push(file));
-                updateFileLists();
-                videoInput.value = '';
-            });
-
-            audioInput.addEventListener('change', (e) => {
-                const files = Array.from(e.target.files);
-                files.forEach(file => audioFiles.push(file));
-                updateFileLists();
-                audioInput.value = '';
-            });
-
-            addVideoBtn.addEventListener('click', () => videoInput.click());
-            addAudioBtn.addEventListener('click', () => audioInput.click());
-
-            clearVideoBtn.addEventListener('click', () => {
-                videoFiles = [];
-                videoInput.value = '';
-                updateFileLists();
-            });
-
-            clearAudioBtn.addEventListener('click', () => {
-                audioFiles = [];
-                audioInput.value = '';
-                updateFileLists();
-            });
-
-            startOverBtn.addEventListener('click', clearAll);
-
-            themeToggle.addEventListener('click', () => {
-                document.body.classList.toggle('light');
-                document.body.classList.toggle('dark');
-            });
-
-            downloadBtn.addEventListener('click', async (e) => {
-                e.preventDefault();
-                if (videoFiles.length === 0 || audioFiles.length === 0) return;
-                if (isMerging) return;
-
-                isMerging = true;
-                updateDownloadState();
-                downloadBtn.disabled = true;
-                progressBar.style.width = '0%';
-                logsBody.innerHTML = '';
-
-                addLog('Initializing process...');
-                addLog('Loading FFmpeg Core (WASM)... This may take a moment first time.');
-
-                try {
-                    if (!ffmpeg) {
-                        const { createFFmpeg, fetchFile } = FFmpeg;
-                        ffmpeg = createFFmpeg({
-                            corePath: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js',
-                            log: false
-                        });
-                        await ffmpeg.load();
-                        addLog('FFmpeg Core Loaded Successfully', 'success');
-                    } else {
-                        addLog('FFmpeg Core Loaded Successfully', 'success');
-                    }
-
-                    progressBar.style.width = '30%';
-                    addLog('Reading video and audio files...');
-
-                    for (let i = 0; i < videoFiles.length; i++) {
-                        const file = videoFiles[i];
-                        addLog(`Writing video segment ${i+1}: ${file.name}`);
-                        ffmpeg.FS('writeFile', `video_${i}.m4s`, await FFmpeg.fetchFile(file));
-                    }
-                    for (let i = 0; i < audioFiles.length; i++) {
-                        const file = audioFiles[i];
-                        addLog(`Writing audio segment ${i+1}: ${file.name}`);
-                        ffmpeg.FS('writeFile', `audio_${i}.m4s`, await FFmpeg.fetchFile(file));
-                    }
-
-                    progressBar.style.width = '60%';
-                    addLog('Merging files...');
-
-                    const videoList = videoFiles.map((_, i) => `file 'video_${i}.m4s'`).join('\n');
-                    const audioList = audioFiles.map((_, i) => `file 'audio_${i}.m4s'`).join('\n');
-
-                    if (videoFiles.length > 1) {
-                        ffmpeg.FS('writeFile', 'video_list.txt', videoList);
-                        await ffmpeg.run('-f', 'concat', '-safe', '0', '-i', 'video_list.txt', '-c', 'copy', 'video_concat.mp4');
-                    } else {
-                        ffmpeg.FS('writeFile', 'video_concat.mp4', ffmpeg.FS('readFile', 'video_0.m4s'));
-                    }
-
-                    if (audioFiles.length > 1) {
-                        ffmpeg.FS('writeFile', 'audio_list.txt', audioList);
-                        await ffmpeg.run('-f', 'concat', '-safe', '0', '-i', 'audio_list.txt', '-c', 'copy', 'audio_concat.m4s');
-                    } else {
-                        ffmpeg.FS('writeFile', 'audio_concat.m4s', ffmpeg.FS('readFile', 'audio_0.m4s'));
-                    }
-
-                    await ffmpeg.run('-i', 'video_concat.mp4', '-i', 'audio_concat.m4s', '-c', 'copy', 'output.mp4');
-
-                    progressBar.style.width = '100%';
-                    addLog('Merge completed successfully!', 'success');
-
-                    const data = ffmpeg.FS('readFile', 'output.mp4');
-                    const blob = new Blob([data.buffer], { type: 'video/mp4' });
-                    const url = URL.createObjectURL(blob);
-                    downloadBtn.href = url;
-                    downloadBtn.download = `merged_${Date.now()}.mp4`;
-                    downloadBtn.disabled = false;
-
-                    addLog('Your merged MP4 is ready. Click the Download button to save it.');
-
-                } catch (error) {
-                    progressBar.style.width = '100%';
-                    addLog('Error: ' + error.message, 'error');
-                    downloadBtn.disabled = true;
-                } finally {
-                    isMerging = false;
-                    updateDownloadState();
-                    try {
-                        ffmpeg.FS('unlink', 'video_concat.mp4');
-                        ffmpeg.FS('unlink', 'audio_concat.m4s');
-                        if (videoFiles.length > 1) ffmpeg.FS('unlink', 'video_list.txt');
-                        if (audioFiles.length > 1) ffmpeg.FS('unlink', 'audio_list.txt');
-                        for (let i = 0; i < videoFiles.length; i++) ffmpeg.FS('unlink', `video_${i}.m4s`);
-                        for (let i = 0; i < audioFiles.length; i++) ffmpeg.FS('unlink', `audio_${i}.m4s`);
-                        ffmpeg.FS('unlink', 'output.mp4');
-                    } catch (e) {}
-                }
-            });
-
-            updateFileLists();
-        })();
+        });
     </script>
 </body>
 </html>
