@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="dark">
-    <title>TgStorage</title>
+    <title>Kiraku Storage | lildavegoth</title>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
@@ -14,7 +14,6 @@
     <style>
         :root {
             --accent-color: #C1FC32;
-            --accent-dark: #9bc726;
             --bg-black: #000000;
             --bg-dark: #1a1a1a;
             --bg-card: rgba(30, 30, 30, 0.7);
@@ -590,6 +589,96 @@
             display: none !important;
         }
 
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-popup:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .popup-body {
+            overflow-y: auto;
+            padding: var(--spacing-md);
+        }
+
+        .popup-body h3 {
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .popup-body p,
+        .popup-body li {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .popup-body ul {
+            padding-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .popup-body li {
+            margin-bottom: 4px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
         @media (max-width: 760px) {
             .sidebar {
                 width: min(330px, 88vw);
@@ -742,13 +831,13 @@
                 <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Open menu">
                     <i class="fa-solid fa-bars"></i>
                 </button>
-                <span class="mobile-title" id="mobileTitle">TgStorage</span>
+                <span class="mobile-title" id="mobileTitle">Kiraku Storage</span>
             </header>
 
             <section class="empty-state" id="emptyState">
                 <div class="empty-card">
                     <div class="logo">TG</div>
-                    <h1>TgStorage</h1>
+                    <h1>Kiraku Storage</h1>
                     <p>Advanced Saved Messages organizer using real Telegram Cloud.</p>
                     <div class="login-form" id="loginForm">
                         <input class="field" id="apiId" placeholder="API ID" autocomplete="off">
@@ -757,6 +846,10 @@
                         <button class="primary-button" id="sendCodeButton" type="button">
                             <i class="fa-brands fa-telegram"></i>
                             Send Code
+                        </button>
+                        <button class="secondary-button" id="guideButton" type="button">
+                            <i class="fa-solid fa-circle-info"></i>
+                            Guide
                         </button>
                         <div id="codeGroup" class="hidden">
                             <input class="field" id="phoneCode" placeholder="Verification code" autocomplete="off">
@@ -825,6 +918,18 @@
         </form>
     </dialog>
 
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" onclick="closeUniversalPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="popup-body" id="popupContent"></div>
+        </div>
+    </div>
+
     <script>
         const tgSessionKey = 'tgstorage-session';
         let client = null;
@@ -870,7 +975,10 @@
             passwordButton: document.getElementById('passwordButton'),
             cancelLoginButton: document.getElementById('cancelLoginButton'),
             loginNote: document.getElementById('loginNote'),
-            connectButton: null
+            guideButton: document.getElementById('guideButton'),
+            universalPopup: document.getElementById('universalPopup'),
+            popupTitle: document.getElementById('popupTitle'),
+            popupContent: document.getElementById('popupContent')
         };
 
         function escapeHtml(value) {
@@ -1098,6 +1206,46 @@
             elements.sidebar.classList.add('open');
             elements.sidebarOverlay.classList.add('open');
         }
+
+        function openGuidePopup() {
+            const guideHTML = `
+                <h3>Welcome to Kiraku Storage</h3>
+                <p>This app allows you to organize your Telegram Saved Messages into folders using hashtags.</p>
+                <h3>Setup Instructions</h3>
+                <ul>
+                    <li>Go to <strong>my.telegram.org</strong> and log in with your Telegram account.</li>
+                    <li>Click on <strong>API development tools</strong> and fill out the form if required.</li>
+                    <li>You will receive an <strong>API ID</strong> and <strong>API Hash</strong>. Enter them in the login form above.</li>
+                    <li>Enter your phone number in international format (e.g., +1234567890).</li>
+                    <li>Click <strong>Send Code</strong>. Telegram will send a verification code to your app or SMS.</li>
+                    <li>Enter the code, and if you have two-step verification enabled, enter your password.</li>
+                    <li>After login, your Saved Messages will be loaded and organized by hashtags.</li>
+                </ul>
+                <h3>How to Use</h3>
+                <ul>
+                    <li>Create a new folder by clicking the <strong>+</strong> button in the sidebar. The folder name will become a hashtag (e.g., "Work" becomes #Work).</li>
+                    <li>Add a note by clicking <strong>Add note</strong>. Use the folder selector (the selected folder is pre-filled) or type a hashtag manually in the text (e.g., #Work).</li>
+                    <li>Notes are stored as messages in your Telegram Saved Messages. The first line becomes the title, and the rest becomes the body.</li>
+                    <li>Edit or delete notes directly from the interface. Changes are synced to Telegram.</li>
+                    <li>Click <strong>Logout</strong> to disconnect and remove the session from this browser.</li>
+                </ul>
+                <h3>Important Notes</h3>
+                <ul>
+                    <li>Your API credentials and session are stored only in your browser's local storage. We do not have a server.</li>
+                    <li>Never share your API credentials or session with anyone.</li>
+                    <li>This app uses the GramJS library to interact with Telegram. It is a third-party library but runs entirely on your device.</li>
+                </ul>
+            `;
+            elements.popupTitle.textContent = 'Guide';
+            elements.popupContent.innerHTML = guideHTML;
+            elements.universalPopup.style.display = 'flex';
+        }
+
+        function closeUniversalPopup() {
+            elements.universalPopup.style.display = 'none';
+        }
+
+        elements.guideButton.addEventListener('click', openGuidePopup);
 
         elements.sendCodeButton.addEventListener('click', async () => {
             const apiId = parseInt(elements.apiId.value.trim());
