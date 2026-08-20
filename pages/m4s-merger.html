@@ -165,9 +165,8 @@
             <div id="downloadContainer"></div>
         </div>
     </div>
-    
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
-    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+
+    <script src="../files/ffmpeg/ffmpeg.min.js"></script>
     <script>
         const videoInput = document.getElementById('videoFile');
         const audioInput = document.getElementById('audioFile');
@@ -208,28 +207,24 @@
 
             try {
                 if (!ffmpegInstance) {
-                    const { FFmpeg } = FFmpegWASM;
-                    const { fetchFile, toBlobURL } = FFmpegUtil;
+                    const { createFFmpeg, fetchFile } = FFmpeg;
                     window.fetchFile = fetchFile;
-                    ffmpegInstance = new FFmpeg();
-                    const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
-                    const workerURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js';
-                    await ffmpegInstance.load({
-                        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-                        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-                        classWorkerURL: await toBlobURL(workerURL, 'text/javascript')
+                    ffmpegInstance = createFFmpeg({
+                        log: false,
+                        corePath: '../files/ffmpeg/ffmpeg-core.js'
                     });
+                    await ffmpegInstance.load();
                 }
 
                 statusDiv.textContent = 'Writing files to memory...';
-                await ffmpegInstance.writeFile('video.m4s', await window.fetchFile(videoFile));
-                await ffmpegInstance.writeFile('audio.m4s', await window.fetchFile(audioFile));
+                ffmpegInstance.FS('writeFile', 'video.m4s', await window.fetchFile(videoFile));
+                ffmpegInstance.FS('writeFile', 'audio.m4s', await window.fetchFile(audioFile));
 
                 statusDiv.textContent = 'Merging files...';
-                await ffmpegInstance.exec(['-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4']);
+                await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
 
                 statusDiv.textContent = 'Reading output file...';
-                const data = await ffmpegInstance.readFile('output.mp4');
+                const data = ffmpegInstance.FS('readFile', 'output.mp4');
                 const blob = new Blob([data.buffer], { type: 'video/mp4' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
@@ -239,11 +234,11 @@
                 link.className = 'download-link';
                 downloadContainer.appendChild(link);
                 statusDiv.textContent = 'Merge complete.';
-                await ffmpegInstance.deleteFile('video.m4s');
-                await ffmpegInstance.deleteFile('audio.m4s');
-                await ffmpegInstance.deleteFile('output.mp4');
+                ffmpegInstance.FS('unlink', 'video.m4s');
+                ffmpegInstance.FS('unlink', 'audio.m4s');
+                ffmpegInstance.FS('unlink', 'output.mp4');
             } catch (error) {
-                statusDiv.textContent = 'Error: ' + (error && error.message ? error.message : String(error));
+                statusDiv.textContent = 'Error: ' + error.message;
             } finally {
                 mergeBtn.disabled = false;
             }
