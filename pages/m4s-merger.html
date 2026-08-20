@@ -209,18 +209,21 @@
             try {
                 if (!ffmpegInstance) {
                     const { FFmpeg } = FFmpegWASM;
-                    const { fetchFile } = FFmpegUtil;
+                    const { fetchFile, toBlobURL } = FFmpegUtil;
+                    window.fetchFile = fetchFile;
                     ffmpegInstance = new FFmpeg();
+                    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+                    const ffmpegBase = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd';
                     await ffmpegInstance.load({
-                        coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-                        wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
+                        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+                        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+                        classWorkerURL: await toBlobURL(`${ffmpegBase}/814.ffmpeg.js`, 'text/javascript')
                     });
-                    await ffmpegInstance.load();
                 }
 
                 statusDiv.textContent = 'Writing files to memory...';
-                await ffmpegInstance.writeFile('video.m4s', await fetchFile(videoFile));
-                await ffmpegInstance.writeFile('audio.m4s', await fetchFile(audioFile));
+                await ffmpegInstance.writeFile('video.m4s', await window.fetchFile(videoFile));
+                await ffmpegInstance.writeFile('audio.m4s', await window.fetchFile(audioFile));
 
                 statusDiv.textContent = 'Merging files...';
                 await ffmpegInstance.exec(['-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4']);
