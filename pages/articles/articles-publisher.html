@@ -761,6 +761,24 @@
         </div>
     </div>
 
+    <div id="resetConfirmPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2>Reset Token &amp; Logout</h2>
+                <button class="close-popup" onclick="closeResetConfirmPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="popup-body">
+                <p>Are you sure you want to reset token and logout? This will clear your session and you will need to login again.</p>
+            </div>
+            <div class="popup-footer">
+                <button class="btn-cancel" onclick="closeResetConfirmPopup()">Cancel</button>
+                <button class="btn-yes" id="confirmResetBtn">Yes, Reset</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         var token = localStorage.getItem('adminToken');
         var articlesData = [];
@@ -788,8 +806,8 @@
                 title: 'Settings',
                 items: [
                     {
-                        title: 'Reset Token',
-                        description: 'Re-enter admin token',
+                        title: 'Reset Token & Logout',
+                        description: 'Clear session and return to login',
                         action: 'resetToken'
                     },
                     {
@@ -808,9 +826,7 @@
 
             title.textContent = popupData[type].title;
 
-            if (type === 'credits') {
-                content.innerHTML = popupData[type].html;
-            } else if (type === 'settings') {
+            if (type === 'settings') {
                 var itemsHTML = '';
                 popupData[type].items.forEach(function(item) {
                     itemsHTML += `
@@ -825,7 +841,6 @@
                     el.addEventListener('click', function() {
                         var action = this.getAttribute('data-action');
                         executePopupAction(action);
-                        closeUniversalPopup();
                     });
                 });
             } else {
@@ -850,19 +865,27 @@
 
         function executePopupAction(action) {
             if (action === 'resetToken') {
-                resetToken();
+                closeUniversalPopup();
+                openResetConfirmPopup();
             } else if (action === 'clearPins') {
                 clearPins();
+                closeUniversalPopup();
             }
         }
 
-        function resetToken() {
-            var newToken = window.prompt('Enter new admin token:');
-            if (newToken !== null && newToken.trim() !== '') {
-                token = newToken.trim();
-                localStorage.setItem('adminToken', token);
-                window.showMessage('Token updated successfully');
-            }
+        function openResetConfirmPopup() {
+            document.getElementById('resetConfirmPopup').style.display = 'flex';
+        }
+
+        function closeResetConfirmPopup() {
+            document.getElementById('resetConfirmPopup').style.display = 'none';
+        }
+
+        function performResetLogout() {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('pinnedSlugs');
+            token = null;
+            location.reload();
         }
 
         function clearPins() {
@@ -899,6 +922,8 @@
             }
             document.body.removeChild(textArea);
         }
+
+        document.getElementById('confirmResetBtn').addEventListener('click', performResetLogout);
 
         btnFeatured.addEventListener('click', function() {
             if (btnFeatured.classList.contains('active')) {
