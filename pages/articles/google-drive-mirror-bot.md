@@ -43,7 +43,7 @@ This Bot does has limitations for free users, but not the speeds of mirroring (D
 
 - To be able to mirror any files, you need 2 things, your Google account has been successfully connected to the bot and **Direct Download URL**
 - After account has been connected, as i say before in Connect account guides, just simply sent the direct download url to the bot, bot will do the rest and your file will be saved or reuploaded to your google drive storage (TheDriveXBot folder)
-- You can also use /fast command to make the download and upload faster (15MBps-90MBps speeds)
+- The download and upload can be faster around 15MBps-90MBps speeds
 
 # Direct Downloads →
 What is **Direct Downloads**? It's a URL used for the bot to read and automatically starts mirroring. Why don't just sent a normal URL with download button inside the websites? The Bot don't works this way, Bot will be confused and will not be able to download and reupload your wanted files.
