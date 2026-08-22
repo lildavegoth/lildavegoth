@@ -175,6 +175,11 @@
             overflow: hidden;
         }
 
+        .settings-fab {
+            bottom: 96px;
+            border-radius: 50%;
+        }
+
         .back-link {
             display: inline-flex;
             align-items: center;
@@ -361,7 +366,8 @@
             cursor: not-allowed;
         }
 
-        #pinBtn {
+        #pinBtn,
+        #copyBtn {
             background: var(--accent-color);
             color: #000;
             padding: 0;
@@ -380,8 +386,10 @@
             border-radius: 50%;
         }
 
-        #pinBtn i {
+        #pinBtn i,
+        #copyBtn i {
             font-size: 1.2rem;
+            color: #000;
         }
 
         #shareBtn {
@@ -525,6 +533,8 @@
             width: 90%;
             max-width: 500px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -561,6 +571,7 @@
         .popup-body {
             padding: var(--spacing-md);
             flex: 1;
+            overflow-y: auto;
         }
 
         .popup-footer {
@@ -594,6 +605,28 @@
             background: rgba(255,255,255,0.1);
             color: var(--text-primary);
         }
+
+        .tool-option {
+            padding: var(--spacing-sm);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .tool-option:hover {
+            background: rgba(193, 252, 50, 0.1);
+        }
+
+        .tool-option h3 {
+            margin: 0 0 4px 0;
+            font-size: 1.1rem;
+        }
+
+        .tool-option p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -621,6 +654,7 @@
             </div>
             <div class="articles-grid" id="articleList"></div>
             <button class="fab" id="fabAdd"><i class="fas fa-plus"></i></button>
+            <button class="fab settings-fab" id="settingsFab"><i class="fas fa-gear"></i></button>
         </div>
 
         <div id="editorContainer" class="hidden">
@@ -681,6 +715,7 @@
                 <div class="button-group">
                     <button id="publishBtn">Publish</button>
                     <button id="pinBtn"><i class="fas fa-thumb-tack"></i></button>
+                    <button id="copyBtn"><i class="fas fa-copy"></i></button>
                     <button id="shareBtn" class="btnMDYE">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
                             <circle cx="18" cy="5" r="3"></circle>
@@ -714,6 +749,18 @@
         </div>
     </div>
 
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" onclick="closeUniversalPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tools-grid" id="popupContent"></div>
+        </div>
+    </div>
+
     <script>
         var token = localStorage.getItem('adminToken');
         var articlesData = [];
@@ -733,6 +780,125 @@
         var highlightNumberGroup = document.getElementById('highlightNumberGroup');
         var highlightNumberInput = document.getElementById('highlightNumber');
         var pinBtn = document.getElementById('pinBtn');
+        var copyBtn = document.getElementById('copyBtn');
+        var settingsFab = document.getElementById('settingsFab');
+
+        var popupData = {
+            settings: {
+                title: 'Settings',
+                items: [
+                    {
+                        title: 'Reset Token',
+                        description: 'Re-enter admin token',
+                        action: 'resetToken'
+                    },
+                    {
+                        title: 'Clear Pins',
+                        description: 'Unpin all pinned articles',
+                        action: 'clearPins'
+                    }
+                ]
+            }
+        };
+
+        function openPopup(type) {
+            var popup = document.getElementById('universalPopup');
+            var title = document.getElementById('popupTitle');
+            var content = document.getElementById('popupContent');
+
+            title.textContent = popupData[type].title;
+
+            if (type === 'credits') {
+                content.innerHTML = popupData[type].html;
+            } else if (type === 'settings') {
+                var itemsHTML = '';
+                popupData[type].items.forEach(function(item) {
+                    itemsHTML += `
+                        <div class="tool-option" data-action="${item.action}">
+                            <h3>${item.title}</h3>
+                            <p>${item.description}</p>
+                        </div>
+                    `;
+                });
+                content.innerHTML = itemsHTML;
+                content.querySelectorAll('.tool-option').forEach(function(el) {
+                    el.addEventListener('click', function() {
+                        var action = this.getAttribute('data-action');
+                        executePopupAction(action);
+                        closeUniversalPopup();
+                    });
+                });
+            } else {
+                var itemsHTML2 = '';
+                popupData[type].items.forEach(function(item) {
+                    itemsHTML2 += `
+                        <div class="tool-option" onclick="window.location.href='${item.url}'">
+                            <h3>${item.title}</h3>
+                            <p>${item.description}</p>
+                        </div>
+                    `;
+                });
+                content.innerHTML = itemsHTML2;
+            }
+
+            popup.style.display = 'flex';
+        }
+
+        function closeUniversalPopup() {
+            document.getElementById('universalPopup').style.display = 'none';
+        }
+
+        function executePopupAction(action) {
+            if (action === 'resetToken') {
+                resetToken();
+            } else if (action === 'clearPins') {
+                clearPins();
+            }
+        }
+
+        function resetToken() {
+            var newToken = window.prompt('Enter new admin token:');
+            if (newToken !== null && newToken.trim() !== '') {
+                token = newToken.trim();
+                localStorage.setItem('adminToken', token);
+                window.showMessage('Token updated successfully');
+            }
+        }
+
+        function clearPins() {
+            pinnedSlugs = [];
+            localStorage.removeItem('pinnedSlugs');
+            if (!document.getElementById('homeContainer').classList.contains('hidden')) {
+                loadArticleList();
+            }
+            window.showMessage('All pins cleared');
+        }
+
+        function copyTextToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function() {
+                    if (typeof window.showMessage === 'function') window.showMessage('Copied to clipboard');
+                }).catch(function() {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            var textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                if (typeof window.showMessage === 'function') window.showMessage('Copied to clipboard');
+            } catch (e) {
+                window.showMessage('Copy failed');
+            }
+            document.body.removeChild(textArea);
+        }
 
         btnFeatured.addEventListener('click', function() {
             if (btnFeatured.classList.contains('active')) {
@@ -791,6 +957,19 @@
                 pinBtn.classList.add('active');
             }
             localStorage.setItem('pinnedSlugs', JSON.stringify(pinnedSlugs));
+        });
+
+        copyBtn.addEventListener('click', function() {
+            var content = document.getElementById('contentInput').value;
+            if (!content) {
+                window.showMessage('Nothing to copy');
+                return;
+            }
+            copyTextToClipboard(content);
+        });
+
+        settingsFab.addEventListener('click', function() {
+            openPopup('settings');
         });
 
         function showHome() {
