@@ -17,6 +17,18 @@ const supabase = createClient(
 const bot = new Bot(process.env.KIRA_TOKEN);
 await bot.init();
 
+async function safeAnswerCallback(ctx, text) {
+    try {
+        if (text) {
+            await ctx.answerCallbackQuery(text);
+        } else {
+            await ctx.answerCallbackQuery();
+        }
+    } catch {
+        // ignore expired callback queries
+    }
+}
+
 bot.on("channel_post", async (ctx) => {
     const msg = ctx.update.channel_post;
     if (!msg.chat) return;
@@ -54,9 +66,9 @@ bot.on("channel_post", async (ctx) => {
         fileUniqueId = msg.document.file_unique_id;
         mimeType = msg.document.mime_type || "";
         if (mimeType.startsWith("image/")) {
-            type = "photo";      // treat image documents as photos
+            type = "photo";
         } else if (mimeType.startsWith("video/")) {
-            type = "video";      // treat video documents as videos
+            type = "video";
         } else {
             type = "document";
         }
@@ -282,7 +294,7 @@ bot.command("owner", async (ctx) => {
 });
 
 bot.callbackQuery("admin_users", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     const { data: users, error } = await supabase
         .from("users")
         .select("telegram_id, username, first_name")
@@ -313,13 +325,13 @@ bot.callbackQuery("admin_users", async (ctx) => {
 });
 
 bot.callbackQuery("admin_grant", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     pendingAdminAction.set(ctx.from.id, "grant");
     return ctx.reply("Send me the Telegram ID to grant access.");
 });
 
 bot.callbackQuery("admin_revoke", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     pendingAdminAction.set(ctx.from.id, "revoke");
     return ctx.reply("Send me the Telegram ID to revoke access.");
 });
@@ -327,28 +339,28 @@ bot.callbackQuery("admin_revoke", async (ctx) => {
 bot.callbackQuery("admin_shutdown", async (ctx) => {
     if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
     await setMaintenance(true);
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     return ctx.reply("Kira is under maintenance mode right now.");
 });
 
 bot.callbackQuery("admin_revive", async (ctx) => {
     if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
     await setMaintenance(false);
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     return ctx.reply("I'm back online.");
 });
 
 bot.callbackQuery("admin_restart", async (ctx) => {
     if (ctx.from.id.toString() !== process.env.OWNER_TELEGRAM_ID) return;
     if (!process.env.VERCEL_DEPLOY_HOOK) {
-        await ctx.answerCallbackQuery();
+        await safeAnswerCallback(ctx);
         return ctx.reply("Deploy hook not configured.");
     }
     await supabase
         .from("bot_config")
         .upsert({ key: "restart_pending", value: ctx.chat.id.toString() });
     await fetch(process.env.VERCEL_DEPLOY_HOOK, { method: "POST" });
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     return ctx.reply("Redeploying…");
 });
 
@@ -387,7 +399,7 @@ bot.callbackQuery("auto_reactions_toggle", async (ctx) => {
             .from("auto_reactions")
             .upsert({ user_id: ctx.from.id, enabled: newState });
 
-        await ctx.answerCallbackQuery();
+        await safeAnswerCallback(ctx);
         await ctx.deleteMessage();
 
         const label = newState ? "Auto Reactions: On" : "Auto Reactions Off";
@@ -401,12 +413,12 @@ bot.callbackQuery("auto_reactions_toggle", async (ctx) => {
             },
         });
     } catch {
-        await ctx.answerCallbackQuery("Failed to toggle. Please try again.");
+        await safeAnswerCallback(ctx, "Failed to toggle. Please try again.");
     }
 });
 
 bot.callbackQuery("connect_prompt", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     await ctx.deleteMessage();
     pendingConnectAction.set(ctx.from.id, "connect");
     return ctx.reply(
@@ -422,7 +434,7 @@ bot.callbackQuery("connect_prompt", async (ctx) => {
 });
 
 bot.callbackQuery("connect_cancel", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     pendingConnectAction.delete(ctx.from.id);
     await ctx.deleteMessage();
     return ctx.reply("Do you want me to post to your channel or something?", {
@@ -437,7 +449,7 @@ bot.callbackQuery("connect_cancel", async (ctx) => {
 });
 
 bot.callbackQuery("list_channels", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     await ctx.deleteMessage();
     const { data: channels, error } = await supabase
         .from("user_channels")
@@ -468,7 +480,7 @@ bot.callbackQuery("list_channels", async (ctx) => {
 });
 
 bot.callbackQuery("connect_back", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     await ctx.deleteMessage();
     const { data: row } = await supabase
         .from("auto_reactions")
@@ -489,7 +501,7 @@ bot.callbackQuery("connect_back", async (ctx) => {
 });
 
 bot.callbackQuery("revoke_prompt", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     await ctx.deleteMessage();
     pendingConnectAction.set(ctx.from.id, "revoke");
     return ctx.reply("You want to delete access to your channel? Send me your Channel ID.");
@@ -632,14 +644,14 @@ bot.command("kira", async (ctx) => {
 });
 
 bot.callbackQuery("kira_setkey", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     await ctx.deleteMessage();
     pendingKiraAction.set(ctx.from.id, "setkey");
     return ctx.reply("Send me your OpenRouter API Key and your Telegram ID for the identification. Don't worry, your data of API Key is encrypted");
 });
 
 bot.callbackQuery("kira_clearkey", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     await ctx.deleteMessage();
     pendingKiraAction.set(ctx.from.id, "clearkey");
     return ctx.reply("Do you want to delete OpenRouter API Key? Send to me your Telegram ID and i'll delete your key");
@@ -740,12 +752,12 @@ bot.callbackQuery(/^mirror_dest_(drive|telegram)_(.+)$/, async (ctx) => {
     const job = mirrorJobs.get(jobKey);
 
     if (!job || job.chatId !== ctx.chat.id || job.userId !== ctx.from.id) {
-        await ctx.answerCallbackQuery("This action has expired. Please /mirror again.");
+        await safeAnswerCallback(ctx);
         return;
     }
 
     job.destination = destination;
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     await ctx.deleteMessage();
 
     const keyboard = {
@@ -769,11 +781,11 @@ bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
     const job = mirrorJobs.get(jobKey);
 
     if (!job || job.chatId !== ctx.chat.id || job.userId !== ctx.from.id) {
-        await ctx.answerCallbackQuery("This action has expired. Please /mirror again.");
+        await safeAnswerCallback(ctx);
         return;
     }
 
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
 
     if (choice === "no") {
         mirrorJobs.delete(jobKey);
@@ -807,7 +819,7 @@ async function startMirror(ctx, url, filename, destination) {
             destination: destination,
         },
     };
-    
+
     try {
         const res = await fetch(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
@@ -879,7 +891,7 @@ bot.command("download", async (ctx) => {
 bot.callbackQuery(/^dl_fmt_(.+)_(.+)$/, async (ctx) => {
     const formatId = ctx.match[1];
     const url = ctx.match[2];
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     try {
         await ctx.deleteMessage();
     } catch {}
@@ -970,13 +982,13 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (
         .single();
 
     if (fetchErr || !row) {
-        await ctx.answerCallbackQuery("This action has expired. Please use /imageedit again.");
+        await safeAnswerCallback(ctx);
         return;
     }
 
     const fileId = row.file_id;
     await supabase.from("temp_file_ids").delete().eq("key", shortKey);
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
     await ctx.deleteMessage();
 
     if (action === "text") {
@@ -1155,11 +1167,9 @@ bot.callbackQuery(/^post_to_channel_(.+)_(.+)$/, async (ctx) => {
         ? { inline_keyboard: [buttons] }
         : undefined;
 
-    const { type, fileId, cleanText, chatId, messageId } = mediaData;
+    const { type, fileId, cleanText, chatId, messageId, entities } = mediaData;
 
     try {
-        const { type, fileId, cleanText, chatId, messageId, entities } = mediaData;
-
         let textToSend = cleanText || "";
         let parseMode = undefined;
 
@@ -1175,10 +1185,10 @@ bot.callbackQuery(/^post_to_channel_(.+)_(.+)$/, async (ctx) => {
         } else {
             await ctx.api.sendMessage(channelId, textToSend, { reply_markup: replyMarkup, parse_mode: parseMode });
         }
-        await ctx.answerCallbackQuery("Posted!");
+        await safeAnswerCallback(ctx, "Posted!");
         await ctx.deleteMessage();
     } catch (e) {
-        await ctx.answerCallbackQuery("Failed to post. Make sure I'm admin in the channel.");
+        await safeAnswerCallback(ctx, "Failed to post. Make sure I'm admin in the channel.");
     }
 });
 
@@ -1191,11 +1201,11 @@ bot.callbackQuery(/^delete_mirror_(.+)$/, async (ctx) => {
         .single();
 
     if (fetchErr || !row) {
-        await ctx.answerCallbackQuery("File not found or already deleted.");
+        await safeAnswerCallback(ctx, "File not found or already deleted.");
         return;
     }
 
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallback(ctx);
 
     try {
         const res = await fetch(
@@ -1217,12 +1227,12 @@ bot.callbackQuery(/^delete_mirror_(.+)$/, async (ctx) => {
             }
         );
         if (!res.ok) {
-            await ctx.answerCallbackQuery("Failed to dispatch deletion.");
+            await safeAnswerCallback(ctx, "Failed to dispatch deletion.");
         } else {
             await ctx.deleteMessage();
         }
     } catch (e) {
-        await ctx.answerCallbackQuery("Error: " + e.message);
+        await safeAnswerCallback(ctx, "Error: " + e.message);
     }
 });
 
