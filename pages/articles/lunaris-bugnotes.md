@@ -9,6 +9,8 @@ categories: "Bug Notes, ROMs"
 hidden: true
 ---
 # [Lunaris 3.12](https://t.me/POCOX3_Updates/4885) → Android 16 by [NothingHere03](https://t.me/NothingHere03) with [Beast-KSUN-20260804-2140-0b1e8e70 Kernel](https://t.me/RandomDiscussions69/9262) (for KSU Support)
+- System Icons Popup feature buggy when DPI is changed or not default
+![System Icons Popup Bug](images/lunaris-bugnotes-system-icons-popup-not-center.webp)
 - limit charging is not like version 3.8 (in current version it's only limit the ampere to 1mA and not really stop the charging like in 3.8), i thought this was a bug and will be fixed soon (but after this update, i guess they really changed the system of limit charging to this method which is not goot
 - Dynamic Island text is truncated when screen recording (restart system ui to fix)
 - Dynamic Bar crashing system ui. sometimes, if there's a clipboard in Dynamic Bar overlay, it will make your screen untouchable and the system ui will be crash after a few seconds
