@@ -17,32 +17,163 @@ const supabase = createClient(
 const bot = new Bot(process.env.KIRA_TOKEN);
 await bot.init();
 
-async function fetchWithTimeout(url, options = {}, timeout = 10000) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-    try {
-        const response = await fetch(url, {
-            ...options,
-            signal: controller.signal,
-        });
-        return response;
-    } finally {
-        clearTimeout(timer);
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "change-me-to-a-strong-random-string";
+const MAX_DIRECT_MB = 0;
+
+function encryptToken(plain) {
+    const key = Buffer.from(ENCRYPTION_KEY, "utf-8");
+    const plainBytes = Buffer.from(plain, "utf-8");
+    const encrypted = Buffer.alloc(plainBytes.length);
+    for (let i = 0; i < plainBytes.length; i++) {
+        encrypted[i] = plainBytes[i] ^ key[i % key.length];
     }
+    return encrypted.toString("base64");
+}
+
+function buildHtml(text, entities) {
+    if (!entities || entities.length === 0) return text;
+    const sorted = [...entities].sort((a, b) => a.offset - b.offset);
+    let result = "";
+    let lastPos = 0;
+    for (const e of sorted) {
+        result += text.slice(lastPos, e.offset).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const content = text.slice(e.offset, e.offset + e.length).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        switch (e.type) {
+            case "bold": result += `<b>${content}</b>`; break;
+            case "italic": result += `<i>${content}</i>`; break;
+            case "underline": result += `<u>${content}</u>`; break;
+            case "strikethrough": result += `<s>${content}</s>`; break;
+            case "code": result += `<code>${content}</code>`; break;
+            case "pre": result += `<pre>${content}</pre>`; break;
+            case "text_link": result += `<a href="${e.url}">${content}</a>`; break;
+            default: result += content;
+        }
+        lastPos = e.offset + e.length;
+    }
+    result += text.slice(lastPos).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return result;
+}
+
+async function savePendingAction(key, actionType, data, ttlSeconds = 300) {
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
+    await supabase.from("pending_actions").upsert({
+        key,
+        action_type: actionType,
+        data,
+        expires_at: expiresAt,
+    }, { onConflict: "key" });
+}
+
+async function getPendingAction(key) {
+    const { data, error } = await supabase
+        .from("pending_actions")
+        .select("*")
+        .eq("key", key)
+        .maybeSingle();
+    if (error || !data) return null;
+    if (new Date(data.expires_at) < new Date()) {
+        await supabase.from("pending_actions").delete().eq("key", key);
+        return null;
+    }
+    return data;
+}
+
+async function deletePendingAction(key) {
+    await supabase.from("pending_actions").delete().eq("key", key);
+}
+
+async function isUnderMaintenance() {
+    try {
+        const { data, error } = await supabase
+            .from("bot_config")
+            .select("value")
+            .eq("key", "maintenance")
+            .single();
+        if (error || !data) return false;
+        return data.value === "true";
+    } catch {
+        return false;
+    }
+}
+
+async function setMaintenance(value) {
+    try {
+        await supabase
+            .from("bot_config")
+            .update({ value: value ? "true" : "false" })
+            .eq("key", "maintenance");
+    } catch {}
 }
 
 async function safeAnswerCallback(ctx, text) {
     try {
-        if (text) {
-            await ctx.answerCallbackQuery(text);
-        } else {
-            await ctx.answerCallbackQuery();
-        }
+        await ctx.answerCallbackQuery({ text });
     } catch {}
 }
 
-bot.catch(async (err) => {
-    // swallow errors to avoid webhook retries
+bot.catch((err) => {
+    const error = err.error;
+    if (
+        error &&
+        error.error_code === 400 &&
+        (error.description.includes("query is too old") ||
+         error.description.includes("query ID is invalid"))
+    ) {
+        return;
+    }
+    throw err;
+});
+
+bot.use(async (ctx, next) => {
+    const text = ctx.message?.text;
+    const cbData = ctx.callbackQuery?.data;
+    if (
+        (text && (text.startsWith("/revive") || text.startsWith("/shutdown") || text.startsWith("/restart"))) ||
+        (cbData && (cbData === "admin_shutdown" || cbData === "admin_revive" || cbData === "admin_restart"))
+    ) {
+        return next();
+    }
+    const maintenance = await isUnderMaintenance();
+    if (maintenance) return;
+    return next();
+});
+
+bot.use(async (ctx, next) => {
+    if (!ctx.from) return next();
+
+    if (ctx.from.id.toString() === process.env.OWNER_TELEGRAM_ID) {
+        return next();
+    }
+
+    const text = ctx.message?.text;
+    if (text && text.startsWith("/start")) {
+        return next();
+    }
+
+    const { data, error } = await supabase
+        .from("allowed_users")
+        .select("telegram_id")
+        .eq("telegram_id", ctx.from.id)
+        .maybeSingle();
+
+    if (error || !data) {
+        return;
+    }
+
+    return next();
+});
+
+bot.use(async (ctx, next) => {
+    if (ctx.from && ctx.chat) {
+        const user = ctx.from;
+        await supabase.from("users").upsert({
+            telegram_id: user.id,
+            first_name: user.first_name,
+            username: user.username,
+            language: user.language_code,
+        });
+    }
+    return next();
 });
 
 bot.on("channel_post", async (ctx) => {
@@ -127,132 +258,6 @@ try {
         await bot.api.sendMessage(ownerChatId, "I'm back, ready to assist you");
     }
 } catch {}
-
-const MAX_DIRECT_MB = 0;
-
-const mirrorJobs = new Map();
-const pendingRenames = new Map();
-const fetchMessages = new Map();
-const pendingAdminAction = new Map();
-const pendingConnectAction = new Map();
-const postButtons = new Map();
-const pendingKiraAction = new Map();
-const pendingImageEditAction = new Map();
-
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "change-me-to-a-strong-random-string";
-
-function encryptToken(plain) {
-    const key = Buffer.from(ENCRYPTION_KEY, "utf-8");
-    const plainBytes = Buffer.from(plain, "utf-8");
-    const encrypted = Buffer.alloc(plainBytes.length);
-    for (let i = 0; i < plainBytes.length; i++) {
-        encrypted[i] = plainBytes[i] ^ key[i % key.length];
-    }
-    return encrypted.toString("base64");
-}
-
-function pendingKey(chatId, userId) {
-    return `${chatId}:${userId}`;
-}
-
-function buildHtml(text, entities) {
-    if (!entities || entities.length === 0) return text;
-    const sorted = [...entities].sort((a, b) => a.offset - b.offset);
-    let result = "";
-    let lastPos = 0;
-    for (const e of sorted) {
-        result += text.slice(lastPos, e.offset).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        const content = text.slice(e.offset, e.offset + e.length).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        switch (e.type) {
-            case "bold": result += `<b>${content}</b>`; break;
-            case "italic": result += `<i>${content}</i>`; break;
-            case "underline": result += `<u>${content}</u>`; break;
-            case "strikethrough": result += `<s>${content}</s>`; break;
-            case "code": result += `<code>${content}</code>`; break;
-            case "pre": result += `<pre>${content}</pre>`; break;
-            case "text_link": result += `<a href="${e.url}">${content}</a>`; break;
-            default: result += content;
-        }
-        lastPos = e.offset + e.length;
-    }
-    result += text.slice(lastPos).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    return result;
-}
-
-async function isUnderMaintenance() {
-    try {
-        const { data, error } = await supabase
-            .from("bot_config")
-            .select("value")
-            .eq("key", "maintenance")
-            .single();
-        if (error || !data) return false;
-        return data.value === "true";
-    } catch {
-        return false;
-    }
-}
-
-async function setMaintenance(value) {
-    try {
-        await supabase
-            .from("bot_config")
-            .update({ value: value ? "true" : "false" })
-            .eq("key", "maintenance");
-    } catch {}
-}
-
-bot.use(async (ctx, next) => {
-    const text = ctx.message?.text;
-    const cbData = ctx.callbackQuery?.data;
-    if (
-        (text && (text.startsWith("/revive") || text.startsWith("/shutdown") || text.startsWith("/restart"))) ||
-        (cbData && (cbData === "admin_shutdown" || cbData === "admin_revive" || cbData === "admin_restart"))
-    ) {
-        return next();
-    }
-    const maintenance = await isUnderMaintenance();
-    if (maintenance) return;
-    return next();
-});
-
-bot.use(async (ctx, next) => {
-    if (!ctx.from) return next();
-
-    if (ctx.from.id.toString() === process.env.OWNER_TELEGRAM_ID) {
-        return next();
-    }
-
-    const text = ctx.message?.text;
-    if (text && text.startsWith("/start")) {
-        return next();
-    }
-
-    const { data, error } = await supabase
-        .from("allowed_users")
-        .select("telegram_id")
-        .eq("telegram_id", ctx.from.id)
-        .maybeSingle();
-
-    if (error || !data) {
-        return;
-    }
-
-    return next();
-});
-
-bot.use(async (ctx, next) => {
-    if (ctx.from && ctx.chat) {
-        const user = ctx.from;
-        await supabase.from("users").upsert({
-            telegram_id: user.id,
-            first_name: user.first_name,
-            username: user.username,
-            language: user.language_code,
-        });
-    }
-    return next();
-});
 
 bot.command("login", async (ctx) => {
     if (ctx.chat.type !== "private") return;
@@ -342,13 +347,13 @@ bot.callbackQuery("admin_users", async (ctx) => {
 
 bot.callbackQuery("admin_grant", async (ctx) => {
     await safeAnswerCallback(ctx);
-    pendingAdminAction.set(ctx.from.id, "grant");
+    await savePendingAction(`admin_action:${ctx.from.id}`, "grant", null);
     return ctx.reply("Send me the Telegram ID to grant access.");
 });
 
 bot.callbackQuery("admin_revoke", async (ctx) => {
     await safeAnswerCallback(ctx);
-    pendingAdminAction.set(ctx.from.id, "revoke");
+    await savePendingAction(`admin_action:${ctx.from.id}`, "revoke", null);
     return ctx.reply("Send me the Telegram ID to revoke access.");
 });
 
@@ -375,7 +380,7 @@ bot.callbackQuery("admin_restart", async (ctx) => {
     await supabase
         .from("bot_config")
         .upsert({ key: "restart_pending", value: ctx.chat.id.toString() });
-    await fetchWithTimeout(process.env.VERCEL_DEPLOY_HOOK, { method: "POST" });
+    await fetch(process.env.VERCEL_DEPLOY_HOOK, { method: "POST" });
     await safeAnswerCallback(ctx);
     return ctx.reply("Redeploying…");
 });
@@ -401,6 +406,7 @@ bot.command("connect", async (ctx) => {
 });
 
 bot.callbackQuery("auto_reactions_toggle", async (ctx) => {
+    await safeAnswerCallback(ctx);
     try {
         const { data: row } = await supabase
             .from("auto_reactions")
@@ -415,7 +421,6 @@ bot.callbackQuery("auto_reactions_toggle", async (ctx) => {
             .from("auto_reactions")
             .upsert({ user_id: ctx.from.id, enabled: newState });
 
-        await safeAnswerCallback(ctx);
         await ctx.deleteMessage();
 
         const label = newState ? "Auto Reactions: On" : "Auto Reactions Off";
@@ -429,14 +434,14 @@ bot.callbackQuery("auto_reactions_toggle", async (ctx) => {
             },
         });
     } catch {
-        await safeAnswerCallback(ctx, "Failed to toggle. Please try again.");
+        await ctx.reply("Failed to toggle. Please try again.");
     }
 });
 
 bot.callbackQuery("connect_prompt", async (ctx) => {
     await safeAnswerCallback(ctx);
     await ctx.deleteMessage();
-    pendingConnectAction.set(ctx.from.id, "connect");
+    await savePendingAction(`connect_action:${ctx.from.id}`, "connect", null);
     return ctx.reply(
         "Send me your channel ID and add me as an admin to let me post to your channel, you can add me in 5 channels\n\nFormat: Channel Name Channel ID\nExample: Yume 1513725816",
         {
@@ -451,7 +456,7 @@ bot.callbackQuery("connect_prompt", async (ctx) => {
 
 bot.callbackQuery("connect_cancel", async (ctx) => {
     await safeAnswerCallback(ctx);
-    pendingConnectAction.delete(ctx.from.id);
+    await deletePendingAction(`connect_action:${ctx.from.id}`);
     await ctx.deleteMessage();
     return ctx.reply("Do you want me to post to your channel or something?", {
         reply_markup: {
@@ -519,7 +524,7 @@ bot.callbackQuery("connect_back", async (ctx) => {
 bot.callbackQuery("revoke_prompt", async (ctx) => {
     await safeAnswerCallback(ctx);
     await ctx.deleteMessage();
-    pendingConnectAction.set(ctx.from.id, "revoke");
+    await savePendingAction(`connect_action:${ctx.from.id}`, "revoke", null);
     return ctx.reply("You want to delete access to your channel? Send me your Channel ID.");
 });
 
@@ -548,41 +553,38 @@ bot.command("ping", (ctx) => ctx.reply("pong"));
 bot.command("cancel", async (ctx) => {
     let cancelled = false;
 
-    for (const [jobKey, job] of mirrorJobs) {
-        if (job.chatId === ctx.chat.id && job.userId === ctx.from.id) {
-            mirrorJobs.delete(jobKey);
+    const jobKeys = await supabase
+        .from("pending_actions")
+        .select("key")
+        .like("key", "mirror:%")
+        .eq("data->>chatId", ctx.chat.id.toString())
+        .eq("data->>userId", ctx.from.id.toString());
+    if (jobKeys.data) {
+        for (const row of jobKeys.data) {
+            await deletePendingAction(row.key);
+            const job = row.data;
             try { await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId); } catch {}
             cancelled = true;
         }
     }
 
-    for (const [key, msgId] of fetchMessages) {
-        if (key.startsWith(`${ctx.chat.id}_`)) {
-            fetchMessages.delete(key);
-            try { await ctx.api.deleteMessage(ctx.chat.id, msgId); } catch {}
+    const fetchKeys = await supabase
+        .from("pending_actions")
+        .select("key")
+        .like("key", "fetch:%")
+        .eq("data->>chatId", ctx.chat.id.toString());
+    if (fetchKeys.data) {
+        for (const row of fetchKeys.data) {
+            await deletePendingAction(row.key);
+            try { await ctx.api.deleteMessage(ctx.chat.id, row.data.messageId); } catch {}
             cancelled = true;
         }
     }
 
-    if (pendingAdminAction.has(ctx.from.id)) {
-        pendingAdminAction.delete(ctx.from.id);
-        cancelled = true;
-    }
-
-    if (pendingConnectAction.has(ctx.from.id)) {
-        pendingConnectAction.delete(ctx.from.id);
-        cancelled = true;
-    }
-
-    if (pendingKiraAction.has(ctx.from.id)) {
-        pendingKiraAction.delete(ctx.from.id);
-        cancelled = true;
-    }
-
-    if (pendingImageEditAction.has(ctx.from.id)) {
-        pendingImageEditAction.delete(ctx.from.id);
-        cancelled = true;
-    }
+    await deletePendingAction(`admin_action:${ctx.from.id}`);
+    await deletePendingAction(`connect_action:${ctx.from.id}`);
+    await deletePendingAction(`kira_action:${ctx.from.id}`);
+    await deletePendingAction(`imageedit_action:${ctx.from.id}`);
 
     if (cancelled) {
         return ctx.reply("All pending operations cancelled.");
@@ -637,7 +639,7 @@ bot.command("kira", async (ctx) => {
     }
 
     try {
-        const res = await fetchWithTimeout(
+        const res = await fetch(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -662,14 +664,14 @@ bot.command("kira", async (ctx) => {
 bot.callbackQuery("kira_setkey", async (ctx) => {
     await safeAnswerCallback(ctx);
     await ctx.deleteMessage();
-    pendingKiraAction.set(ctx.from.id, "setkey");
+    await savePendingAction(`kira_action:${ctx.from.id}`, "setkey", null);
     return ctx.reply("Send me your OpenRouter API Key and your Telegram ID for the identification. Don't worry, your data of API Key is encrypted");
 });
 
 bot.callbackQuery("kira_clearkey", async (ctx) => {
     await safeAnswerCallback(ctx);
     await ctx.deleteMessage();
-    pendingKiraAction.set(ctx.from.id, "clearkey");
+    await savePendingAction(`kira_action:${ctx.from.id}`, "clearkey", null);
     return ctx.reply("Do you want to delete OpenRouter API Key? Send to me your Telegram ID and i'll delete your key");
 });
 
@@ -737,13 +739,14 @@ bot.command("mirror", async (ctx) => {
     } catch {}
 
     const jobKey = Math.random().toString(36).slice(2, 10);
-    mirrorJobs.set(jobKey, {
+    const job = {
         url,
         filename,
         fileSize,
         chatId: ctx.chat.id,
         userId: ctx.from.id,
-    });
+    };
+    await savePendingAction(`mirror:${jobKey}`, "mirror_job", job, 300);
 
     const keyboard = {
         reply_markup: {
@@ -765,15 +768,15 @@ bot.command("mirror", async (ctx) => {
 bot.callbackQuery(/^mirror_dest_(drive|telegram)_(.+)$/, async (ctx) => {
     const destination = ctx.match[1];
     const jobKey = ctx.match[2];
-    const job = mirrorJobs.get(jobKey);
-
-    if (!job || job.chatId !== ctx.chat.id || job.userId !== ctx.from.id) {
-        await safeAnswerCallback(ctx);
-        return;
+    await safeAnswerCallback(ctx);
+    const jobData = await getPendingAction(`mirror:${jobKey}`);
+    if (!jobData || jobData.data.chatId !== ctx.chat.id || jobData.data.userId !== ctx.from.id) {
+        return ctx.reply("This action has expired. Please /mirror again.");
     }
 
+    const job = jobData.data;
     job.destination = destination;
-    await safeAnswerCallback(ctx);
+    await savePendingAction(`mirror:${jobKey}`, "mirror_job", job, 300);
     await ctx.deleteMessage();
 
     const keyboard = {
@@ -789,22 +792,22 @@ bot.callbackQuery(/^mirror_dest_(drive|telegram)_(.+)$/, async (ctx) => {
 
     const promptMsg = await ctx.reply("Do you want to rename the file before mirroring?", keyboard);
     job.promptMessageId = promptMsg.message_id;
+    await savePendingAction(`mirror:${jobKey}`, "mirror_job", job, 300);
 });
 
 bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
     const choice = ctx.match[1];
     const jobKey = ctx.match[2];
-    const job = mirrorJobs.get(jobKey);
-
-    if (!job || job.chatId !== ctx.chat.id || job.userId !== ctx.from.id) {
-        await safeAnswerCallback(ctx);
-        return;
+    await safeAnswerCallback(ctx);
+    const jobData = await getPendingAction(`mirror:${jobKey}`);
+    if (!jobData || jobData.data.chatId !== ctx.chat.id || jobData.data.userId !== ctx.from.id) {
+        return ctx.reply("This action has expired. Please /mirror again.");
     }
 
-    await safeAnswerCallback(ctx);
+    const job = jobData.data;
 
     if (choice === "no") {
-        mirrorJobs.delete(jobKey);
+        await deletePendingAction(`mirror:${jobKey}`);
         await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
         let filename = job.filename;
         if (filename === "Unknown") {
@@ -818,7 +821,7 @@ bot.callbackQuery(/^rename_(yes|no)_(.+)$/, async (ctx) => {
         await startMirror(ctx, job.url, filename, job.destination);
     } else {
         await ctx.editMessageText("Send the new file name:");
-        pendingRenames.set(pendingKey(ctx.chat.id, ctx.from.id), jobKey);
+        await savePendingAction(`rename:${ctx.chat.id}:${ctx.from.id}`, "rename", jobKey);
     }
 });
 
@@ -835,9 +838,9 @@ async function startMirror(ctx, url, filename, destination) {
             destination: destination,
         },
     };
-
+    
     try {
-        const res = await fetchWithTimeout(
+        const res = await fetch(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -870,7 +873,7 @@ bot.command("download", async (ctx) => {
 
     const fetchingMsg = await ctx.reply("Let me fetch the media first.");
     const jobKey = `${ctx.chat.id}_${Date.now()}`;
-    fetchMessages.set(jobKey, fetchingMsg.message_id);
+    await savePendingAction(`fetch:${jobKey}`, "fetch_info", { messageId: fetchingMsg.message_id, chatId: ctx.chat.id });
 
     const dispatchBody = {
         event_type: "fetch-media-info",
@@ -883,7 +886,7 @@ bot.command("download", async (ctx) => {
     };
 
     try {
-        const res = await fetchWithTimeout(
+        const res = await fetch(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -925,7 +928,7 @@ bot.callbackQuery(/^dl_fmt_(.+)_(.+)$/, async (ctx) => {
     };
 
     try {
-        const res = await fetchWithTimeout(
+        const res = await fetch(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -998,7 +1001,7 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (
         .single();
 
     if (fetchErr || !row) {
-        await safeAnswerCallback(ctx);
+        await safeAnswerCallback(ctx, "This action has expired. Please use /imageedit again.");
         return;
     }
 
@@ -1008,7 +1011,7 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (
     await ctx.deleteMessage();
 
     if (action === "text") {
-        pendingImageEditAction.set(ctx.from.id, `imgedit_text_${fileId}`);
+        await savePendingAction(`imageedit_action:${ctx.from.id}`, "text", fileId);
         await ctx.reply("Send me the text you want to overlay on the image.");
         return;
     }
@@ -1018,7 +1021,7 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (
             "Send me your custom ffmpeg command. Use `input.jpg` as input and `output.jpg` as final output.\n\nExample:\n`ffmpeg -y -i input.jpg -vf scale=1200:-1:bicubic -frames:v 1 -q:v 10 output.jpg`",
             { parse_mode: "Markdown" }
         );
-        pendingImageEditAction.set(ctx.from.id, `imgedit_custom_${fileId}_${promptMsg.message_id}`);
+        await savePendingAction(`imageedit_action:${ctx.from.id}`, "custom", { fileId, promptMsgId: promptMsg.message_id });
         return;
     }
 
@@ -1065,7 +1068,7 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (
             },
         };
 
-        const dispatchRes = await fetchWithTimeout(
+        const dispatchRes = await fetch(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -1125,7 +1128,15 @@ bot.command("post", async (ctx) => {
     }
 
     const postKey = Math.random().toString(36).slice(2, 10);
-    postButtons.set(postKey, buttons);
+    await savePendingAction(`post_buttons:${postKey}`, "post_buttons", buttons, 600);
+    await savePendingAction(`post_media:${postKey}`, "post_media", {
+        type: "text",
+        fileId: null,
+        cleanText: "",
+        chatId: reply.chat.id,
+        messageId: reply.message_id,
+        entities: [],
+    }, 600);
 
     const cleanText = contentLines.join("\n").trim();
 
@@ -1149,13 +1160,20 @@ bot.command("post", async (ctx) => {
         fileId = reply.voice.file_id;
     }
 
+    const originalEntities = reply.entities || reply.caption_entities || [];
+    await savePendingAction(`post_media:${postKey}`, "post_media", {
+        type: mediaType,
+        fileId,
+        cleanText,
+        chatId: reply.chat.id,
+        messageId: reply.message_id,
+        entities: originalEntities,
+    }, 600);
+
     const channelButtons = channels.map((c) => [{
         text: c.channel_name || c.channel_id,
         callback_data: `post_to_channel_${c.channel_id}_${postKey}`,
     }]);
-
-    const originalEntities = reply.entities || reply.caption_entities || [];
-    postButtons.set(postKey + "_media", { type: mediaType, fileId, cleanText, chatId: reply.chat.id, messageId: reply.message_id, entities: originalEntities });
 
     const previewText = cleanText || (reply.photo ? "[Photo]" : reply.video ? "[Video]" : reply.document ? "[Document]" : reply.audio ? "[Audio]" : reply.voice ? "[Voice]" : "[Message]");
 
@@ -1174,16 +1192,21 @@ bot.callbackQuery(/^post_to_channel_(.+)_(.+)$/, async (ctx) => {
         channelId = "-100" + channelId;
     }
 
-    const buttons = postButtons.get(postKey) || [];
-    const mediaData = postButtons.get(postKey + "_media") || {};
-    postButtons.delete(postKey);
-    postButtons.delete(postKey + "_media");
+    await safeAnswerCallback(ctx, "Posted!");
+
+    const buttonsData = await getPendingAction(`post_buttons:${postKey}`);
+    const mediaData = await getPendingAction(`post_media:${postKey}`);
+    await deletePendingAction(`post_buttons:${postKey}`);
+    await deletePendingAction(`post_media:${postKey}`);
+
+    const buttons = buttonsData ? buttonsData.data : [];
+    const media = mediaData ? mediaData.data : {};
 
     const replyMarkup = buttons.length > 0
         ? { inline_keyboard: [buttons] }
         : undefined;
 
-    const { type, fileId, cleanText, chatId, messageId, entities } = mediaData;
+    const { type, fileId, cleanText, chatId, messageId, entities } = media;
 
     try {
         let textToSend = cleanText || "";
@@ -1194,17 +1217,14 @@ bot.callbackQuery(/^post_to_channel_(.+)_(.+)$/, async (ctx) => {
             parseMode = "HTML";
         }
 
-        if (type === "text") {
+        if (type === "text" || !fileId) {
             await ctx.api.sendMessage(channelId, textToSend, { reply_markup: replyMarkup, parse_mode: parseMode });
-        } else if (fileId) {
-            await ctx.api.copyMessage(channelId, chatId, messageId, { reply_markup: replyMarkup, caption: textToSend || undefined, parse_mode: parseMode });
         } else {
-            await ctx.api.sendMessage(channelId, textToSend, { reply_markup: replyMarkup, parse_mode: parseMode });
+            await ctx.api.copyMessage(channelId, chatId, messageId, { reply_markup: replyMarkup, caption: textToSend || undefined, parse_mode: parseMode });
         }
-        await safeAnswerCallback(ctx, "Posted!");
         await ctx.deleteMessage();
-    } catch (e) {
-        await safeAnswerCallback(ctx, "Failed to post. Make sure I'm admin in the channel.");
+    } catch {
+        await ctx.reply("Failed to post. Make sure I'm admin in the channel.");
     }
 });
 
@@ -1224,7 +1244,7 @@ bot.callbackQuery(/^delete_mirror_(.+)$/, async (ctx) => {
     await safeAnswerCallback(ctx);
 
     try {
-        const res = await fetchWithTimeout(
+        const res = await fetch(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -1243,12 +1263,12 @@ bot.callbackQuery(/^delete_mirror_(.+)$/, async (ctx) => {
             }
         );
         if (!res.ok) {
-            await safeAnswerCallback(ctx, "Failed to dispatch deletion.");
+            await ctx.reply("Failed to dispatch deletion.");
         } else {
             await ctx.deleteMessage();
         }
     } catch (e) {
-        await safeAnswerCallback(ctx, "Error: " + e.message);
+        await ctx.reply("Error: " + e.message);
     }
 });
 
@@ -1356,7 +1376,7 @@ bot.command("videoreduce", async (ctx) => {
                 },
             };
 
-            const dispatchRes = await fetchWithTimeout(
+            const dispatchRes = await fetch(
                 `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
                 {
                     method: "POST",
@@ -1409,9 +1429,10 @@ bot.command("videoreduce", async (ctx) => {
             return ctx.reply("Compression failed. Try a different video.");
         }
 
+        const outputFileName = `compressed_${Date.now()}.mp4`;
         const { error } = await supabase.storage
             .from("images")
-            .upload(`compressed_${Date.now()}.mp4`, outputPath, {
+            .upload(outputFileName, outputPath, {
                 contentType: "video/mp4",
                 upsert: true,
             });
@@ -1423,7 +1444,7 @@ bot.command("videoreduce", async (ctx) => {
 
         const { data: publicUrlData } = supabase.storage
             .from("images")
-            .getPublicUrl(`compressed_${Date.now()}.mp4`);
+            .getPublicUrl(outputFileName);
 
         return ctx.replyWithVideo(publicUrlData.publicUrl, {
             caption: "Here’s your compressed video.",
@@ -1481,7 +1502,7 @@ bot.command("videocapture", async (ctx) => {
             },
         };
 
-        const dispatchRes = await fetchWithTimeout(
+        const dispatchRes = await fetch(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -1523,22 +1544,25 @@ bot.on(":left_chat_member", async (ctx) => {
 });
 
 bot.on("message:text", async (ctx) => {
-    const pk = pendingKey(ctx.chat.id, ctx.from.id);
-    const jobKey = pendingRenames.get(pk);
-    if (jobKey) {
-        pendingRenames.delete(pk);
-        const job = mirrorJobs.get(jobKey);
-        if (job) {
-            mirrorJobs.delete(jobKey);
+    const pendingRenameData = await getPendingAction(`rename:${ctx.chat.id}:${ctx.from.id}`);
+    if (pendingRenameData) {
+        await deletePendingAction(`rename:${ctx.chat.id}:${ctx.from.id}`);
+        const jobKey = pendingRenameData.data;
+        const jobData = await getPendingAction(`mirror:${jobKey}`);
+        if (jobData) {
+            await deletePendingAction(`mirror:${jobKey}`);
+            const job = jobData.data;
             const newName = ctx.message.text.trim();
             await ctx.api.deleteMessage(ctx.chat.id, job.promptMessageId);
             await startMirror(ctx, job.url, newName, job.destination);
             return;
         }
     }
-    if (pendingConnectAction.has(ctx.from.id)) {
-        const action = pendingConnectAction.get(ctx.from.id);
-        pendingConnectAction.delete(ctx.from.id);
+
+    const connectActionData = await getPendingAction(`connect_action:${ctx.from.id}`);
+    if (connectActionData) {
+        const action = connectActionData.data;
+        await deletePendingAction(`connect_action:${ctx.from.id}`);
         const input = ctx.message.text.trim();
         if (action === "connect") {
             const parts = input.split(/\s+/);
@@ -1583,9 +1607,10 @@ bot.on("message:text", async (ctx) => {
         return;
     }
 
-    if (pendingAdminAction.has(ctx.from.id)) {
-        const action = pendingAdminAction.get(ctx.from.id);
-        pendingAdminAction.delete(ctx.from.id);
+    const adminActionData = await getPendingAction(`admin_action:${ctx.from.id}`);
+    if (adminActionData) {
+        const action = adminActionData.data;
+        await deletePendingAction(`admin_action:${ctx.from.id}`);
         const input = ctx.message.text.trim();
         const targetId = parseInt(input, 10);
         if (isNaN(targetId)) {
@@ -1607,12 +1632,13 @@ bot.on("message:text", async (ctx) => {
         return;
     }
 
-    if (pendingImageEditAction.has(ctx.from.id)) {
-        const action = pendingImageEditAction.get(ctx.from.id);
-        pendingImageEditAction.delete(ctx.from.id);
+    const imageEditActionData = await getPendingAction(`imageedit_action:${ctx.from.id}`);
+    if (imageEditActionData) {
+        const actionData = imageEditActionData.data;
+        await deletePendingAction(`imageedit_action:${ctx.from.id}`);
         const input = ctx.message.text.trim();
-        if (action.startsWith("imgedit_text_")) {
-            const fileId = action.substring("imgedit_text_".length);
+        if (typeof actionData === "string" && actionData === "text") {
+            const fileId = actionData;
             if (!fileId || !input) return ctx.reply("Invalid input.");
             try {
                 const file = await ctx.api.getFile(fileId);
@@ -1648,7 +1674,7 @@ bot.on("message:text", async (ctx) => {
                     },
                 };
 
-                const dispatchRes = await fetchWithTimeout(
+                const dispatchRes = await fetch(
                     `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
                     {
                         method: "POST",
@@ -1668,16 +1694,12 @@ bot.on("message:text", async (ctx) => {
             } catch (e) {
                 return ctx.reply("Error: " + e.message);
             }
-        }
-        if (action.startsWith("imgedit_custom_")) {
-            const rest = action.substring("imgedit_custom_".length);
-            const underscoreIdx = rest.lastIndexOf("_");
-            const fileId = underscoreIdx > 0 ? rest.substring(0, underscoreIdx) : rest;
-            const promptMsgId = underscoreIdx > 0 ? parseInt(rest.substring(underscoreIdx + 1), 10) : null;
-            if (!fileId || !input) return ctx.reply("Invalid input.");
+        } else if (typeof actionData === "object" && actionData.fileId) {
+            const { fileId, promptMsgId } = actionData;
             if (promptMsgId) {
                 try { await ctx.api.deleteMessage(ctx.chat.id, promptMsgId); } catch {}
             }
+            if (!fileId || !input) return ctx.reply("Invalid input.");
             try {
                 const file = await ctx.api.getFile(fileId);
                 const fileUrl = `https://api.telegram.org/file/bot${process.env.KIRA_TOKEN}/${file.file_path}`;
@@ -1714,7 +1736,7 @@ bot.on("message:text", async (ctx) => {
                     },
                 };
 
-                const dispatchRes = await fetchWithTimeout(
+                const dispatchRes = await fetch(
                     `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
                     {
                         method: "POST",
@@ -1737,9 +1759,10 @@ bot.on("message:text", async (ctx) => {
         return;
     }
 
-    if (pendingKiraAction.has(ctx.from.id)) {
-        const action = pendingKiraAction.get(ctx.from.id);
-        pendingKiraAction.delete(ctx.from.id);
+    const kiraActionData = await getPendingAction(`kira_action:${ctx.from.id}`);
+    if (kiraActionData) {
+        const action = kiraActionData.data;
+        await deletePendingAction(`kira_action:${ctx.from.id}`);
         const input = ctx.message.text.trim();
         if (action === "setkey") {
             const token = input;
@@ -1772,7 +1795,11 @@ bot.on("message:text", async (ctx) => {
 });
 
 export async function POST(request) {
-    const body = await request.json();
-    await bot.handleUpdate(body);
-    return new Response("ok");
+    try {
+        const body = await request.json();
+        await bot.handleUpdate(body);
+        return new Response("ok", { status: 200 });
+    } catch {
+        return new Response("ok", { status: 200 });
+    }
 }
