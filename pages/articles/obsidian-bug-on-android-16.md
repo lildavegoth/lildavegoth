@@ -20,5 +20,5 @@ categories: "Apps, Tutorials, Useful, Fix"
 5. Try to edit anything like adding any letter in any notes and then try to save, if there are no error saving heads-up appear, it means this method works
 
 # Notes →
-- This bug are only happend after restore the Obsidian app using DataBackup, Swift Backups of any rooted App Backup
-- Everything is just fine if your android is below Android 16, even doing Backup and Restore using any rooted App Backup apps
+- This bug are only happend after restore the Obsidian app using DataBackup, Swift Backups of any rooted App Backup, and you can just clear install (Install the app from Play Store and move or import all your obsidian vault) or use my tutorial above.
+- Everything is just fine if your android is below Android 16, even doing Backup and Restore using any root App Backup apps
