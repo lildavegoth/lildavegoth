@@ -17,6 +17,20 @@ const supabase = createClient(
 const bot = new Bot(process.env.KIRA_TOKEN);
 await bot.init();
 
+async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal,
+        });
+        return response;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 async function safeAnswerCallback(ctx, text) {
     try {
         if (text) {
@@ -24,10 +38,11 @@ async function safeAnswerCallback(ctx, text) {
         } else {
             await ctx.answerCallbackQuery();
         }
-    } catch {
-        // ignore expired callback queries
-    }
+    } catch {}
 }
+
+bot.catch(async (err) => {
+});
 
 bot.on("channel_post", async (ctx) => {
     const msg = ctx.update.channel_post;
@@ -359,7 +374,7 @@ bot.callbackQuery("admin_restart", async (ctx) => {
     await supabase
         .from("bot_config")
         .upsert({ key: "restart_pending", value: ctx.chat.id.toString() });
-    await fetch(process.env.VERCEL_DEPLOY_HOOK, { method: "POST" });
+    await fetchWithTimeout(process.env.VERCEL_DEPLOY_HOOK, { method: "POST" });
     await safeAnswerCallback(ctx);
     return ctx.reply("Redeploying…");
 });
@@ -621,7 +636,7 @@ bot.command("kira", async (ctx) => {
     }
 
     try {
-        const res = await fetch(
+        const res = await fetchWithTimeout(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -701,7 +716,7 @@ bot.command("mirror", async (ctx) => {
     let fileSize = "Unknown";
 
     try {
-        const headRes = await fetch(url, { method: "HEAD" });
+        const headRes = await fetchWithTimeout(url, { method: "HEAD" }, 5000);
         if (headRes.ok) {
             const disposition = headRes.headers.get("content-disposition");
             if (disposition) {
@@ -821,7 +836,7 @@ async function startMirror(ctx, url, filename, destination) {
     };
 
     try {
-        const res = await fetch(
+        const res = await fetchWithTimeout(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -867,7 +882,7 @@ bot.command("download", async (ctx) => {
     };
 
     try {
-        const res = await fetch(
+        const res = await fetchWithTimeout(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -909,7 +924,7 @@ bot.callbackQuery(/^dl_fmt_(.+)_(.+)$/, async (ctx) => {
     };
 
     try {
-        const res = await fetch(
+        const res = await fetchWithTimeout(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -1049,7 +1064,7 @@ bot.callbackQuery(/^imgedit_(enhance|restore|reduce|text|custom)_(.+)$/, async (
             },
         };
 
-        const dispatchRes = await fetch(
+        const dispatchRes = await fetchWithTimeout(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -1208,7 +1223,7 @@ bot.callbackQuery(/^delete_mirror_(.+)$/, async (ctx) => {
     await safeAnswerCallback(ctx);
 
     try {
-        const res = await fetch(
+        const res = await fetchWithTimeout(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -1340,7 +1355,7 @@ bot.command("videoreduce", async (ctx) => {
                 },
             };
 
-            const dispatchRes = await fetch(
+            const dispatchRes = await fetchWithTimeout(
                 `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
                 {
                     method: "POST",
@@ -1465,7 +1480,7 @@ bot.command("videocapture", async (ctx) => {
             },
         };
 
-        const dispatchRes = await fetch(
+        const dispatchRes = await fetchWithTimeout(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 method: "POST",
@@ -1632,7 +1647,7 @@ bot.on("message:text", async (ctx) => {
                     },
                 };
 
-                const dispatchRes = await fetch(
+                const dispatchRes = await fetchWithTimeout(
                     `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
                     {
                         method: "POST",
@@ -1698,7 +1713,7 @@ bot.on("message:text", async (ctx) => {
                     },
                 };
 
-                const dispatchRes = await fetch(
+                const dispatchRes = await fetchWithTimeout(
                     `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
                     {
                         method: "POST",
