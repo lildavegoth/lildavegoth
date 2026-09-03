@@ -1236,7 +1236,7 @@
         .bg-color-input {
             width: 100%;
             height: 44px;
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            border: 2px solid rgba(193, 252, 50, 0.4);
             border-radius: var(--radius-small);
             cursor: pointer;
             background: none;
@@ -1252,12 +1252,12 @@
 
         .bg-color-input::-webkit-color-swatch {
             border: none;
-            border-radius: calc(var(--radius-small) - 2px);
+            border-radius: calc(var(--radius-small) - 4px);
         }
 
         .bg-color-input::-moz-color-swatch {
             border: none;
-            border-radius: calc(var(--radius-small) - 2px);
+            border-radius: calc(var(--radius-small) - 4px);
         }
 
         .reset-modal,
@@ -1744,6 +1744,8 @@
             var currentPage = 1;
             var quickLinksData = [];
             var pagesData = [];
+            var pagesDataLoaded = false;
+            var pagesLoadPromise = null;
             var defaultLinks = [
                 { name: 'Gmail', url: 'https://mail.google.com/' },
                 { name: 'Kakoi Kiraku', url: 'https://kakoi-kiraku-home.vercel.app/' },
@@ -2006,48 +2008,42 @@
                     savedState = 'true';
                     localStorage.setItem('searchAppsEnabled', 'true');
                 }
-                if (savedState === 'true') {
-                    toggleSearchApps.checked = true;
-                } else {
-                    toggleSearchApps.checked = false;
-                }
+                toggleSearchApps.checked = savedState === 'true';
             }
 
             function loadPagesData() {
-                fetch(PAGES_URL)
+                if (pagesDataLoaded) return Promise.resolve();
+                if (pagesLoadPromise) return pagesLoadPromise;
+                pagesLoadPromise = fetch(PAGES_URL)
                     .then(function(response) {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
+                        if (!response.ok) throw new Error('Failed to load pages');
                         return response.json();
                     })
                     .then(function(data) {
                         pagesData = [];
                         if (data.highlightProjects) {
                             data.highlightProjects.forEach(function(item) {
-                                if (item.url) {
-                                    pagesData.push({ name: item.title, url: item.url });
-                                }
+                                if (item.url) pagesData.push({ name: item.title, url: item.url });
                             });
                         }
                         if (data.apps) {
                             data.apps.forEach(function(item) {
-                                if (item.url) {
-                                    pagesData.push({ name: item.title, url: item.url });
-                                }
+                                if (item.url) pagesData.push({ name: item.title, url: item.url });
                             });
                         }
                         if (data.games) {
                             data.games.forEach(function(item) {
-                                if (item.url) {
-                                    pagesData.push({ name: item.title, url: item.url });
-                                }
+                                if (item.url) pagesData.push({ name: item.title, url: item.url });
                             });
                         }
+                        pagesDataLoaded = true;
                     })
                     .catch(function() {
                         pagesData = [];
+                        pagesDataLoaded = false;
+                        pagesLoadPromise = null;
                     });
+                return pagesLoadPromise;
             }
 
             function renderSuggestions(query) {
@@ -2055,6 +2051,12 @@
                 if (!enabled || !query || query.trim() === '') {
                     searchSuggestions.classList.remove('active');
                     searchSuggestions.innerHTML = '';
+                    return;
+                }
+                if (!pagesDataLoaded) {
+                    loadPagesData().then(function() {
+                        renderSuggestions(query);
+                    });
                     return;
                 }
                 var lowerQuery = query.toLowerCase().trim();
@@ -2104,10 +2106,7 @@
                 searchEngineOverlay.classList.remove('active');
             }
 
-            resetSettings.addEventListener('click', function() {
-                openResetModal();
-            });
-
+            resetSettings.addEventListener('click', openResetModal);
             resetOverlay.addEventListener('click', closeResetModalFunc);
             closeResetModal.addEventListener('click', closeResetModalFunc);
 
