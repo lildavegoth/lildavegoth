@@ -166,84 +166,84 @@
         </div>
     </div>
 
-    <script src="../files/ffmpeg/ffmpeg.min.js"></script>
-    <script>
-      const videoInput = document.getElementById('videoFile');
-      const audioInput = document.getElementById('audioFile');
-      const mergeBtn = document.getElementById('mergeBtn');
-      const statusDiv = document.getElementById('status');
-      const downloadContainer = document.getElementById('downloadContainer');
-    
-      let ffmpegInstance = null;
-      let videoFile = null;
-      let audioFile = null;
-    
-      videoInput.addEventListener('change', (e) => {
+<<script src="/scripts/ffmpeg/ffmpeg.min.js"></script>
+<script>
+    const videoInput = document.getElementById('videoFile');
+    const audioInput = document.getElementById('audioFile');
+    const mergeBtn = document.getElementById('mergeBtn');
+    const statusDiv = document.getElementById('status');
+    const downloadContainer = document.getElementById('downloadContainer');
+
+    let ffmpegInstance = null;
+    let videoFile = null;
+    let audioFile = null;
+
+    videoInput.addEventListener('change', (e) => {
         videoFile = e.target.files[0];
         checkFiles();
-      });
-    
-      audioInput.addEventListener('change', (e) => {
+    });
+
+    audioInput.addEventListener('change', (e) => {
         audioFile = e.target.files[0];
         checkFiles();
-      });
-    
-      function checkFiles() {
+    });
+
+    function checkFiles() {
         if (videoFile && audioFile) {
-          mergeBtn.disabled = false;
-          statusDiv.textContent = 'Ready to merge.';
+            mergeBtn.disabled = false;
+            statusDiv.textContent = 'Ready to merge.';
         } else {
-          mergeBtn.disabled = true;
-          statusDiv.textContent = 'Select both files to begin.';
+            mergeBtn.disabled = true;
+            statusDiv.textContent = 'Select both files to begin.';
         }
         downloadContainer.innerHTML = '';
-      }
-    
-      mergeBtn.addEventListener('click', async () => {
+    }
+
+    mergeBtn.addEventListener('click', async () => {
         if (!videoFile || !audioFile) return;
         mergeBtn.disabled = true;
         statusDiv.textContent = 'Loading FFmpeg...';
         downloadContainer.innerHTML = '';
-    
+
         try {
-          if (!ffmpegInstance) {
-            const { createFFmpeg, fetchFile } = FFmpeg;
-            ffmpegInstance = createFFmpeg({
-              log: false,
-              corePath: 'files/ffmpeg/ffmpeg-core.js',
-            });
-            await ffmpegInstance.load();
-          }
-    
-          statusDiv.textContent = 'Writing files to memory...';
-          ffmpegInstance.FS('writeFile', 'video.m4s', await fetchFile(videoFile));
-          ffmpegInstance.FS('writeFile', 'audio.m4s', await fetchFile(audioFile));
-    
-          statusDiv.textContent = 'Merging files...';
-          await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
-    
-          statusDiv.textContent = 'Reading output file...';
-          const data = ffmpegInstance.FS('readFile', 'output.mp4');
-          const blob = new Blob([data.buffer], { type: 'video/mp4' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = 'merged.mp4';
-          link.textContent = 'Download merged MP4';
-          link.className = 'download-link';
-          downloadContainer.appendChild(link);
-          statusDiv.textContent = 'Merge complete.';
-    
-          ffmpegInstance.FS('unlink', 'video.m4s');
-          ffmpegInstance.FS('unlink', 'audio.m4s');
-          ffmpegInstance.FS('unlink', 'output.mp4');
+            if (!ffmpegInstance) {
+                const { createFFmpeg, fetchFile } = FFmpeg;
+                ffmpegInstance = createFFmpeg({
+                    log: false,
+                    corePath: '/scripts/ffmpeg/ffmpeg-core.js',
+                });
+                await ffmpegInstance.load();
+            }
+
+            statusDiv.textContent = 'Writing files to memory...';
+            ffmpegInstance.FS('writeFile', 'video.m4s', await fetchFile(videoFile));
+            ffmpegInstance.FS('writeFile', 'audio.m4s', await fetchFile(audioFile));
+
+            statusDiv.textContent = 'Merging files...';
+            await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
+
+            statusDiv.textContent = 'Reading output file...';
+            const data = ffmpegInstance.FS('readFile', 'output.mp4');
+            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'merged.mp4';
+            link.textContent = 'Download merged MP4';
+            link.className = 'download-link';
+            downloadContainer.appendChild(link);
+            statusDiv.textContent = 'Merge complete.';
+
+            ffmpegInstance.FS('unlink', 'video.m4s');
+            ffmpegInstance.FS('unlink', 'audio.m4s');
+            ffmpegInstance.FS('unlink', 'output.mp4');
         } catch (error) {
-          statusDiv.textContent = 'Error: ' + error.message;
-          console.error('FFmpeg error:', error);
+            statusDiv.textContent = 'Error: ' + error.message;
+            console.error('FFmpeg error:', error);
         } finally {
-          mergeBtn.disabled = false;
+            mergeBtn.disabled = false;
         }
-      });
-    </script>
+    });
+</script>
 </body>
 </html>
