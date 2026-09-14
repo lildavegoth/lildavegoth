@@ -194,26 +194,66 @@
         </footer>
     </div>
 
-<script src="/scripts/ffmpeg/ffmpeg.min.js"></script>
 <script>
-    const videoInput = document.getElementById('videoFile');
-    const audioInput = document.getElementById('audioFile');
-    const mergeBtn = document.getElementById('mergeBtn');
-    const downloadContainer = document.getElementById('downloadContainer');
-    const errorText = document.getElementById('errorText');
+    function loadFFmpeg(callback) {
+        if (window.FFmpeg) {
+            callback();
+            return;
+        }
 
-    let ffmpegInstance = null;
-    let videoFile = null;
-    let audioFile = null;
-    let activeNotif = null;
-    let activeInterval = null;
+        var sources = [
+            'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js',
+            'https://m4s-merger-tools-web.vercel.app/scripts/ffmpeg/ffmpeg.min.js'
+        ];
 
-    videoInput.addEventListener('change', (e) => {
+        var index = 0;
+
+        function tryNext() {
+            if (index >= sources.length) {
+                errorText.textContent = 'Error: Failed to load FFmpeg engine.';
+                errorText.classList.add('visible');
+                mergeBtn.disabled = false;
+                return;
+            }
+
+            var script = document.createElement('script');
+            script.src = sources[index];
+            script.onload = function() {
+                if (window.FFmpeg) {
+                    callback();
+                } else {
+                    index++;
+                    tryNext();
+                }
+            };
+            script.onerror = function() {
+                index++;
+                tryNext();
+            };
+            document.head.appendChild(script);
+        }
+
+        tryNext();
+    }
+
+    var videoInput = document.getElementById('videoFile');
+    var audioInput = document.getElementById('audioFile');
+    var mergeBtn = document.getElementById('mergeBtn');
+    var downloadContainer = document.getElementById('downloadContainer');
+    var errorText = document.getElementById('errorText');
+
+    var ffmpegInstance = null;
+    var videoFile = null;
+    var audioFile = null;
+    var activeNotif = null;
+    var activeInterval = null;
+
+    videoInput.addEventListener('change', function(e) {
         videoFile = e.target.files[0];
         checkFiles();
     });
 
-    audioInput.addEventListener('change', (e) => {
+    audioInput.addEventListener('change', function(e) {
         audioFile = e.target.files[0];
         checkFiles();
     });
@@ -231,9 +271,9 @@
 
     function startNotification(title, total) {
         stopNotification();
-        let remaining = total;
+        var remaining = total;
         activeNotif = window.createTimerNotification(title, total);
-        activeInterval = setInterval(() => {
+        activeInterval = setInterval(function() {
             remaining--;
             if (remaining >= 0) {
                 activeNotif.update(remaining, total);
@@ -255,53 +295,55 @@
         }
     }
 
-    mergeBtn.addEventListener('click', async () => {
+    mergeBtn.addEventListener('click', function() {
         if (!videoFile || !audioFile) return;
         mergeBtn.disabled = true;
         downloadContainer.innerHTML = '';
         errorText.classList.remove('visible');
         errorText.textContent = '';
 
-        try {
-            if (!ffmpegInstance) {
-                startNotification('Loading FFmpeg', 20);
-                const { createFFmpeg, fetchFile } = FFmpeg;
-                ffmpegInstance = createFFmpeg({
-                    log: false,
-                    corePath: '/scripts/ffmpeg/ffmpeg-core.js'
-                });
-                await ffmpegInstance.load();
+        loadFFmpeg(async function() {
+            try {
+                if (!ffmpegInstance) {
+                    startNotification('Loading FFmpeg', 20);
+                    var createFFmpeg = FFmpeg.createFFmpeg;
+                    ffmpegInstance = createFFmpeg({
+                        log: false,
+                        corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+                    });
+                    await ffmpegInstance.load();
+                }
+
+                startNotification('Merging Files', 30);
+
+                ffmpegInstance.FS('writeFile', 'video.m4s', await FFmpeg.fetchFile(videoFile));
+                ffmpegInstance.FS('writeFile', 'audio.m4s', await FFmpeg.fetchFile(audioFile));
+
+                await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
+
+                var data = ffmpegInstance.FS('readFile', 'output.mp4');
+                var blob = new Blob([data.buffer], { type: 'video/mp4' });
+                var url = URL.createObjectURL(blob);
+                var link = document.createElement('a');
+                link.href = url;
+                link.download = 'merged.mp4';
+                link.textContent = 'Download merged MP4';
+                link.className = 'download-link';
+                downloadContainer.appendChild(link);
+
+                ffmpegInstance.FS('unlink', 'video.m4s');
+                ffmpegInstance.FS('unlink', 'audio.m4s');
+                ffmpegInstance.FS('unlink', 'output.mp4');
+
+                stopNotification();
+            } catch (error) {
+                stopNotification();
+                errorText.textContent = 'Error: ' + error.message;
+                errorText.classList.add('visible');
+            } finally {
+                mergeBtn.disabled = false;
             }
-
-            startNotification('Merging Files', 30);
-
-            ffmpegInstance.FS('writeFile', 'video.m4s', await FFmpeg.fetchFile(videoFile));
-            ffmpegInstance.FS('writeFile', 'audio.m4s', await FFmpeg.fetchFile(audioFile));
-
-            await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
-
-            const data = ffmpegInstance.FS('readFile', 'output.mp4');
-            const blob = new Blob([data.buffer], { type: 'video/mp4' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'merged.mp4';
-            link.textContent = 'Download merged MP4';
-            link.className = 'download-link';
-            downloadContainer.appendChild(link);
-
-            ffmpegInstance.FS('unlink', 'video.m4s');
-            ffmpegInstance.FS('unlink', 'audio.m4s');
-            ffmpegInstance.FS('unlink', 'output.mp4');
-
-            stopNotification();
-        } catch (error) {
-            stopNotification();
-            errorText.textContent = 'Error: ' + error.message;
-            errorText.classList.add('visible');
-        } finally {
-            mergeBtn.disabled = false;
-        }
+        });
     });
 </script>
 </body>
