@@ -40,7 +40,6 @@
             color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
-            padding-bottom: 90px;
         }
 
         .container {
@@ -48,7 +47,6 @@
             margin: 0 auto;
             padding: var(--spacing-md);
             position: relative;
-            min-height: calc(100vh - 90px);
         }
 
         .card {
@@ -88,12 +86,22 @@
         input[type="file"] {
             display: block;
             width: 100%;
-            padding: var(--spacing-xs) var(--spacing-sm);
+            min-height: 52px;
+            padding: var(--spacing-sm);
             background-color: var(--bg-dark);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: var(--radius-small);
             color: var(--text-primary);
             font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        input[type="file"]::file-selector-button {
+            display: none;
+        }
+
+        input[type="file"]::-webkit-file-upload-button {
+            display: none;
         }
 
         button {
@@ -107,6 +115,8 @@
             cursor: pointer;
             transition: background-color 0.2s;
             margin-top: var(--spacing-sm);
+            width: 100%;
+            display: block;
         }
 
         button:hover {
@@ -116,21 +126,6 @@
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-        }
-
-        .status {
-            margin-top: var(--spacing-md);
-            padding: var(--spacing-sm);
-            border-radius: var(--radius-small);
-            background-color: var(--bg-dark);
-            min-height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            text-align: center;
-            word-break: break-all;
         }
 
         .download-link {
@@ -145,113 +140,169 @@
         .download-link:hover {
             text-decoration: underline;
         }
+
+        .error-text {
+            margin-top: var(--spacing-sm);
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-small);
+            background-color: rgba(255, 60, 60, 0.1);
+            color: #ff6b6b;
+            font-size: 0.9rem;
+            text-align: center;
+            display: none;
+        }
+
+        .error-text.visible {
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="card">
-            <div class="title">M4S to MP4 Merger</div>
-            <div class="subtitle">Select video and audio M4S files, then merge them into a single MP4 file.</div>
-            <div class="file-input-group">
-                <label class="file-label" for="videoFile">Video M4S file:</label>
-                <input type="file" id="videoFile" accept=".m4s">
+        <a href="../index.html" class="back-link fade-in" style="margin-bottom: 12px;">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        <app-header class="fade-in">
+            <div>
+                <h1>M4S Merger</h1>
+                <p class="tagline">Select video and audio M4S files to merge them into a single MP4 file</p>
             </div>
+        </app-header>
+        <div class="card">
             <div class="file-input-group">
-                <label class="file-label" for="audioFile">Audio M4S file:</label>
+                <label class="file-label" for="audioFile">Audio M4S File:</label>
                 <input type="file" id="audioFile" accept=".m4s">
             </div>
-            <button id="mergeBtn" disabled>Merge Files</button>
-            <div class="status" id="status">Select both files to begin.</div>
+            <div class="file-input-group">
+                <label class="file-label" for="videoFile">Video M4S File:</label>
+                <input type="file" id="videoFile" accept=".m4s">
+            </div>
             <div id="downloadContainer"></div>
+            <div class="error-text" id="errorText"></div>
         </div>
+        <button id="mergeBtn" disabled>Merge Files</button>
+
+        <footer class="fade-in">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | M4S Merger</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
     </div>
 
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
-    <script>
-        var videoInput = document.getElementById('videoFile');
-        var audioInput = document.getElementById('audioFile');
-        var mergeBtn = document.getElementById('mergeBtn');
-        var statusDiv = document.getElementById('status');
-        var downloadContainer = document.getElementById('downloadContainer');
+<script src="/scripts/ffmpeg/ffmpeg.min.js"></script>
+<script>
+    const videoInput = document.getElementById('videoFile');
+    const audioInput = document.getElementById('audioFile');
+    const mergeBtn = document.getElementById('mergeBtn');
+    const downloadContainer = document.getElementById('downloadContainer');
+    const errorText = document.getElementById('errorText');
 
-        var ffmpegInstance = null;
-        var videoFile = null;
-        var audioFile = null;
+    let ffmpegInstance = null;
+    let videoFile = null;
+    let audioFile = null;
+    let activeNotif = null;
+    let activeInterval = null;
 
-        videoInput.addEventListener('change', function(e) {
-            videoFile = e.target.files[0];
-            checkFiles();
-        });
+    videoInput.addEventListener('change', (e) => {
+        videoFile = e.target.files[0];
+        checkFiles();
+    });
 
-        audioInput.addEventListener('change', function(e) {
-            audioFile = e.target.files[0];
-            checkFiles();
-        });
+    audioInput.addEventListener('change', (e) => {
+        audioFile = e.target.files[0];
+        checkFiles();
+    });
 
-        function checkFiles() {
-            if (videoFile && audioFile) {
-                mergeBtn.disabled = false;
-                statusDiv.textContent = 'Ready to merge.';
-            } else {
-                mergeBtn.disabled = true;
-                statusDiv.textContent = 'Select both files to begin.';
-            }
-            downloadContainer.innerHTML = '';
-        }
-
-        mergeBtn.addEventListener('click', async function() {
-            if (!videoFile || !audioFile) {
-                return;
-            }
+    function checkFiles() {
+        if (videoFile && audioFile) {
+            mergeBtn.disabled = false;
+        } else {
             mergeBtn.disabled = true;
-            statusDiv.textContent = 'Loading FFmpeg...';
-            downloadContainer.innerHTML = '';
+        }
+        downloadContainer.innerHTML = '';
+        errorText.classList.remove('visible');
+        errorText.textContent = '';
+    }
 
-            try {
-                if (typeof FFmpeg === 'undefined') {
-                    throw new Error('FFmpeg library could not be loaded.');
-                }
-
-                if (!ffmpegInstance) {
-                    var createFFmpeg = FFmpeg.createFFmpeg;
-                    var fetchFile = FFmpeg.fetchFile;
-                    ffmpegInstance = createFFmpeg({
-                        log: false,
-                        corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
-                    });
-                    await ffmpegInstance.load();
-                }
-
-                statusDiv.textContent = 'Writing files to memory...';
-                var videoData = await FFmpeg.fetchFile(videoFile);
-                ffmpegInstance.FS('writeFile', 'video.m4s', videoData);
-                var audioData = await FFmpeg.fetchFile(audioFile);
-                ffmpegInstance.FS('writeFile', 'audio.m4s', audioData);
-
-                statusDiv.textContent = 'Merging files...';
-                await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
-
-                statusDiv.textContent = 'Reading output file...';
-                var data = ffmpegInstance.FS('readFile', 'output.mp4');
-                var blob = new Blob([data.buffer], { type: 'video/mp4' });
-                var url = URL.createObjectURL(blob);
-                var link = document.createElement('a');
-                link.href = url;
-                link.download = 'merged.mp4';
-                link.textContent = 'Download merged MP4';
-                link.className = 'download-link';
-                downloadContainer.appendChild(link);
-                statusDiv.textContent = 'Merge complete.';
-
-                ffmpegInstance.FS('unlink', 'video.m4s');
-                ffmpegInstance.FS('unlink', 'audio.m4s');
-                ffmpegInstance.FS('unlink', 'output.mp4');
-            } catch (error) {
-                statusDiv.textContent = 'Error: ' + error.message;
-            } finally {
-                mergeBtn.disabled = false;
+    function startNotification(title, total) {
+        stopNotification();
+        let remaining = total;
+        activeNotif = window.createTimerNotification(title, total);
+        activeInterval = setInterval(() => {
+            remaining--;
+            if (remaining >= 0) {
+                activeNotif.update(remaining, total);
+            } else {
+                clearInterval(activeInterval);
+                activeInterval = null;
             }
-        });
-    </script>
+        }, 1000);
+    }
+
+    function stopNotification() {
+        if (activeInterval) {
+            clearInterval(activeInterval);
+            activeInterval = null;
+        }
+        if (activeNotif) {
+            activeNotif.close();
+            activeNotif = null;
+        }
+    }
+
+    mergeBtn.addEventListener('click', async () => {
+        if (!videoFile || !audioFile) return;
+        mergeBtn.disabled = true;
+        downloadContainer.innerHTML = '';
+        errorText.classList.remove('visible');
+        errorText.textContent = '';
+
+        try {
+            if (!ffmpegInstance) {
+                startNotification('Loading FFmpeg', 20);
+                const { createFFmpeg, fetchFile } = FFmpeg;
+                ffmpegInstance = createFFmpeg({
+                    log: false,
+                    corePath: '/scripts/ffmpeg/ffmpeg-core.js'
+                });
+                await ffmpegInstance.load();
+            }
+
+            startNotification('Merging Files', 30);
+
+            ffmpegInstance.FS('writeFile', 'video.m4s', await FFmpeg.fetchFile(videoFile));
+            ffmpegInstance.FS('writeFile', 'audio.m4s', await FFmpeg.fetchFile(audioFile));
+
+            await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
+
+            const data = ffmpegInstance.FS('readFile', 'output.mp4');
+            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'merged.mp4';
+            link.textContent = 'Download merged MP4';
+            link.className = 'download-link';
+            downloadContainer.appendChild(link);
+
+            ffmpegInstance.FS('unlink', 'video.m4s');
+            ffmpegInstance.FS('unlink', 'audio.m4s');
+            ffmpegInstance.FS('unlink', 'output.mp4');
+
+            stopNotification();
+        } catch (error) {
+            stopNotification();
+            errorText.textContent = 'Error: ' + error.message;
+            errorText.classList.add('visible');
+        } finally {
+            mergeBtn.disabled = false;
+        }
+    });
+</script>
 </body>
 </html>
