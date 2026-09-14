@@ -226,6 +226,12 @@
         if (timeElement) timeElement.textContent = Math.floor(percent) + '%';
     }
 
+    function closeNotification(notif) {
+        if (notif && typeof notif.close === 'function') {
+            notif.close();
+        }
+    }
+
     var videoInput = document.getElementById('videoFile');
     var audioInput = document.getElementById('audioFile');
     var mergeBtn = document.getElementById('mergeBtn');
@@ -264,6 +270,12 @@
         downloadBtn.style.display = 'none';
     }
 
+    function delay(ms) {
+        return new Promise(function(resolve) {
+            setTimeout(resolve, ms);
+        });
+    }
+
     mergeBtn.addEventListener('click', function() {
         if (!videoFile || !audioFile) return;
         mergeBtn.disabled = true;
@@ -271,20 +283,22 @@
         downloadBtn.style.display = 'none';
 
         loadFFmpeg(async function() {
-            var notif = null;
-            var interval = null;
+            var loadingNotif = null;
+            var mergeNotif = null;
+            var loadingInterval = null;
+            var mergeInterval = null;
 
             try {
                 if (!ffmpegInstance) {
-                    notif = startProgressNotification('Loading FFmpeg');
+                    loadingNotif = startProgressNotification('Loading FFmpeg');
                     var loadStep = 0;
-                    interval = setInterval(function() {
-                        if (loadStep < 30) {
-                            loadStep += 2;
-                            if (loadStep > 30) loadStep = 30;
-                            updateProgress(notif, loadStep);
+                    loadingInterval = setInterval(function() {
+                        if (loadStep < 90) {
+                            loadStep += 3;
+                            if (loadStep > 90) loadStep = 90;
+                            updateProgress(loadingNotif, loadStep);
                         }
-                    }, 200);
+                    }, 150);
 
                     var createFFmpeg = FFmpeg.createFFmpeg;
                     ffmpegInstance = createFFmpeg({
@@ -293,27 +307,27 @@
                     });
                     await ffmpegInstance.load();
 
-                    clearInterval(interval);
-                    interval = null;
-                    updateProgress(notif, 30);
-                    setTimeout(function() {
-                        if (notif) notif.close();
-                    }, 500);
+                    clearInterval(loadingInterval);
+                    loadingInterval = null;
+                    updateProgress(loadingNotif, 100);
+                    await delay(400);
+                    closeNotification(loadingNotif);
+                    loadingNotif = null;
                 }
 
-                notif = startProgressNotification('Merging Files');
-                var step = 30;
-                interval = setInterval(function() {
-                    if (step < 90) {
-                        step += Math.random() * 6 + 2;
-                        if (step > 90) step = 90;
-                        updateProgress(notif, step);
+                mergeNotif = startProgressNotification('Merging Files');
+                var mergeStep = 10;
+                mergeInterval = setInterval(function() {
+                    if (mergeStep < 90) {
+                        mergeStep += Math.random() * 6 + 2;
+                        if (mergeStep > 90) mergeStep = 90;
+                        updateProgress(mergeNotif, mergeStep);
                     }
                 }, 300);
 
                 ffmpegInstance.FS('writeFile', 'video.m4s', await FFmpeg.fetchFile(videoFile));
                 ffmpegInstance.FS('writeFile', 'audio.m4s', await FFmpeg.fetchFile(audioFile));
-                updateProgress(notif, 55);
+                updateProgress(mergeNotif, 45);
 
                 await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
 
@@ -321,12 +335,12 @@
                 var blob = new Blob([data.buffer], { type: 'video/mp4' });
                 mergedUrl = URL.createObjectURL(blob);
 
-                clearInterval(interval);
-                interval = null;
-                updateProgress(notif, 100);
-                setTimeout(function() {
-                    if (notif) notif.close();
-                }, 1200);
+                clearInterval(mergeInterval);
+                mergeInterval = null;
+                updateProgress(mergeNotif, 100);
+                await delay(500);
+                closeNotification(mergeNotif);
+                mergeNotif = null;
 
                 ffmpegInstance.FS('unlink', 'video.m4s');
                 ffmpegInstance.FS('unlink', 'audio.m4s');
@@ -336,8 +350,10 @@
                 downloadBtn.style.display = 'block';
                 mergeBtn.disabled = false;
             } catch (error) {
-                if (interval) clearInterval(interval);
-                if (notif) notif.close();
+                if (loadingInterval) clearInterval(loadingInterval);
+                if (mergeInterval) clearInterval(mergeInterval);
+                closeNotification(loadingNotif);
+                closeNotification(mergeNotif);
                 window.showMessage('Error: ' + error.message, true);
                 mergeBtn.style.display = 'block';
                 downloadBtn.style.display = 'none';
