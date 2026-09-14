@@ -128,32 +128,8 @@
             cursor: not-allowed;
         }
 
-        .download-link {
-            display: inline-block;
-            margin-top: var(--spacing-sm);
-            color: var(--accent-color);
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .download-link:hover {
-            text-decoration: underline;
-        }
-
-        .error-text {
-            margin-top: var(--spacing-sm);
-            padding: var(--spacing-sm);
-            border-radius: var(--radius-small);
-            background-color: rgba(255, 60, 60, 0.1);
-            color: #ff6b6b;
-            font-size: 0.9rem;
-            text-align: center;
+        #downloadBtn {
             display: none;
-        }
-
-        .error-text.visible {
-            display: block;
         }
     </style>
 </head>
@@ -177,10 +153,9 @@
                 <label class="file-label" for="videoFile">Video M4S File:</label>
                 <input type="file" id="videoFile" accept=".m4s">
             </div>
-            <div id="downloadContainer"></div>
-            <div class="error-text" id="errorText"></div>
         </div>
         <button id="mergeBtn" disabled>Merge Files</button>
+        <button id="downloadBtn">Download MP4</button>
 
         <footer class="fade-in">
             <div class="social-links">
@@ -210,8 +185,7 @@
 
         function tryNext() {
             if (index >= sources.length) {
-                errorText.textContent = 'Error: Failed to load FFmpeg engine.';
-                errorText.classList.add('visible');
+                window.showMessage('Failed to load FFmpeg engine.', true);
                 mergeBtn.disabled = false;
                 return;
             }
@@ -236,17 +210,31 @@
         tryNext();
     }
 
+    function startProgressNotification(title) {
+        var notif = window.createTimerNotification(title, 100);
+        var progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
+        var timeElement = notif.wrapper.querySelector('.timer-time-notif');
+        if (progressBar) progressBar.style.width = '0%';
+        if (timeElement) timeElement.textContent = '0%';
+        return notif;
+    }
+
+    function updateProgress(notif, percent) {
+        var progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
+        var timeElement = notif.wrapper.querySelector('.timer-time-notif');
+        if (progressBar) progressBar.style.width = percent + '%';
+        if (timeElement) timeElement.textContent = Math.floor(percent) + '%';
+    }
+
     var videoInput = document.getElementById('videoFile');
     var audioInput = document.getElementById('audioFile');
     var mergeBtn = document.getElementById('mergeBtn');
-    var downloadContainer = document.getElementById('downloadContainer');
-    var errorText = document.getElementById('errorText');
+    var downloadBtn = document.getElementById('downloadBtn');
 
     var ffmpegInstance = null;
     var videoFile = null;
     var audioFile = null;
-    var activeNotif = null;
-    var activeInterval = null;
+    var mergedUrl = null;
 
     videoInput.addEventListener('change', function(e) {
         videoFile = e.target.files[0];
@@ -264,86 +252,108 @@
         } else {
             mergeBtn.disabled = true;
         }
-        downloadContainer.innerHTML = '';
-        errorText.classList.remove('visible');
-        errorText.textContent = '';
+        resetButtons();
     }
 
-    function startNotification(title, total) {
-        stopNotification();
-        var remaining = total;
-        activeNotif = window.createTimerNotification(title, total);
-        activeInterval = setInterval(function() {
-            remaining--;
-            if (remaining >= 0) {
-                activeNotif.update(remaining, total);
-            } else {
-                clearInterval(activeInterval);
-                activeInterval = null;
-            }
-        }, 1000);
-    }
-
-    function stopNotification() {
-        if (activeInterval) {
-            clearInterval(activeInterval);
-            activeInterval = null;
+    function resetButtons() {
+        if (mergedUrl) {
+            URL.revokeObjectURL(mergedUrl);
+            mergedUrl = null;
         }
-        if (activeNotif) {
-            activeNotif.close();
-            activeNotif = null;
-        }
+        mergeBtn.style.display = 'block';
+        downloadBtn.style.display = 'none';
     }
 
     mergeBtn.addEventListener('click', function() {
         if (!videoFile || !audioFile) return;
         mergeBtn.disabled = true;
-        downloadContainer.innerHTML = '';
-        errorText.classList.remove('visible');
-        errorText.textContent = '';
+        mergeBtn.style.display = 'none';
+        downloadBtn.style.display = 'none';
 
         loadFFmpeg(async function() {
+            var notif = null;
+            var interval = null;
+
             try {
                 if (!ffmpegInstance) {
-                    startNotification('Loading FFmpeg', 20);
+                    notif = startProgressNotification('Loading FFmpeg');
+                    var loadStep = 0;
+                    interval = setInterval(function() {
+                        if (loadStep < 30) {
+                            loadStep += 2;
+                            if (loadStep > 30) loadStep = 30;
+                            updateProgress(notif, loadStep);
+                        }
+                    }, 200);
+
                     var createFFmpeg = FFmpeg.createFFmpeg;
                     ffmpegInstance = createFFmpeg({
                         log: false,
                         corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
                     });
                     await ffmpegInstance.load();
+
+                    clearInterval(interval);
+                    interval = null;
+                    updateProgress(notif, 30);
+                    setTimeout(function() {
+                        if (notif) notif.close();
+                    }, 500);
                 }
 
-                startNotification('Merging Files', 30);
+                notif = startProgressNotification('Merging Files');
+                var step = 30;
+                interval = setInterval(function() {
+                    if (step < 90) {
+                        step += Math.random() * 6 + 2;
+                        if (step > 90) step = 90;
+                        updateProgress(notif, step);
+                    }
+                }, 300);
 
                 ffmpegInstance.FS('writeFile', 'video.m4s', await FFmpeg.fetchFile(videoFile));
                 ffmpegInstance.FS('writeFile', 'audio.m4s', await FFmpeg.fetchFile(audioFile));
+                updateProgress(notif, 55);
 
                 await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
 
                 var data = ffmpegInstance.FS('readFile', 'output.mp4');
                 var blob = new Blob([data.buffer], { type: 'video/mp4' });
-                var url = URL.createObjectURL(blob);
-                var link = document.createElement('a');
-                link.href = url;
-                link.download = 'merged.mp4';
-                link.textContent = 'Download merged MP4';
-                link.className = 'download-link';
-                downloadContainer.appendChild(link);
+                mergedUrl = URL.createObjectURL(blob);
+
+                clearInterval(interval);
+                interval = null;
+                updateProgress(notif, 100);
+                setTimeout(function() {
+                    if (notif) notif.close();
+                }, 1200);
 
                 ffmpegInstance.FS('unlink', 'video.m4s');
                 ffmpegInstance.FS('unlink', 'audio.m4s');
                 ffmpegInstance.FS('unlink', 'output.mp4');
 
-                stopNotification();
+                mergeBtn.style.display = 'none';
+                downloadBtn.style.display = 'block';
+                mergeBtn.disabled = false;
             } catch (error) {
-                stopNotification();
-                errorText.textContent = 'Error: ' + error.message;
-                errorText.classList.add('visible');
-            } finally {
+                if (interval) clearInterval(interval);
+                if (notif) notif.close();
+                window.showMessage('Error: ' + error.message, true);
+                mergeBtn.style.display = 'block';
+                downloadBtn.style.display = 'none';
                 mergeBtn.disabled = false;
             }
         });
+    });
+
+    downloadBtn.addEventListener('click', function() {
+        if (!mergedUrl) return;
+        var link = document.createElement('a');
+        link.href = mergedUrl;
+        link.download = 'merged.mp4';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     });
 </script>
 </body>
