@@ -136,6 +136,7 @@
             margin-top: var(--spacing-sm);
             width: 100%;
             display: block;
+            opacity: 1 !important;
         }
 
         button:hover {
@@ -188,6 +189,10 @@
 
         .bulk-card {
             position: relative;
+        }
+
+        .bulk-card:first-child .bulk-close {
+            display: none;
         }
 
         .bulk-title {
@@ -253,7 +258,7 @@
             <div class="card">
                 <div class="file-input-group">
                     <label class="file-label" for="fileNameInput">File Name (optional):</label>
-                    <input type="text" id="fileNameInput" class="file-name-input" placeholder="merged">
+                    <input type="text" id="fileNameInput" class="file-name-input" placeholder="M4S Merger">
                 </div>
                 <div class="file-input-group">
                     <label class="file-label" for="audioFile">Audio M4S File:</label>
@@ -291,16 +296,17 @@
 
 <script>
     function playMDYE(button) {
+        if (button._mdyeTimeout) {
+            clearTimeout(button._mdyeTimeout);
+        }
         button.classList.remove('btnMDYE');
         void button.offsetWidth;
         button.classList.add('btnMDYE');
+        button._mdyeTimeout = setTimeout(function() {
+            button.classList.remove('btnMDYE');
+            button._mdyeTimeout = null;
+        }, 500);
     }
-
-    document.addEventListener('animationend', function(e) {
-        if (e.animationName === 'mdYeAnim') {
-            e.target.classList.remove('btnMDYE');
-        }
-    });
 
     function delay(ms) {
         return new Promise(function(resolve) {
@@ -492,15 +498,15 @@
 
     mergeBtn.addEventListener('click', async function() {
         if (!audioFile && !videoFile) {
-            window.showMessage('Please insert both an audio and a video M4S file.', true);
+            window.showMessage('Please insert both an audio and a video M4S file.');
             return;
         }
         if (!audioFile) {
-            window.showMessage('Please insert the audio M4S file.', true);
+            window.showMessage('Please insert the audio M4S file.');
             return;
         }
         if (!videoFile) {
-            window.showMessage('Please insert the video M4S file.', true);
+            window.showMessage('Please insert the video M4S file.');
             return;
         }
 
@@ -550,7 +556,7 @@
         } catch (error) {
             if (interval) clearInterval(interval);
             closeNotification(notif);
-            window.showMessage('Error: ' + error.message, true);
+            window.showMessage('Error: ' + error.message);
             mergeBtn.style.display = 'block';
             downloadBtn.style.display = 'none';
             clearBtn.style.display = 'block';
@@ -575,7 +581,7 @@
             clearInterval(interval);
             updateProgress(notif, 100);
 
-            var name = buildFileName(fileNameInput.value, 'merged');
+            var name = buildFileName(fileNameInput.value, 'M4S Merger');
             var link = document.createElement('a');
             link.href = mergedUrl;
             link.download = name;
@@ -597,7 +603,7 @@
             '<div class="bulk-title">Pair</div>' +
             '<div class="file-input-group">' +
                 '<label class="file-label">File Name (optional):</label>' +
-                '<input type="text" class="bulk-name file-name-input" placeholder="merged">' +
+                '<input type="text" class="bulk-name file-name-input" placeholder="M4S Merger">' +
             '</div>' +
             '<div class="file-input-group">' +
                 '<label class="file-label">Audio M4S File:</label>' +
@@ -615,7 +621,7 @@
         cards.forEach(function(card, index) {
             card.querySelector('.bulk-title').textContent = 'Pair ' + (index + 1);
             var nameInput = card.querySelector('.bulk-name');
-            nameInput.placeholder = 'merged-' + (index + 1);
+            nameInput.placeholder = 'M4S Merger ' + (index + 1);
         });
     }
 
@@ -638,7 +644,7 @@
 
     addPairBtn.addEventListener('click', function() {
         if (bulkList.children.length >= 10) {
-            window.showMessage('You can add up to 10 pairs only.', true);
+            window.showMessage('You can add up to 10 pairs only.');
             return;
         }
         playMDYE(addPairBtn);
@@ -667,6 +673,7 @@
         bulkMergeBtn.style.display = 'block';
         bulkDownloadBtn.style.display = 'none';
         bulkClearBtn.style.display = 'block';
+        addPairBtn.style.display = 'block';
         refreshBulk();
     });
 
@@ -694,7 +701,7 @@
             }
         }
         if (missingIndex !== -1) {
-            window.showMessage('Pair ' + (missingIndex + 1) + ': please insert ' + missingType + '.', true);
+            window.showMessage('Pair ' + (missingIndex + 1) + ': please insert ' + missingType + '.');
             return;
         }
 
@@ -702,6 +709,7 @@
         bulkMergeBtn.style.display = 'none';
         bulkDownloadBtn.style.display = 'none';
         bulkClearBtn.style.display = 'none';
+        addPairBtn.style.display = 'none';
 
         var notif = null;
         var total = pairs.length;
@@ -721,7 +729,7 @@
 
                 var data = ffmpegInstance.FS('readFile', 'output.mp4');
                 var blob = new Blob([data.buffer], { type: 'video/mp4' });
-                var name = buildFileName(pairs[i].name, 'merged-' + (i + 1));
+                var name = buildFileName(pairs[i].name, 'M4S Merger ' + (i + 1));
                 bulkResults.push({ name: name, blob: blob });
 
                 ffmpegInstance.FS('unlink', 'video.m4s');
@@ -737,12 +745,14 @@
 
             bulkDownloadBtn.style.display = 'block';
             bulkClearBtn.style.display = 'block';
+            addPairBtn.style.display = 'block';
         } catch (error) {
             closeNotification(notif);
-            window.showMessage('Error: ' + error.message, true);
+            window.showMessage('Error: ' + error.message);
             bulkMergeBtn.style.display = 'block';
             bulkDownloadBtn.style.display = 'none';
             bulkClearBtn.style.display = 'block';
+            addPairBtn.style.display = 'block';
         }
     });
 
@@ -781,7 +791,7 @@
             closeNotification(notif);
         } catch (error) {
             closeNotification(notif);
-            window.showMessage('Error: ' + error.message, true);
+            window.showMessage('Error: ' + error.message);
         }
     });
 
