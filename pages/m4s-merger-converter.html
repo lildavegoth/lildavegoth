@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <script src="../ui-icons.js"></script>
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+            color: var(--accent-color);
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .file-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .file-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            min-height: 52px;
+            padding: var(--spacing-sm);
+            background-color: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        input[type="file"]::file-selector-button {
+            display: none;
+        }
+
+        input[type="file"]::-webkit-file-upload-button {
+            display: none;
+        }
+
+        .file-name-input {
+            display: block;
+            width: 100%;
+            min-height: 52px;
+            padding: var(--spacing-sm);
+            background-color: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            resize: none;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .file-name-input::-webkit-scrollbar {
+            display: none;
+        }
+
+        .file-name-input:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: var(--bg-black);
+            border: none;
+            border-radius: var(--radius-small);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: var(--spacing-sm);
+            width: 100%;
+            display: block;
+            opacity: 1 !important;
+            box-shadow: none;
+            filter: none;
+        }
+
+        button:active {
+            opacity: 1 !important;
+            box-shadow: none;
+            filter: none;
+            background-color: var(--accent-color);
+        }
+
+        #downloadBtn,
+        #bulkDownloadBtn,
+        #downloadSrtBtn {
+            display: none;
+        }
+
+        .folder-pills {
+            display: flex;
+            gap: 8px;
+            margin-bottom: var(--spacing-md);
+            justify-content: flex-start;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            white-space: nowrap;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            padding-bottom: 4px;
+        }
+
+        .folder-pills::-webkit-scrollbar {
+            display: none;
+        }
+
+        .folder-pill {
+            padding: 14px 24px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            user-select: none;
+            transition: border-radius 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        padding 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        background 0.2s,
+                        color 0.2s;
+            flex-shrink: 0;
+            border: none;
+            margin-top: 0;
+            width: auto;
+            opacity: 1 !important;
+            box-shadow: none;
+            filter: none;
+        }
+
+        .folder-pill:active {
+            opacity: 1 !important;
+            box-shadow: none;
+            filter: none;
+        }
+
+        .folder-pill.active {
+            background: var(--accent-color);
+            color: #000;
+            border-radius: 50px !important;
+            padding: 14px 32px;
+        }
+
+        .folder-pill:first-child {
+            border-top-left-radius: 50px;
+            border-bottom-left-radius: 50px;
+            border-top-right-radius: 20px;
+            border-bottom-right-radius: 20px;
+        }
+
+        .folder-pill:last-child {
+            border-top-right-radius: 50px;
+            border-bottom-right-radius: 50px;
+            border-top-left-radius: 20px;
+            border-bottom-left-radius: 20px;
+        }
+
+        #bulkMerger,
+        #subConverter {
+            display: none;
+        }
+
+        .bulk-card {
+            position: relative;
+        }
+
+        .bulk-card:first-child .bulk-close {
+            display: none;
+        }
+
+        .bulk-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            margin-bottom: var(--spacing-sm);
+            padding-right: 44px;
+        }
+
+        .bulk-close {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 32px;
+            height: 32px;
+            min-height: 0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: #C42833;
+            color: #ffffff;
+            font-size: 0.8rem;
+            line-height: 1;
+            box-shadow: none;
+            filter: none;
+            opacity: 1 !important;
+        }
+
+        .bulk-close:active {
+            opacity: 1 !important;
+            box-shadow: none;
+            filter: none;
+            background-color: #C42833;
+        }
+
+        .clear-btn {
+            background-color: transparent;
+            color: var(--text-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: none;
+            filter: none;
+        }
+
+        .clear-btn:active {
+            opacity: 1 !important;
+            box-shadow: none;
+            filter: none;
+            background-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link fade-in" style="margin-bottom: 12px;">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        <app-header class="fade-in">
+            <div>
+                <h1>M4S Merger &amp; Converter</h1>
+                <p class="tagline">Select video and audio M4S files to merge them into a single MP4 file and JSON subtitle to SRT file</p>
+            </div>
+        </app-header>
+
+        <div class="folder-pills fade-in">
+            <button id="singleTab" class="folder-pill active">Single Merger</button>
+            <button id="bulkTab" class="folder-pill">Bulk Merger</button>
+            <button id="subTab" class="folder-pill">Subtitle Converter</button>
+        </div>
+
+        <div id="singleMerger">
+            <div class="card">
+                <div class="file-input-group">
+                    <label class="file-label" for="fileNameInput">File Name (optional)</label>
+                    <input type="text" id="fileNameInput" class="file-name-input" placeholder="M4S Merger">
+                </div>
+                <div class="file-input-group">
+                    <label class="file-label" for="audioFile">Audio M4S File</label>
+                    <input type="file" id="audioFile" accept=".m4s">
+                </div>
+                <div class="file-input-group">
+                    <label class="file-label" for="videoFile">Video M4S File</label>
+                    <input type="file" id="videoFile" accept=".m4s">
+                </div>
+            </div>
+            <button id="mergeBtn">Merge Files</button>
+            <button id="downloadBtn">Download MP4</button>
+            <button id="clearBtn" class="clear-btn">Clear</button>
+        </div>
+
+        <div id="bulkMerger">
+            <div id="bulkList"></div>
+            <button id="addPairBtn">Add Pair</button>
+            <button id="bulkMergeBtn">Merge All</button>
+            <button id="bulkDownloadBtn">Download All Files</button>
+            <button id="bulkClearBtn" class="clear-btn">Clear</button>
+        </div>
+
+        <div id="subConverter">
+            <div class="card">
+                <div class="file-input-group">
+                    <label class="file-label" for="subFileInput">JSON Subtitle File</label>
+                    <input type="file" id="subFileInput" accept=".json">
+                </div>
+                <div class="file-input-group">
+                    <label class="file-label" for="srtPreview">SRT Output Preview</label>
+                    <textarea id="srtPreview" class="file-name-input" rows="12" placeholder="SRT output will appear here..." style="resize: none;"></textarea>
+                </div>
+            </div>
+            <button id="convertSubBtn">Convert to SRT</button>
+            <button id="downloadSrtBtn">Download SRT</button>
+            <button id="subClearBtn" class="clear-btn">Clear</button>
+        </div>
+
+        <footer class="fade-in">
+            <div class="social-links">
+                <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
+                <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
+            </div>
+            <p>© 2026 lildavegoth | M4S Merger &amp; Converter</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
+            </p>
+        </footer>
+    </div>
+
+<script>
+    function delay(ms) {
+        return new Promise(function(resolve) {
+            setTimeout(resolve, ms);
+        });
+    }
+
+    function buildFileName(value, fallback) {
+        var name = (value || '').trim();
+        if (!name) name = fallback;
+        if (!/\.mp4$/i.test(name)) name += '.mp4';
+        return name;
+    }
+
+    function startProgressNotification(title) {
+        var notif = window.createTimerNotification(title, 100);
+        var progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
+        var timeElement = notif.wrapper.querySelector('.timer-time-notif');
+        if (progressBar) progressBar.style.width = '0%';
+        if (timeElement) timeElement.textContent = '0%';
+        return notif;
+    }
+
+    function updateProgress(notif, percent) {
+        var progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
+        var timeElement = notif.wrapper.querySelector('.timer-time-notif');
+        if (progressBar) progressBar.style.width = percent + '%';
+        if (timeElement) timeElement.textContent = Math.floor(percent) + '%';
+    }
+
+    function closeNotification(notif) {
+        if (notif && typeof notif.close === 'function') {
+            notif.close();
+        }
+    }
+
+    function loadFFmpegScript() {
+        return new Promise(function(resolve, reject) {
+            if (window.FFmpeg) {
+                resolve();
+                return;
+            }
+
+            var sources = [
+                'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js',
+                'https://m4s-merger-tools-web.vercel.app/scripts/ffmpeg/ffmpeg.min.js'
+            ];
+
+            var index = 0;
+
+            function tryNext() {
+                if (index >= sources.length) {
+                    reject(new Error('Failed to load FFmpeg engine'));
+                    return;
+                }
+
+                var script = document.createElement('script');
+                script.src = sources[index];
+                script.onload = function() {
+                    if (window.FFmpeg) {
+                        resolve();
+                    } else {
+                        index++;
+                        tryNext();
+                    }
+                };
+                script.onerror = function() {
+                    index++;
+                    tryNext();
+                };
+                document.head.appendChild(script);
+            }
+
+            tryNext();
+        });
+    }
+
+    async function ensureFFmpeg() {
+        if (ffmpegInstance) return;
+
+        var notif = startProgressNotification('Loading FFmpeg');
+        var step = 0;
+        var interval = setInterval(function() {
+            if (step < 90) {
+                step += 3;
+                if (step > 90) step = 90;
+                updateProgress(notif, step);
+            }
+        }, 150);
+
+        try {
+            await loadFFmpegScript();
+            ffmpegInstance = FFmpeg.createFFmpeg({
+                log: false,
+                corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+            });
+            await ffmpegInstance.load();
+        } catch (error) {
+            clearInterval(interval);
+            closeNotification(notif);
+            throw error;
+        }
+
+        clearInterval(interval);
+        updateProgress(notif, 100);
+        await delay(400);
+        closeNotification(notif);
+    }
+
+    function formatSRTTime(seconds) {
+        var totalSeconds = Math.floor(seconds);
+        var ms = Math.floor((seconds - totalSeconds) * 1000);
+        var h = Math.floor(totalSeconds / 3600);
+        var m = Math.floor((totalSeconds % 3600) / 60);
+        var s = totalSeconds % 60;
+        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + ',' + String(ms).padStart(3, '0');
+    }
+
+    var singleTab = document.getElementById('singleTab');
+    var bulkTab = document.getElementById('bulkTab');
+    var subTab = document.getElementById('subTab');
+    var singleMerger = document.getElementById('singleMerger');
+    var bulkMerger = document.getElementById('bulkMerger');
+    var subConverter = document.getElementById('subConverter');
+
+    var videoInput = document.getElementById('videoFile');
+    var audioInput = document.getElementById('audioFile');
+    var fileNameInput = document.getElementById('fileNameInput');
+    var mergeBtn = document.getElementById('mergeBtn');
+    var downloadBtn = document.getElementById('downloadBtn');
+    var clearBtn = document.getElementById('clearBtn');
+
+    var bulkList = document.getElementById('bulkList');
+    var addPairBtn = document.getElementById('addPairBtn');
+    var bulkMergeBtn = document.getElementById('bulkMergeBtn');
+    var bulkDownloadBtn = document.getElementById('bulkDownloadBtn');
+    var bulkClearBtn = document.getElementById('bulkClearBtn');
+
+    var subFileInput = document.getElementById('subFileInput');
+    var srtPreview = document.getElementById('srtPreview');
+    var convertSubBtn = document.getElementById('convertSubBtn');
+    var downloadSrtBtn = document.getElementById('downloadSrtBtn');
+    var subClearBtn = document.getElementById('subClearBtn');
+
+    var ffmpegInstance = null;
+    var videoFile = null;
+    var audioFile = null;
+    var mergedUrl = null;
+    var bulkResults = [];
+    var srtData = '';
+
+    function updateClearVisibility() {
+        var singleHasFile = videoInput.files.length > 0 || audioInput.files.length > 0;
+        var bulkHasFile = false;
+        bulkList.querySelectorAll('input[type="file"]').forEach(function(input) {
+            if (input.files.length > 0) bulkHasFile = true;
+        });
+        var subHasFile = subFileInput.files.length > 0;
+
+        clearBtn.style.display = singleHasFile ? 'block' : 'none';
+        bulkClearBtn.style.display = bulkHasFile ? 'block' : 'none';
+        subClearBtn.style.display = subHasFile ? 'block' : 'none';
+    }
+
+    singleTab.addEventListener('click', function() {
+        singleTab.classList.add('active');
+        bulkTab.classList.remove('active');
+        subTab.classList.remove('active');
+        singleMerger.style.display = 'block';
+        bulkMerger.style.display = 'none';
+        subConverter.style.display = 'none';
+    });
+
+    bulkTab.addEventListener('click', function() {
+        bulkTab.classList.add('active');
+        singleTab.classList.remove('active');
+        subTab.classList.remove('active');
+        bulkMerger.style.display = 'block';
+        singleMerger.style.display = 'none';
+        subConverter.style.display = 'none';
+    });
+
+    subTab.addEventListener('click', function() {
+        subTab.classList.add('active');
+        singleTab.classList.remove('active');
+        bulkTab.classList.remove('active');
+        subConverter.style.display = 'block';
+        singleMerger.style.display = 'none';
+        bulkMerger.style.display = 'none';
+    });
+
+    videoInput.addEventListener('change', function(e) {
+        videoFile = e.target.files[0] || null;
+        if (mergedUrl) {
+            URL.revokeObjectURL(mergedUrl);
+            mergedUrl = null;
+        }
+        mergeBtn.style.display = 'block';
+        downloadBtn.style.display = 'none';
+        updateClearVisibility();
+    });
+
+    audioInput.addEventListener('change', function(e) {
+        audioFile = e.target.files[0] || null;
+        if (mergedUrl) {
+            URL.revokeObjectURL(mergedUrl);
+            mergedUrl = null;
+        }
+        mergeBtn.style.display = 'block';
+        downloadBtn.style.display = 'none';
+        updateClearVisibility();
+    });
+
+    function clearSingle() {
+        if (mergedUrl) {
+            URL.revokeObjectURL(mergedUrl);
+            mergedUrl = null;
+        }
+        videoFile = null;
+        audioFile = null;
+        videoInput.value = '';
+        audioInput.value = '';
+        fileNameInput.value = '';
+        mergeBtn.style.display = 'block';
+        downloadBtn.style.display = 'none';
+        updateClearVisibility();
+    }
+
+    clearBtn.addEventListener('click', function() {
+        clearSingle();
+    });
+
+    mergeBtn.addEventListener('click', async function() {
+        if (!audioFile && !videoFile) {
+            window.showMessage('Please insert both an audio and a video M4S file');
+            return;
+        }
+        if (!audioFile) {
+            window.showMessage('Please insert the audio M4S file');
+            return;
+        }
+        if (!videoFile) {
+            window.showMessage('Please insert the video M4S file');
+            return;
+        }
+
+        mergeBtn.style.display = 'none';
+        downloadBtn.style.display = 'none';
+        clearBtn.style.display = 'none';
+
+        var notif = null;
+        var interval = null;
+
+        try {
+            await ensureFFmpeg();
+
+            notif = startProgressNotification('Merging Files');
+            var step = 10;
+            interval = setInterval(function() {
+                if (step < 90) {
+                    step += Math.random() * 6 + 2;
+                    if (step > 90) step = 90;
+                    updateProgress(notif, step);
+                }
+            }, 300);
+
+            ffmpegInstance.FS('writeFile', 'video.m4s', await FFmpeg.fetchFile(videoFile));
+            ffmpegInstance.FS('writeFile', 'audio.m4s', await FFmpeg.fetchFile(audioFile));
+            updateProgress(notif, 45);
+
+            await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
+
+            var data = ffmpegInstance.FS('readFile', 'output.mp4');
+            mergedUrl = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+
+            clearInterval(interval);
+            interval = null;
+            updateProgress(notif, 100);
+            await delay(500);
+            closeNotification(notif);
+            notif = null;
+
+            ffmpegInstance.FS('unlink', 'video.m4s');
+            ffmpegInstance.FS('unlink', 'audio.m4s');
+            ffmpegInstance.FS('unlink', 'output.mp4');
+
+            downloadBtn.style.display = 'block';
+            updateClearVisibility();
+        } catch (error) {
+            if (interval) clearInterval(interval);
+            closeNotification(notif);
+            window.showMessage('Error: ' + error.message);
+            mergeBtn.style.display = 'block';
+            downloadBtn.style.display = 'none';
+            updateClearVisibility();
+        }
+    });
+
+    downloadBtn.addEventListener('click', function() {
+        if (!mergedUrl) return;
+
+        var notif = startProgressNotification('Preparing Download');
+        var step = 0;
+        var interval = setInterval(function() {
+            if (step < 95) {
+                step += 5;
+                updateProgress(notif, step);
+            }
+        }, 60);
+
+        setTimeout(function() {
+            clearInterval(interval);
+            updateProgress(notif, 100);
+
+            var name = buildFileName(fileNameInput.value, 'M4S Merger');
+            var link = document.createElement('a');
+            link.href = mergedUrl;
+            link.download = name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            setTimeout(function() {
+                closeNotification(notif);
+            }, 600);
+        }, 1300);
+    });
+
+    function createBulkCard() {
+        var card = document.createElement('div');
+        card.className = 'card bulk-card';
+        card.innerHTML =
+            '<button type="button" class="bulk-close"><i class="fas fa-close"></i></button>' +
+            '<div class="bulk-title">Pair</div>' +
+            '<div class="file-input-group">' +
+                '<label class="file-label">File Name (optional)</label>' +
+                '<input type="text" class="bulk-name file-name-input" placeholder="M4S Merger">' +
+            '</div>' +
+            '<div class="file-input-group">' +
+                '<label class="file-label">Audio M4S File</label>' +
+                '<input type="file" class="bulk-audio" accept=".m4s">' +
+            '</div>' +
+            '<div class="file-input-group">' +
+                '<label class="file-label">Video M4S File</label>' +
+                '<input type="file" class="bulk-video" accept=".m4s">' +
+            '</div>';
+        return card;
+    }
+
+    function refreshBulk() {
+        var cards = bulkList.querySelectorAll('.bulk-card');
+        cards.forEach(function(card, index) {
+            card.querySelector('.bulk-title').textContent = 'Pair ' + (index + 1);
+            var nameInput = card.querySelector('.bulk-name');
+            nameInput.placeholder = 'M4S Merger ' + (index + 1);
+        });
+    }
+
+    function getPairs() {
+        var cards = bulkList.querySelectorAll('.bulk-card');
+        var pairs = [];
+        cards.forEach(function(card) {
+            pairs.push({
+                audio: card.querySelector('.bulk-audio').files[0] || null,
+                video: card.querySelector('.bulk-video').files[0] || null,
+                name: card.querySelector('.bulk-name').value
+            });
+        });
+        return pairs;
+    }
+
+    function clearBulkResults() {
+        bulkResults = [];
+    }
+
+    addPairBtn.addEventListener('click', function() {
+        if (bulkList.children.length >= 10) {
+            window.showMessage('You can add up to 10 pairs only');
+            return;
+        }
+        bulkList.appendChild(createBulkCard());
+        refreshBulk();
+        updateClearVisibility();
+    });
+
+    bulkList.addEventListener('click', function(e) {
+        var closeBtn = e.target.closest('.bulk-close');
+        if (!closeBtn) return;
+
+        var card = closeBtn.closest('.bulk-card');
+        card.remove();
+
+        if (bulkList.children.length === 0) {
+            bulkList.appendChild(createBulkCard());
+        }
+        refreshBulk();
+        updateClearVisibility();
+    });
+
+    bulkList.addEventListener('change', function() {
+        updateClearVisibility();
+    });
+
+    bulkClearBtn.addEventListener('click', function() {
+        clearBulkResults();
+        bulkList.innerHTML = '';
+        bulkList.appendChild(createBulkCard());
+        bulkMergeBtn.style.display = 'block';
+        bulkDownloadBtn.style.display = 'none';
+        addPairBtn.style.display = 'block';
+        refreshBulk();
+        updateClearVisibility();
+    });
+
+    bulkMergeBtn.addEventListener('click', async function() {
+        var pairs = getPairs();
+        if (!pairs.length) return;
+
+        var missingIndex = -1;
+        var missingType = '';
+        for (var k = 0; k < pairs.length; k++) {
+            if (!pairs[k].audio && !pairs[k].video) {
+                missingIndex = k;
+                missingType = 'both an audio and a video M4S file';
+                break;
+            }
+            if (!pairs[k].audio) {
+                missingIndex = k;
+                missingType = 'the audio M4S file';
+                break;
+            }
+            if (!pairs[k].video) {
+                missingIndex = k;
+                missingType = 'the video M4S file';
+                break;
+            }
+        }
+        if (missingIndex !== -1) {
+            window.showMessage('Pair ' + (missingIndex + 1) + ': please insert ' + missingType);
+            return;
+        }
+
+        bulkMergeBtn.style.display = 'none';
+        bulkDownloadBtn.style.display = 'none';
+        bulkClearBtn.style.display = 'none';
+        addPairBtn.style.display = 'none';
+
+        var notif = null;
+        var total = pairs.length;
+
+        try {
+            await ensureFFmpeg();
+
+            clearBulkResults();
+            notif = startProgressNotification('Merging Files');
+            updateProgress(notif, 0);
+
+            for (var i = 0; i < total; i++) {
+                ffmpegInstance.FS('writeFile', 'video.m4s', await FFmpeg.fetchFile(pairs[i].video));
+                ffmpegInstance.FS('writeFile', 'audio.m4s', await FFmpeg.fetchFile(pairs[i].audio));
+
+                await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
+
+                var data = ffmpegInstance.FS('readFile', 'output.mp4');
+                var blob = new Blob([data.buffer], { type: 'video/mp4' });
+                var name = buildFileName(pairs[i].name, 'M4S Merger ' + (i + 1));
+                bulkResults.push({ name: name, blob: blob });
+
+                ffmpegInstance.FS('unlink', 'video.m4s');
+                ffmpegInstance.FS('unlink', 'audio.m4s');
+                ffmpegInstance.FS('unlink', 'output.mp4');
+
+                updateProgress(notif, ((i + 1) / total) * 100);
+            }
+
+            await delay(500);
+            closeNotification(notif);
+            notif = null;
+
+            bulkDownloadBtn.style.display = 'block';
+            addPairBtn.style.display = 'block';
+            updateClearVisibility();
+        } catch (error) {
+            closeNotification(notif);
+            window.showMessage('Error: ' + error.message);
+            bulkMergeBtn.style.display = 'block';
+            bulkDownloadBtn.style.display = 'none';
+            addPairBtn.style.display = 'block';
+            updateClearVisibility();
+        }
+    });
+
+    bulkDownloadBtn.addEventListener('click', async function() {
+        if (!bulkResults.length) return;
+
+        var notif = startProgressNotification('Downloading Files');
+        updateProgress(notif, 5);
+
+        try {
+            for (var i = 0; i < bulkResults.length; i++) {
+                var item = bulkResults[i];
+                var url = URL.createObjectURL(item.blob);
+                var link = document.createElement('a');
+                link.href = url;
+                link.download = item.name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                updateProgress(notif, 5 + ((i + 1) / bulkResults.length) * 95);
+                await delay(1000);
+            }
+            await delay(500);
+            closeNotification(notif);
+        } catch (error) {
+            closeNotification(notif);
+            window.showMessage('Error: ' + error.message);
+        }
+    });
+
+    subFileInput.addEventListener('change', function() {
+        srtPreview.value = '';
+        srtData = '';
+        convertSubBtn.style.display = 'block';
+        downloadSrtBtn.style.display = 'none';
+        updateClearVisibility();
+    });
+
+    convertSubBtn.addEventListener('click', function() {
+        var file = subFileInput.files[0];
+        if (!file) {
+            window.showMessage('Please select a JSON subtitle file');
+            return;
+        }
+
+        convertSubBtn.style.display = 'none';
+        downloadSrtBtn.style.display = 'none';
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var json = JSON.parse(e.target.result);
+                if (!json.body || !Array.isArray(json.body)) {
+                    throw new Error('Invalid JSON format. Missing body array');
+                }
+
+                var srtOutput = '';
+                for (var i = 0; i < json.body.length; i++) {
+                    var item = json.body[i];
+                    var start = formatSRTTime(item.from);
+                    var end = formatSRTTime(item.to);
+                    var content = item.content || '';
+                    srtOutput += (i + 1) + '\n';
+                    srtOutput += start + ' --> ' + end + '\n';
+                    srtOutput += content + '\n\n';
+                }
+
+                srtData = srtOutput;
+                srtPreview.value = srtOutput;
+                downloadSrtBtn.style.display = 'block';
+                window.showMessage('Conversion successful');
+            } catch (error) {
+                window.showMessage('Error converting file: ' + error.message);
+                convertSubBtn.style.display = 'block';
+            }
+            updateClearVisibility();
+        };
+        reader.readAsText(file);
+    });
+
+    downloadSrtBtn.addEventListener('click', function() {
+        if (!srtData) return;
+
+        var blob = new Blob([srtData], { type: 'text/plain' });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = 'subtitle.srt';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    });
+
+    subClearBtn.addEventListener('click', function() {
+        subFileInput.value = '';
+        srtPreview.value = '';
+        srtData = '';
+        convertSubBtn.style.display = 'block';
+        downloadSrtBtn.style.display = 'none';
+        updateClearVisibility();
+    });
+
+    bulkList.appendChild(createBulkCard());
+    refreshBulk();
+    updateClearVisibility();
+</script>
+</body>
+</html>
