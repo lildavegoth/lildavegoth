@@ -157,8 +157,17 @@
             display: flex;
             gap: 8px;
             margin-bottom: var(--spacing-md);
-            justify-content: center;
-            flex-wrap: wrap;
+            justify-content: flex-start;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            white-space: nowrap;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            padding-bottom: 4px;
+        }
+
+        .folder-pills::-webkit-scrollbar {
+            display: none;
         }
 
         .folder-pill {
@@ -334,6 +343,7 @@
             </div>
             <button id="convertSubBtn">Convert to SRT</button>
             <button id="downloadSrtBtn">Download SRT</button>
+            <button id="subClearBtn" class="clear-btn">Clear</button>
         </div>
 
         <footer class="fade-in">
@@ -400,7 +410,7 @@
 
             function tryNext() {
                 if (index >= sources.length) {
-                    reject(new Error('Failed to load FFmpeg engine.'));
+                    reject(new Error('Failed to load FFmpeg engine'));
                     return;
                 }
 
@@ -490,6 +500,7 @@
     var srtPreview = document.getElementById('srtPreview');
     var convertSubBtn = document.getElementById('convertSubBtn');
     var downloadSrtBtn = document.getElementById('downloadSrtBtn');
+    var subClearBtn = document.getElementById('subClearBtn');
 
     var ffmpegInstance = null;
     var videoFile = null;
@@ -497,6 +508,32 @@
     var mergedUrl = null;
     var bulkResults = [];
     var srtData = '';
+
+    function updateClearVisibility() {
+        var singleHasFile = videoInput.files.length > 0 || audioInput.files.length > 0;
+        var bulkHasFile = false;
+        bulkList.querySelectorAll('.bulk-audio, .bulk-video').forEach(function(input) {
+            if (input.files.length > 0) bulkHasFile = true;
+        });
+        var subHasFile = subFileInput.files.length > 0;
+
+        var anyFileExists = singleHasFile || bulkHasFile || subHasFile;
+        var allModesHaveFiles = singleHasFile && bulkHasFile && subHasFile;
+
+        if (anyFileExists && !allModesHaveFiles) {
+            clearBtn.style.display = 'none';
+            bulkClearBtn.style.display = 'none';
+            subClearBtn.style.display = 'none';
+        } else if (anyFileExists && allModesHaveFiles) {
+            clearBtn.style.display = singleHasFile ? 'block' : 'none';
+            bulkClearBtn.style.display = bulkHasFile ? 'block' : 'none';
+            subClearBtn.style.display = subHasFile ? 'block' : 'none';
+        } else {
+            clearBtn.style.display = 'none';
+            bulkClearBtn.style.display = 'none';
+            subClearBtn.style.display = 'none';
+        }
+    }
 
     singleTab.addEventListener('click', function() {
         singleTab.classList.add('active');
@@ -533,7 +570,7 @@
         }
         mergeBtn.style.display = 'block';
         downloadBtn.style.display = 'none';
-        clearBtn.style.display = 'block';
+        updateClearVisibility();
     });
 
     audioInput.addEventListener('change', function(e) {
@@ -544,7 +581,7 @@
         }
         mergeBtn.style.display = 'block';
         downloadBtn.style.display = 'none';
-        clearBtn.style.display = 'block';
+        updateClearVisibility();
     });
 
     function clearSingle() {
@@ -559,7 +596,7 @@
         fileNameInput.value = '';
         mergeBtn.style.display = 'block';
         downloadBtn.style.display = 'none';
-        clearBtn.style.display = 'block';
+        updateClearVisibility();
     }
 
     clearBtn.addEventListener('click', function() {
@@ -568,15 +605,15 @@
 
     mergeBtn.addEventListener('click', async function() {
         if (!audioFile && !videoFile) {
-            window.showMessage('Please insert both an audio and a video M4S file.');
+            window.showMessage('Please insert both an audio and a video M4S file');
             return;
         }
         if (!audioFile) {
-            window.showMessage('Please insert the audio M4S file.');
+            window.showMessage('Please insert the audio M4S file');
             return;
         }
         if (!videoFile) {
-            window.showMessage('Please insert the video M4S file.');
+            window.showMessage('Please insert the video M4S file');
             return;
         }
 
@@ -621,14 +658,14 @@
             ffmpegInstance.FS('unlink', 'output.mp4');
 
             downloadBtn.style.display = 'block';
-            clearBtn.style.display = 'block';
+            updateClearVisibility();
         } catch (error) {
             if (interval) clearInterval(interval);
             closeNotification(notif);
             window.showMessage('Error: ' + error.message);
             mergeBtn.style.display = 'block';
             downloadBtn.style.display = 'none';
-            clearBtn.style.display = 'block';
+            updateClearVisibility();
         }
     });
 
@@ -711,11 +748,12 @@
 
     addPairBtn.addEventListener('click', function() {
         if (bulkList.children.length >= 10) {
-            window.showMessage('You can add up to 10 pairs only.');
+            window.showMessage('You can add up to 10 pairs only');
             return;
         }
         bulkList.appendChild(createBulkCard());
         refreshBulk();
+        updateClearVisibility();
     });
 
     bulkList.addEventListener('click', function(e) {
@@ -729,6 +767,11 @@
             bulkList.appendChild(createBulkCard());
         }
         refreshBulk();
+        updateClearVisibility();
+    });
+
+    bulkList.addEventListener('change', function() {
+        updateClearVisibility();
     });
 
     bulkClearBtn.addEventListener('click', function() {
@@ -737,9 +780,9 @@
         bulkList.appendChild(createBulkCard());
         bulkMergeBtn.style.display = 'block';
         bulkDownloadBtn.style.display = 'none';
-        bulkClearBtn.style.display = 'block';
         addPairBtn.style.display = 'block';
         refreshBulk();
+        updateClearVisibility();
     });
 
     bulkMergeBtn.addEventListener('click', async function() {
@@ -766,7 +809,7 @@
             }
         }
         if (missingIndex !== -1) {
-            window.showMessage('Pair ' + (missingIndex + 1) + ': please insert ' + missingType + '.');
+            window.showMessage('Pair ' + (missingIndex + 1) + ': please insert ' + missingType);
             return;
         }
 
@@ -808,15 +851,15 @@
             notif = null;
 
             bulkDownloadBtn.style.display = 'block';
-            bulkClearBtn.style.display = 'block';
             addPairBtn.style.display = 'block';
+            updateClearVisibility();
         } catch (error) {
             closeNotification(notif);
             window.showMessage('Error: ' + error.message);
             bulkMergeBtn.style.display = 'block';
             bulkDownloadBtn.style.display = 'none';
-            bulkClearBtn.style.display = 'block';
             addPairBtn.style.display = 'block';
+            updateClearVisibility();
         }
     });
 
@@ -851,22 +894,27 @@
     subFileInput.addEventListener('change', function() {
         srtPreview.value = '';
         srtData = '';
+        convertSubBtn.style.display = 'block';
         downloadSrtBtn.style.display = 'none';
+        updateClearVisibility();
     });
 
     convertSubBtn.addEventListener('click', function() {
         var file = subFileInput.files[0];
         if (!file) {
-            window.showMessage('Please select a JSON subtitle file.');
+            window.showMessage('Please select a JSON subtitle file');
             return;
         }
+
+        convertSubBtn.style.display = 'none';
+        downloadSrtBtn.style.display = 'none';
 
         var reader = new FileReader();
         reader.onload = function(e) {
             try {
                 var json = JSON.parse(e.target.result);
                 if (!json.body || !Array.isArray(json.body)) {
-                    throw new Error('Invalid JSON format. Missing body array.');
+                    throw new Error('Invalid JSON format. Missing body array');
                 }
 
                 var srtOutput = '';
@@ -883,10 +931,12 @@
                 srtData = srtOutput;
                 srtPreview.value = srtOutput;
                 downloadSrtBtn.style.display = 'block';
-                window.showMessage('Conversion successful.');
+                window.showMessage('Conversion successful');
             } catch (error) {
                 window.showMessage('Error converting file: ' + error.message);
+                convertSubBtn.style.display = 'block';
             }
+            updateClearVisibility();
         };
         reader.readAsText(file);
     });
@@ -905,8 +955,18 @@
         URL.revokeObjectURL(url);
     });
 
+    subClearBtn.addEventListener('click', function() {
+        subFileInput.value = '';
+        srtPreview.value = '';
+        srtData = '';
+        convertSubBtn.style.display = 'block';
+        downloadSrtBtn.style.display = 'none';
+        updateClearVisibility();
+    });
+
     bulkList.appendChild(createBulkCard());
     refreshBulk();
+    updateClearVisibility();
 </script>
 </body>
 </html>
