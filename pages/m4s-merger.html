@@ -8,7 +8,6 @@
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
     <script src="../ui-icons.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -149,7 +148,8 @@
         }
 
         #downloadBtn,
-        #bulkDownloadBtn {
+        #bulkDownloadBtn,
+        #downloadSrtBtn {
             display: none;
         }
 
@@ -209,7 +209,8 @@
             border-bottom-left-radius: 20px;
         }
 
-        #bulkMerger {
+        #bulkMerger,
+        #subConverter {
             display: none;
         }
 
@@ -289,6 +290,7 @@
         <div class="folder-pills fade-in">
             <button id="singleTab" class="folder-pill active">Single Merger</button>
             <button id="bulkTab" class="folder-pill">Bulk Merger</button>
+            <button id="subTab" class="folder-pill">Subtitle Converter</button>
         </div>
 
         <div id="singleMerger">
@@ -315,8 +317,23 @@
             <div id="bulkList"></div>
             <button id="addPairBtn">Add Pair</button>
             <button id="bulkMergeBtn">Merge All</button>
-            <button id="bulkDownloadBtn">Download ZIP</button>
+            <button id="bulkDownloadBtn">Download All Files</button>
             <button id="bulkClearBtn" class="clear-btn">Clear</button>
+        </div>
+
+        <div id="subConverter">
+            <div class="card">
+                <div class="file-input-group">
+                    <label class="file-label" for="subFileInput">JSON Subtitle File:</label>
+                    <input type="file" id="subFileInput" accept=".json">
+                </div>
+                <div class="file-input-group">
+                    <label class="file-label" for="srtPreview">SRT Output Preview:</label>
+                    <textarea id="srtPreview" class="file-name-input" rows="12" placeholder="SRT output will appear here..." style="resize: none;"></textarea>
+                </div>
+            </div>
+            <button id="convertSubBtn">Convert to SRT</button>
+            <button id="downloadSrtBtn">Download SRT</button>
         </div>
 
         <footer class="fade-in">
@@ -440,10 +457,21 @@
         closeNotification(notif);
     }
 
+    function formatSRTTime(seconds) {
+        var totalSeconds = Math.floor(seconds);
+        var ms = Math.floor((seconds - totalSeconds) * 1000);
+        var h = Math.floor(totalSeconds / 3600);
+        var m = Math.floor((totalSeconds % 3600) / 60);
+        var s = totalSeconds % 60;
+        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + ',' + String(ms).padStart(3, '0');
+    }
+
     var singleTab = document.getElementById('singleTab');
     var bulkTab = document.getElementById('bulkTab');
+    var subTab = document.getElementById('subTab');
     var singleMerger = document.getElementById('singleMerger');
     var bulkMerger = document.getElementById('bulkMerger');
+    var subConverter = document.getElementById('subConverter');
 
     var videoInput = document.getElementById('videoFile');
     var audioInput = document.getElementById('audioFile');
@@ -458,24 +486,43 @@
     var bulkDownloadBtn = document.getElementById('bulkDownloadBtn');
     var bulkClearBtn = document.getElementById('bulkClearBtn');
 
+    var subFileInput = document.getElementById('subFileInput');
+    var srtPreview = document.getElementById('srtPreview');
+    var convertSubBtn = document.getElementById('convertSubBtn');
+    var downloadSrtBtn = document.getElementById('downloadSrtBtn');
+
     var ffmpegInstance = null;
     var videoFile = null;
     var audioFile = null;
     var mergedUrl = null;
     var bulkResults = [];
+    var srtData = '';
 
     singleTab.addEventListener('click', function() {
         singleTab.classList.add('active');
         bulkTab.classList.remove('active');
+        subTab.classList.remove('active');
         singleMerger.style.display = 'block';
         bulkMerger.style.display = 'none';
+        subConverter.style.display = 'none';
     });
 
     bulkTab.addEventListener('click', function() {
         bulkTab.classList.add('active');
         singleTab.classList.remove('active');
+        subTab.classList.remove('active');
         bulkMerger.style.display = 'block';
         singleMerger.style.display = 'none';
+        subConverter.style.display = 'none';
+    });
+
+    subTab.addEventListener('click', function() {
+        subTab.classList.add('active');
+        singleTab.classList.remove('active');
+        bulkTab.classList.remove('active');
+        subConverter.style.display = 'block';
+        singleMerger.style.display = 'none';
+        bulkMerger.style.display = 'none';
     });
 
     videoInput.addEventListener('change', function(e) {
@@ -776,38 +823,86 @@
     bulkDownloadBtn.addEventListener('click', async function() {
         if (!bulkResults.length) return;
 
-        var notif = startProgressNotification('Preparing ZIP');
+        var notif = startProgressNotification('Downloading Files');
         updateProgress(notif, 5);
 
         try {
-            var zip = new JSZip();
-            bulkResults.forEach(function(item) {
-                zip.file(item.name, item.blob);
-            });
-
-            updateProgress(notif, 30);
-
-            var zipBlob = await zip.generateAsync({ type: 'blob' }, function(meta) {
-                updateProgress(notif, 30 + meta.percent * 0.65);
-            });
-
-            updateProgress(notif, 100);
-
-            var url = URL.createObjectURL(zipBlob);
-            var link = document.createElement('a');
-            link.href = url;
-            link.download = 'M4S Merger.zip';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-
-            await delay(600);
+            for (var i = 0; i < bulkResults.length; i++) {
+                var item = bulkResults[i];
+                var url = URL.createObjectURL(item.blob);
+                var link = document.createElement('a');
+                link.href = url;
+                link.download = item.name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                updateProgress(notif, 5 + ((i + 1) / bulkResults.length) * 95);
+                await delay(1000);
+            }
+            await delay(500);
             closeNotification(notif);
         } catch (error) {
             closeNotification(notif);
             window.showMessage('Error: ' + error.message);
         }
+    });
+
+    subFileInput.addEventListener('change', function() {
+        srtPreview.value = '';
+        srtData = '';
+        downloadSrtBtn.style.display = 'none';
+    });
+
+    convertSubBtn.addEventListener('click', function() {
+        var file = subFileInput.files[0];
+        if (!file) {
+            window.showMessage('Please select a JSON subtitle file.');
+            return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var json = JSON.parse(e.target.result);
+                if (!json.body || !Array.isArray(json.body)) {
+                    throw new Error('Invalid JSON format. Missing body array.');
+                }
+
+                var srtOutput = '';
+                for (var i = 0; i < json.body.length; i++) {
+                    var item = json.body[i];
+                    var start = formatSRTTime(item.from);
+                    var end = formatSRTTime(item.to);
+                    var content = item.content || '';
+                    srtOutput += (i + 1) + '\n';
+                    srtOutput += start + ' --> ' + end + '\n';
+                    srtOutput += content + '\n\n';
+                }
+
+                srtData = srtOutput;
+                srtPreview.value = srtOutput;
+                downloadSrtBtn.style.display = 'block';
+                window.showMessage('Conversion successful.');
+            } catch (error) {
+                window.showMessage('Error converting file: ' + error.message);
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    downloadSrtBtn.addEventListener('click', function() {
+        if (!srtData) return;
+
+        var blob = new Blob([srtData], { type: 'text/plain' });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = 'subtitle.srt';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     });
 
     bulkList.appendChild(createBulkCard());
