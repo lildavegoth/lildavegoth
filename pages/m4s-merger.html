@@ -8,6 +8,7 @@
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
     <script src="../ui-icons.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -104,6 +105,24 @@
             display: none;
         }
 
+        .file-name-input {
+            display: block;
+            width: 100%;
+            min-height: 52px;
+            padding: var(--spacing-sm);
+            background-color: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            resize: none;
+        }
+
+        .file-name-input:focus {
+            border-color: var(--accent-color);
+        }
+
         button {
             background-color: var(--accent-color);
             color: var(--bg-black);
@@ -121,6 +140,10 @@
 
         button:hover {
             background-color: var(--accent-dark);
+        }
+
+        button:focus {
+            outline: none;
         }
 
         #downloadBtn,
@@ -229,6 +252,10 @@
         <div id="singleMerger">
             <div class="card">
                 <div class="file-input-group">
+                    <label class="file-label" for="fileNameInput">File Name (optional):</label>
+                    <input type="text" id="fileNameInput" class="file-name-input" placeholder="merged">
+                </div>
+                <div class="file-input-group">
                     <label class="file-label" for="audioFile">Audio M4S File:</label>
                     <input type="file" id="audioFile" accept=".m4s">
                 </div>
@@ -237,7 +264,7 @@
                     <input type="file" id="videoFile" accept=".m4s">
                 </div>
             </div>
-            <button id="mergeBtn" disabled>Merge Files</button>
+            <button id="mergeBtn">Merge Files</button>
             <button id="downloadBtn">Download MP4</button>
             <button id="clearBtn" class="clear-btn">Clear</button>
         </div>
@@ -245,8 +272,8 @@
         <div id="bulkMerger">
             <div id="bulkList"></div>
             <button id="addPairBtn">Add Pair</button>
-            <button id="bulkMergeBtn" disabled>Merge All</button>
-            <button id="bulkDownloadBtn">Download All</button>
+            <button id="bulkMergeBtn">Merge All</button>
+            <button id="bulkDownloadBtn">Download ZIP</button>
             <button id="bulkClearBtn" class="clear-btn">Clear</button>
         </div>
 
@@ -269,10 +296,23 @@
         button.classList.add('btnMDYE');
     }
 
+    document.addEventListener('animationend', function(e) {
+        if (e.animationName === 'mdYeAnim') {
+            e.target.classList.remove('btnMDYE');
+        }
+    });
+
     function delay(ms) {
         return new Promise(function(resolve) {
             setTimeout(resolve, ms);
         });
+    }
+
+    function buildFileName(value, fallback) {
+        var name = (value || '').trim();
+        if (!name) name = fallback;
+        if (!/\.mp4$/i.test(name)) name += '.mp4';
+        return name;
     }
 
     function startProgressNotification(title) {
@@ -377,6 +417,7 @@
 
     var videoInput = document.getElementById('videoFile');
     var audioInput = document.getElementById('audioFile');
+    var fileNameInput = document.getElementById('fileNameInput');
     var mergeBtn = document.getElementById('mergeBtn');
     var downloadBtn = document.getElementById('downloadBtn');
     var clearBtn = document.getElementById('clearBtn');
@@ -409,16 +450,6 @@
 
     videoInput.addEventListener('change', function(e) {
         videoFile = e.target.files[0] || null;
-        checkFiles();
-    });
-
-    audioInput.addEventListener('change', function(e) {
-        audioFile = e.target.files[0] || null;
-        checkFiles();
-    });
-
-    function checkFiles() {
-        mergeBtn.disabled = !(videoFile && audioFile);
         if (mergedUrl) {
             URL.revokeObjectURL(mergedUrl);
             mergedUrl = null;
@@ -426,7 +457,18 @@
         mergeBtn.style.display = 'block';
         downloadBtn.style.display = 'none';
         clearBtn.style.display = 'block';
-    }
+    });
+
+    audioInput.addEventListener('change', function(e) {
+        audioFile = e.target.files[0] || null;
+        if (mergedUrl) {
+            URL.revokeObjectURL(mergedUrl);
+            mergedUrl = null;
+        }
+        mergeBtn.style.display = 'block';
+        downloadBtn.style.display = 'none';
+        clearBtn.style.display = 'block';
+    });
 
     function clearSingle() {
         if (mergedUrl) {
@@ -437,7 +479,7 @@
         audioFile = null;
         videoInput.value = '';
         audioInput.value = '';
-        mergeBtn.disabled = true;
+        fileNameInput.value = '';
         mergeBtn.style.display = 'block';
         downloadBtn.style.display = 'none';
         clearBtn.style.display = 'block';
@@ -449,10 +491,20 @@
     });
 
     mergeBtn.addEventListener('click', async function() {
-        if (!videoFile || !audioFile) return;
+        if (!audioFile && !videoFile) {
+            window.showMessage('Please insert both an audio and a video M4S file.', true);
+            return;
+        }
+        if (!audioFile) {
+            window.showMessage('Please insert the audio M4S file.', true);
+            return;
+        }
+        if (!videoFile) {
+            window.showMessage('Please insert the video M4S file.', true);
+            return;
+        }
 
         playMDYE(mergeBtn);
-        mergeBtn.disabled = true;
         mergeBtn.style.display = 'none';
         downloadBtn.style.display = 'none';
         clearBtn.style.display = 'none';
@@ -493,7 +545,6 @@
             ffmpegInstance.FS('unlink', 'audio.m4s');
             ffmpegInstance.FS('unlink', 'output.mp4');
 
-            mergeBtn.disabled = false;
             downloadBtn.style.display = 'block';
             clearBtn.style.display = 'block';
         } catch (error) {
@@ -501,7 +552,6 @@
             closeNotification(notif);
             window.showMessage('Error: ' + error.message, true);
             mergeBtn.style.display = 'block';
-            mergeBtn.disabled = false;
             downloadBtn.style.display = 'none';
             clearBtn.style.display = 'block';
         }
@@ -525,9 +575,10 @@
             clearInterval(interval);
             updateProgress(notif, 100);
 
+            var name = buildFileName(fileNameInput.value, 'merged');
             var link = document.createElement('a');
             link.href = mergedUrl;
-            link.download = 'merged.mp4';
+            link.download = name;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -545,6 +596,10 @@
             '<button type="button" class="bulk-close"><i class="fas fa-close"></i></button>' +
             '<div class="bulk-title">Pair</div>' +
             '<div class="file-input-group">' +
+                '<label class="file-label">File Name (optional):</label>' +
+                '<input type="text" class="bulk-name file-name-input" placeholder="merged">' +
+            '</div>' +
+            '<div class="file-input-group">' +
                 '<label class="file-label">Audio M4S File:</label>' +
                 '<input type="file" class="bulk-audio" accept=".m4s">' +
             '</div>' +
@@ -559,19 +614,9 @@
         var cards = bulkList.querySelectorAll('.bulk-card');
         cards.forEach(function(card, index) {
             card.querySelector('.bulk-title').textContent = 'Pair ' + (index + 1);
+            var nameInput = card.querySelector('.bulk-name');
+            nameInput.placeholder = 'merged-' + (index + 1);
         });
-        updateBulkState();
-    }
-
-    function updateBulkState() {
-        var cards = bulkList.querySelectorAll('.bulk-card');
-        var ready = cards.length > 0;
-        cards.forEach(function(card) {
-            var audio = card.querySelector('.bulk-audio').files[0];
-            var video = card.querySelector('.bulk-video').files[0];
-            if (!audio || !video) ready = false;
-        });
-        bulkMergeBtn.disabled = !ready;
     }
 
     function getPairs() {
@@ -580,16 +625,14 @@
         cards.forEach(function(card) {
             pairs.push({
                 audio: card.querySelector('.bulk-audio').files[0] || null,
-                video: card.querySelector('.bulk-video').files[0] || null
+                video: card.querySelector('.bulk-video').files[0] || null,
+                name: card.querySelector('.bulk-name').value
             });
         });
         return pairs;
     }
 
     function clearBulkResults() {
-        bulkResults.forEach(function(url) {
-            URL.revokeObjectURL(url);
-        });
         bulkResults = [];
     }
 
@@ -598,6 +641,7 @@
             window.showMessage('You can add up to 10 pairs only.', true);
             return;
         }
+        playMDYE(addPairBtn);
         bulkList.appendChild(createBulkCard());
         refreshBulk();
     });
@@ -615,17 +659,12 @@
         refreshBulk();
     });
 
-    bulkList.addEventListener('change', function() {
-        updateBulkState();
-    });
-
     bulkClearBtn.addEventListener('click', function() {
         playMDYE(bulkClearBtn);
         clearBulkResults();
         bulkList.innerHTML = '';
         bulkList.appendChild(createBulkCard());
         bulkMergeBtn.style.display = 'block';
-        bulkMergeBtn.disabled = true;
         bulkDownloadBtn.style.display = 'none';
         bulkClearBtn.style.display = 'block';
         refreshBulk();
@@ -635,8 +674,31 @@
         var pairs = getPairs();
         if (!pairs.length) return;
 
+        var missingIndex = -1;
+        var missingType = '';
+        for (var k = 0; k < pairs.length; k++) {
+            if (!pairs[k].audio && !pairs[k].video) {
+                missingIndex = k;
+                missingType = 'both an audio and a video M4S file';
+                break;
+            }
+            if (!pairs[k].audio) {
+                missingIndex = k;
+                missingType = 'the audio M4S file';
+                break;
+            }
+            if (!pairs[k].video) {
+                missingIndex = k;
+                missingType = 'the video M4S file';
+                break;
+            }
+        }
+        if (missingIndex !== -1) {
+            window.showMessage('Pair ' + (missingIndex + 1) + ': please insert ' + missingType + '.', true);
+            return;
+        }
+
         playMDYE(bulkMergeBtn);
-        bulkMergeBtn.disabled = true;
         bulkMergeBtn.style.display = 'none';
         bulkDownloadBtn.style.display = 'none';
         bulkClearBtn.style.display = 'none';
@@ -658,7 +720,9 @@
                 await ffmpegInstance.run('-i', 'video.m4s', '-i', 'audio.m4s', '-c', 'copy', 'output.mp4');
 
                 var data = ffmpegInstance.FS('readFile', 'output.mp4');
-                bulkResults.push(URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' })));
+                var blob = new Blob([data.buffer], { type: 'video/mp4' });
+                var name = buildFileName(pairs[i].name, 'merged-' + (i + 1));
+                bulkResults.push({ name: name, blob: blob });
 
                 ffmpegInstance.FS('unlink', 'video.m4s');
                 ffmpegInstance.FS('unlink', 'audio.m4s');
@@ -671,50 +735,54 @@
             closeNotification(notif);
             notif = null;
 
-            bulkMergeBtn.disabled = false;
             bulkDownloadBtn.style.display = 'block';
             bulkClearBtn.style.display = 'block';
         } catch (error) {
             closeNotification(notif);
             window.showMessage('Error: ' + error.message, true);
             bulkMergeBtn.style.display = 'block';
-            bulkMergeBtn.disabled = false;
             bulkDownloadBtn.style.display = 'none';
             bulkClearBtn.style.display = 'block';
         }
     });
 
-    bulkDownloadBtn.addEventListener('click', function() {
+    bulkDownloadBtn.addEventListener('click', async function() {
         if (!bulkResults.length) return;
 
         playMDYE(bulkDownloadBtn);
 
-        var notif = startProgressNotification('Preparing Downloads');
-        var total = bulkResults.length;
-        var index = 0;
+        var notif = startProgressNotification('Preparing ZIP');
+        updateProgress(notif, 5);
 
-        function next() {
-            if (index >= total) {
-                updateProgress(notif, 100);
-                setTimeout(function() {
-                    closeNotification(notif);
-                }, 600);
-                return;
-            }
+        try {
+            var zip = new JSZip();
+            bulkResults.forEach(function(item) {
+                zip.file(item.name, item.blob);
+            });
 
+            updateProgress(notif, 30);
+
+            var zipBlob = await zip.generateAsync({ type: 'blob' }, function(meta) {
+                updateProgress(notif, 30 + meta.percent * 0.65);
+            });
+
+            updateProgress(notif, 100);
+
+            var url = URL.createObjectURL(zipBlob);
             var link = document.createElement('a');
-            link.href = bulkResults[index];
-            link.download = 'merged-' + (index + 1) + '.mp4';
+            link.href = url;
+            link.download = 'M4S Merger.zip';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            URL.revokeObjectURL(url);
 
-            index++;
-            updateProgress(notif, (index / total) * 100);
-            setTimeout(next, 700);
+            await delay(600);
+            closeNotification(notif);
+        } catch (error) {
+            closeNotification(notif);
+            window.showMessage('Error: ' + error.message, true);
         }
-
-        next();
     });
 
     bulkList.appendChild(createBulkCard());
