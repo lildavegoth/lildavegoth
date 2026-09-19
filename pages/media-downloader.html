@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Kakoi Kiraku Downloader</title>
+<style>
+  :root{
+    --accent-color:#C1FC32; --accent-dark:#9bc726;
+    --bg-black:#000; --bg-dark:#1a1a1a; --bg-card:rgba(30,30,30,.7);
+    --text-primary:#f5f5f7; --text-secondary:#a1a1a6;
+    --radius-small:12px; --radius-medium:20px; --radius-large:28px;
+    --spacing-xs:8px; --spacing-sm:16px; --spacing-md:24px;
+    --spacing-lg:32px; --spacing-xl:48px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    -webkit-tap-highlight-color:transparent;}
+  body{background:var(--bg-black);color:var(--text-primary);min-height:100vh;
+       overflow-x:hidden;padding-bottom:40px;}
+  .container{max-width:1200px;margin:0 auto;padding:var(--spacing-md);}
+  .back-link{display:inline-flex;align-items:center;gap:8px;color:var(--text-secondary);
+             text-decoration:none;font-size:.9rem;margin-bottom:12px;}
+  header h1{font-size:1.8rem;font-weight:700;color:var(--accent-color);margin-bottom:6px;}
+  header .tagline{color:var(--text-secondary);font-size:.9rem;margin-bottom:var(--spacing-md);}
+  .card{background:var(--bg-card);border-radius:var(--radius-medium);
+        padding:var(--spacing-md);margin-bottom:var(--spacing-md);
+        border:1px solid rgba(255,255,255,.05);}
+  .file-label{display:block;font-size:.85rem;color:var(--text-secondary);margin-bottom:var(--spacing-xs);}
+  .input{
+    display:block;width:100%;min-height:52px;padding:var(--spacing-sm);
+    background:var(--bg-dark);border:1px solid rgba(255,255,255,.1);
+    border-radius:var(--radius-small);color:var(--text-primary);
+    font-size:.95rem;outline:none;
+  }
+  .input:focus{border-color:var(--accent-color);}
+  button{
+    background:var(--accent-color);color:#000;border:none;
+    border-radius:var(--radius-small);padding:var(--spacing-sm) var(--spacing-md);
+    font-size:1rem;font-weight:600;cursor:pointer;margin-top:var(--spacing-sm);
+    width:100%;display:block;transition:background .2s,transform .1s;
+  }
+  button:active{transform:scale(.98);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  .ghost{background:transparent;color:var(--text-secondary);
+         border:1px solid rgba(255,255,255,.15);}
+  .folder-pills{display:flex;gap:8px;margin:var(--spacing-sm) 0;flex-wrap:nowrap;
+                overflow-x:auto;white-space:nowrap;scrollbar-width:none;padding-bottom:4px;}
+  .folder-pills::-webkit-scrollbar{display:none;}
+  .folder-pill{
+    padding:12px 20px;background:var(--bg-card);color:var(--text-secondary);
+    font-weight:600;font-size:.9rem;cursor:pointer;user-select:none;flex-shrink:0;
+    border:none;margin:0;width:auto;transition:all .25s cubic-bezier(.34,1.56,.64,1);
+    border-radius:20px;
+  }
+  .folder-pill.active{background:var(--accent-color);color:#000;border-radius:50px;padding:12px 26px;}
+  .meta{display:flex;gap:14px;align-items:flex-start;margin-bottom:var(--spacing-sm);}
+  .meta img{width:120px;height:auto;border-radius:var(--radius-small);flex-shrink:0;}
+  .meta h3{font-size:1rem;font-weight:600;margin-bottom:4px;line-height:1.35;}
+  .meta .sub{font-size:.8rem;color:var(--text-secondary);}
+  #results,#progressCard{display:none;}
+  #progressCard{
+    position:fixed;top:16px;left:50%;transform:translateX(-50%);
+    width:min(420px,calc(100vw - 32px));background:var(--bg-card);
+    backdrop-filter:blur(12px);border-radius:var(--radius-medium);
+    border:1px solid rgba(255,255,255,.08);padding:14px 18px;z-index:1000;
+    box-shadow:0 10px 40px rgba(0,0,0,.6);
+  }
+  #progressCard .label{font-size:.85rem;margin-bottom:8px;color:var(--text-primary);}
+  .bar{height:6px;background:rgba(255,255,255,.08);border-radius:6px;overflow:hidden;}
+  .bar > i{display:block;height:100%;width:0;background:var(--accent-color);
+           border-radius:6px;transition:width .35s;}
+  footer{margin-top:var(--spacing-xl);text-align:center;color:#666;font-size:.85rem;}
+  .hint{font-size:.78rem;color:var(--text-secondary);margin-top:6px;}
+</style>
+</head>
+<body>
+  <div class="container">
+    <a href="../index.html" class="back-link">← Back to Home</a>
+
+    <header>
+      <h1>Kakoi Kiraku Downloader</h1>
+      <p class="tagline">Paste a link. Our remote terminal does the heavy lifting — no server, no install.</p>
+    </header>
+
+    <div class="card">
+      <label class="file-label" for="urlInput">Media URL</label>
+      <input id="urlInput" class="input" type="url" placeholder="https://…" autocomplete="off">
+      <button id="fetchBtn">Fetch Available Formats</button>
+      <p class="hint">Works for YouTube, Twitter/X, Instagram, TikTok, Reddit, and thousands more.</p>
+    </div>
+
+    <div class="card" id="results">
+      <div class="meta">
+        <img id="thumb" alt="" style="display:none;">
+        <div>
+          <h3 id="title">—</h3>
+          <div class="sub" id="subtitle">—</div>
+        </div>
+      </div>
+      <label class="file-label">Choose a format</label>
+      <div class="folder-pills" id="formatPills"></div>
+      <button id="downloadBtn" disabled>Download</button>
+      <button id="resetBtn" class="ghost">Start Over</button>
+    </div>
+
+    <div class="card" id="doneCard" style="display:none;">
+      <label class="file-label">Ready</label>
+      <button id="saveBtn">Save File</button>
+    </div>
+
+    <footer>
+      <p>© 2026 lildavegoth | Kakoi Kiraku Downloader</p>
+    </footer>
+  </div>
+
+  <div id="progressCard">
+    <div class="label" id="progressLabel">Working…</div>
+    <div class="bar"><i id="progressBar"></i></div>
+  </div>
+
+<script>
+(() => {
+  const API = "/api/dl";
+  const POLL_MS = 2500;
+  const TIMEOUT_MS = 10 * 60 * 1000;
+
+  const $ = id => document.getElementById(id);
+  const urlInput   = $("urlInput");
+  const fetchBtn   = $("fetchBtn");
+  const results    = $("results");
+  const thumb      = $("thumb");
+  const titleEl    = $("title");
+  const subtitleEl = $("subtitle");
+  const pills      = $("formatPills");
+  const downloadBtn= $("downloadBtn");
+  const resetBtn   = $("resetBtn");
+  const doneCard   = $("doneCard");
+  const saveBtn    = $("saveBtn");
+  const pc         = $("progressCard");
+  const pcLabel    = $("progressLabel");
+  const pcBar      = $("progressBar");
+
+  let jobId = null, selectedFormat = null, finalJob = null, pollTimer = null, startedAt = 0;
+
+  function showProgress(label, pct) {
+    pc.style.display = "block";
+    pcLabel.textContent = label;
+    pcBar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  }
+  function hideProgress() { pc.style.display = "none"; pcBar.style.width = "0"; }
+  function toast(msg) {
+    // minimal inline toast; replace with your notification.cssjs if you prefer
+    const t = document.createElement("div");
+    t.textContent = msg;
+    Object.assign(t.style, {
+      position:"fixed", bottom:"24px", left:"50%", transform:"translateX(-50%)",
+      background:"#1a1a1a", color:"#f5f5f7", padding:"12px 20px",
+      borderRadius:"12px", border:"1px solid rgba(255,255,255,.1)",
+      fontSize:".9rem", zIndex:2000, maxWidth:"90vw", textAlign:"center",
+    });
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+  }
+
+  function fmtMB(mb) {
+    if (mb == null) return "";
+    return mb >= 1024 ? `${(mb/1024).toFixed(1)}GB` : `${mb}MB`;
+  }
+
+  function renderFormats(formats) {
+    pills.innerHTML = "";
+    selectedFormat = null;
+    downloadBtn.disabled = true;
+
+    if (!formats || formats.length === 0) {
+      const p = document.createElement("button");
+      p.className = "folder-pill active";
+      p.textContent = "Best quality";
+      p.dataset.id = "best";
+      p.onclick = () => {
+        [...pills.children].forEach(c => c.classList.remove("active"));
+        p.classList.add("active");
+        selectedFormat = "best";
+        downloadBtn.disabled = false;
+      };
+      pills.appendChild(p);
+      selectedFormat = "best";
+      downloadBtn.disabled = false;
+      return;
+    }
+
+    formats.forEach((f, i) => {
+      const p = document.createElement("button");
+      p.className = "folder-pill" + (i === formats.length - 1 ? " active" : "");
+      p.textContent = f.size_mb ? `${f.res} · ${fmtMB(f.size_mb)}` : f.res;
+      p.dataset.id = f.format_id;
+      p.onclick = () => {
+        [...pills.children].forEach(c => c.classList.remove("active"));
+        p.classList.add("active");
+        selectedFormat = f.format_id;
+        downloadBtn.disabled = false;
+      };
+      pills.appendChild(p);
+      if (i === formats.length - 1) {
+        selectedFormat = f.format_id;
+        downloadBtn.disabled = false;
+      }
+    });
+  }
+
+  async function poll() {
+    if (!jobId) return;
+    if (Date.now() - startedAt > TIMEOUT_MS) {
+      clearInterval(pollTimer); hideProgress();
+      toast("Timed out. Try again.");
+      return;
+    }
+    try {
+      const res = await fetch(`${API}?job_id=${jobId}`);
+      const job = await res.json();
+      if (job.error) return;
+
+      if (job.status === "info_ready") {
+        clearInterval(pollTimer); hideProgress();
+        titleEl.textContent = job.title || "Untitled";
+        subtitleEl.textContent = job.duration ? `Duration: ${job.duration}` : "";
+        if (job.thumbnail) { thumb.src = job.thumbnail; thumb.style.display = "block"; }
+        renderFormats(job.formats);
+        results.style.display = "block";
+      } else if (job.status === "downloading") {
+        showProgress("Downloading on remote terminal…", 55);
+      } else if (job.status === "done") {
+        clearInterval(pollTimer); hideProgress();
+        finalJob = job;
+        results.style.display = "none";
+        doneCard.style.display = "block";
+      } else if (job.status === "error") {
+        clearInterval(pollTimer); hideProgress();
+        toast("Error: " + (job.error || "unknown"));
+        fetchBtn.disabled = false;
+      }
+    } catch {}
+  }
+
+  fetchBtn.addEventListener("click", async () => {
+    const url = urlInput.value.trim();
+    if (!url) { toast("Paste a URL first"); return; }
+    try { new URL(url); } catch { toast("That doesn't look like a valid URL"); return; }
+
+    fetchBtn.disabled = true;
+    results.style.display = "none";
+    doneCard.style.display = "none";
+    startedAt = Date.now();
+    showProgress("Asking remote terminal for formats…", 15);
+
+    try {
+      const res = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "info", url }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Request failed");
+      jobId = data.job_id;
+      pollTimer = setInterval(poll, POLL_MS);
+      poll();
+    } catch (e) {
+      hideProgress(); fetchBtn.disabled = false;
+      toast("Failed: " + e.message);
+    }
+  });
+
+  downloadBtn.addEventListener("click", async () => {
+    if (!jobId || !selectedFormat) return;
+    downloadBtn.disabled = true;
+    startedAt = Date.now();
+    showProgress("Starting download…", 30);
+
+    try {
+      const res = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "download", job_id: jobId, format_id: selectedFormat }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Request failed");
+      pollTimer = setInterval(poll, POLL_MS);
+      poll();
+    } catch (e) {
+      hideProgress(); downloadBtn.disabled = false;
+      toast("Failed: " + e.message);
+    }
+  });
+
+  saveBtn.addEventListener("click", () => {
+    if (!finalJob || !finalJob.file_url) return;
+    const a = document.createElement("a");
+    a.href = finalJob.file_url;
+    a.download = finalJob.filename || "download";
+    a.target = "_blank";
+    a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  resetBtn.addEventListener("click", () => {
+    jobId = null; selectedFormat = null; finalJob = null;
+    results.style.display = "none"; doneCard.style.display = "none";
+    fetchBtn.disabled = false;
+    urlInput.value = ""; urlInput.focus();
+  });
+})();
+</script>
+</body>
+</html>
