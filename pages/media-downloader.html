@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Downloader | lildavegoth</title>
     <meta name="color-scheme" content="dark">
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
@@ -11,7 +12,6 @@
     <style>
         :root {
             --accent-color: #C1FC32;
-            --accent-dark: #9bc726;
             --bg-black: #000000;
             --bg-dark: #1a1a1a;
             --bg-card: rgba(30, 30, 30, 0.7);
@@ -227,6 +227,23 @@
         #doneCard {
             display: none;
         }
+
+        #doneThumb {
+            display: block;
+            width: 100%;
+            max-width: 320px;
+            height: auto;
+            border-radius: var(--radius-small);
+            margin: 0 auto var(--spacing-sm);
+        }
+
+        #doneTitle {
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.35;
+            text-align: center;
+            margin-bottom: var(--spacing-sm);
+        }
     </style>
 </head>
 <body>
@@ -236,7 +253,7 @@
         </a>
         <app-header class="fade-in">
             <div>
-                <h1>Kakoi Kiraku Downloader</h1>
+                <h1>Media Downloader</h1>
                 <p class="tagline">Paste a link and pick a format, the remote terminal does the rest</p>
             </div>
         </app-header>
@@ -263,7 +280,8 @@
         </div>
 
         <div class="card" id="doneCard">
-            <label class="file-label">Ready</label>
+            <img id="doneThumb" alt="" style="display: none;">
+            <h3 id="doneTitle">—</h3>
             <button id="saveBtn">Save File</button>
             <button id="doneResetBtn" class="ghost">Start Over</button>
         </div>
@@ -273,7 +291,7 @@
                 <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
                 <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
             </div>
-            <p>© 2026 lildavegoth | Kakoi Kiraku Downloader</p>
+            <p>© 2026 lildavegoth | Media Downloader</p>
             <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
                 Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
             </p>
@@ -281,6 +299,50 @@
     </div>
 
 <script>
+    var audioCtx = null;
+
+    function ensureAudio() {
+        if (!audioCtx) {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {}
+        }
+        return audioCtx;
+    }
+
+    function playCompletionSound() {
+        var ctx = ensureAudio();
+        if (!ctx) return;
+        var play = function() {
+            try {
+                var t0 = ctx.currentTime + 0.01;
+                var notes = [
+                    { f: 1397, start: 0.00, dur: 0.11 },
+                    { f: 1047, start: 0.13, dur: 0.16 }
+                ];
+                for (var i = 0; i < notes.length; i++) {
+                    var n = notes[i];
+                    var osc = ctx.createOscillator();
+                    var gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = n.f;
+                    var when = t0 + n.start;
+                    gain.gain.setValueAtTime(0.0001, when);
+                    gain.gain.exponentialRampToValueAtTime(0.65, when + 0.012);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, when + n.dur);
+                    osc.connect(gain).connect(ctx.destination);
+                    osc.start(when);
+                    osc.stop(when + n.dur + 0.04);
+                }
+            } catch (e) {}
+        };
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(play).catch(function() {});
+        } else {
+            play();
+        }
+    }
+
     function startProgressNotification(title) {
         var notif = window.createTimerNotification(title, 100);
         var progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
@@ -323,6 +385,8 @@
     var downloadBtn = document.getElementById('downloadBtn');
     var resetBtn = document.getElementById('resetBtn');
     var doneCard = document.getElementById('doneCard');
+    var doneThumb = document.getElementById('doneThumb');
+    var doneTitle = document.getElementById('doneTitle');
     var saveBtn = document.getElementById('saveBtn');
     var doneResetBtn = document.getElementById('doneResetBtn');
 
@@ -332,6 +396,8 @@
     var pollTimer = null;
     var startedAt = 0;
     var activeNotif = null;
+    var currentTitle = '';
+    var currentThumb = '';
 
     function setActivePill(target) {
         var children = pills.children;
@@ -398,14 +464,18 @@
                 clearInterval(pollTimer);
                 closeNotification(activeNotif);
                 activeNotif = null;
-                titleEl.textContent = job.title || 'Untitled';
+                currentTitle = job.title || 'Untitled';
+                currentThumb = job.thumbnail || '';
+                titleEl.textContent = currentTitle;
                 subtitleEl.textContent = job.duration ? 'Duration: ' + job.duration : '';
-                if (job.thumbnail) {
-                    thumb.src = job.thumbnail;
+                if (currentThumb) {
+                    thumb.src = currentThumb;
                     thumb.style.display = 'block';
                 }
                 renderFormats(job.formats);
                 results.style.display = 'block';
+                playCompletionSound();
+                window.showMessage('Formats ready', 'Select a format to download', 'NOTIFICATION');
             } else if (job.status === 'downloading') {
                 if (activeNotif) updateProgress(activeNotif, 55);
             } else if (job.status === 'done') {
@@ -414,7 +484,16 @@
                 activeNotif = null;
                 finalJob = job;
                 results.style.display = 'none';
+                if (currentThumb) {
+                    doneThumb.src = currentThumb;
+                    doneThumb.style.display = 'block';
+                } else {
+                    doneThumb.style.display = 'none';
+                }
+                doneTitle.textContent = currentTitle || job.title || 'Untitled';
                 doneCard.style.display = 'block';
+                playCompletionSound();
+                window.showMessage('Download complete', 'Your file is ready to save', 'NOTIFICATION');
             } else if (job.status === 'error') {
                 clearInterval(pollTimer);
                 closeNotification(activeNotif);
@@ -505,12 +584,17 @@
         jobId = null;
         selectedFormat = null;
         finalJob = null;
+        currentTitle = '';
+        currentThumb = '';
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = null;
         closeNotification(activeNotif);
         activeNotif = null;
         results.style.display = 'none';
         doneCard.style.display = 'none';
+        doneThumb.style.display = 'none';
+        doneThumb.src = '';
+        doneTitle.textContent = '—';
         fetchBtn.disabled = false;
         downloadBtn.disabled = true;
         urlInput.value = '';
