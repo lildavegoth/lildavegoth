@@ -40,7 +40,11 @@ export async function POST(request) {
         headers: { ...supaHeaders, Prefer: "return=representation" },
         body: JSON.stringify({ url, status: "pending" }),
       });
-      const [row] = await r.json();
+
+      const data = await r.json();
+      const row  = Array.isArray(data) ? data[0] : null;
+      if (!row) throw new Error("Insert failed: " + JSON.stringify(data));
+
       await dispatch("web-dl-info", { job_id: row.id });
       return Response.json({ job_id: row.id });
     }
@@ -65,14 +69,26 @@ export async function POST(request) {
 }
 
 export async function GET(request) {
-  const id = new URL(request.url).searchParams.get("job_id");
-  if (!id) return Response.json({ error: "Missing job_id" }, { status: 400 });
+  try {
+    const id = new URL(request.url).searchParams.get("job_id");
+    if (!id) return Response.json({ error: "Missing job_id" }, { status: 400 });
 
-  const r = await fetch(
-    `${SUPA}/rest/v1/download_jobs?id=eq.${id}&select=*`,
-    { headers: supaHeaders }
-  );
-  const [row] = await r.json();
-  if (!row) return Response.json({ error: "Not found" }, { status: 404 });
-  return Response.json(row);
+    const r = await fetch(
+      `${SUPA}/rest/v1/download_jobs?id=eq.${id}&select=*`,
+      { headers: supaHeaders }
+    );
+
+    const data = await r.json();
+    const row  = Array.isArray(data) ? data[0] : null;
+    if (!row) {
+      return Response.json(
+        { error: "Job not found or Supabase error", details: data },
+        { status: 500 }
+      );
+    }
+
+    return Response.json(row);
+  } catch (e) {
+    return Response.json({ error: e.message }, { status: 500 });
+  }
 }
