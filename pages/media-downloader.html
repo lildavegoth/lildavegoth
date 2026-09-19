@@ -299,13 +299,19 @@
     </div>
 
 <script>
+    var API = '/api/route';
+    var POLL_MS = 2500;
+    var TIMEOUT_MS = 600000;
+
     var audioCtx = null;
 
     function ensureAudio() {
         if (!audioCtx) {
             try {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            } catch (e) {}
+            } catch (e) {
+                audioCtx = null;
+            }
         }
         return audioCtx;
     }
@@ -313,7 +319,8 @@
     function playCompletionSound() {
         var ctx = ensureAudio();
         if (!ctx) return;
-        var play = function() {
+
+        function play() {
             try {
                 var t0 = ctx.currentTime + 0.01;
                 var notes = [
@@ -335,7 +342,8 @@
                     osc.stop(when + n.dur + 0.04);
                 }
             } catch (e) {}
-        };
+        }
+
         if (ctx.state === 'suspended') {
             ctx.resume().then(play).catch(function() {});
         } else {
@@ -353,6 +361,7 @@
     }
 
     function updateProgress(notif, percent) {
+        if (!notif) return;
         var progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
         var timeElement = notif.wrapper.querySelector('.timer-time-notif');
         if (progressBar) progressBar.style.width = percent + '%';
@@ -370,10 +379,6 @@
         if (mb >= 1024) return (mb / 1024).toFixed(1) + 'GB';
         return mb + 'MB';
     }
-
-    var API = '/api/route';
-    var POLL_MS = 2500;
-    var TIMEOUT_MS = 600000;
 
     var urlInput = document.getElementById('urlInput');
     var fetchBtn = document.getElementById('fetchBtn');
@@ -398,6 +403,18 @@
     var activeNotif = null;
     var currentTitle = '';
     var currentThumb = '';
+
+    function stopPolling() {
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+    }
+
+    function closeActiveNotification() {
+        closeNotification(activeNotif);
+        activeNotif = null;
+    }
 
     function setActivePill(target) {
         var children = pills.children;
@@ -448,60 +465,75 @@
 
     async function poll() {
         if (!jobId) return;
+
         if (Date.now() - startedAt > TIMEOUT_MS) {
-            clearInterval(pollTimer);
-            closeNotification(activeNotif);
-            activeNotif = null;
+            stopPolling();
+            closeActiveNotification();
+            fetchBtn.disabled = false;
+            downloadBtn.disabled = false;
             window.showMessage('Timed out. Try again.');
             return;
         }
-        try {
-            var res = await fetch(API + '?job_id=' + jobId);
-            var job = await res.json();
-            if (job.error) return;
 
-            if (job.status === 'info_ready') {
-                clearInterval(pollTimer);
-                closeNotification(activeNotif);
-                activeNotif = null;
-                currentTitle = job.title || 'Untitled';
-                currentThumb = job.thumbnail || '';
-                titleEl.textContent = currentTitle;
-                subtitleEl.textContent = job.duration ? 'Duration: ' + job.duration : '';
-                if (currentThumb) {
-                    thumb.src = currentThumb;
-                    thumb.style.display = 'block';
-                }
-                renderFormats(job.formats);
-                results.style.display = 'block';
-                playCompletionSound();
-                window.showMessage('Formats ready', 'Select a format to download', 'NOTIFICATION');
-            } else if (job.status === 'downloading') {
-                if (activeNotif) updateProgress(activeNotif, 55);
-            } else if (job.status === 'done') {
-                clearInterval(pollTimer);
-                closeNotification(activeNotif);
-                activeNotif = null;
-                finalJob = job;
-                results.style.display = 'none';
-                if (currentThumb) {
-                    doneThumb.src = currentThumb;
-                    doneThumb.style.display = 'block';
-                } else {
-                    doneThumb.style.display = 'none';
-                }
-                doneTitle.textContent = currentTitle || job.title || 'Untitled';
-                doneCard.style.display = 'block';
-                playCompletionSound();
-                window.showMessage('Download complete', 'Your file is ready to save', 'NOTIFICATION');
-            } else if (job.status === 'error') {
-                clearInterval(pollTimer);
-                closeNotification(activeNotif);
-                activeNotif = null;
-                window.showMessage('Error: ' + (job.error || 'unknown'));
-                fetchBtn.disabled = false;
+        var res;
+        try {
+            res = await fetch(API + '?job_id=' + encodeURIComponent(jobId));
+        } catch (e) {
+            return;
+        }
+
+        if (!res.ok) return;
+
+        var job;
+        try {
+            job = await res.json();
+        } catch (e) {
+            return;
+        }
+
+        if (!job || !job.status) return;
+
+        if (job.status === 'info_ready') {
+            stopPolling();
+            closeActiveNotification();
+            currentTitle = job.title || 'Untitled';
+            currentThumb = job.thumbnail || '';
+            titleEl.textContent = currentTitle;
+            subtitleEl.textContent = job.duration ? 'Duration: ' + job.duration : '';
+            if (currentThumb) {
+                thumb.src = currentThumb;
+                thumb.style.display = 'block';
+            } else {
+                thumb.style.display = 'none';
             }
-        } catch (e) {}
+            renderFormats(job.formats);
+            results.style.display = 'block';
+            playCompletionSound();
+            window.showMessage('Formats ready', 'Select a format to download', 'NOTIFICATION');
+        } else if (job.status === 'downloading') {
+            updateProgress(activeNotif, 55);
+        } else if (job.status === 'done') {
+            stopPolling();
+            closeActiveNotification();
+            finalJob = job;
+            results.style.display = 'none';
+            if (currentThumb) {
+                doneThumb.src = currentThumb;
+                doneThumb.style.display = 'block';
+            } else {
+                doneThumb.style.display = 'none';
+            }
+            doneTitle.textContent = currentTitle || job.title || 'Untitled';
+            doneCard.style.display = 'block';
+            playCompletionSound();
+            window.showMessage('Download complete', 'Your file is ready to save', 'NOTIFICATION');
+        } else if (job.status === 'error') {
+            stopPolling();
+            closeActiveNotification();
+            fetchBtn.disabled = false;
+            downloadBtn.disabled = false;
+            window.showMessage('Error: ' + (job.error || 'unknown'));
+        }
     }
 
     fetchBtn.addEventListener('click', async function() {
@@ -524,23 +556,40 @@
         activeNotif = startProgressNotification('Fetching formats');
         updateProgress(activeNotif, 15);
 
+        var res;
         try {
-            var res = await fetch(API, {
+            res = await fetch(API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'info', url: url }),
             });
-            var data = await res.json();
-            if (!res.ok || data.error) throw new Error(data.error || 'Request failed');
-            jobId = data.job_id;
-            pollTimer = setInterval(poll, POLL_MS);
-            poll();
         } catch (e) {
-            closeNotification(activeNotif);
-            activeNotif = null;
+            closeActiveNotification();
             fetchBtn.disabled = false;
             window.showMessage('Failed: ' + e.message);
+            return;
         }
+
+        var data;
+        try {
+            data = await res.json();
+        } catch (e) {
+            closeActiveNotification();
+            fetchBtn.disabled = false;
+            window.showMessage('Failed: invalid server response');
+            return;
+        }
+
+        if (!res.ok || !data || data.error || !data.job_id) {
+            closeActiveNotification();
+            fetchBtn.disabled = false;
+            window.showMessage('Failed: ' + ((data && data.error) || 'Request failed'));
+            return;
+        }
+
+        jobId = data.job_id;
+        pollTimer = setInterval(poll, POLL_MS);
+        poll();
     });
 
     downloadBtn.addEventListener('click', async function() {
@@ -550,22 +599,39 @@
         activeNotif = startProgressNotification('Downloading');
         updateProgress(activeNotif, 30);
 
+        var res;
         try {
-            var res = await fetch(API, {
+            res = await fetch(API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'download', job_id: jobId, format_id: selectedFormat }),
             });
-            var data = await res.json();
-            if (!res.ok || data.error) throw new Error(data.error || 'Request failed');
-            pollTimer = setInterval(poll, POLL_MS);
-            poll();
         } catch (e) {
-            closeNotification(activeNotif);
-            activeNotif = null;
+            closeActiveNotification();
             downloadBtn.disabled = false;
             window.showMessage('Failed: ' + e.message);
+            return;
         }
+
+        var data;
+        try {
+            data = await res.json();
+        } catch (e) {
+            closeActiveNotification();
+            downloadBtn.disabled = false;
+            window.showMessage('Failed: invalid server response');
+            return;
+        }
+
+        if (!res.ok || !data || data.error) {
+            closeActiveNotification();
+            downloadBtn.disabled = false;
+            window.showMessage('Failed: ' + ((data && data.error) || 'Request failed'));
+            return;
+        }
+
+        pollTimer = setInterval(poll, POLL_MS);
+        poll();
     });
 
     saveBtn.addEventListener('click', function() {
@@ -586,10 +652,8 @@
         finalJob = null;
         currentTitle = '';
         currentThumb = '';
-        if (pollTimer) clearInterval(pollTimer);
-        pollTimer = null;
-        closeNotification(activeNotif);
-        activeNotif = null;
+        stopPolling();
+        closeActiveNotification();
         results.style.display = 'none';
         doneCard.style.display = 'none';
         doneThumb.style.display = 'none';
