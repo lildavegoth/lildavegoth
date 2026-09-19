@@ -187,7 +187,7 @@ jobs:
                 -d "text=$MSG"
             fi
           fi
-          
+
   delete-mirror:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'delete-mirror'
     runs-on: ubuntu-latest
@@ -604,7 +604,7 @@ jobs:
         id: fetch
         run: |
           JOB_ID="${{ github.event.client_payload.job_id }}"
-          DATA=$(curl -s "https://$SUPABASE_URL/rest/v1/kira_jobs?id=eq.$JOB_ID&select=*" \
+          DATA=$(curl -s "$SUPABASE_URL/rest/v1/kira_jobs?id=eq.$JOB_ID&select=*" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
           echo "JOB=$DATA" >> $GITHUB_ENV
@@ -614,7 +614,7 @@ jobs:
           JOB_ID="${{ github.event.client_payload.job_id }}"
           JOB=$(echo "$JOB" | jq '.[0]')
           USER_ID=$(echo "$JOB" | jq -r '.user_id')
-          TOKEN_DATA=$(curl -s "https://$SUPABASE_URL/rest/v1/kira_keys?user_id=eq.$USER_ID&select=encrypted_token" \
+          TOKEN_DATA=$(curl -s "$SUPABASE_URL/rest/v1/kira_keys?user_id=eq.$USER_ID&select=encrypted_token" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
           ENC_TOKEN=$(echo "$TOKEN_DATA" | jq -r '.[0].encrypted_token')
@@ -626,7 +626,6 @@ jobs:
       - name: Decrypt token and call OpenRouter
         id: ai
         run: |
-          # Simple XOR decrypt (Node.js)
           node -e "
             const key = process.env.ENCRYPTION_KEY;
             const cipher = process.env.ENC_TOKEN;
@@ -657,7 +656,7 @@ jobs:
       - name: Delete job
         run: |
           JOB_ID="${{ github.event.client_payload.job_id }}"
-          curl -s -X DELETE "https://$SUPABASE_URL/rest/v1/kira_jobs?id=eq.$JOB_ID" \
+          curl -s -X DELETE "$SUPABASE_URL/rest/v1/kira_jobs?id=eq.$JOB_ID" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
 
@@ -670,7 +669,8 @@ jobs:
       JOB_ID: ${{ github.event.client_payload.job_id }}
     steps:
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with:
+          node-version: 20
 
       - name: Install yt-dlp + ffmpeg
         run: |
@@ -718,7 +718,8 @@ jobs:
       FMT: ${{ github.event.client_payload.format_id }}
     steps:
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with:
+          node-version: 20
 
       - name: Install yt-dlp + ffmpeg
         run: |
