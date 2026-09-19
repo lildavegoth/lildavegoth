@@ -5,7 +5,7 @@ on:
     branches: [homepage]
   workflow_dispatch:
   repository_dispatch:
-    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image, delete-mirror, custom-image]
+    types: [compress-video, mirror, capture-frames, fetch-media-info, download-media, enhance-image, restore-image, kira-ai, reduce-image, text-overlay-image, delete-mirror, custom-image, web-dl-info, web-dl-download]
   schedule:
     - cron: '0 0 * * *'
 
@@ -660,6 +660,109 @@ jobs:
           curl -s -X DELETE "https://$SUPABASE_URL/rest/v1/kira_jobs?id=eq.$JOB_ID" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
+
+  web-dl-info:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'web-dl-info'
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SRK: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      JOB_ID: ${{ github.event.client_payload.job_id }}
+    steps:
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+
+      - name: Install yt-dlp + ffmpeg
+        run: |
+          pip install -q yt-dlp
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: Fetch metadata and formats
+        run: |
+          set -e
+          echo "${{ secrets.YOUTUBE_COOKIES }}" > cookies.txt
+
+          URL=$(curl -s "$SUPABASE_URL/rest/v1/download_jobs?id=eq.$JOB_ID&select=url" \
+            -H "apikey: $SRK" -H "Authorization: Bearer $SRK" | jq -r '.[0].url')
+
+          INFO=$(yt-dlp --cookies cookies.txt --js-runtimes node \
+            --remote-components ejs:github --dump-json "$URL")
+
+          TITLE=$(echo "$INFO" | jq -r '.title // "Unknown"')
+          DURATION=$(echo "$INFO" | jq -r '.duration_string // "?"')
+          THUMB=$(echo "$INFO" | jq -r '.thumbnail // ""')
+
+          FORMATS=$(echo "$INFO" | jq -c '
+            [ .formats[]
+              | select(.height != null and .vcodec != "none")
+              | { format_id, ext,
+                  res: "\(.height)p",
+                  size_mb: (if .filesize then ((.filesize/1048576)|round) else null end) }
+            ] | unique_by(.res) | sort_by(.height)')
+
+          jq -n \
+            --arg t "$TITLE" --arg d "$DURATION" --arg th "$THUMB" \
+            --argjson f "$FORMATS" \
+            '{status:"info_ready", title:$t, duration:$d, thumbnail:$th, formats:$f}' \
+          | curl -s -X PATCH "$SUPABASE_URL/rest/v1/download_jobs?id=eq.$JOB_ID" \
+              -H "apikey: $SRK" -H "Authorization: Bearer $SRK" \
+              -H "Content-Type: application/json" --data-binary @-
+
+  web-dl-download:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'web-dl-download'
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SRK: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      JOB_ID: ${{ github.event.client_payload.job_id }}
+      FMT: ${{ github.event.client_payload.format_id }}
+    steps:
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+
+      - name: Install yt-dlp + ffmpeg
+        run: |
+          pip install -q yt-dlp
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: Download chosen format
+        id: dl
+        run: |
+          set -e
+          echo "${{ secrets.YOUTUBE_COOKIES }}" > cookies.txt
+
+          URL=$(curl -s "$SUPABASE_URL/rest/v1/download_jobs?id=eq.$JOB_ID&select=url" \
+            -H "apikey: $SRK" -H "Authorization: Bearer $SRK" | jq -r '.[0].url')
+
+          mkdir -p out
+          yt-dlp --cookies cookies.txt --js-runtimes node \
+            --remote-components ejs:github \
+            -f "$FMT+bestaudio/$FMT" --merge-output-format mp4 \
+            -o "out/media.%(ext)s" "$URL"
+
+          FILE=$(ls out/media.* | head -1)
+          echo "FILE=$FILE" >> $GITHUB_ENV
+          echo "EXT=${FILE##*.}" >> $GITHUB_ENV
+          echo "SIZE=$(stat -c%s "$FILE")" >> $GITHUB_ENV
+          echo "MIME=$(file --mime-type -b "$FILE")" >> $GITHUB_ENV
+
+      - name: Upload to Supabase Storage
+        run: |
+          curl -s -X POST \
+            "$SUPABASE_URL/storage/v1/object/downloads/$JOB_ID.$EXT" \
+            -H "Authorization: Bearer $SRK" \
+            -H "Content-Type: $MIME" \
+            -H "x-upsert: true" \
+            --data-binary "@$FILE"
+
+      - name: Mark job done
+        run: |
+          PUBLIC="$SUPABASE_URL/storage/v1/object/public/downloads/$JOB_ID.$EXT"
+          jq -n --arg u "$PUBLIC" --arg n "media.$EXT" --argjson s "$SIZE" \
+            '{status:"done", file_url:$u, filename:$n, file_size:$s}' \
+          | curl -s -X PATCH "$SUPABASE_URL/rest/v1/download_jobs?id=eq.$JOB_ID" \
+              -H "apikey: $SRK" -H "Authorization: Bearer $SRK" \
+              -H "Content-Type: application/json" --data-binary @-
 
   cleanup-history:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
