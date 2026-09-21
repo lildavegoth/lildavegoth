@@ -1004,10 +1004,28 @@
             width: 100%;
         }
 
+        .reading-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 12px;
+        }
+
         .reading-date {
             color: var(--text-secondary);
             font-size: 0.9rem;
-            width: 100%;
+        }
+
+        .reading-folder {
+            color: var(--accent-color);
+            font-size: 0.9rem;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 50%;
+            text-align: right;
         }
 
         .reading-content {
@@ -1132,7 +1150,7 @@
             border: 2px solid var(--accent-color);
             border-radius: 50%;
             outline: none;
-            cursor: default;
+            cursor: pointer;
             vertical-align: middle;
             margin-right: 0.5em;
             background: transparent;
@@ -2170,7 +2188,7 @@
             flex: 1 1 auto;
             overflow-y: auto;
             overflow-x: hidden;
-            padding: 4px 0;
+            padding: 4px 0 60px 0;
             margin-top: 12px;
             min-height: 0;
             -webkit-overflow-scrolling: touch;
@@ -2240,6 +2258,16 @@
             cursor: pointer;
             padding: 0;
             font-size: 14px;
+        }
+
+        .home-note-sidebar-item .home-folder-icon {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .home-note-sidebar-item .home-folder-name {
+            font-size: 13px;
+            color: var(--text-secondary);
         }
 
         .home-main {
@@ -2838,11 +2866,14 @@
     <div class="reading-mode" id="readingMode">
         <div class="reading-mode-header">
             <div class="header-row">
-                <button class="back-button circle-accent" onclick="goHomeFromReading()"><i class="fas fa-arrow-left" style="color: #000000;"></i></button>
+                <button class="back-button circle-accent" id="readingBackBtn"><i class="fas fa-arrow-left" style="color: #000000;"></i></button>
                 <button class="back-button square-accent" onclick="editFromReading()" title="Edit note"><i class="fas fa-pencil" style="font-size: 0.9rem; color: #000000;"></i></button>
             </div>
             <h1 id="readingTitle"></h1>
-            <p class="reading-date" id="readingDate"></p>
+            <div class="reading-meta">
+                <span class="reading-date" id="readingDate"></span>
+                <span class="reading-folder" id="readingFolder"></span>
+            </div>
         </div>
         <div class="reading-content" id="readingContent"></div>
     </div>
@@ -3312,6 +3343,8 @@
                     const noteCount = notesData.filter(n => n.folderId === folder.id).length;
                     const totalCount = getTotalNotesInFolder(folder.id);
                     const hasChildren = childCount > 0;
+                    const hasNotes = noteCount > 0;
+                    const hasContent = hasChildren || hasNotes;
                     const isExpanded = expandedFolders.has(folder.id);
                     const displayCount = (noteCount === 0 && hasChildren) ? totalCount : noteCount;
 
@@ -3319,7 +3352,7 @@
                         <span class="home-folder-icon"><i class="fas fa-folder"></i></span>
                         <span class="home-folder-name">${folder.name}</span>
                         ${displayCount > 0 ? `<span class="home-folder-count">${displayCount}</span>` : ''}
-                        ${hasChildren ? `<button class="home-folder-chevron" data-chevron="${folder.id}">
+                        ${hasContent ? `<button class="home-folder-chevron" data-chevron="${folder.id}">
                             <i class="fas ${isExpanded ? 'fa-chevron-circle-up' : 'fa-chevron-circle-down'}"></i>
                         </button>` : ''}
                     `;
@@ -3362,33 +3395,29 @@
 
                     folderList.appendChild(item);
 
-                    if (hasChildren && isExpanded) {
-                        renderFolderRecursive(folder.id, depth + 1);
+                    if (isExpanded) {
+                        if (hasChildren) renderFolderRecursive(folder.id, depth + 1);
+                        if (hasNotes) {
+                            const folderNotes = notesData.filter(n => n.folderId === folder.id).sort((a, b) => new Date(b.date) - new Date(a.date));
+                            folderNotes.forEach(note => {
+                                const noteItem = document.createElement('button');
+                                noteItem.className = 'home-folder-item home-note-sidebar-item';
+                                noteItem.style.paddingLeft = (12 + (depth + 1) * 16) + 'px';
+                                noteItem.innerHTML = `
+                                    <span class="home-folder-icon"><i class="fas fa-sticky-note"></i></span>
+                                    <span class="home-folder-name">${note.title || 'Untitled'}</span>
+                                `;
+                                noteItem.addEventListener('click', () => {
+                                    openNoteReadingMode(note.id);
+                                });
+                                folderList.appendChild(noteItem);
+                            });
+                        }
                     }
                 });
             }
 
             renderFolderRecursive(null, 0);
-
-            const unfolderedCount = notesData.filter(n => n.folderId === null).length;
-            const unfolderedItem = document.createElement('button');
-            unfolderedItem.className = 'home-folder-item' + (currentHomeFolderId === UNFOLDERED && !NotesApp.homeView.active ? ' active' : '');
-            unfolderedItem.innerHTML = `
-                <span class="home-folder-icon"><i class="fas fa-file"></i></span>
-                <span class="home-folder-name">No Folder</span>
-                ${unfolderedCount > 0 ? `<span class="home-folder-count">${unfolderedCount}</span>` : ''}
-            `;
-            unfolderedItem.addEventListener('click', () => {
-                NotesApp.emit('home:navigate');
-                currentHomeFolderId = UNFOLDERED;
-                currentSearchTerm = '';
-                homePage = 0;
-                document.getElementById('homeSearchInput').value = '';
-                renderHomeFolders();
-                renderHomeNotes();
-                closeSidebar();
-            });
-            folderList.appendChild(unfolderedItem);
         }
 
         let longPressTimer = null;
@@ -3960,7 +3989,8 @@
             if (!note) return;
 
             document.getElementById('readingTitle').textContent = note.title || 'Untitled';
-            document.getElementById('readingDate').textContent = `Last edited: ${formatDate(note.date)}`;
+            document.getElementById('readingDate').textContent = formatDate(note.date);
+            document.getElementById('readingFolder').textContent = note.folderId ? getFolderName(note.folderId) : 'No Folder';
             let html = await replaceAttachmentRefs(note.content);
             html = convertMarkdownToHTML(html);
             html = enhanceWikiLinks(html);
@@ -3991,6 +4021,13 @@
                 openNoteReadingMode(prevId, true);
                 return;
             }
+            readingHistory = [];
+            document.getElementById('readingMode').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            switchPage('home');
+        }
+
+        function jumpHomeFromReading() {
             readingHistory = [];
             document.getElementById('readingMode').classList.remove('active');
             document.body.style.overflow = 'auto';
@@ -4467,6 +4504,7 @@
             }
             var checkboxes = document.querySelectorAll('.reading-content input[type="checkbox"]');
             checkboxes.forEach((checkbox, idx) => {
+                checkbox.removeAttribute('disabled');
                 var li = checkbox.closest('li');
                 if (!li || idx >= taskLineIndices.length) return;
                 var lineIndex = taskLineIndices[idx];
@@ -4974,6 +5012,10 @@
             openFolderSelectPopup(function(targetFolderId) {
                 var mdFiles = files.filter(f => f.name.match(/\.(md|txt)$/i));
                 var processed = 0;
+                if (mdFiles.length === 0) {
+                    window.showMessage('No Markdown files found in folder');
+                    return;
+                }
                 mdFiles.forEach(file => {
                     var reader = new FileReader();
                     reader.onload = async (e) => {
@@ -4983,6 +5025,7 @@
                         var fileName = parts.pop();
                         var title = fileName.replace(/\.(md|txt)$/i, '') || 'Imported';
                         var folderId = targetFolderId;
+                        if (parts.length > 0) parts.shift();
                         if (parts.length > 0) {
                             folderId = getOrCreateFolderByPath(parts, targetFolderId);
                         }
@@ -5377,6 +5420,12 @@
             el.addEventListener('contextmenu', (e) => e.preventDefault());
         }
 
+        function setupReadingBackButton() {
+            const btn = document.getElementById('readingBackBtn');
+            if (!btn) return;
+            setupLongPress(btn, jumpHomeFromReading, goHomeFromReading);
+        }
+
         function setupPaginationButtons() {
             const prevBtn = document.getElementById('homePrevBtn');
             const nextBtn = document.getElementById('homeNextBtn');
@@ -5511,6 +5560,7 @@
             }
             setupEditorSearch();
             setupPaginationButtons();
+            setupReadingBackButton();
         }
 
         async function confirmReset() {
