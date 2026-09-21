@@ -119,7 +119,7 @@
         .note-card {
             background: var(--bg-card);
             border-radius: var(--radius-medium);
-            padding: var(--spacing-md) var(--spacing-md) 12px var(--spacing-md);
+            padding: var(--spacing-md) var(--spacing-md) 5px var(--spacing-md);
             transition: opacity 0.3s ease, border-color 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.05);
             cursor: pointer;
@@ -2155,19 +2155,18 @@
             min-height: 0;
             -webkit-overflow-scrolling: touch;
             overscroll-behavior: contain;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .home-folder-list::-webkit-scrollbar {
+            display: none;
         }
 
         .home-folder-list .sidebar-separator {
             height: 1px;
             margin: 8px 0 12px;
             background: rgba(255, 255, 255, 0.08);
-        }
-
-        #recentNotesList {
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            flex-shrink: 0;
         }
 
         .home-folder-item {
@@ -2410,33 +2409,6 @@
             font-size: 14px;
         }
 
-        .recent-note-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            margin: 2px 0;
-            background: transparent;
-            border: none;
-            color: var(--text-primary);
-            border-radius: var(--radius-small);
-            cursor: pointer;
-            text-align: left;
-            width: 100%;
-        }
-
-        .recent-note-item:hover {
-            background: rgba(255, 255, 255, 0.06);
-        }
-
-        .recent-note-title {
-            flex: 1;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            font-size: 14px;
-        }
-
         .home-search-container {
             padding: 8px 12px;
             position: relative;
@@ -2609,10 +2581,6 @@
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
-                    <div class="home-quick-access">
-                        <h2 class="home-section-title">Recently Open</h2>
-                    </div>
-                    <div id="recentNotesList"></div>
                     <div class="home-folder-list" id="homeFolderList"></div>
                 </aside>
                 <main class="home-main">
@@ -3002,7 +2970,6 @@
         let autoSaveTimer = null;
         let currentHomeFolderId = null;
         let expandedFolders = new Set();
-        let recentNotes = JSON.parse(localStorage.getItem('recentNotes') || '[]');
         let importTargetFolderId = null;
         let pendingImportFiles = null;
         let folderMoveTargetId = null;
@@ -3271,6 +3238,15 @@
             return foldersData.filter(f => f.parentId === parentId);
         }
 
+        function getTotalNotesInFolder(folderId) {
+            let count = notesData.filter(n => n.folderId === folderId).length;
+            const children = getChildFolders(folderId);
+            children.forEach(child => {
+                count += getTotalNotesInFolder(child.id);
+            });
+            return count;
+        }
+
         function renderHomeFolders() {
             const folderList = document.getElementById('homeFolderList');
             if (!folderList) return;
@@ -3310,13 +3286,15 @@
 
                     const childCount = getChildFolders(folder.id).length;
                     const noteCount = notesData.filter(n => n.folderId === folder.id).length;
+                    const totalCount = getTotalNotesInFolder(folder.id);
                     const hasChildren = childCount > 0;
                     const isExpanded = expandedFolders.has(folder.id);
+                    const displayCount = (noteCount === 0 && hasChildren) ? totalCount : noteCount;
 
                     item.innerHTML = `
                         <span class="home-folder-icon"><i class="fas fa-folder"></i></span>
                         <span class="home-folder-name">${folder.name}</span>
-                        ${noteCount > 0 ? `<span class="home-folder-count">${noteCount}</span>` : ''}
+                        ${displayCount > 0 ? `<span class="home-folder-count">${displayCount}</span>` : ''}
                         ${hasChildren ? `<button class="home-folder-chevron" data-chevron="${folder.id}">
                             <i class="fas ${isExpanded ? 'fa-chevron-circle-up' : 'fa-chevron-circle-down'}"></i>
                         </button>` : ''}
@@ -3427,6 +3405,8 @@
                 folderMeta.textContent = folderNotes.length > 0 ? `${folderNotes.length} note${folderNotes.length > 1 ? 's' : ''}` : 'Empty';
             }
 
+            folderNotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+
             const totalPages = Math.max(1, Math.ceil(folderNotes.length / HOME_PAGE_SIZE));
             if (homePage > totalPages - 1) homePage = totalPages - 1;
             if (homePage < 0) homePage = 0;
@@ -3477,29 +3457,12 @@
             fadeHomeView(itemsContainer);
         }
 
-        function renderRecentNotes() {
-            const list = document.getElementById('recentNotesList');
-            if (!list) return;
-            if (recentNotes.length === 0) {
-                list.innerHTML = '<div style="padding:0 12px;color:var(--text-secondary);font-size:12px;">No recent notes</div>';
-                return;
-            }
-            list.innerHTML = recentNotes.map(noteId => {
-                const note = notesData.find(n => n.id === noteId);
-                if (!note) return '';
-                return `<button class="recent-note-item" onclick="closeSidebar(); openNoteReadingMode(${note.id})">
-                    <span class="recent-note-title">${note.title || 'Untitled'}</span>
-                </button>`;
-            }).join('');
-        }
-
         function initHomeUI() {
             if (foldersData.length > 0) {
                 currentHomeFolderId = null;
             }
             renderHomeFolders();
             renderHomeNotes();
-            renderRecentNotes();
         }
 
         function closeSidebar() {
@@ -3952,13 +3915,6 @@
             currentNoteId = noteId;
             const note = notesData.find(n => n.id === noteId);
             if (!note) return;
-
-            if (!recentNotes.includes(noteId)) {
-                recentNotes.unshift(noteId);
-                if (recentNotes.length > 10) recentNotes.pop();
-                localStorage.setItem('recentNotes', JSON.stringify(recentNotes));
-                renderRecentNotes();
-            }
 
             document.getElementById('readingTitle').textContent = note.title || 'Untitled';
             document.getElementById('readingDate').textContent = `Last edited: ${formatDate(note.date)}`;
@@ -4808,6 +4764,7 @@
         }
 
         function switchPage(page, event) {
+            closeSidebar();
             var currentActivePage = document.querySelector('.page-section.active');
             var targetPage = document.getElementById(page + '-page');
 
@@ -5441,6 +5398,7 @@
                 openNewFolderPopup();
             });
             document.getElementById('homeSettingsBtn').addEventListener('click', () => {
+                closeSidebar();
                 switchPage('settings');
             });
             document.getElementById('codeRunClose').addEventListener('click', closeCodeRun);
