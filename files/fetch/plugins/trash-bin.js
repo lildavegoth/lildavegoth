@@ -247,14 +247,35 @@
                 app.showMessage('All items restored');
             }
 
+            function confirmTrashAction(title, message, confirmLabel, onConfirm) {
+                document.getElementById('popupTitle').textContent = title;
+                document.getElementById('popupBody').innerHTML = '<p>' + message + '</p><div class="popup-buttons"><button class="popup-btn secondary" id="trashConfirmCancel">Cancel</button><button class="popup-btn danger" id="trashConfirmOk">' + confirmLabel + '</button></div>';
+                document.getElementById('universalPopup').style.display = 'flex';
+                document.getElementById('trashConfirmCancel').addEventListener('click', function() {
+                    closeUniversalPopup();
+                });
+                document.getElementById('trashConfirmOk').addEventListener('click', function() {
+                    closeUniversalPopup();
+                    onConfirm();
+                });
+            }
+
             app.on('home:navigate', () => {
                 deactivateTrash();
             });
 
             const clearBtn = document.getElementById('trashClearAllBtn');
             const restoreBtn = document.getElementById('trashRestoreAllBtn');
-            if (clearBtn) clearBtn.addEventListener('click', clearAllTrash);
-            if (restoreBtn) restoreBtn.addEventListener('click', restoreAllTrash);
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    confirmTrashAction('Clear All Trash', 'Permanently delete all items in the trash? This cannot be undone.', 'Clear All', clearAllTrash);
+                });
+            }
+            if (restoreBtn) {
+                restoreBtn.addEventListener('click', function() {
+                    confirmTrashAction('Restore All', 'Restore all items from the trash?', 'Restore All', restoreAllTrash);
+                });
+            }
 
             ensureTrashButton();
             app.on('app:ready', ensureTrashButton);
