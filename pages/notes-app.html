@@ -3012,6 +3012,7 @@
         <div class="fullscreen-media-container">
             <img id="galleryFullscreenImage" style="display: none;">
             <video id="galleryFullscreenVideo" controls style="display: none;"></video>
+            <audio id="galleryFullscreenAudio" controls style="display: none;"></audio>
         </div>
     </div>
 
@@ -3318,7 +3319,9 @@
         async function init() {
             await openDB();
             await migrateFromLocalStorage();
-            await migrateAttachmentsToGallery();
+            try {
+                await migrateAttachmentsToGallery();
+            } catch (e) {}
             await loadNotesFromStorage();
             await loadFoldersFromStorage();
             sortNotesNewestFirst();
@@ -3327,50 +3330,54 @@
             initHomeUI();
             setupEventListeners();
             setupHomeSearch();
-            await loadPluginsIfEnabled();
+            try {
+                await loadPluginsIfEnabled();
+            } catch (e) {}
         }
 
         async function migrateAttachmentsToGallery() {
-            const keys = await dbGetAllKeys('attachments');
-            const existing = await dbGetAll('gallery');
-            const existingIds = new Set(existing.map(g => g.id));
-        
-            for (const key of keys) {
-                const blob = await dbGet('attachments', key);
-                if (!blob) continue;
-        
-                const type = blob.type || 'application/octet-stream';
-        
-                if (
-                    type.indexOf('image/') !== 0 &&
-                    type.indexOf('video/') !== 0 &&
-                    type.indexOf('audio/') !== 0
-                ) continue;
-        
-                if (existingIds.has(key)) continue;
-        
-                let ext = 'bin';
-        
-                if (type.indexOf('jpeg') !== -1 || type.indexOf('jpg') !== -1) ext = 'jpg';
-                else if (type.indexOf('png') !== -1) ext = 'png';
-                else if (type.indexOf('webp') !== -1) ext = 'webp';
-                else if (type.indexOf('gif') !== -1) ext = 'gif';
-                else if (type.indexOf('svg') !== -1) ext = 'svg';
-                else if (type.indexOf('mp4') !== -1) ext = 'mp4';
-                else if (type.indexOf('webm') !== -1) ext = 'webm';
-                else if (type.indexOf('ogg') !== -1) ext = 'ogg';
-                else if (type.indexOf('mov') !== -1) ext = 'mov';
-                else if (type.indexOf('mp3') !== -1) ext = 'mp3';
-                else if (type.indexOf('wav') !== -1) ext = 'wav';
-                else if (type.indexOf('m4a') !== -1) ext = 'm4a';
-        
-                await dbPut('gallery', key, {
-                    id: key,
-                    filename: 'attachment-' + key + '.' + ext,
-                    type: type,
-                    dateAdded: new Date().toISOString()
-                });
-            }
+            try {
+                const keys = await dbGetAllKeys('attachments');
+                const existing = await dbGetAll('gallery');
+                const existingIds = new Set(existing.map(g => g.id));
+
+                for (const key of keys) {
+                    const blob = await dbGet('attachments', key);
+                    if (!blob) continue;
+
+                    const type = blob.type || 'application/octet-stream';
+
+                    if (
+                        type.indexOf('image/') !== 0 &&
+                        type.indexOf('video/') !== 0 &&
+                        type.indexOf('audio/') !== 0
+                    ) continue;
+
+                    if (existingIds.has(key)) continue;
+
+                    let ext = 'bin';
+
+                    if (type.indexOf('jpeg') !== -1 || type.indexOf('jpg') !== -1) ext = 'jpg';
+                    else if (type.indexOf('png') !== -1) ext = 'png';
+                    else if (type.indexOf('webp') !== -1) ext = 'webp';
+                    else if (type.indexOf('gif') !== -1) ext = 'gif';
+                    else if (type.indexOf('svg') !== -1) ext = 'svg';
+                    else if (type.indexOf('mp4') !== -1) ext = 'mp4';
+                    else if (type.indexOf('webm') !== -1) ext = 'webm';
+                    else if (type.indexOf('ogg') !== -1) ext = 'ogg';
+                    else if (type.indexOf('mov') !== -1) ext = 'mov';
+                    else if (type.indexOf('mp3') !== -1) ext = 'mp3';
+                    else if (type.indexOf('wav') !== -1) ext = 'wav';
+                    else if (type.indexOf('m4a') !== -1) ext = 'm4a';
+
+                    await dbPut('gallery', key, {
+                        id: key,
+                        filename: 'attachment-' + key + '.' + ext,
+                        type: type,
+                        dateAdded: new Date().toISOString()
+                    });
+                }
+            } catch (e) {}
         }
 
         async function migrateFromLocalStorage() {
@@ -6106,7 +6113,7 @@
             NotesApp.plugins.initEnabled();
             NotesApp.emit('app:ready');
             switchPage('home');
-        });
+        }).catch(function() {});
     </script>
 </body>
 </html>
