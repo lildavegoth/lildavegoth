@@ -2654,6 +2654,83 @@
             }
         }
 
+        .table-editor-table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: max-content;
+        }
+
+        .table-editor-table th,
+        .table-editor-table td {
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 8px 12px;
+            text-align: left;
+            min-width: 90px;
+            max-width: 26ch;
+            word-break: break-word;
+            vertical-align: top;
+            outline: none;
+            font-size: 0.9rem;
+        }
+
+        .table-editor-table th {
+            background: rgba(193, 252, 50, 0.1);
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .table-editor-table td {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-primary);
+        }
+
+        .table-editor-table th:focus,
+        .table-editor-table td:focus {
+            background: rgba(193, 252, 50, 0.08);
+            box-shadow: inset 0 0 0 1px var(--accent-color);
+        }
+
+        .table-editor-wrap {
+            overflow-x: auto;
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: 55vh;
+            overflow-y: auto;
+        }
+
+        .table-editor-btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .table-editor-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-primary);
+            padding: 8px 14px;
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .table-editor-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+            border-color: rgba(193, 252, 50, 0.3);
+            color: var(--accent-color);
+        }
+
+        .table-editor-btn.danger:hover {
+            background: rgba(255, 59, 48, 0.15);
+            border-color: rgba(255, 59, 48, 0.3);
+            color: #ff3b30;
+        }
+
         @media (min-width: 769px) {
             .sidebar-backdrop,
             .sidebar-backdrop.active {
@@ -2968,7 +3045,7 @@
             <button class="toolbar-btn" title="Undo" onclick="undo()"><i class="fas fa-undo"></i></button>
             <button class="toolbar-btn" title="Redo" onclick="redo()"><i class="fas fa-redo"></i></button>
             <button class="toolbar-btn" title="Clear" onclick="clearText()"><i class="fas fa-eraser"></i></button>
-            <button class="toolbar-btn" title="Insert Table" onclick="openTablePicker()"><i class="fas fa-table"></i></button>
+            <button class="toolbar-btn" title="Insert Table" onclick="openTableEditor()"><i class="fas fa-table"></i></button>
             <button class="toolbar-btn" title="Word Count" onclick="countWords()"><i class="fas fa-font"></i></button>
         </div>
         <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
@@ -3030,6 +3107,28 @@
                 <button class="close-popup" onclick="closeUniversalPopup()"><i class="fas fa-times"></i></button>
             </div>
             <div class="popup-body" id="popupBody"></div>
+        </div>
+    </div>
+
+    <div id="tableEditorPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content" style="max-width: 720px; width: 92%;">
+            <div class="popup-header">
+                <h2>Table Editor</h2>
+                <button class="close-popup" onclick="closeTableEditor()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="popup-body">
+                <div class="table-editor-btn-row">
+                    <button class="table-editor-btn" onclick="tableAddRow()"><i class="fas fa-plus"></i> Row</button>
+                    <button class="table-editor-btn danger" onclick="tableRemoveRow()"><i class="fas fa-minus"></i> Row</button>
+                    <button class="table-editor-btn" onclick="tableAddCol()"><i class="fas fa-plus"></i> Column</button>
+                    <button class="table-editor-btn danger" onclick="tableRemoveCol()"><i class="fas fa-minus"></i> Column</button>
+                </div>
+                <div class="table-editor-wrap" id="tableEditorWrap"></div>
+                <div class="popup-buttons">
+                    <button class="popup-btn secondary" onclick="closeTableEditor()">Cancel</button>
+                    <button class="popup-btn primary" onclick="insertTableFromEditor()">Insert Table</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -3149,7 +3248,7 @@
         const DB_VERSION = 3;
         const HOME_PAGE_SIZE = 10;
         const UNFOLDERED = '__unfoldered__';
-        const MEDIA_EXT_REGEX = /\.(png|jpe?g|gif|webp|svg|bmp|mp4|webm|ogg|mov|m4v|mp3|wav|m4a|aac|flac)$/i;
+        const MEDIA_EXT_REGEX = /\.(png|jpe?g|gif|webp|svg|bmp|mp4|webm|ogg|mov|m4v|mp3|wav|m4a|aac|flac|avif|tiff?|ico)$/i;
         let db = null;
         let notesData = [];
         let foldersData = [];
@@ -3214,6 +3313,10 @@
 
         function dbGetAll(storeName) {
             return new Promise((resolve, reject) => {
+                if (!db || !db.objectStoreNames.contains(storeName)) {
+                    resolve([]);
+                    return;
+                }
                 const tx = db.transaction(storeName, 'readonly');
                 const store = tx.objectStore(storeName);
                 const request = store.getAll();
@@ -3224,6 +3327,10 @@
 
         function dbGetAllKeys(storeName) {
             return new Promise((resolve, reject) => {
+                if (!db || !db.objectStoreNames.contains(storeName)) {
+                    resolve([]);
+                    return;
+                }
                 const tx = db.transaction(storeName, 'readonly');
                 const store = tx.objectStore(storeName);
                 const request = store.getAllKeys();
@@ -3234,6 +3341,10 @@
 
         function dbGet(storeName, key) {
             return new Promise((resolve, reject) => {
+                if (!db || !db.objectStoreNames.contains(storeName)) {
+                    resolve(null);
+                    return;
+                }
                 const tx = db.transaction(storeName, 'readonly');
                 const store = tx.objectStore(storeName);
                 const request = store.get(key);
@@ -3244,6 +3355,10 @@
 
         function dbPut(storeName, key, value) {
             return new Promise((resolve, reject) => {
+                if (!db || !db.objectStoreNames.contains(storeName)) {
+                    reject(new Error('Store not found: ' + storeName));
+                    return;
+                }
                 const tx = db.transaction(storeName, 'readwrite');
                 const store = tx.objectStore(storeName);
                 const request = store.put(value, key);
@@ -3254,6 +3369,10 @@
 
         function dbDelete(storeName, key) {
             return new Promise((resolve, reject) => {
+                if (!db || !db.objectStoreNames.contains(storeName)) {
+                    resolve();
+                    return;
+                }
                 const tx = db.transaction(storeName, 'readwrite');
                 const store = tx.objectStore(storeName);
                 const request = store.delete(key);
@@ -3264,6 +3383,10 @@
 
         function dbClear(storeName) {
             return new Promise((resolve, reject) => {
+                if (!db || !db.objectStoreNames.contains(storeName)) {
+                    resolve();
+                    return;
+                }
                 const tx = db.transaction(storeName, 'readwrite');
                 const store = tx.objectStore(storeName);
                 const request = store.clear();
@@ -3274,6 +3397,10 @@
 
         function dbPutAll(storeName, items) {
             return new Promise((resolve, reject) => {
+                if (!db || !db.objectStoreNames.contains(storeName)) {
+                    resolve();
+                    return;
+                }
                 const tx = db.transaction(storeName, 'readwrite');
                 const store = tx.objectStore(storeName);
                 for (const item of items) store.put(item);
@@ -3405,12 +3532,14 @@
         }
 
         async function addAttachmentToGallery(key, filename, type) {
-            await dbPut('gallery', key, {
-                id: key,
-                filename: filename,
-                type: type || 'application/octet-stream',
-                dateAdded: new Date().toISOString()
-            });
+            try {
+                await dbPut('gallery', key, {
+                    id: key,
+                    filename: filename,
+                    type: type || 'application/octet-stream',
+                    dateAdded: new Date().toISOString()
+                });
+            } catch (e) {}
         }
 
         async function getAttachmentUrl(key) {
@@ -3431,6 +3560,13 @@
 
         function isMediaFilename(filename) {
             return MEDIA_EXT_REGEX.test(filename);
+        }
+
+        function isMediaFileByType(file) {
+            if (!file) return false;
+            if (isMediaFilename(file.name)) return true;
+            var t = file.type || '';
+            return t.indexOf('image/') === 0 || t.indexOf('video/') === 0 || t.indexOf('audio/') === 0;
         }
 
         function openNoteByTitle(title) {
@@ -4229,7 +4365,7 @@
                 return '![' + filename + '](attachment-by-name:' + encodeURIComponent(filename.trim()) + ')';
             });
 
-            result = result.replace(/!\[([^\]]*)\]\(([^):\/\\]+\.(?:png|jpe?g|gif|webp|svg|bmp|mp4|webm|ogg|mov|m4v|mp3|wav|m4a|aac|flac))\)/gi, function(match, alt, filename) {
+            result = result.replace(/!\[([^\]]*)\]\(([^):\/\\]+\.(?:png|jpe?g|gif|webp|svg|bmp|mp4|webm|ogg|mov|m4v|mp3|wav|m4a|aac|flac|avif|tiff?|ico))\)/gi, function(match, alt, filename) {
                 return '![' + alt + '](attachment-by-name:' + encodeURIComponent(filename.trim()) + ')';
             });
 
@@ -4820,7 +4956,7 @@
             if (!file) return;
             const key = generateAttachmentKey();
             const blob = new Blob([file], {
-                type: file.type
+                type: file.type || 'image/png'
             });
             await dbPut('attachments', key, blob);
             await addAttachmentToGallery(key, file.name, file.type || 'image/png');
@@ -5002,67 +5138,116 @@
             insertMarkdown('[' + linkText + '](' + url + ')', '');
         }
 
-        function insertTableOfSize(rows, cols) {
-            var table = '\n|';
-            for (var c = 1; c <= cols; c++) table += ' Header ' + c + ' |';
-            table += '\n|';
-            for (var c = 1; c <= cols; c++) table += '----------|';
-            table += '\n';
-            for (var r = 1; r <= rows - 1; r++) {
-                table += '|';
-                for (var c = 1; c <= cols; c++) table += ' Cell ' + r + '-' + c + ' |';
-                table += '\n';
-            }
-            table += '\n';
-            insertMarkdown(table, '');
+        var tableEditorState = {
+            rows: 3,
+            cols: 3,
+            data: [
+                ['Header 1', 'Header 2', 'Header 3'],
+                ['', '', ''],
+                ['', '', '']
+            ]
+        };
+
+        function openTableEditor() {
+            tableEditorState = {
+                rows: 3,
+                cols: 3,
+                data: [
+                    ['Header 1', 'Header 2', 'Header 3'],
+                    ['', '', ''],
+                    ['', '', '']
+                ]
+            };
+            renderTableEditor();
+            document.getElementById('tableEditorPopup').style.display = 'flex';
         }
 
-        function openTablePicker() {
-            document.getElementById('popupTitle').textContent = 'Insert Table';
-            document.getElementById('popupBody').innerHTML = `
-                <p style="color:var(--text-secondary); margin-bottom:16px;">Click a cell to insert a table of that size.</p>
-                <div id="tablePickerGrid" style="display:grid; grid-template-columns:repeat(8,1fr); gap:4px; margin-bottom:16px;"></div>
-                <div style="text-align:center; color:var(--accent-color); font-size:1rem; font-weight:600; min-height:24px;" id="tablePickerInfo">1 × 1</div>
-            `;
-            var grid = document.getElementById('tablePickerGrid');
-            var info = document.getElementById('tablePickerInfo');
+        function closeTableEditor() {
+            document.getElementById('tableEditorPopup').style.display = 'none';
+        }
 
-            function highlight(r, c) {
-                var cells = grid.querySelectorAll('div');
-                cells.forEach(function(el) {
-                    var elR = Number(el.dataset.row);
-                    var elC = Number(el.dataset.col);
-                    if (elR <= r && elC <= c) {
-                        el.style.background = 'rgba(193, 252, 50, 0.3)';
-                        el.style.borderColor = 'var(--accent-color)';
-                    } else {
-                        el.style.background = 'rgba(255,255,255,0.05)';
-                        el.style.borderColor = 'rgba(255,255,255,0.1)';
-                    }
-                });
+        function renderTableEditor() {
+            var wrap = document.getElementById('tableEditorWrap');
+            if (!wrap) return;
+            var html = '<table class="table-editor-table">';
+            html += '<thead><tr>';
+            for (var c = 0; c < tableEditorState.cols; c++) {
+                html += '<th contenteditable="true" data-row="0" data-col="' + c + '">' + (tableEditorState.data[0][c] || 'Header ' + (c + 1)) + '</th>';
             }
-
-            for (var r = 1; r <= 8; r++) {
-                for (var c = 1; c <= 8; c++) {
-                    var cell = document.createElement('div');
-                    cell.style.cssText = 'aspect-ratio:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; cursor:pointer;';
-                    cell.dataset.row = r;
-                    cell.dataset.col = c;
-                    (function(row, col) {
-                        cell.addEventListener('mouseenter', function() {
-                            highlight(row, col);
-                            info.textContent = row + ' × ' + col;
-                        });
-                        cell.addEventListener('click', function() {
-                            closeUniversalPopup();
-                            insertTableOfSize(row, col);
-                        });
-                    })(r, c);
-                    grid.appendChild(cell);
+            html += '</tr></thead><tbody>';
+            for (var r = 1; r < tableEditorState.rows; r++) {
+                html += '<tr>';
+                for (var c = 0; c < tableEditorState.cols; c++) {
+                    html += '<td contenteditable="true" data-row="' + r + '" data-col="' + c + '">' + (tableEditorState.data[r][c] || '') + '</td>';
                 }
+                html += '</tr>';
             }
+            html += '</tbody></table>';
+            wrap.innerHTML = html;
 
-            document.getElementById('universalPopup').style.display = 'flex';
+            wrap.querySelectorAll('[contenteditable]').forEach(function(cell) {
+                cell.addEventListener('input', function() {
+                    var r = Number(cell.dataset.row);
+                    var c = Number(cell.dataset.col);
+                    if (!tableEditorState.data[r]) tableEditorState.data[r] = [];
+                    tableEditorState.data[r][c] = cell.textContent;
+                });
+            });
+        }
+
+        function tableAddRow() {
+            var newRow = [];
+            for (var c = 0; c < tableEditorState.cols; c++) newRow.push('');
+            tableEditorState.data.push(newRow);
+            tableEditorState.rows++;
+            renderTableEditor();
+        }
+
+        function tableRemoveRow() {
+            if (tableEditorState.rows <= 2) return;
+            tableEditorState.data.pop();
+            tableEditorState.rows--;
+            renderTableEditor();
+        }
+
+        function tableAddCol() {
+            tableEditorState.data.forEach(function(row) {
+                row.push('');
+            });
+            tableEditorState.cols++;
+            renderTableEditor();
+        }
+
+        function tableRemoveCol() {
+            if (tableEditorState.cols <= 1) return;
+            tableEditorState.data.forEach(function(row) {
+                row.pop();
+            });
+            tableEditorState.cols--;
+            renderTableEditor();
+        }
+
+        function insertTableFromEditor() {
+            var md = '\n';
+            md += '|';
+            for (var c = 0; c < tableEditorState.cols; c++) {
+                md += ' ' + (tableEditorState.data[0][c] || 'Header ' + (c + 1)) + ' |';
+            }
+            md += '\n|';
+            for (var c = 0; c < tableEditorState.cols; c++) {
+                md += '---|';
+            }
+            md += '\n';
+            for (var r = 1; r < tableEditorState.rows; r++) {
+                md += '|';
+                for (var c = 0; c < tableEditorState.cols; c++) {
+                    md += ' ' + (tableEditorState.data[r][c] || '') + ' |';
+                }
+                md += '\n';
+            }
+            md += '\n';
+            insertMarkdown(md, '');
+            closeTableEditor();
         }
 
         function indent() {
@@ -5330,41 +5515,57 @@
         }
 
         async function processMediaFiles(mediaFiles) {
+            var count = 0;
             for (const file of mediaFiles) {
-                await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = async (e) => {
-                        try {
-                            const key = generateAttachmentKey();
-                            const blob = new Blob([e.target.result], {
-                                type: file.type || 'application/octet-stream'
-                            });
-                            await dbPut('attachments', key, blob);
-                            await addAttachmentToGallery(key, file.name, file.type || 'application/octet-stream');
-                        } catch (err) {}
+                await new Promise(function(resolve) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        var key = generateAttachmentKey();
+                        var type = file.type || 'application/octet-stream';
+                        var blob = new Blob([e.target.result], {
+                            type: type
+                        });
+                        dbPut('attachments', key, blob).then(function() {
+                            return addAttachmentToGallery(key, file.name, type);
+                        }).then(function() {
+                            count++;
+                            resolve();
+                        }).catch(function() {
+                            resolve();
+                        });
+                    };
+                    reader.onerror = function() {
                         resolve();
                     };
-                    reader.onerror = () => resolve();
                     reader.readAsArrayBuffer(file);
                 });
             }
+            return count;
         }
 
         function importFolderHandler(event) {
             var files = Array.from(event.target.files || []);
             event.target.value = '';
-            if (!files.length) return;
+            if (!files.length) {
+                window.showMessage('No files selected');
+                return;
+            }
             closeUniversalPopup();
             openFolderSelectPopup(async function(targetFolderId) {
                 var mdFiles = files.filter(f => /\.(md|txt)$/i.test(f.name));
-                var mediaFiles = files.filter(f => isMediaFilename(f.name));
+                var mediaFiles = files.filter(f => isMediaFileByType(f));
 
+                var mediaCount = 0;
                 if (mediaFiles.length > 0) {
-                    await processMediaFiles(mediaFiles);
+                    mediaCount = await processMediaFiles(mediaFiles);
                 }
 
                 if (mdFiles.length === 0) {
-                    window.showMessage('Imported ' + mediaFiles.length + ' media file' + (mediaFiles.length !== 1 ? 's' : ''));
+                    if (mediaCount > 0) {
+                        window.showMessage('Imported ' + mediaCount + ' media file' + (mediaCount !== 1 ? 's' : '') + ' to Gallery');
+                    } else {
+                        window.showMessage('No notes or media found');
+                    }
                     return;
                 }
 
@@ -5409,8 +5610,8 @@
                             await saveNotesToStorage();
                             await saveFoldersToStorage();
                             var msgParts = [];
-                            if (mdFiles.length > 0) msgParts.push(mdFiles.length + ' note' + (mdFiles.length !== 1 ? 's' : ''));
-                            if (mediaFiles.length > 0) msgParts.push(mediaFiles.length + ' media file' + (mediaFiles.length !== 1 ? 's' : ''));
+                            msgParts.push(mdFiles.length + ' note' + (mdFiles.length !== 1 ? 's' : ''));
+                            if (mediaCount > 0) msgParts.push(mediaCount + ' media');
                             window.showMessage('Imported ' + msgParts.join(' and '));
                         }
                     };
@@ -5988,6 +6189,7 @@
                 if (e.key === 'Escape' && document.getElementById('universalPopup').style.display === 'flex') closeUniversalPopup();
                 if (e.key === 'Escape' && document.getElementById('codeRunOverlay').classList.contains('active')) closeCodeRun();
                 if (e.key === 'Escape' && document.getElementById('galleryFullscreen').classList.contains('active')) closeGalleryFullscreen();
+                if (e.key === 'Escape' && document.getElementById('tableEditorPopup').style.display === 'flex') closeTableEditor();
                 if (e.key === 'Tab' && document.getElementById('noteEditorPage').classList.contains('active')) {
                     e.preventDefault();
                     e.shiftKey ? outdent() : indent();
