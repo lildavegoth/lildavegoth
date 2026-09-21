@@ -4857,12 +4857,9 @@
             if (!file) return;
             const key = generateAttachmentKey();
             const type = file.type || 'image/png';
-            const blob = new Blob([file], {
-                type: type
-            });
-            await dbPut('attachments', key, blob);
+            await dbPut('attachments', key, file);
             await addAttachmentToGallery(key, file.name, type);
-            const insertText = `![[${file.name}]]`;
+            const insertText = '![' + file.name + '](attachment:' + key + ')';
             const textarea = document.getElementById('editorContent');
             const start = textarea.selectionStart;
             const end = textarea.selectionEnd;
@@ -5312,28 +5309,11 @@
         async function processMediaFiles(mediaFiles) {
             var count = 0;
             for (const file of mediaFiles) {
-                await new Promise(function(resolve) {
-                    var reader = new FileReader();
-                    reader.onload = function(e) {
-                        var key = generateAttachmentKey();
-                        var type = file.type || 'application/octet-stream';
-                        var blob = new Blob([e.target.result], {
-                            type: type
-                        });
-                        dbPut('attachments', key, blob).then(function() {
-                            return addAttachmentToGallery(key, file.name, type);
-                        }).then(function() {
-                            count++;
-                            resolve();
-                        }).catch(function() {
-                            resolve();
-                        });
-                    };
-                    reader.onerror = function() {
-                        resolve();
-                    };
-                    reader.readAsArrayBuffer(file);
-                });
+                const key = generateAttachmentKey();
+                const type = file.type || 'application/octet-stream';
+                await dbPut('attachments', key, file);
+                await addAttachmentToGallery(key, file.name, type);
+                count++;
             }
             return count;
         }
