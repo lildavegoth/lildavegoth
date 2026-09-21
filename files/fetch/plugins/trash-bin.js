@@ -4,6 +4,15 @@
         description: 'View, restore, or permanently delete deleted notes and folders.',
         init(app) {
             let trashActive = false;
+            let longPressTimer = null;
+
+            function getTrashNotes() {
+                return app.getTrashNotes() || [];
+            }
+
+            function getTrashFolders() {
+                return app.getTrashFolders() || [];
+            }
 
             function ensureTrashButton() {
                 const actionsContainer = document.querySelector('.home-sidebar-actions');
@@ -16,14 +25,20 @@
                 trashBtn.setAttribute('aria-label', 'Trash');
                 trashBtn.innerHTML = '<i class="fas fa-trash"></i>';
 
-                const settingsBtn = actionsContainer.querySelector('.home-settings-btn');
-                if (settingsBtn) {
-                    actionsContainer.insertBefore(trashBtn, settingsBtn);
+                if (actionsContainer.firstChild) {
+                    actionsContainer.insertBefore(trashBtn, actionsContainer.firstChild);
                 } else {
                     actionsContainer.appendChild(trashBtn);
                 }
 
                 trashBtn.addEventListener('click', showTrashView);
+            }
+
+            function closeSidebarSafe() {
+                const sidebar = document.getElementById('homeSidebar');
+                const backdrop = document.getElementById('sidebarBackdrop');
+                if (sidebar) sidebar.classList.remove('open');
+                if (backdrop) backdrop.classList.remove('active');
             }
 
             function showTrashView() {
@@ -35,25 +50,12 @@
                 closeSidebarSafe();
             }
 
-            function closeSidebarSafe() {
-                const sidebar = document.getElementById('homeSidebar');
-                const backdrop = document.getElementById('sidebarBackdrop');
-                if (sidebar) sidebar.classList.remove('open');
-                if (backdrop) backdrop.classList.remove('active');
-            }
-
-            function getTrashActions() {
-                return document.getElementById('trashActions');
-            }
-
-            function getTrashItems() {
-                const trashNotes = app.getTrashNotes();
-                const trashFolders = app.getTrashFolders();
-                return {
-                    trashNotes,
-                    trashFolders,
-                    total: trashNotes.length + trashFolders.length
-                };
+            function deactivateTrash() {
+                if (!trashActive) return;
+                trashActive = false;
+                app.homeView.clear();
+                const actions = document.getElementById('trashActions');
+                if (actions) actions.style.display = 'none';
             }
 
             function renderTrashView(itemsContainer, folderTitle, folderMeta) {
@@ -61,18 +63,14 @@
 
                 folderTitle.textContent = 'Trash Bin';
 
-                const trashActions = getTrashActions();
-                const {
-                    trashNotes,
-                    trashFolders,
-                    total
-                } = getTrashItems();
+                const trashNotes = getTrashNotes();
+                const trashFolders = getTrashFolders();
+                const total = trashNotes.length + trashFolders.length;
 
                 folderMeta.textContent = total > 0 ? `${total} item${total > 1 ? 's' : ''}` : 'Empty';
 
-                if (trashActions) {
-                    trashActions.style.display = total > 0 ? 'flex' : 'none';
-                }
+                const actions = document.getElementById('trashActions');
+                if (actions) actions.style.display = total > 0 ? 'flex' : 'none';
 
                 if (total === 0) {
                     itemsContainer.innerHTML = '<div class="home-empty-folder"><i class="fas fa-trash"></i><div>Trash is empty.</div></div>';
@@ -103,44 +101,34 @@
 
                 itemsContainer.querySelectorAll('[data-trash-note-id]').forEach(el => {
                     const noteId = Number(el.getAttribute('data-trash-note-id'));
-                    el.addEventListener('contextmenu', (e) => {
+                    const handler = (e) => {
                         e.preventDefault();
-                        showTrashContextMenu(e.clientX, e.clientY, () => restoreNote(noteId));
-                    });
-                    let timer = null;
+                        const x = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) || 0;
+                        const y = (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY) || 0;
+                        showTrashContextMenu(x, y, () => restoreNote(noteId));
+                    };
+                    el.addEventListener('contextmenu', handler);
                     el.addEventListener('touchstart', (e) => {
-                        timer = setTimeout(() => {
-                            e.preventDefault();
-                            showTrashContextMenu(e.touches[0].clientX, e.touches[0].clientY, () => restoreNote(noteId));
-                        }, 600);
+                        longPressTimer = setTimeout(() => handler(e), 600);
                     });
-                    el.addEventListener('touchend', () => {
-                        if (timer) clearTimeout(timer);
-                    });
-                    el.addEventListener('touchmove', () => {
-                        if (timer) clearTimeout(timer);
-                    });
+                    el.addEventListener('touchend', () => clearTimeout(longPressTimer));
+                    el.addEventListener('touchmove', () => clearTimeout(longPressTimer));
                 });
 
                 itemsContainer.querySelectorAll('[data-trash-folder-id]').forEach(el => {
                     const folderId = Number(el.getAttribute('data-trash-folder-id'));
-                    el.addEventListener('contextmenu', (e) => {
+                    const handler = (e) => {
                         e.preventDefault();
-                        showTrashContextMenu(e.clientX, e.clientY, () => restoreFolder(folderId));
-                    });
-                    let timer = null;
+                        const x = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) || 0;
+                        const y = (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY) || 0;
+                        showTrashContextMenu(x, y, () => restoreFolder(folderId));
+                    };
+                    el.addEventListener('contextmenu', handler);
                     el.addEventListener('touchstart', (e) => {
-                        timer = setTimeout(() => {
-                            e.preventDefault();
-                            showTrashContextMenu(e.touches[0].clientX, e.touches[0].clientY, () => restoreFolder(folderId));
-                        }, 600);
+                        longPressTimer = setTimeout(() => handler(e), 600);
                     });
-                    el.addEventListener('touchend', () => {
-                        if (timer) clearTimeout(timer);
-                    });
-                    el.addEventListener('touchmove', () => {
-                        if (timer) clearTimeout(timer);
-                    });
+                    el.addEventListener('touchend', () => clearTimeout(longPressTimer));
+                    el.addEventListener('touchmove', () => clearTimeout(longPressTimer));
                 });
 
                 app.fadeElement(itemsContainer);
@@ -172,7 +160,7 @@
             }
 
             function restoreNote(noteId) {
-                const trashNotes = app.getTrashNotes();
+                const trashNotes = getTrashNotes();
                 const note = trashNotes.find(n => n.id === noteId);
                 if (!note) return;
 
@@ -180,7 +168,7 @@
                 const originalFolderId = note.folderId;
                 const folderExists = originalFolderId === null || folders.some(f => f.id === originalFolderId);
 
-                const restored = { ...note };
+                const restored = Object.assign({}, note);
                 delete restored.deletedAt;
                 if (!folderExists) restored.folderId = null;
 
@@ -188,14 +176,14 @@
                 notes.unshift(restored);
 
                 const newTrashNotes = trashNotes.filter(n => n.id !== noteId);
-                app.setTrash(newTrashNotes, app.getTrashFolders());
+                app.setTrash(newTrashNotes, getTrashFolders());
                 app.saveNotes();
                 app.renderHomeNotes();
                 app.showMessage('Note restored');
             }
 
             function restoreFolder(folderId) {
-                const trashFolders = app.getTrashFolders();
+                const trashFolders = getTrashFolders();
                 const folder = trashFolders.find(f => f.id === folderId);
                 if (!folder) return;
 
@@ -203,24 +191,23 @@
                 const originalParentId = folder.parentId;
                 const parentExists = originalParentId === null || folders.some(f => f.id === originalParentId);
 
-                const restored = { ...folder };
+                const restored = Object.assign({}, folder);
                 delete restored.deletedAt;
                 if (!parentExists) restored.parentId = null;
 
                 folders.unshift(restored);
 
                 const newTrashFolders = trashFolders.filter(f => f.id !== folderId);
-                app.setTrash(app.getTrashNotes(), newTrashFolders);
+                app.setTrash(getTrashNotes(), newTrashFolders);
                 app.saveFolders();
                 app.renderHomeNotes();
                 app.showMessage('Folder restored');
             }
 
             function clearAllTrash() {
-                const {
-                    total
-                } = getTrashItems();
-                if (total === 0) return;
+                const trashNotes = getTrashNotes();
+                const trashFolders = getTrashFolders();
+                if (trashNotes.length === 0 && trashFolders.length === 0) return;
 
                 app.setTrash([], []);
                 app.renderHomeNotes();
@@ -228,8 +215,8 @@
             }
 
             function restoreAllTrash() {
-                const trashNotes = app.getTrashNotes();
-                const trashFolders = app.getTrashFolders();
+                const trashNotes = getTrashNotes();
+                const trashFolders = getTrashFolders();
                 if (trashNotes.length === 0 && trashFolders.length === 0) return;
 
                 const notes = app.getNotes();
@@ -238,7 +225,7 @@
                 trashNotes.forEach(note => {
                     const originalFolderId = note.folderId;
                     const folderExists = originalFolderId === null || folders.some(f => f.id === originalFolderId);
-                    const restored = { ...note };
+                    const restored = Object.assign({}, note);
                     delete restored.deletedAt;
                     if (!folderExists) restored.folderId = null;
                     notes.unshift(restored);
@@ -247,7 +234,7 @@
                 trashFolders.forEach(folder => {
                     const originalParentId = folder.parentId;
                     const parentExists = originalParentId === null || folders.some(f => f.id === originalParentId);
-                    const restored = { ...folder };
+                    const restored = Object.assign({}, folder);
                     delete restored.deletedAt;
                     if (!parentExists) restored.parentId = null;
                     folders.unshift(restored);
@@ -261,24 +248,16 @@
             }
 
             app.on('home:navigate', () => {
-                if (trashActive) {
-                    trashActive = false;
-                    app.homeView.clear();
-                    const trashActions = getTrashActions();
-                    if (trashActions) trashActions.style.display = 'none';
-                }
+                deactivateTrash();
             });
-
-            ensureTrashButton();
 
             const clearBtn = document.getElementById('trashClearAllBtn');
             const restoreBtn = document.getElementById('trashRestoreAllBtn');
             if (clearBtn) clearBtn.addEventListener('click', clearAllTrash);
             if (restoreBtn) restoreBtn.addEventListener('click', restoreAllTrash);
 
-            app.on('app:ready', () => {
-                ensureTrashButton();
-            });
+            ensureTrashButton();
+            app.on('app:ready', ensureTrashButton);
         }
     });
 })();
