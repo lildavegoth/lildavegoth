@@ -2135,6 +2135,24 @@
             background: #d2ff62;
         }
 
+        .home-gallery-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-small);
+            background: #202020;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .home-gallery-btn:hover {
+            background: #2a2a2a;
+        }
+
         .home-settings-btn {
             width: 40px;
             height: 40px;
@@ -2188,7 +2206,7 @@
             flex: 1 1 auto;
             overflow-y: auto;
             overflow-x: hidden;
-            padding: 4px 0 60px 0;
+            padding: 4px 0 250px 0;
             margin-top: 12px;
             min-height: 0;
             -webkit-overflow-scrolling: touch;
@@ -2545,6 +2563,97 @@
             display: block;
         }
 
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .gallery-item {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: var(--radius-medium);
+            overflow: hidden;
+            background: var(--bg-card);
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: border-color 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            border-color: rgba(193, 252, 50, 0.4);
+        }
+
+        .gallery-item img,
+        .gallery-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .gallery-item-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px 10px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
+            color: #fff;
+            font-size: 0.75rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .gallery-item-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: var(--accent-color);
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .gallery-item-delete {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        .gallery-item-delete:hover {
+            background: rgba(255, 59, 48, 0.8);
+        }
+
+        @media (min-width: 769px) {
+            .gallery-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .gallery-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
         @media (min-width: 769px) {
             .sidebar-backdrop,
             .sidebar-backdrop.active {
@@ -2622,6 +2731,9 @@
             <div class="app home-app">
                 <aside class="home-sidebar" id="homeSidebar">
                     <div class="home-sidebar-actions">
+                        <button class="home-gallery-btn" id="homeGalleryBtn" aria-label="Gallery">
+                            <i class="fas fa-images"></i>
+                        </button>
                         <button class="home-settings-btn" id="homeSettingsBtn" aria-label="Settings">
                             <i class="fas fa-cog"></i>
                         </button>
@@ -2673,6 +2785,21 @@
                         </div>
                     </div>
                 </main>
+            </div>
+        </section>
+
+        <section id="gallery-page" class="page-section">
+            <div class="app-header">
+                <h1 class="app-title">Gallery</h1>
+                <p class="app-subtitle">All your media attachments</p>
+            </div>
+            <button class="back-button circle-accent" style="margin-bottom: 16px;" onclick="switchPage('home')">
+                <i class="fas fa-arrow-left" style="color: #000000;"></i>
+            </button>
+            <div class="gallery-grid" id="galleryGrid"></div>
+            <div class="empty-state" id="galleryEmptyState" style="display: none;">
+                <i class="fas fa-images"></i>
+                <p>No media yet. Attach images or videos to your notes!</p>
             </div>
         </section>
 
@@ -2819,6 +2946,8 @@
             <div class="tags-container" id="editorTagsContainer"></div>
         </div>
         <div class="rich-toolbar" id="richToolbar">
+            <button class="toolbar-btn" title="Close Keyboard" onclick="closeKeyboard()"><i class="fas fa-keyboard"></i></button>
+            <div class="toolbar-divider"></div>
             <button class="toolbar-btn" title="Bold" onclick="insertMarkdown('**', '**')"><i class="fas fa-bold"></i></button>
             <button class="toolbar-btn" title="Italic" onclick="insertMarkdown('*', '*')"><i class="fas fa-italic"></i></button>
             <button class="toolbar-btn" title="Strikethrough" onclick="insertMarkdown('~~', '~~')"><i class="fas fa-strikethrough"></i></button>
@@ -2839,7 +2968,7 @@
             <button class="toolbar-btn" title="Undo" onclick="undo()"><i class="fas fa-undo"></i></button>
             <button class="toolbar-btn" title="Redo" onclick="redo()"><i class="fas fa-redo"></i></button>
             <button class="toolbar-btn" title="Clear" onclick="clearText()"><i class="fas fa-eraser"></i></button>
-            <button class="toolbar-btn" title="Insert Table" onclick="insertTable()"><i class="fas fa-table"></i></button>
+            <button class="toolbar-btn" title="Insert Table" onclick="openTablePicker()"><i class="fas fa-table"></i></button>
             <button class="toolbar-btn" title="Word Count" onclick="countWords()"><i class="fas fa-font"></i></button>
         </div>
         <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
@@ -2876,6 +3005,14 @@
             </div>
         </div>
         <div class="reading-content" id="readingContent"></div>
+    </div>
+
+    <div class="fullscreen-overlay" id="galleryFullscreen">
+        <button class="fullscreen-close-btn" id="galleryFullscreenClose"><i class="fas fa-times"></i></button>
+        <div class="fullscreen-media-container">
+            <img id="galleryFullscreenImage" style="display: none;">
+            <video id="galleryFullscreenVideo" controls style="display: none;"></video>
+        </div>
     </div>
 
     <div class="code-run-overlay" id="codeRunOverlay">
@@ -3009,9 +3146,10 @@
         };
 
         const DB_NAME = 'NotesAppDB';
-        const DB_VERSION = 2;
+        const DB_VERSION = 3;
         const HOME_PAGE_SIZE = 10;
         const UNFOLDERED = '__unfoldered__';
+        const MEDIA_EXT_REGEX = /\.(png|jpe?g|gif|webp|svg|bmp|mp4|webm|ogg|mov|m4v|mp3|wav|m4a|aac|flac)$/i;
         let db = null;
         let notesData = [];
         let foldersData = [];
@@ -3032,6 +3170,7 @@
         let currentSearchTerm = '';
         let homePage = 0;
         let readingHistory = [];
+        const attachmentUrlCache = new Map();
 
         const turndownService = new TurndownService();
 
@@ -3061,6 +3200,14 @@
                     if (!db.objectStoreNames.contains('attachments')) {
                         db.createObjectStore('attachments');
                     }
+                    if (!db.objectStoreNames.contains('gallery')) {
+                        const galleryStore = db.createObjectStore('gallery', {
+                            keyPath: 'id'
+                        });
+                        galleryStore.createIndex('filename', 'filename', {
+                            unique: false
+                        });
+                    }
                 };
             });
         }
@@ -3070,6 +3217,16 @@
                 const tx = db.transaction(storeName, 'readonly');
                 const store = tx.objectStore(storeName);
                 const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function dbGetAllKeys(storeName) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(storeName, 'readonly');
+                const store = tx.objectStore(storeName);
+                const request = store.getAllKeys();
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => reject(request.error);
             });
@@ -3133,6 +3290,7 @@
         async function init() {
             await openDB();
             await migrateFromLocalStorage();
+            await migrateAttachmentsToGallery();
             await loadNotesFromStorage();
             await loadFoldersFromStorage();
             sortNotesNewestFirst();
@@ -3142,6 +3300,33 @@
             setupEventListeners();
             setupHomeSearch();
             await loadPluginsIfEnabled();
+        }
+
+        async function migrateAttachmentsToGallery() {
+            try {
+                const keys = await dbGetAllKeys('attachments');
+                const existing = await dbGetAll('gallery');
+                const existingIds = new Set(existing.map(g => g.id));
+                for (const key of keys) {
+                    if (existingIds.has(key)) continue;
+                    const blob = await dbGet('attachments', key);
+                    if (!blob) continue;
+                    let type = blob.type || 'image/png';
+                    let ext = 'png';
+                    if (type.indexOf('jpeg') !== -1 || type.indexOf('jpg') !== -1) ext = 'jpg';
+                    else if (type.indexOf('webp') !== -1) ext = 'webp';
+                    else if (type.indexOf('gif') !== -1) ext = 'gif';
+                    else if (type.indexOf('svg') !== -1) ext = 'svg';
+                    else if (type.indexOf('mp4') !== -1) ext = 'mp4';
+                    else if (type.indexOf('webm') !== -1) ext = 'webm';
+                    await dbPut('gallery', key, {
+                        id: key,
+                        filename: 'attachment-' + key + '.' + ext,
+                        type: type,
+                        dateAdded: new Date().toISOString()
+                    });
+                }
+            } catch (e) {}
         }
 
         async function migrateFromLocalStorage() {
@@ -3213,6 +3398,39 @@
 
         function getDefaultFolders() {
             return [];
+        }
+
+        function generateAttachmentKey() {
+            return Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
+        }
+
+        async function addAttachmentToGallery(key, filename, type) {
+            await dbPut('gallery', key, {
+                id: key,
+                filename: filename,
+                type: type || 'application/octet-stream',
+                dateAdded: new Date().toISOString()
+            });
+        }
+
+        async function getAttachmentUrl(key) {
+            if (attachmentUrlCache.has(key)) return attachmentUrlCache.get(key);
+            const blob = await dbGet('attachments', key);
+            if (!blob) return null;
+            const url = URL.createObjectURL(blob);
+            attachmentUrlCache.set(key, url);
+            return url;
+        }
+
+        function revokeAttachmentUrl(key) {
+            if (attachmentUrlCache.has(key)) {
+                URL.revokeObjectURL(attachmentUrlCache.get(key));
+                attachmentUrlCache.delete(key);
+            }
+        }
+
+        function isMediaFilename(filename) {
+            return MEDIA_EXT_REGEX.test(filename);
         }
 
         function openNoteByTitle(title) {
@@ -3540,6 +3758,12 @@
         function closeSidebar() {
             document.getElementById('homeSidebar').classList.remove('open');
             document.getElementById('sidebarBackdrop').classList.remove('active');
+        }
+
+        function closeKeyboard() {
+            if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                document.activeElement.blur();
+            }
         }
 
         function showFolderContextMenu(folderId, x, y) {
@@ -4001,17 +4225,57 @@
         }
 
         async function replaceAttachmentRefs(markdown) {
-            const regex = /!\[([^\]]*)\]\(attachment:([a-zA-Z0-9]+)\)/g;
-            let match;
-            let result = markdown;
-            while ((match = regex.exec(markdown)) !== null) {
-                const key = match[2];
-                const blob = await dbGet('attachments', key);
-                if (blob) {
-                    const url = URL.createObjectURL(blob);
-                    result = result.replace(match[0], `![${match[1]}](${url})`);
-                }
+            let result = markdown.replace(/!\[\[([^\]]+)\]\]/g, function(_, filename) {
+                return '![' + filename + '](attachment-by-name:' + encodeURIComponent(filename.trim()) + ')';
+            });
+
+            result = result.replace(/!\[([^\]]*)\]\(([^):\/\\]+\.(?:png|jpe?g|gif|webp|svg|bmp|mp4|webm|ogg|mov|m4v|mp3|wav|m4a|aac|flac))\)/gi, function(match, alt, filename) {
+                return '![' + alt + '](attachment-by-name:' + encodeURIComponent(filename.trim()) + ')';
+            });
+
+            const galleryItems = await dbGetAll('gallery');
+            const byName = {};
+            for (const item of galleryItems) {
+                byName[(item.filename || '').toLowerCase()] = item.id;
             }
+
+            const keysToResolve = new Set();
+            let m;
+
+            const regexByName = /!\[([^\]]*)\]\(attachment-by-name:([^)]+)\)/g;
+            while ((m = regexByName.exec(result)) !== null) {
+                const filename = decodeURIComponent(m[2]).toLowerCase();
+                const key = byName[filename];
+                if (key) keysToResolve.add(key);
+            }
+
+            const regexAttach = /!\[([^\]]*)\]\(attachment:([a-zA-Z0-9]+)\)/g;
+            while ((m = regexAttach.exec(result)) !== null) {
+                keysToResolve.add(m[2]);
+            }
+
+            const urlMap = {};
+            for (const key of keysToResolve) {
+                const url = await getAttachmentUrl(key);
+                if (url) urlMap[key] = url;
+            }
+
+            result = result.replace(/!\[([^\]]*)\]\(attachment-by-name:([^)]+)\)/g, function(match, alt, filename) {
+                const decoded = decodeURIComponent(filename).toLowerCase();
+                const key = byName[decoded];
+                if (key && urlMap[key]) {
+                    return '![' + alt + '](' + urlMap[key] + ')';
+                }
+                return match;
+            });
+
+            result = result.replace(/!\[([^\]]*)\]\(attachment:([a-zA-Z0-9]+)\)/g, function(match, alt, key) {
+                if (urlMap[key]) {
+                    return '![' + alt + '](' + urlMap[key] + ')';
+                }
+                return match;
+            });
+
             return result;
         }
 
@@ -4540,6 +4804,8 @@
             for (const key of oldKeys) {
                 if (!newKeys.includes(key)) {
                     await dbDelete('attachments', key);
+                    await dbDelete('gallery', key);
+                    revokeAttachmentUrl(key);
                 }
             }
             note.attachmentKeys = newKeys;
@@ -4552,11 +4818,12 @@
         document.getElementById('imageFileInput').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (!file) return;
-            const key = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+            const key = generateAttachmentKey();
             const blob = new Blob([file], {
                 type: file.type
             });
             await dbPut('attachments', key, blob);
+            await addAttachmentToGallery(key, file.name, file.type || 'image/png');
             const insertText = `![${file.name}](attachment:${key})`;
             const textarea = document.getElementById('editorContent');
             const start = textarea.selectionStart;
@@ -4735,9 +5002,67 @@
             insertMarkdown('[' + linkText + '](' + url + ')', '');
         }
 
-        function insertTable() {
-            var tableTemplate = '\n| Header 1 | Header 2 | Header 3 |\n|----------|----------|----------|\n| Cell 1   | Cell 2   | Cell 3   |\n| Cell 4   | Cell 5   | Cell 6   |\n';
-            insertMarkdown(tableTemplate, '');
+        function insertTableOfSize(rows, cols) {
+            var table = '\n|';
+            for (var c = 1; c <= cols; c++) table += ' Header ' + c + ' |';
+            table += '\n|';
+            for (var c = 1; c <= cols; c++) table += '----------|';
+            table += '\n';
+            for (var r = 1; r <= rows - 1; r++) {
+                table += '|';
+                for (var c = 1; c <= cols; c++) table += ' Cell ' + r + '-' + c + ' |';
+                table += '\n';
+            }
+            table += '\n';
+            insertMarkdown(table, '');
+        }
+
+        function openTablePicker() {
+            document.getElementById('popupTitle').textContent = 'Insert Table';
+            document.getElementById('popupBody').innerHTML = `
+                <p style="color:var(--text-secondary); margin-bottom:16px;">Click a cell to insert a table of that size.</p>
+                <div id="tablePickerGrid" style="display:grid; grid-template-columns:repeat(8,1fr); gap:4px; margin-bottom:16px;"></div>
+                <div style="text-align:center; color:var(--accent-color); font-size:1rem; font-weight:600; min-height:24px;" id="tablePickerInfo">1 × 1</div>
+            `;
+            var grid = document.getElementById('tablePickerGrid');
+            var info = document.getElementById('tablePickerInfo');
+
+            function highlight(r, c) {
+                var cells = grid.querySelectorAll('div');
+                cells.forEach(function(el) {
+                    var elR = Number(el.dataset.row);
+                    var elC = Number(el.dataset.col);
+                    if (elR <= r && elC <= c) {
+                        el.style.background = 'rgba(193, 252, 50, 0.3)';
+                        el.style.borderColor = 'var(--accent-color)';
+                    } else {
+                        el.style.background = 'rgba(255,255,255,0.05)';
+                        el.style.borderColor = 'rgba(255,255,255,0.1)';
+                    }
+                });
+            }
+
+            for (var r = 1; r <= 8; r++) {
+                for (var c = 1; c <= 8; c++) {
+                    var cell = document.createElement('div');
+                    cell.style.cssText = 'aspect-ratio:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; cursor:pointer;';
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    (function(row, col) {
+                        cell.addEventListener('mouseenter', function() {
+                            highlight(row, col);
+                            info.textContent = row + ' × ' + col;
+                        });
+                        cell.addEventListener('click', function() {
+                            closeUniversalPopup();
+                            insertTableOfSize(row, col);
+                        });
+                    })(r, c);
+                    grid.appendChild(cell);
+                }
+            }
+
+            document.getElementById('universalPopup').style.display = 'flex';
         }
 
         function indent() {
@@ -5004,18 +5329,48 @@
             return getOrCreateFolderByPath(pathParts.slice(1), newFolder.id);
         }
 
+        async function processMediaFiles(mediaFiles) {
+            for (const file of mediaFiles) {
+                await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const key = generateAttachmentKey();
+                            const blob = new Blob([e.target.result], {
+                                type: file.type || 'application/octet-stream'
+                            });
+                            await dbPut('attachments', key, blob);
+                            await addAttachmentToGallery(key, file.name, file.type || 'application/octet-stream');
+                        } catch (err) {}
+                        resolve();
+                    };
+                    reader.onerror = () => resolve();
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+        }
+
         function importFolderHandler(event) {
             var files = Array.from(event.target.files || []);
             event.target.value = '';
             if (!files.length) return;
             closeUniversalPopup();
-            openFolderSelectPopup(function(targetFolderId) {
-                var mdFiles = files.filter(f => f.name.match(/\.(md|txt)$/i));
-                var processed = 0;
+            openFolderSelectPopup(async function(targetFolderId) {
+                var mdFiles = files.filter(f => /\.(md|txt)$/i.test(f.name));
+                var mediaFiles = files.filter(f => isMediaFilename(f.name));
+
+                if (mediaFiles.length > 0) {
+                    await processMediaFiles(mediaFiles);
+                }
+
                 if (mdFiles.length === 0) {
-                    window.showMessage('No Markdown files found in folder');
+                    window.showMessage('Imported ' + mediaFiles.length + ' media file' + (mediaFiles.length !== 1 ? 's' : ''));
                     return;
                 }
+
+                var processed = 0;
+                var total = mdFiles.length;
+
                 mdFiles.forEach(file => {
                     var reader = new FileReader();
                     reader.onload = async (e) => {
@@ -5050,10 +5405,13 @@
                             attachmentKeys: []
                         });
                         processed++;
-                        if (processed === mdFiles.length) {
+                        if (processed === total) {
                             await saveNotesToStorage();
                             await saveFoldersToStorage();
-                            window.showMessage('Imported ' + mdFiles.length + ' notes with folder structure');
+                            var msgParts = [];
+                            if (mdFiles.length > 0) msgParts.push(mdFiles.length + ' note' + (mdFiles.length !== 1 ? 's' : ''));
+                            if (mediaFiles.length > 0) msgParts.push(mediaFiles.length + ' media file' + (mediaFiles.length !== 1 ? 's' : ''));
+                            window.showMessage('Imported ' + msgParts.join(' and '));
                         }
                     };
                     reader.readAsText(file);
@@ -5111,6 +5469,112 @@
                     window.showMessage('Failed to import Markdown files');
                 }
             });
+        }
+
+        async function renderGalleryView() {
+            const grid = document.getElementById('galleryGrid');
+            const empty = document.getElementById('galleryEmptyState');
+            if (!grid) return;
+
+            const items = await dbGetAll('gallery');
+            items.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
+
+            if (items.length === 0) {
+                grid.innerHTML = '';
+                if (empty) empty.style.display = 'block';
+                return;
+            }
+            if (empty) empty.style.display = 'none';
+
+            const htmlParts = [];
+            for (const item of items) {
+                const url = await getAttachmentUrl(item.id);
+                if (!url) continue;
+                const isVideo = (item.type || '').indexOf('video') === 0;
+                const badge = isVideo ? 'Video' : 'Image';
+                let media;
+                if (isVideo) {
+                    media = '<video src="' + url + '" muted preload="metadata"></video>';
+                } else {
+                    media = '<img src="' + url + '" alt="' + (item.filename || '') + '">';
+                }
+                htmlParts.push(
+                    '<div class="gallery-item" data-id="' + item.id + '" data-type="' + (item.type || '') + '">' +
+                    media +
+                    '<div class="gallery-item-badge">' + badge + '</div>' +
+                    '<div class="gallery-item-overlay">' + (item.filename || 'Untitled') + '</div>' +
+                    '<button class="gallery-item-delete" data-delete="' + item.id + '" aria-label="Delete"><i class="fas fa-trash"></i></button>' +
+                    '</div>'
+                );
+            }
+            grid.innerHTML = htmlParts.join('');
+
+            grid.querySelectorAll('.gallery-item').forEach(el => {
+                el.addEventListener('click', function(e) {
+                    if (e.target.closest('.gallery-item-delete')) return;
+                    openGalleryFullscreen(el.dataset.id, el.dataset.type);
+                });
+            });
+
+            grid.querySelectorAll('.gallery-item-delete').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    deleteGalleryItem(btn.dataset.delete);
+                });
+            });
+        }
+
+        async function openGalleryFullscreen(id, type) {
+            const url = await getAttachmentUrl(id);
+            if (!url) return;
+            const overlay = document.getElementById('galleryFullscreen');
+            const imgEl = document.getElementById('galleryFullscreenImage');
+            const videoEl = document.getElementById('galleryFullscreenVideo');
+            const isVideo = (type || '').indexOf('video') === 0;
+            if (isVideo) {
+                videoEl.src = url;
+                videoEl.style.display = 'block';
+                imgEl.style.display = 'none';
+            } else {
+                imgEl.src = url;
+                imgEl.style.display = 'block';
+                videoEl.style.display = 'none';
+            }
+            overlay.classList.add('active');
+        }
+
+        function closeGalleryFullscreen() {
+            const overlay = document.getElementById('galleryFullscreen');
+            const imgEl = document.getElementById('galleryFullscreenImage');
+            const videoEl = document.getElementById('galleryFullscreenVideo');
+            overlay.classList.remove('active');
+            imgEl.style.display = 'none';
+            videoEl.style.display = 'none';
+            videoEl.pause();
+            videoEl.src = '';
+        }
+
+        function deleteGalleryItem(id) {
+            document.getElementById('popupTitle').textContent = 'Delete Media';
+            document.getElementById('popupBody').innerHTML = '<p>Delete this media permanently? This cannot be undone.</p><div class="popup-buttons"><button class="popup-btn secondary" id="galleryDelCancel">Cancel</button><button class="popup-btn danger" id="galleryDelOk">Delete</button></div>';
+            document.getElementById('universalPopup').style.display = 'flex';
+            document.getElementById('galleryDelCancel').addEventListener('click', function() {
+                closeUniversalPopup();
+            });
+            document.getElementById('galleryDelOk').addEventListener('click', async function() {
+                closeUniversalPopup();
+                await dbDelete('attachments', id);
+                await dbDelete('gallery', id);
+                revokeAttachmentUrl(id);
+                renderGalleryView();
+                window.showMessage('Media deleted');
+            });
+        }
+
+        function openGalleryView() {
+            closeSidebar();
+            switchPage('gallery');
+            renderGalleryView();
         }
 
         function setupHomeSearch() {
@@ -5494,6 +5958,9 @@
             document.getElementById('homeNewFolderBtn').addEventListener('click', () => {
                 openNewFolderPopup();
             });
+            document.getElementById('homeGalleryBtn').addEventListener('click', () => {
+                openGalleryView();
+            });
             document.getElementById('homeSettingsBtn').addEventListener('click', () => {
                 closeSidebar();
                 switchPage('settings');
@@ -5501,6 +5968,10 @@
             document.getElementById('codeRunClose').addEventListener('click', closeCodeRun);
             document.getElementById('codeRunOverlay').addEventListener('click', (e) => {
                 if (e.target.id === 'codeRunOverlay') closeCodeRun();
+            });
+            document.getElementById('galleryFullscreenClose').addEventListener('click', closeGalleryFullscreen);
+            document.getElementById('galleryFullscreen').addEventListener('click', (e) => {
+                if (e.target.id === 'galleryFullscreen') closeGalleryFullscreen();
             });
             document.getElementById('homeMobileMenuBtn').addEventListener('click', () => {
                 document.getElementById('homeSidebar').classList.toggle('open');
@@ -5516,6 +5987,7 @@
                 if (e.key === 'Escape' && document.getElementById('readingMode').classList.contains('active')) goHomeFromReading();
                 if (e.key === 'Escape' && document.getElementById('universalPopup').style.display === 'flex') closeUniversalPopup();
                 if (e.key === 'Escape' && document.getElementById('codeRunOverlay').classList.contains('active')) closeCodeRun();
+                if (e.key === 'Escape' && document.getElementById('galleryFullscreen').classList.contains('active')) closeGalleryFullscreen();
                 if (e.key === 'Tab' && document.getElementById('noteEditorPage').classList.contains('active')) {
                     e.preventDefault();
                     e.shiftKey ? outdent() : indent();
@@ -5568,9 +6040,17 @@
                 if (note.attachmentKeys) {
                     for (const key of note.attachmentKeys) {
                         await dbDelete('attachments', key);
+                        await dbDelete('gallery', key);
+                        revokeAttachmentUrl(key);
                     }
                 }
             }
+            await dbClear('attachments');
+            await dbClear('gallery');
+            attachmentUrlCache.forEach((url) => {
+                URL.revokeObjectURL(url);
+            });
+            attachmentUrlCache.clear();
             notesData = [];
             foldersData = [];
             trashNotes = [];
