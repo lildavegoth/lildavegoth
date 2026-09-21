@@ -2654,83 +2654,6 @@
             }
         }
 
-        .table-editor-table {
-            border-collapse: collapse;
-            width: 100%;
-            min-width: max-content;
-        }
-
-        .table-editor-table th,
-        .table-editor-table td {
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 8px 12px;
-            text-align: left;
-            min-width: 90px;
-            max-width: 26ch;
-            word-break: break-word;
-            vertical-align: top;
-            outline: none;
-            font-size: 0.9rem;
-        }
-
-        .table-editor-table th {
-            background: rgba(193, 252, 50, 0.1);
-            color: var(--accent-color);
-            font-weight: 600;
-        }
-
-        .table-editor-table td {
-            background: rgba(255, 255, 255, 0.02);
-            color: var(--text-primary);
-        }
-
-        .table-editor-table th:focus,
-        .table-editor-table td:focus {
-            background: rgba(193, 252, 50, 0.08);
-            box-shadow: inset 0 0 0 1px var(--accent-color);
-        }
-
-        .table-editor-wrap {
-            overflow-x: auto;
-            border-radius: var(--radius-medium);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            max-height: 55vh;
-            overflow-y: auto;
-        }
-
-        .table-editor-btn-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 14px;
-        }
-
-        .table-editor-btn {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: var(--text-primary);
-            padding: 8px 14px;
-            border-radius: var(--radius-small);
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .table-editor-btn:hover {
-            background: rgba(193, 252, 50, 0.1);
-            border-color: rgba(193, 252, 50, 0.3);
-            color: var(--accent-color);
-        }
-
-        .table-editor-btn.danger:hover {
-            background: rgba(255, 59, 48, 0.15);
-            border-color: rgba(255, 59, 48, 0.3);
-            color: #ff3b30;
-        }
-
         @media (min-width: 769px) {
             .sidebar-backdrop,
             .sidebar-backdrop.active {
@@ -3045,10 +2968,10 @@
             <button class="toolbar-btn" title="Undo" onclick="undo()"><i class="fas fa-undo"></i></button>
             <button class="toolbar-btn" title="Redo" onclick="redo()"><i class="fas fa-redo"></i></button>
             <button class="toolbar-btn" title="Clear" onclick="clearText()"><i class="fas fa-eraser"></i></button>
-            <button class="toolbar-btn" title="Insert Table" onclick="openTableEditor()"><i class="fas fa-table"></i></button>
+            <button class="toolbar-btn" title="Insert Table" onclick="insertTable()"><i class="fas fa-table"></i></button>
             <button class="toolbar-btn" title="Word Count" onclick="countWords()"><i class="fas fa-font"></i></button>
         </div>
-        <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
+        <input type="file" id="imageFileInput" accept="image/*,video/*,audio/*" style="display: none;">
     </div>
 
     <div class="folder-window" id="folderWindow">
@@ -3107,28 +3030,6 @@
                 <button class="close-popup" onclick="closeUniversalPopup()"><i class="fas fa-times"></i></button>
             </div>
             <div class="popup-body" id="popupBody"></div>
-        </div>
-    </div>
-
-    <div id="tableEditorPopup" class="popup-overlay" style="display: none;">
-        <div class="popup-content" style="max-width: 720px; width: 92%;">
-            <div class="popup-header">
-                <h2>Table Editor</h2>
-                <button class="close-popup" onclick="closeTableEditor()"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="popup-body">
-                <div class="table-editor-btn-row">
-                    <button class="table-editor-btn" onclick="tableAddRow()"><i class="fas fa-plus"></i> Row</button>
-                    <button class="table-editor-btn danger" onclick="tableRemoveRow()"><i class="fas fa-minus"></i> Row</button>
-                    <button class="table-editor-btn" onclick="tableAddCol()"><i class="fas fa-plus"></i> Column</button>
-                    <button class="table-editor-btn danger" onclick="tableRemoveCol()"><i class="fas fa-minus"></i> Column</button>
-                </div>
-                <div class="table-editor-wrap" id="tableEditorWrap"></div>
-                <div class="popup-buttons">
-                    <button class="popup-btn secondary" onclick="closeTableEditor()">Cancel</button>
-                    <button class="popup-btn primary" onclick="insertTableFromEditor()">Insert Table</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -4955,12 +4856,13 @@
             const file = e.target.files[0];
             if (!file) return;
             const key = generateAttachmentKey();
+            const type = file.type || 'image/png';
             const blob = new Blob([file], {
-                type: file.type || 'image/png'
+                type: type
             });
             await dbPut('attachments', key, blob);
-            await addAttachmentToGallery(key, file.name, file.type || 'image/png');
-            const insertText = `![${file.name}](attachment:${key})`;
+            await addAttachmentToGallery(key, file.name, type);
+            const insertText = `![[${file.name}]]`;
             const textarea = document.getElementById('editorContent');
             const start = textarea.selectionStart;
             const end = textarea.selectionEnd;
@@ -5138,116 +5040,9 @@
             insertMarkdown('[' + linkText + '](' + url + ')', '');
         }
 
-        var tableEditorState = {
-            rows: 3,
-            cols: 3,
-            data: [
-                ['Header 1', 'Header 2', 'Header 3'],
-                ['', '', ''],
-                ['', '', '']
-            ]
-        };
-
-        function openTableEditor() {
-            tableEditorState = {
-                rows: 3,
-                cols: 3,
-                data: [
-                    ['Header 1', 'Header 2', 'Header 3'],
-                    ['', '', ''],
-                    ['', '', '']
-                ]
-            };
-            renderTableEditor();
-            document.getElementById('tableEditorPopup').style.display = 'flex';
-        }
-
-        function closeTableEditor() {
-            document.getElementById('tableEditorPopup').style.display = 'none';
-        }
-
-        function renderTableEditor() {
-            var wrap = document.getElementById('tableEditorWrap');
-            if (!wrap) return;
-            var html = '<table class="table-editor-table">';
-            html += '<thead><tr>';
-            for (var c = 0; c < tableEditorState.cols; c++) {
-                html += '<th contenteditable="true" data-row="0" data-col="' + c + '">' + (tableEditorState.data[0][c] || 'Header ' + (c + 1)) + '</th>';
-            }
-            html += '</tr></thead><tbody>';
-            for (var r = 1; r < tableEditorState.rows; r++) {
-                html += '<tr>';
-                for (var c = 0; c < tableEditorState.cols; c++) {
-                    html += '<td contenteditable="true" data-row="' + r + '" data-col="' + c + '">' + (tableEditorState.data[r][c] || '') + '</td>';
-                }
-                html += '</tr>';
-            }
-            html += '</tbody></table>';
-            wrap.innerHTML = html;
-
-            wrap.querySelectorAll('[contenteditable]').forEach(function(cell) {
-                cell.addEventListener('input', function() {
-                    var r = Number(cell.dataset.row);
-                    var c = Number(cell.dataset.col);
-                    if (!tableEditorState.data[r]) tableEditorState.data[r] = [];
-                    tableEditorState.data[r][c] = cell.textContent;
-                });
-            });
-        }
-
-        function tableAddRow() {
-            var newRow = [];
-            for (var c = 0; c < tableEditorState.cols; c++) newRow.push('');
-            tableEditorState.data.push(newRow);
-            tableEditorState.rows++;
-            renderTableEditor();
-        }
-
-        function tableRemoveRow() {
-            if (tableEditorState.rows <= 2) return;
-            tableEditorState.data.pop();
-            tableEditorState.rows--;
-            renderTableEditor();
-        }
-
-        function tableAddCol() {
-            tableEditorState.data.forEach(function(row) {
-                row.push('');
-            });
-            tableEditorState.cols++;
-            renderTableEditor();
-        }
-
-        function tableRemoveCol() {
-            if (tableEditorState.cols <= 1) return;
-            tableEditorState.data.forEach(function(row) {
-                row.pop();
-            });
-            tableEditorState.cols--;
-            renderTableEditor();
-        }
-
-        function insertTableFromEditor() {
-            var md = '\n';
-            md += '|';
-            for (var c = 0; c < tableEditorState.cols; c++) {
-                md += ' ' + (tableEditorState.data[0][c] || 'Header ' + (c + 1)) + ' |';
-            }
-            md += '\n|';
-            for (var c = 0; c < tableEditorState.cols; c++) {
-                md += '---|';
-            }
-            md += '\n';
-            for (var r = 1; r < tableEditorState.rows; r++) {
-                md += '|';
-                for (var c = 0; c < tableEditorState.cols; c++) {
-                    md += ' ' + (tableEditorState.data[r][c] || '') + ' |';
-                }
-                md += '\n';
-            }
-            md += '\n';
-            insertMarkdown(md, '');
-            closeTableEditor();
+        function insertTable() {
+            var tableTemplate = '\n| Header 1 | Header 2 | Header 3 |\n|----------|----------|----------|\n| Cell 1   | Cell 2   | Cell 3   |\n| Cell 4   | Cell 5   | Cell 6   |\n';
+            insertMarkdown(tableTemplate, '');
         }
 
         function indent() {
@@ -5676,6 +5471,30 @@
             const grid = document.getElementById('galleryGrid');
             const empty = document.getElementById('galleryEmptyState');
             if (!grid) return;
+
+            var existing = await dbGetAll('gallery');
+            var existingIds = new Set(existing.map(function(g) {
+                return g.id;
+            }));
+            var allKeys = await dbGetAllKeys('attachments');
+            for (var i = 0; i < allKeys.length; i++) {
+                var key = allKeys[i];
+                if (existingIds.has(key)) continue;
+                var blob = await dbGet('attachments', key);
+                if (!blob) continue;
+                var t = blob.type || '';
+                if (t.indexOf('image/') !== 0 && t.indexOf('video/') !== 0) continue;
+                var ext = 'png';
+                if (t.indexOf('jpeg') !== -1 || t.indexOf('jpg') !== -1) ext = 'jpg';
+                else if (t.indexOf('webp') !== -1) ext = 'webp';
+                else if (t.indexOf('gif') !== -1) ext = 'gif';
+                else if (t.indexOf('svg') !== -1) ext = 'svg';
+                else if (t.indexOf('mp4') !== -1) ext = 'mp4';
+                else if (t.indexOf('webm') !== -1) ext = 'webm';
+                else if (t.indexOf('ogg') !== -1) ext = 'ogg';
+                await addAttachmentToGallery(key, 'attachment-' + key + '.' + ext, t);
+                existingIds.add(key);
+            }
 
             const items = await dbGetAll('gallery');
             items.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
@@ -6189,7 +6008,6 @@
                 if (e.key === 'Escape' && document.getElementById('universalPopup').style.display === 'flex') closeUniversalPopup();
                 if (e.key === 'Escape' && document.getElementById('codeRunOverlay').classList.contains('active')) closeCodeRun();
                 if (e.key === 'Escape' && document.getElementById('galleryFullscreen').classList.contains('active')) closeGalleryFullscreen();
-                if (e.key === 'Escape' && document.getElementById('tableEditorPopup').style.display === 'flex') closeTableEditor();
                 if (e.key === 'Tab' && document.getElementById('noteEditorPage').classList.contains('active')) {
                     e.preventDefault();
                     e.shiftKey ? outdent() : indent();
