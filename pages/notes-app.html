@@ -2135,24 +2135,6 @@
             background: #d2ff62;
         }
 
-        .home-gallery-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: var(--radius-small);
-            background: #202020;
-            color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-
-        .home-gallery-btn:hover {
-            background: #2a2a2a;
-        }
-
         .home-settings-btn {
             width: 40px;
             height: 40px;
@@ -2563,97 +2545,6 @@
             display: block;
         }
 
-        .gallery-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: var(--spacing-xl);
-        }
-
-        .gallery-item {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1 / 1;
-            border-radius: var(--radius-medium);
-            overflow: hidden;
-            background: var(--bg-card);
-            cursor: pointer;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: border-color 0.3s ease;
-        }
-
-        .gallery-item:hover {
-            border-color: rgba(193, 252, 50, 0.4);
-        }
-
-        .gallery-item img,
-        .gallery-item video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .gallery-item-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 8px 10px;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
-            color: #fff;
-            font-size: 0.75rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .gallery-item-badge {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            background: rgba(0, 0, 0, 0.7);
-            color: var(--accent-color);
-            padding: 3px 8px;
-            border-radius: 8px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .gallery-item-delete {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(0, 0, 0, 0.6);
-            color: #fff;
-            border: none;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-        }
-
-        .gallery-item-delete:hover {
-            background: rgba(255, 59, 48, 0.8);
-        }
-
-        @media (min-width: 769px) {
-            .gallery-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-
-        @media (min-width: 1024px) {
-            .gallery-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-
         @media (min-width: 769px) {
             .sidebar-backdrop,
             .sidebar-backdrop.active {
@@ -2731,9 +2622,6 @@
             <div class="app home-app">
                 <aside class="home-sidebar" id="homeSidebar">
                     <div class="home-sidebar-actions">
-                        <button class="home-gallery-btn" id="homeGalleryBtn" aria-label="Gallery">
-                            <i class="fas fa-images"></i>
-                        </button>
                         <button class="home-settings-btn" id="homeSettingsBtn" aria-label="Settings">
                             <i class="fas fa-cog"></i>
                         </button>
@@ -2785,21 +2673,6 @@
                         </div>
                     </div>
                 </main>
-            </div>
-        </section>
-
-        <section id="gallery-page" class="page-section">
-            <div class="app-header">
-                <h1 class="app-title">Gallery</h1>
-                <p class="app-subtitle">All your media attachments</p>
-            </div>
-            <button class="back-button circle-accent" style="margin-bottom: 16px;" onclick="switchPage('home')">
-                <i class="fas fa-arrow-left" style="color: #000000;"></i>
-            </button>
-            <div class="gallery-grid" id="galleryGrid"></div>
-            <div class="empty-state" id="galleryEmptyState" style="display: none;">
-                <i class="fas fa-images"></i>
-                <p>No media yet. Attach images, videos, or audio to your notes!</p>
             </div>
         </section>
 
@@ -3007,15 +2880,6 @@
         <div class="reading-content" id="readingContent"></div>
     </div>
 
-    <div class="fullscreen-overlay" id="galleryFullscreen">
-        <button class="fullscreen-close-btn" id="galleryFullscreenClose"><i class="fas fa-times"></i></button>
-        <div class="fullscreen-media-container">
-            <img id="galleryFullscreenImage" style="display: none;">
-            <video id="galleryFullscreenVideo" controls style="display: none;"></video>
-            <audio id="galleryFullscreenAudio" controls style="display: none;"></audio>
-        </div>
-    </div>
-
     <div class="code-run-overlay" id="codeRunOverlay">
         <div class="code-run-header">
             <span>HTML Preview</span>
@@ -3175,6 +3039,26 @@
 
         const turndownService = new TurndownService();
 
+        function getAttachmentNameMap() {
+            try {
+                return JSON.parse(localStorage.getItem('attachmentNames') || '{}');
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function saveAttachmentName(key, filename) {
+            var map = getAttachmentNameMap();
+            map[key] = filename;
+            localStorage.setItem('attachmentNames', JSON.stringify(map));
+        }
+
+        function removeAttachmentName(key) {
+            var map = getAttachmentNameMap();
+            delete map[key];
+            localStorage.setItem('attachmentNames', JSON.stringify(map));
+        }
+
         function openDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -3201,14 +3085,6 @@
                     if (!db.objectStoreNames.contains('attachments')) {
                         db.createObjectStore('attachments');
                     }
-                    if (!db.objectStoreNames.contains('gallery')) {
-                        const galleryStore = db.createObjectStore('gallery', {
-                            keyPath: 'id'
-                        });
-                        galleryStore.createIndex('filename', 'filename', {
-                            unique: false
-                        });
-                    }
                 };
             });
         }
@@ -3222,20 +3098,6 @@
                 const tx = db.transaction(storeName, 'readonly');
                 const store = tx.objectStore(storeName);
                 const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        function dbGetAllKeys(storeName) {
-            return new Promise((resolve, reject) => {
-                if (!db || !db.objectStoreNames.contains(storeName)) {
-                    resolve([]);
-                    return;
-                }
-                const tx = db.transaction(storeName, 'readonly');
-                const store = tx.objectStore(storeName);
-                const request = store.getAllKeys();
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => reject(request.error);
             });
@@ -3319,9 +3181,6 @@
         async function init() {
             await openDB();
             await migrateFromLocalStorage();
-            try {
-                await migrateAttachmentsToGallery();
-            } catch (e) {}
             await loadNotesFromStorage();
             await loadFoldersFromStorage();
             sortNotesNewestFirst();
@@ -3332,51 +3191,6 @@
             setupHomeSearch();
             try {
                 await loadPluginsIfEnabled();
-            } catch (e) {}
-        }
-
-        async function migrateAttachmentsToGallery() {
-            try {
-                const keys = await dbGetAllKeys('attachments');
-                const existing = await dbGetAll('gallery');
-                const existingIds = new Set(existing.map(g => g.id));
-
-                for (const key of keys) {
-                    const blob = await dbGet('attachments', key);
-                    if (!blob) continue;
-
-                    const type = blob.type || 'application/octet-stream';
-
-                    if (
-                        type.indexOf('image/') !== 0 &&
-                        type.indexOf('video/') !== 0 &&
-                        type.indexOf('audio/') !== 0
-                    ) continue;
-
-                    if (existingIds.has(key)) continue;
-
-                    let ext = 'bin';
-
-                    if (type.indexOf('jpeg') !== -1 || type.indexOf('jpg') !== -1) ext = 'jpg';
-                    else if (type.indexOf('png') !== -1) ext = 'png';
-                    else if (type.indexOf('webp') !== -1) ext = 'webp';
-                    else if (type.indexOf('gif') !== -1) ext = 'gif';
-                    else if (type.indexOf('svg') !== -1) ext = 'svg';
-                    else if (type.indexOf('mp4') !== -1) ext = 'mp4';
-                    else if (type.indexOf('webm') !== -1) ext = 'webm';
-                    else if (type.indexOf('ogg') !== -1) ext = 'ogg';
-                    else if (type.indexOf('mov') !== -1) ext = 'mov';
-                    else if (type.indexOf('mp3') !== -1) ext = 'mp3';
-                    else if (type.indexOf('wav') !== -1) ext = 'wav';
-                    else if (type.indexOf('m4a') !== -1) ext = 'm4a';
-
-                    await dbPut('gallery', key, {
-                        id: key,
-                        filename: 'attachment-' + key + '.' + ext,
-                        type: type,
-                        dateAdded: new Date().toISOString()
-                    });
-                }
             } catch (e) {}
         }
 
@@ -3453,17 +3267,6 @@
 
         function generateAttachmentKey() {
             return Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
-        }
-
-        async function addAttachmentToGallery(key, filename, type) {
-            try {
-                await dbPut('gallery', key, {
-                    id: key,
-                    filename: filename,
-                    type: type || 'application/octet-stream',
-                    dateAdded: new Date().toISOString()
-                });
-            } catch (e) {}
         }
 
         async function getAttachmentUrl(key) {
@@ -4293,10 +4096,10 @@
                 return '![' + alt + '](attachment-by-name:' + encodeURIComponent(filename.trim()) + ')';
             });
 
-            const galleryItems = await dbGetAll('gallery');
+            const nameMap = getAttachmentNameMap();
             const byName = {};
-            for (const item of galleryItems) {
-                byName[(item.filename || '').toLowerCase()] = item.id;
+            for (const key in nameMap) {
+                byName[(nameMap[key] || '').toLowerCase()] = key;
             }
 
             const keysToResolve = new Set();
@@ -4864,7 +4667,7 @@
             for (const key of oldKeys) {
                 if (!newKeys.includes(key)) {
                     await dbDelete('attachments', key);
-                    await dbDelete('gallery', key);
+                    removeAttachmentName(key);
                     revokeAttachmentUrl(key);
                 }
             }
@@ -4881,7 +4684,7 @@
             const key = generateAttachmentKey();
             const type = file.type || 'image/png';
             await dbPut('attachments', key, file);
-            await addAttachmentToGallery(key, file.name, type);
+            saveAttachmentName(key, file.name);
             const insertText = '![' + file.name + '](attachment:' + key + ')';
             const textarea = document.getElementById('editorContent');
             const start = textarea.selectionStart;
@@ -5333,9 +5136,8 @@
             var count = 0;
             for (const file of mediaFiles) {
                 const key = generateAttachmentKey();
-                const type = file.type || 'application/octet-stream';
                 await dbPut('attachments', key, file);
-                await addAttachmentToGallery(key, file.name, type);
+                saveAttachmentName(key, file.name);
                 count++;
             }
             return count;
@@ -5360,7 +5162,7 @@
 
                 if (mdFiles.length === 0) {
                     if (mediaCount > 0) {
-                        window.showMessage('Imported ' + mediaCount + ' media file' + (mediaCount !== 1 ? 's' : '') + ' to Gallery');
+                        window.showMessage('Imported ' + mediaCount + ' media file' + (mediaCount !== 1 ? 's' : ''));
                     } else {
                         window.showMessage('No notes or media found');
                     }
@@ -5468,159 +5270,6 @@
                     window.showMessage('Failed to import Markdown files');
                 }
             });
-        }
-
-        async function renderGalleryView() {
-            const grid = document.getElementById('galleryGrid');
-            const empty = document.getElementById('galleryEmptyState');
-        
-            if (!grid) return;
-        
-            await migrateAttachmentsToGallery();
-        
-            const items = await dbGetAll('gallery');
-        
-            items.sort((a, b) => {
-                return new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0);
-            });
-        
-            grid.innerHTML = '';
-        
-            if (!items.length) {
-                if (empty) empty.style.display = 'block';
-                return;
-            }
-        
-            if (empty) empty.style.display = 'none';
-        
-            const htmlParts = [];
-        
-            for (const item of items) {
-                const url = await getAttachmentUrl(item.id);
-                if (!url) continue;
-        
-                const type = item.type || '';
-                const isVideo = type.indexOf('video/') === 0;
-                const isAudio = type.indexOf('audio/') === 0;
-        
-                let media = '';
-        
-                if (isVideo) {
-                    media = '<video src="' + url + '" muted preload="metadata"></video>';
-                } else if (isAudio) {
-                    media = '<audio src="' + url + '" controls preload="metadata"></audio>';
-                } else {
-                    media = '<img src="' + url + '" alt="' + (item.filename || '') + '">';
-                }
-        
-                const badge = isVideo ? 'Video' : isAudio ? 'Audio' : 'Image';
-        
-                htmlParts.push(
-                    '<div class="gallery-item" data-id="' + item.id + '" data-type="' + type + '">' +
-                    media +
-                    '<div class="gallery-item-badge">' + badge + '</div>' +
-                    '<div class="gallery-item-overlay">' + (item.filename || 'Untitled') + '</div>' +
-                    '<button class="gallery-item-delete" data-delete="' + item.id + '" aria-label="Delete"><i class="fas fa-trash"></i></button>' +
-                    '</div>'
-                );
-            }
-        
-            grid.innerHTML = htmlParts.join('');
-        
-            grid.querySelectorAll('.gallery-item').forEach(el => {
-                el.addEventListener('click', function(e) {
-                    if (e.target.closest('.gallery-item-delete')) return;
-                    openGalleryFullscreen(el.dataset.id, el.dataset.type);
-                });
-            });
-        
-            grid.querySelectorAll('.gallery-item-delete').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    deleteGalleryItem(btn.dataset.delete);
-                });
-            });
-        }
-
-        async function openGalleryFullscreen(id, type) {
-            const url = await getAttachmentUrl(id);
-            if (!url) return;
-        
-            const overlay = document.getElementById('galleryFullscreen');
-            const imgEl = document.getElementById('galleryFullscreenImage');
-            const videoEl = document.getElementById('galleryFullscreenVideo');
-            const audioEl = document.getElementById('galleryFullscreenAudio');
-        
-            const isVideo = (type || '').indexOf('video/') === 0;
-            const isAudio = (type || '').indexOf('audio/') === 0;
-        
-            imgEl.style.display = 'none';
-            videoEl.style.display = 'none';
-        
-            if (audioEl) {
-                audioEl.style.display = 'none';
-                audioEl.pause();
-                audioEl.src = '';
-            }
-        
-            if (isVideo) {
-                videoEl.src = url;
-                videoEl.style.display = 'block';
-            } else if (isAudio && audioEl) {
-                audioEl.src = url;
-                audioEl.style.display = 'block';
-            } else {
-                imgEl.src = url;
-                imgEl.style.display = 'block';
-            }
-        
-            overlay.classList.add('active');
-        }
-
-        function closeGalleryFullscreen() {
-            const overlay = document.getElementById('galleryFullscreen');
-            const imgEl = document.getElementById('galleryFullscreenImage');
-            const videoEl = document.getElementById('galleryFullscreenVideo');
-            const audioEl = document.getElementById('galleryFullscreenAudio');
-        
-            overlay.classList.remove('active');
-        
-            imgEl.style.display = 'none';
-            videoEl.style.display = 'none';
-        
-            videoEl.pause();
-            videoEl.src = '';
-        
-            if (audioEl) {
-                audioEl.style.display = 'none';
-                audioEl.pause();
-                audioEl.src = '';
-            }
-        
-            imgEl.src = '';
-        }
-
-        function deleteGalleryItem(id) {
-            document.getElementById('popupTitle').textContent = 'Delete Media';
-            document.getElementById('popupBody').innerHTML = '<p>Delete this media permanently? This cannot be undone.</p><div class="popup-buttons"><button class="popup-btn secondary" id="galleryDelCancel">Cancel</button><button class="popup-btn danger" id="galleryDelOk">Delete</button></div>';
-            document.getElementById('universalPopup').style.display = 'flex';
-            document.getElementById('galleryDelCancel').addEventListener('click', function() {
-                closeUniversalPopup();
-            });
-            document.getElementById('galleryDelOk').addEventListener('click', async function() {
-                closeUniversalPopup();
-                await dbDelete('attachments', id);
-                await dbDelete('gallery', id);
-                revokeAttachmentUrl(id);
-                renderGalleryView();
-                window.showMessage('Media deleted');
-            });
-        }
-
-        function openGalleryView() {
-            closeSidebar();
-            switchPage('gallery');
-            renderGalleryView();
         }
 
         function setupHomeSearch() {
@@ -6004,9 +5653,6 @@
             document.getElementById('homeNewFolderBtn').addEventListener('click', () => {
                 openNewFolderPopup();
             });
-            document.getElementById('homeGalleryBtn').addEventListener('click', () => {
-                openGalleryView();
-            });
             document.getElementById('homeSettingsBtn').addEventListener('click', () => {
                 closeSidebar();
                 switchPage('settings');
@@ -6014,10 +5660,6 @@
             document.getElementById('codeRunClose').addEventListener('click', closeCodeRun);
             document.getElementById('codeRunOverlay').addEventListener('click', (e) => {
                 if (e.target.id === 'codeRunOverlay') closeCodeRun();
-            });
-            document.getElementById('galleryFullscreenClose').addEventListener('click', closeGalleryFullscreen);
-            document.getElementById('galleryFullscreen').addEventListener('click', (e) => {
-                if (e.target.id === 'galleryFullscreen') closeGalleryFullscreen();
             });
             document.getElementById('homeMobileMenuBtn').addEventListener('click', () => {
                 document.getElementById('homeSidebar').classList.toggle('open');
@@ -6033,7 +5675,6 @@
                 if (e.key === 'Escape' && document.getElementById('readingMode').classList.contains('active')) goHomeFromReading();
                 if (e.key === 'Escape' && document.getElementById('universalPopup').style.display === 'flex') closeUniversalPopup();
                 if (e.key === 'Escape' && document.getElementById('codeRunOverlay').classList.contains('active')) closeCodeRun();
-                if (e.key === 'Escape' && document.getElementById('galleryFullscreen').classList.contains('active')) closeGalleryFullscreen();
                 if (e.key === 'Tab' && document.getElementById('noteEditorPage').classList.contains('active')) {
                     e.preventDefault();
                     e.shiftKey ? outdent() : indent();
@@ -6086,13 +5727,13 @@
                 if (note.attachmentKeys) {
                     for (const key of note.attachmentKeys) {
                         await dbDelete('attachments', key);
-                        await dbDelete('gallery', key);
+                        removeAttachmentName(key);
                         revokeAttachmentUrl(key);
                     }
                 }
             }
             await dbClear('attachments');
-            await dbClear('gallery');
+            localStorage.removeItem('attachmentNames');
             attachmentUrlCache.forEach((url) => {
                 URL.revokeObjectURL(url);
             });
