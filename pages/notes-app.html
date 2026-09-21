@@ -1420,7 +1420,7 @@
             overflow-y: auto;
         }
 
-        .popup-body > p {
+        .popup-body>p {
             margin-bottom: 24px;
             line-height: 1.5;
         }
@@ -2029,7 +2029,13 @@
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
-            min-height: 0;
+            position: sticky;
+            top: 0;
+            align-self: flex-start;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+            box-sizing: border-box;
         }
 
         .home-sidebar * {
@@ -2070,6 +2076,7 @@
             justify-content: flex-end;
             gap: 8px;
             margin-bottom: 10px;
+            flex-shrink: 0;
         }
 
         .home-new-folder {
@@ -2130,6 +2137,7 @@
             display: flex;
             align-items: center;
             padding: 0 8px 8px;
+            flex-shrink: 0;
         }
 
         .home-section-title {
@@ -2146,6 +2154,7 @@
             margin-top: 12px;
             min-height: 0;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
         }
 
         .home-folder-list .sidebar-separator {
@@ -2504,7 +2513,10 @@
         .sidebar-backdrop {
             display: none;
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: rgba(0, 0, 0, 0.5);
             z-index: 999;
         }
@@ -2514,8 +2526,18 @@
         }
 
         @media (min-width: 769px) {
+            .sidebar-backdrop,
             .sidebar-backdrop.active {
-                display: none;
+                display: none !important;
+            }
+
+            .home-sidebar {
+                position: sticky;
+                top: 0;
+                align-self: flex-start;
+                height: 100vh;
+                max-height: 100vh;
+                overflow: hidden;
             }
         }
 
@@ -2530,9 +2552,11 @@
                 left: 0;
                 width: min(300px, 85vw);
                 height: 100vh;
+                max-height: 100vh;
                 z-index: 1000;
                 transform: translateX(-105%);
                 transition: transform 0.25s ease;
+                overflow: hidden;
             }
 
             .home-sidebar.open {
@@ -2877,7 +2901,6 @@
                     localStorage.setItem('pluginStates', JSON.stringify(states));
                 },
                 initEnabled() {
-                    var self = this;
                     this.list.forEach(function(plugin) {
                         if (plugin.enabled) {
                             plugin.init(window.NotesApp);
@@ -3127,6 +3150,7 @@
 
         async function loadFoldersFromStorage() {
             foldersData = await dbGetAll('folders');
+            sortFoldersAZ();
             updateFolderCounts();
         }
 
@@ -3270,10 +3294,6 @@
                 renderHomeFolders();
                 renderHomeNotes();
                 closeSidebar();
-            });
-            rootItem.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                showFolderContextMenu(null, e.clientX, e.clientY);
             });
             folderList.appendChild(rootItem);
 
@@ -5242,24 +5262,29 @@
                 document.getElementById('pluginsList').classList.remove('active');
                 return;
             }
+            var fileList = ['trash-bin.js'];
             try {
                 var resp = await fetch('../files/fetch/plugins/plugins.json');
-                if (!resp.ok) throw new Error('plugins.json not found');
-                var fileList = await resp.json();
-                var base = '../files/fetch/plugins/';
-                var promises = fileList.map(function(file) {
-                    return new Promise(function(resolve, reject) {
-                        var script = document.createElement('script');
-                        script.src = base + file;
-                        script.onload = resolve;
-                        script.onerror = reject;
-                        document.head.appendChild(script);
-                    });
+                if (resp.ok) {
+                    var jsonList = await resp.json();
+                    if (Array.isArray(jsonList)) {
+                        jsonList.forEach(function(f) {
+                            if (fileList.indexOf(f) === -1) fileList.push(f);
+                        });
+                    }
+                }
+            } catch (e) {}
+            var base = '../files/fetch/plugins/';
+            var promises = fileList.map(function(file) {
+                return new Promise(function(resolve) {
+                    var script = document.createElement('script');
+                    script.src = base + file;
+                    script.onload = resolve;
+                    script.onerror = resolve;
+                    document.head.appendChild(script);
                 });
-                await Promise.all(promises);
-            } catch (e) {
-                window.showMessage('Failed to load plugins');
-            }
+            });
+            await Promise.all(promises);
             renderPluginList();
         }
 
@@ -5268,10 +5293,8 @@
             localStorage.setItem('pluginsEnabled', masterEnabled);
             if (masterEnabled) {
                 document.getElementById('pluginsList').classList.add('active');
-                window.showMessage('Reload the page to load plugins');
             } else {
                 document.getElementById('pluginsList').classList.remove('active');
-                window.showMessage('Plugins disabled. Reload to apply.');
             }
         }
 
@@ -5285,7 +5308,7 @@
                 return;
             }
             empty.style.display = 'none';
-            container.innerHTML = plugins.map(function(plugin, index) {
+            container.innerHTML = plugins.map(function(plugin) {
                 return '<div class="plugin-item">' +
                     '<div class="plugin-info">' +
                     '<div class="plugin-name">' + plugin.name + '</div>' +
@@ -5338,7 +5361,7 @@
                 }
             }
 
-            function end(e) {
+            function end() {
                 cancel();
                 if (!triggered) {
                     onShortPress();
