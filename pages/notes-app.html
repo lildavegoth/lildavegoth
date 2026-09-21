@@ -119,7 +119,7 @@
         .note-card {
             background: var(--bg-card);
             border-radius: var(--radius-medium);
-            padding: var(--spacing-md) var(--spacing-md) 5px var(--spacing-md);
+            padding: var(--spacing-md) var(--spacing-md) 10px var(--spacing-md);
             transition: opacity 0.3s ease, border-color 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.05);
             cursor: pointer;
@@ -818,8 +818,28 @@
             line-height: 1;
         }
 
+        .folder-window-search {
+            padding: 0 var(--spacing-md) var(--spacing-sm);
+        }
+
+        .folder-window-search-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .folder-window-search-input::placeholder {
+            color: var(--text-secondary);
+        }
+
         .folder-window-content {
-            padding: var(--spacing-md);
+            padding: 0 var(--spacing-md) var(--spacing-md);
             max-height: 400px;
             overflow-y: auto;
         }
@@ -1180,7 +1200,10 @@
             border-radius: var(--radius-medium);
             border: 1px solid rgba(255, 255, 255, 0.1);
             margin: 1rem 0;
-            overflow: visible;
+            max-height: 500px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .code-header {
@@ -1190,12 +1213,8 @@
             padding: 8px 12px;
             background: rgba(0, 0, 0, 0.85);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 10;
+            flex-shrink: 0;
             border-radius: var(--radius-medium) var(--radius-medium) 0 0;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
         }
 
         .code-label {
@@ -1236,7 +1255,8 @@
         }
 
         .code-content {
-            overflow-x: auto;
+            flex: 1;
+            overflow: auto;
             scrollbar-width: none;
             -ms-overflow-style: none;
         }
@@ -2804,6 +2824,9 @@
                 <i class="fas fa-close"></i>
             </button>
         </div>
+        <div class="folder-window-search">
+            <input type="text" id="folderWindowSearchInput" class="folder-window-search-input" placeholder="Search folders...">
+        </div>
         <div class="folder-window-content" id="folderWindowContent"></div>
         <div class="folder-window-actions">
             <button class="folder-window-btn secondary" onclick="createNewFolderFromWindow()"><i class="fas fa-plus"></i> New Folder</button>
@@ -2957,6 +2980,7 @@
         const DB_NAME = 'NotesAppDB';
         const DB_VERSION = 2;
         const HOME_PAGE_SIZE = 10;
+        const UNFOLDERED = '__unfoldered__';
         let db = null;
         let notesData = [];
         let foldersData = [];
@@ -3345,6 +3369,26 @@
             }
 
             renderFolderRecursive(null, 0);
+
+            const unfolderedCount = notesData.filter(n => n.folderId === null).length;
+            const unfolderedItem = document.createElement('button');
+            unfolderedItem.className = 'home-folder-item' + (currentHomeFolderId === UNFOLDERED && !NotesApp.homeView.active ? ' active' : '');
+            unfolderedItem.innerHTML = `
+                <span class="home-folder-icon"><i class="fas fa-file"></i></span>
+                <span class="home-folder-name">No Folder</span>
+                ${unfolderedCount > 0 ? `<span class="home-folder-count">${unfolderedCount}</span>` : ''}
+            `;
+            unfolderedItem.addEventListener('click', () => {
+                NotesApp.emit('home:navigate');
+                currentHomeFolderId = UNFOLDERED;
+                currentSearchTerm = '';
+                homePage = 0;
+                document.getElementById('homeSearchInput').value = '';
+                renderHomeFolders();
+                renderHomeNotes();
+                closeSidebar();
+            });
+            folderList.appendChild(unfolderedItem);
         }
 
         let longPressTimer = null;
@@ -3357,15 +3401,14 @@
                     (note.content && note.content.toLowerCase().includes(q))
                 );
             }
+            if (currentHomeFolderId === UNFOLDERED) {
+                return notesData.filter(n => n.folderId === null);
+            }
             const folder = currentHomeFolderId === null ? null : foldersData.find(f => f.id === currentHomeFolderId);
             if (folder) {
-                const folderNotes = notesData.filter(n => n.folderId === folder.id);
-                const nonFolderedNotes = notesData.filter(n => n.folderId === null);
-                return [...folderNotes, ...nonFolderedNotes];
+                return notesData.filter(n => n.folderId === folder.id);
             }
-            const folderedNotes = notesData.filter(n => n.folderId !== null);
-            const nonFolderedNotes = notesData.filter(n => n.folderId === null);
-            return [...folderedNotes, ...nonFolderedNotes];
+            return [...notesData];
         }
 
         function renderHomeNotes() {
@@ -3389,17 +3432,17 @@
                 );
                 folderTitle.textContent = 'Search Results';
                 folderMeta.textContent = folderNotes.length > 0 ? `${folderNotes.length} note${folderNotes.length > 1 ? 's' : ''} found` : 'No matches';
+            } else if (currentHomeFolderId === UNFOLDERED) {
+                folderNotes = notesData.filter(n => n.folderId === null);
+                folderTitle.textContent = 'No Folder';
+                folderMeta.textContent = folderNotes.length > 0 ? `${folderNotes.length} note${folderNotes.length > 1 ? 's' : ''}` : 'Empty';
             } else {
                 const folder = currentHomeFolderId === null ? null : foldersData.find(f => f.id === currentHomeFolderId);
                 if (folder) {
-                    const folderNotesInFolder = notesData.filter(n => n.folderId === folder.id);
-                    const nonFoldered = notesData.filter(n => n.folderId === null);
-                    folderNotes = [...folderNotesInFolder, ...nonFoldered];
+                    folderNotes = notesData.filter(n => n.folderId === folder.id);
                     folderTitle.textContent = folder.name;
                 } else {
-                    const folderedNotes = notesData.filter(n => n.folderId !== null);
-                    const nonFoldered = notesData.filter(n => n.folderId === null);
-                    folderNotes = [...folderedNotes, ...nonFoldered];
+                    folderNotes = [...notesData];
                     folderTitle.textContent = 'All Notes';
                 }
                 folderMeta.textContent = folderNotes.length > 0 ? `${folderNotes.length} note${folderNotes.length > 1 ? 's' : ''}` : 'Empty';
@@ -4568,7 +4611,9 @@
         function openFolderWindow() {
             var note = notesData.find(n => n.id === currentNoteId);
             selectedFolderId = note ? note.folderId : null;
-            renderFolderWindow();
+            var searchInput = document.getElementById('folderWindowSearchInput');
+            if (searchInput) searchInput.value = '';
+            renderFolderWindow('');
             document.getElementById('folderWindow').classList.add('active');
             document.getElementById('folderWindowOverlay').classList.add('active');
         }
@@ -4578,23 +4623,31 @@
             document.getElementById('folderWindowOverlay').classList.remove('active');
         }
 
-        function renderFolderWindow() {
+        function renderFolderWindow(filterText) {
             var note = notesData.find(n => n.id === currentNoteId);
             var folderWindowContent = document.getElementById('folderWindowContent');
+            if (!folderWindowContent) return;
+            var q = (filterText || '').toLowerCase();
             folderWindowContent.innerHTML = '';
+
             var noFolderDiv = document.createElement('div');
-            noFolderDiv.className = 'folder-window-item ' + (!note.folderId ? 'selected' : '');
+            noFolderDiv.className = 'folder-window-item' + (!note.folderId ? ' selected' : '');
+            noFolderDiv.setAttribute('data-folder-id', 'null');
             noFolderDiv.onclick = () => selectFolderInWindow(null);
             noFolderDiv.innerHTML = '<i class="fas fa-times"></i><span>No Folder</span>';
             folderWindowContent.appendChild(noFolderDiv);
+
             const sortedFolders = [...foldersData].sort((a, b) =>
                 (a.name || '').localeCompare(b.name || '', undefined, {
                     sensitivity: 'base'
                 })
             );
+
             sortedFolders.forEach(folder => {
+                if (q && !(folder.name || '').toLowerCase().includes(q)) return;
                 var folderDiv = document.createElement('div');
-                folderDiv.className = 'folder-window-item ' + (note.folderId === folder.id ? 'selected' : '');
+                folderDiv.className = 'folder-window-item' + (note.folderId === folder.id ? ' selected' : '');
+                folderDiv.setAttribute('data-folder-id', String(folder.id));
                 folderDiv.onclick = () => selectFolderInWindow(folder.id);
                 folderDiv.innerHTML = '<i class="fas fa-folder"></i><span>' + folder.name + '</span><span class="note-count">' + folder.noteCount + ' notes</span>';
                 folderWindowContent.appendChild(folderDiv);
@@ -4603,18 +4656,10 @@
 
         function selectFolderInWindow(folderId) {
             selectedFolderId = folderId;
-            document.querySelectorAll('.folder-window-item').forEach(item => item.classList.remove('selected'));
-            var items = document.querySelectorAll('.folder-window-item');
-            if (folderId === null) items[0].classList.add('selected');
-            else {
-                const sortedFolders = [...foldersData].sort((a, b) =>
-                    (a.name || '').localeCompare(b.name || '', undefined, {
-                        sensitivity: 'base'
-                    })
-                );
-                var folderIndex = sortedFolders.findIndex(f => f.id === folderId) + 1;
-                if (items[folderIndex]) items[folderIndex].classList.add('selected');
-            }
+            document.querySelectorAll('#folderWindowContent .folder-window-item').forEach(item => item.classList.remove('selected'));
+            var target = folderId === null ? 'null' : String(folderId);
+            var el = document.querySelector('#folderWindowContent .folder-window-item[data-folder-id="' + target + '"]');
+            if (el) el.classList.add('selected');
         }
 
         async function applyFolderSelection() {
@@ -4938,8 +4983,8 @@
                         var fileName = parts.pop();
                         var title = fileName.replace(/\.(md|txt)$/i, '') || 'Imported';
                         var folderId = targetFolderId;
-                        if (parts.length > 1) {
-                            folderId = getOrCreateFolderByPath(parts.slice(1), targetFolderId);
+                        if (parts.length > 0) {
+                            folderId = getOrCreateFolderByPath(parts, targetFolderId);
                         }
                         var existing = notesData.find(n => n.title === title && n.folderId === folderId);
                         if (existing) {
@@ -5389,6 +5434,9 @@
             document.getElementById('exportMdBtn').addEventListener('click', exportSingleMd);
             document.getElementById('closeFolderWindow').addEventListener('click', closeFolderWindow);
             document.getElementById('folderWindowOverlay').addEventListener('click', closeFolderWindow);
+            document.getElementById('folderWindowSearchInput').addEventListener('input', function() {
+                renderFolderWindow(this.value);
+            });
             document.getElementById('importMdFiles').addEventListener('change', importMdFilesHandler);
             document.getElementById('importFolder').addEventListener('change', importFolderHandler);
             document.getElementById('homeAddNoteBtn').addEventListener('click', () => {
