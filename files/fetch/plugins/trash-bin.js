@@ -252,10 +252,10 @@
                 document.getElementById('popupBody').innerHTML = '<p>' + message + '</p><div class="popup-buttons"><button class="popup-btn secondary" id="trashConfirmCancel">Cancel</button><button class="popup-btn danger" id="trashConfirmOk">' + confirmLabel + '</button></div>';
                 document.getElementById('universalPopup').style.display = 'flex';
                 document.getElementById('trashConfirmCancel').addEventListener('click', function() {
-                    closeUniversalPopup();
+                    document.getElementById('universalPopup').style.display = 'none';
                 });
                 document.getElementById('trashConfirmOk').addEventListener('click', function() {
-                    closeUniversalPopup();
+                    document.getElementById('universalPopup').style.display = 'none';
                     onConfirm();
                 });
             }
