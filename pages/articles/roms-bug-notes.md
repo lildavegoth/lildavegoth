@@ -24,6 +24,7 @@ You must take note that this Bug Notes list are only contains ROMs that i person
 
 ^^^ports1hide^^^
 # Ports →
+- [ColorOS](https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=coloros-ports-bugnotes)
 - [HyperOS](https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=hyperos-ports-bugnotes)
 - [OxygenOS](https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=oxygenos-ports-bugnotes)
 
