@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="../media.css">
     <script src="../ui-icons.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <script src="./telegram.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -369,6 +368,12 @@
             line-height: 1.5;
         }
 
+        .empty-card .primary-button,
+        .empty-card .secondary-button {
+            width: 100%;
+            margin-top: 10px;
+        }
+
         .workspace {
             min-height: 100vh;
             display: flex;
@@ -476,18 +481,25 @@
         .item-footer {
             display: flex;
             justify-content: flex-end;
+            gap: 8px;
             margin-top: 12px;
         }
 
-        .delete-button {
+        .delete-button,
+        .edit-button {
             padding: 7px 9px;
             color: #ff6b6b;
             background: transparent;
             border-radius: 8px;
         }
 
-        .delete-button:hover {
+        .delete-button:hover,
+        .edit-button:hover {
             background: rgba(255, 107, 107, 0.1);
+        }
+
+        .edit-button {
+            color: var(--accent-color);
         }
 
         .empty-folder {
@@ -761,7 +773,7 @@
                     <i class="fa-solid fa-desktop"></i>
                 </button>
                 <button class="version-button" type="button">
-                    v3.0
+                    v3.1
                     <span class="version-dot"></span>
                 </button>
             </div>
@@ -907,7 +919,7 @@
         <div class="popup-content">
             <div class="popup-header">
                 <h2 id="popupTitle"></h2>
-                <button class="close-popup" onclick="closeUniversalPopup()">
+                <button class="close-popup" id="closePopupButton" type="button">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -925,10 +937,10 @@
         let messages = [];
         let folders = ['general'];
         let selectedFolder = 'general';
-        let phoneCodeHash = '';
         let phoneNumber = '';
-        let passwordResolver = null;
-        let otpResolver = null;
+        let pendingResolver = null;
+        let currentStep = '';
+        let telegramLoaded = false;
 
         const elements = {
             sidebar: document.getElementById('sidebar'),
@@ -963,7 +975,21 @@
             noteModalTitle: document.getElementById('noteModalTitle'),
             universalPopup: document.getElementById('universalPopup'),
             popupTitle: document.getElementById('popupTitle'),
-            popupContent: document.getElementById('popupContent')
+            popupContent: document.getElementById('popupContent'),
+            guideButton: document.getElementById('guideButton'),
+            connectButton: document.getElementById('connectButton'),
+            closePopupButton: document.getElementById('closePopupButton'),
+            accountButton: document.getElementById('accountButton'),
+            settingsButton: document.getElementById('settingsButton'),
+            devicesButton: document.getElementById('devicesButton'),
+            quickMenuButton: document.getElementById('quickMenuButton'),
+            clearSelection: document.getElementById('clearSelection'),
+            newFolderButton: document.getElementById('newFolderButton'),
+            addNoteButton: document.getElementById('addNoteButton'),
+            disconnectButton: document.getElementById('disconnectButton'),
+            cancelLogin: document.getElementById('cancelLogin'),
+            cancelFolder: document.getElementById('cancelFolder'),
+            cancelNote: document.getElementById('cancelNote')
         };
 
         function escapeHtml(value) {
@@ -989,7 +1015,6 @@
             if (tags.length > 0) {
                 const knownFolder = folders.find(folder => folder !== 'general' && tags.includes(folder));
                 if (knownFolder) return knownFolder;
-                return 'general';
             }
             return 'general';
         }
@@ -1005,10 +1030,6 @@
         }
 
         function formatNoteText(title, text, folder) {
-            let folderTag = '';
-            if (folder && folder !== 'general') {
-                folderTag = '#' + folder + ' ';
-            }
             return (title ? title + '\n' : '') + (text || '');
         }
 
@@ -1023,6 +1044,7 @@
         }
 
         function setLoginStep(step) {
+            currentStep = step;
             clearLoginError();
             elements.apiId.classList.add('hidden');
             elements.apiHash.classList.add('hidden');
@@ -1054,6 +1076,24 @@
             }
         }
 
+        function loadTelegramScript() {
+            return new Promise((resolve, reject) => {
+                if (telegramLoaded || typeof window.TelegramClient !== 'undefined') {
+                    telegramLoaded = true;
+                    resolve();
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = './telegram.js';
+                script.onload = () => {
+                    telegramLoaded = true;
+                    resolve();
+                };
+                script.onerror = () => reject(new Error('Failed to load Telegram library. Make sure telegram.js exists in your repo.'));
+                document.head.appendChild(script);
+            });
+        }
+
         async function initClient() {
             const session = localStorage.getItem(sessionKey);
             if (!session) {
@@ -1070,6 +1110,7 @@
             }
 
             try {
+                await loadTelegramScript();
                 client = new TelegramClient(new StringSession(session), apiId, apiHash, { connectionRetries: 2 });
                 await client.connect();
                 currentUser = await client.getMe();
@@ -1078,7 +1119,6 @@
             } catch (error) {
                 localStorage.removeItem(sessionKey);
                 showLoginState();
-                alert('Session expired or invalid. Please login again.');
             }
         }
 
@@ -1234,7 +1274,7 @@
                 <h3>Setup Instructions</h3>
                 <ul>
                     <li>Go to <strong>my.telegram.org</strong> and log in with your Telegram account.</li>
-                    <li>Click on <strong>API development tools</strong> and fill out the form if required.</li>
+                    <li>Click on <strong>API development tools</strong> and fill out the form.</li>
                     <li>You will receive an <strong>API ID</strong> and <strong>API Hash</strong>. Enter them in the login form.</li>
                     <li>Enter your phone number in international format (e.g., +1234567890).</li>
                     <li>Telegram will send a verification code. Enter it.</li>
@@ -1245,16 +1285,15 @@
                 <ul>
                     <li>Create a new folder by clicking the <strong>+</strong> button in the sidebar.</li>
                     <li>The folder name becomes a hashtag (e.g., "Work" becomes #Work).</li>
-                    <li>Add a note by clicking <strong>Add note</strong>. The note is stored as a message in your Saved Messages.</li>
-                    <li>The first line becomes the title, and the rest becomes the body.</li>
-                    <li>Edit or delete notes directly from the interface. Changes are synced to Telegram.</li>
+                    <li>Add a note by clicking <strong>Add note</strong>.</li>
+                    <li>The first line becomes the title, the rest becomes the body.</li>
+                    <li>Edit or delete notes directly from the interface. Changes sync to Telegram.</li>
                     <li>Click <strong>Logout</strong> to disconnect and remove the session.</li>
                 </ul>
                 <h3>Important Notes</h3>
                 <ul>
-                    <li>Your API credentials and session are stored only in your browser's local storage.</li>
+                    <li>Your API credentials and session are stored only in your browser.</li>
                     <li>Never share your API credentials or session with anyone.</li>
-                    <li>This app uses the GramJS library to interact with Telegram.</li>
                 </ul>
             `;
             elements.popupTitle.textContent = 'Guide';
@@ -1266,9 +1305,81 @@
             elements.universalPopup.style.display = 'none';
         }
 
+        function askCode() {
+            return new Promise((resolve) => {
+                pendingResolver = resolve;
+                elements.otp.value = '';
+                setLoginStep('otp');
+                if (!elements.loginModal.open) {
+                    elements.loginModal.showModal();
+                }
+            });
+        }
+
+        function askPassword() {
+            return new Promise((resolve) => {
+                pendingResolver = resolve;
+                elements.password.value = '';
+                setLoginStep('password');
+                if (!elements.loginModal.open) {
+                    elements.loginModal.showModal();
+                }
+            });
+        }
+
+        async function startLogin() {
+            try {
+                await loadTelegramScript();
+            } catch (error) {
+                showLoginError(error.message);
+                setLoginStep('phone');
+                if (!elements.loginModal.open) {
+                    elements.loginModal.showModal();
+                }
+                return;
+            }
+
+            const apiId = parseInt(localStorage.getItem(apiIdKey));
+            const apiHash = localStorage.getItem(apiHashKey);
+
+            try {
+                client = new TelegramClient(new StringSession(''), apiId, apiHash, { connectionRetries: 3 });
+
+                await client.start({
+                    phoneNumber: async () => phoneNumber,
+                    password: async () => await askPassword(),
+                    phoneCode: async () => await askCode(),
+                    onError: (error) => {
+                        throw error;
+                    }
+                });
+
+                const session = client.session.save();
+                localStorage.setItem(sessionKey, session);
+                currentUser = await client.getMe();
+                await loadMessages();
+                showWorkspace();
+            } catch (error) {
+                alert('Login failed: ' + error.message);
+                if (client) {
+                    try {
+                        await client.disconnect();
+                    } catch (disconnectError) {
+                    }
+                    client = null;
+                }
+                setLoginStep('phone');
+                if (!elements.loginModal.open) {
+                    elements.loginModal.showModal();
+                }
+            }
+        }
+
         elements.guideButton.addEventListener('click', openGuidePopup);
 
-        document.getElementById('connectButton').addEventListener('click', () => {
+        elements.closePopupButton.addEventListener('click', closeUniversalPopup);
+
+        elements.connectButton.addEventListener('click', () => {
             clearLoginError();
             const savedApiId = localStorage.getItem(apiIdKey);
             const savedApiHash = localStorage.getItem(apiHashKey);
@@ -1278,9 +1389,13 @@
             elements.loginModal.showModal();
         });
 
-        document.getElementById('cancelLogin').addEventListener('click', () => {
+        elements.cancelLogin.addEventListener('click', () => {
+            pendingResolver = null;
             if (client) {
-                client.disconnect();
+                try {
+                    client.disconnect();
+                } catch (error) {
+                }
                 client = null;
             }
             elements.loginModal.close();
@@ -1290,7 +1405,7 @@
             event.preventDefault();
             clearLoginError();
 
-            if (elements.apiId.classList.contains('hidden') === false) {
+            if (currentStep === 'credentials') {
                 const id = elements.apiId.value.trim();
                 const hash = elements.apiHash.value.trim();
                 if (!id || !hash) {
@@ -1303,93 +1418,54 @@
                 return;
             }
 
-            if (elements.phone.classList.contains('hidden') === false) {
+            if (currentStep === 'phone') {
                 const phone = elements.phone.value.trim();
                 if (!phone) {
                     showLoginError('Phone number is required.');
                     return;
                 }
                 phoneNumber = phone;
-
-                try {
-                    const apiId = parseInt(localStorage.getItem(apiIdKey));
-                    const apiHash = localStorage.getItem(apiHashKey);
-                    client = new TelegramClient(new StringSession(''), apiId, apiHash, { connectionRetries: 3 });
-                    await client.connect();
-
-                    const result = await client.invoke(new Api.auth.SendCode({
-                        phoneNumber,
-                        apiId,
-                        apiHash,
-                        settings: new Api.CodeSettings({})
-                    }));
-
-                    phoneCodeHash = result.phoneCodeHash;
-                    setLoginStep('otp');
-                } catch (error) {
-                    showLoginError('Failed to send code: ' + error.message);
-                }
+                elements.loginModal.close();
+                await startLogin();
                 return;
             }
 
-            if (elements.otp.classList.contains('hidden') === false) {
+            if (currentStep === 'otp') {
                 const code = elements.otp.value.trim();
                 if (!code) {
                     showLoginError('Login code is required.');
                     return;
                 }
-
-                try {
-                    await client.invoke(new Api.auth.SignIn({
-                        phoneNumber,
-                        phoneCodeHash,
-                        phoneCode: code
-                    }));
-
-                    const session = client.session.save();
-                    localStorage.setItem(sessionKey, session);
-                    currentUser = await client.getMe();
-                    await loadMessages();
-                    elements.loginModal.close();
-                    showWorkspace();
-                } catch (error) {
-                    if (error.message.includes('SESSION_PASSWORD_NEEDED')) {
-                        setLoginStep('password');
-                    } else {
-                        showLoginError('Login failed: ' + error.message);
-                    }
+                const resolver = pendingResolver;
+                pendingResolver = null;
+                elements.loginModal.close();
+                if (resolver) {
+                    resolver(code);
                 }
                 return;
             }
 
-            if (elements.password.classList.contains('hidden') === false) {
+            if (currentStep === 'password') {
                 const password = elements.password.value;
                 if (!password) {
                     showLoginError('Cloud password is required.');
                     return;
                 }
-
-                try {
-                    const { computeCheck } = require('telegram/Password');
-                    const pwd = await client.invoke(new Api.account.GetPassword());
-                    const check = await computeCheck(pwd, password);
-                    await client.invoke(new Api.auth.CheckPassword({ password: check }));
-
-                    const session = client.session.save();
-                    localStorage.setItem(sessionKey, session);
-                    currentUser = await client.getMe();
-                    await loadMessages();
-                    elements.loginModal.close();
-                    showWorkspace();
-                } catch (error) {
-                    showLoginError('Password verification failed: ' + error.message);
+                const resolver = pendingResolver;
+                pendingResolver = null;
+                elements.loginModal.close();
+                if (resolver) {
+                    resolver(password);
                 }
             }
         });
 
-        document.getElementById('disconnectButton').addEventListener('click', async () => {
+        elements.disconnectButton.addEventListener('click', async () => {
             if (client) {
-                await client.disconnect();
+                try {
+                    await client.disconnect();
+                } catch (error) {
+                }
                 client = null;
             }
             localStorage.removeItem(sessionKey);
@@ -1399,13 +1475,13 @@
             showLoginState();
         });
 
-        document.getElementById('newFolderButton').addEventListener('click', () => {
+        elements.newFolderButton.addEventListener('click', () => {
             elements.folderName.value = '';
             elements.folderModal.showModal();
             elements.folderName.focus();
         });
 
-        document.getElementById('addNoteButton').addEventListener('click', () => {
+        elements.addNoteButton.addEventListener('click', () => {
             elements.noteModalTitle.textContent = 'Add note';
             elements.noteTitle.value = '';
             elements.noteText.value = '';
@@ -1414,11 +1490,11 @@
             elements.noteTitle.focus();
         });
 
-        document.getElementById('cancelFolder').addEventListener('click', () => {
+        elements.cancelFolder.addEventListener('click', () => {
             elements.folderModal.close();
         });
 
-        document.getElementById('cancelNote').addEventListener('click', () => {
+        elements.cancelNote.addEventListener('click', () => {
             elements.noteModal.close();
         });
 
@@ -1467,28 +1543,28 @@
             }
         });
 
-        document.getElementById('clearSelection').addEventListener('click', () => {
+        elements.clearSelection.addEventListener('click', () => {
             selectedFolder = 'general';
             render();
         });
 
-        document.getElementById('accountButton').addEventListener('click', () => {
+        elements.accountButton.addEventListener('click', () => {
             if (currentUser) {
-                alert(`Logged in as ${currentUser.firstName || ''} ${currentUser.lastName || ''} (@${currentUser.username || 'no username'})`);
+                alert('Logged in as ' + (currentUser.firstName || '') + ' ' + (currentUser.lastName || '') + ' (@' + (currentUser.username || 'no username') + ')');
             } else {
                 alert('Not connected.');
             }
         });
 
-        document.getElementById('settingsButton').addEventListener('click', () => {
+        elements.settingsButton.addEventListener('click', () => {
             alert('Settings: API credentials are stored locally. Session is encrypted with GramJS.');
         });
 
-        document.getElementById('devicesButton').addEventListener('click', () => {
+        elements.devicesButton.addEventListener('click', () => {
             alert('Active session is stored in this browser.');
         });
 
-        document.getElementById('quickMenuButton').addEventListener('click', () => {
+        elements.quickMenuButton.addEventListener('click', () => {
             alert('Quick access: select a folder from the list.');
         });
 
