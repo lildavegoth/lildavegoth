@@ -765,6 +765,42 @@ jobs:
               -H "apikey: $SRK" -H "Authorization: Bearer $SRK" \
               -H "Content-Type: application/json" --data-binary @-
 
+  build-gramjs:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Clone GramJS
+        run: git clone --depth 1 https://github.com/gram-js/gramjs.git gramjs-src
+
+      - name: Install dependencies
+        working-directory: gramjs-src
+        run: npm install
+
+      - name: Build browser bundle
+        working-directory: gramjs-src
+        run: NODE_ENV=production npx webpack
+
+      - name: Copy bundle to repo
+        run: cp gramjs-src/browser/telegram.js telegram.js
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add telegram.js
+          git diff --staged --quiet || git commit -m "Update GramJS browser bundle"
+          git push
+
   cleanup-history:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
