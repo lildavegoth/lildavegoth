@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="dark">
-    <title>TgStorage</title>
+    <title>Kiraku Storage | lildavegoth</title>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
     <script src="../ui-icons.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <script src="./telegram.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
-            --accent-dark: #9bc726;
             --bg-black: #000000;
             --bg-dark: #1a1a1a;
             --bg-card: rgba(30, 30, 30, 0.7);
@@ -578,6 +578,96 @@
             display: none !important;
         }
 
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-popup:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .popup-body {
+            overflow-y: auto;
+            padding: var(--spacing-md);
+        }
+
+        .popup-body h3 {
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .popup-body p,
+        .popup-body li {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .popup-body ul {
+            padding-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .popup-body li {
+            margin-bottom: 4px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
         @media (max-width: 760px) {
             .sidebar {
                 width: min(330px, 88vw);
@@ -671,7 +761,7 @@
                     <i class="fa-solid fa-desktop"></i>
                 </button>
                 <button class="version-button" type="button">
-                    v2.2-beta
+                    v3.0
                     <span class="version-dot"></span>
                 </button>
             </div>
@@ -681,7 +771,7 @@
             </button>
 
             <div class="quick-access">
-                <h2 class="section-title">Quick access</h2>
+                <h2 class="section-title">Folders</h2>
                 <button class="quick-menu" id="quickMenuButton" type="button" aria-label="Quick access menu">
                     <i class="fa-solid fa-ellipsis-vertical"></i>
                 </button>
@@ -691,33 +781,33 @@
 
             <div class="sidebar-separator"></div>
 
-            <span class="example-label">Folder structure example:</span>
+            <span class="example-label">Organize with hashtags</span>
 
             <div class="category-title">
-                <h2 class="section-title">Category</h2>
+                <h2 class="section-title">Example</h2>
             </div>
 
             <div class="example-list">
                 <div class="example-folder">
                     <i class="fa-solid fa-folder"></i>
-                    <span>Group</span>
+                    <span>#General</span>
                 </div>
                 <div class="example-folder">
                     <i class="fa-solid fa-folder"></i>
-                    <span>Folder #1</span>
+                    <span>#Work</span>
                 </div>
                 <div class="example-folder">
                     <i class="fa-solid fa-folder"></i>
-                    <span>Folder #2</span>
+                    <span>#Personal</span>
                 </div>
                 <div class="example-folder">
                     <i class="fa-solid fa-folder"></i>
-                    <span>Folder #3</span>
+                    <span>#Ideas</span>
                 </div>
             </div>
 
             <div class="sidebar-footer">
-                <span>Select folder</span>
+                <span>Selected folder</span>
                 <button class="clear-selection" id="clearSelection" type="button" aria-label="Clear selection">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
@@ -730,19 +820,23 @@
                 <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Open menu">
                     <i class="fa-solid fa-bars"></i>
                 </button>
-                <span class="mobile-title" id="mobileTitle">TgStorage</span>
+                <span class="mobile-title" id="mobileTitle">Kiraku Storage</span>
             </header>
 
             <section class="empty-state" id="emptyState">
                 <div class="empty-card">
-                    <div class="logo">TG</div>
-                    <h1>TgStorage</h1>
-                    <p>Cloud storage powered by your Telegram account. Files live in private channels with TeleDrive-style metadata.</p>
+                    <div class="logo">KS</div>
+                    <h1>Kiraku Storage</h1>
+                    <p>Advanced Saved Messages organizer using real Telegram Cloud.</p>
                     <button class="primary-button" id="connectButton" type="button">
                         <i class="fa-brands fa-telegram"></i>
                         Connect Telegram
                     </button>
-                    <small>Supports API ID + API Hash, phone code and full 2FA cloud password. Session stays on this device only.</small>
+                    <button class="secondary-button" id="guideButton" type="button">
+                        <i class="fa-solid fa-circle-info"></i>
+                        Guide
+                    </button>
+                    <small>Enter your Telegram API credentials and phone number. We never store passwords or codes. Session is stored locally in your browser.</small>
                 </div>
             </section>
 
@@ -750,16 +844,16 @@
                 <header class="workspace-header">
                     <div class="workspace-title">
                         <h1 id="folderTitle">General</h1>
-                        <p id="folderMeta">Empty</p>
+                        <p id="folderMeta">Loading...</p>
                     </div>
                     <div class="workspace-actions">
-                        <button class="primary-button" id="addFileButton" type="button">
+                        <button class="primary-button" id="addNoteButton" type="button">
                             <i class="fa-solid fa-plus"></i>
-                            Add file
+                            Add note
                         </button>
                         <button class="secondary-button" id="disconnectButton" type="button">
                             <i class="fa-solid fa-right-from-bracket"></i>
-                            Disconnect
+                            Logout
                         </button>
                     </div>
                 </header>
@@ -796,39 +890,45 @@
         </form>
     </dialog>
 
-    <dialog class="modal" id="fileModal">
-        <form id="fileForm">
-            <h2>Add file</h2>
-            <input class="field" id="fileName" maxlength="120" placeholder="File name (e.g. photo.jpg)" autocomplete="off" required>
-            <input class="field" id="fileMime" maxlength="80" placeholder="MIME type (e.g. image/jpeg)" autocomplete="off" required>
-            <input class="field" id="fileSize" type="number" min="1" placeholder="Size in bytes" autocomplete="off" required>
+    <dialog class="modal" id="noteModal">
+        <form id="noteForm">
+            <h2 id="noteModalTitle">Add note</h2>
+            <input class="field" id="noteTitle" maxlength="80" placeholder="Title" autocomplete="off">
+            <textarea class="field" id="noteText" maxlength="5000" placeholder="Text" required></textarea>
+            <input type="hidden" id="noteMessageId">
             <div class="modal-actions">
-                <button type="button" id="cancelFile">Cancel</button>
+                <button type="button" id="cancelNote">Cancel</button>
                 <button class="primary-button" type="submit">Save</button>
             </div>
         </form>
     </dialog>
 
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" onclick="closeUniversalPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="popup-body" id="popupContent"></div>
+        </div>
+    </div>
+
     <script>
-        const storageKey = 'tgstorage-beta-v2';
+        const sessionKey = 'kiraku-session';
+        const apiIdKey = 'kiraku-api-id';
+        const apiHashKey = 'kiraku-api-hash';
 
-        const state = JSON.parse(localStorage.getItem(storageKey) || 'null') || {
-            connected: false,
-            apiId: '',
-            apiHash: '',
-            phone: '',
-            selected: 'general',
-            folders: [
-                {
-                    id: 'general',
-                    name: 'General',
-                    path: 'General',
-                    files: []
-                }
-            ]
-        };
-
-        let loginStep = 'credentials';
+        let client = null;
+        let currentUser = null;
+        let messages = [];
+        let folders = ['general'];
+        let selectedFolder = 'general';
+        let phoneCodeHash = '';
+        let phoneNumber = '';
+        let passwordResolver = null;
+        let otpResolver = null;
 
         const elements = {
             sidebar: document.getElementById('sidebar'),
@@ -844,10 +944,10 @@
             items: document.getElementById('items'),
             loginModal: document.getElementById('loginModal'),
             folderModal: document.getElementById('folderModal'),
-            fileModal: document.getElementById('fileModal'),
+            noteModal: document.getElementById('noteModal'),
             loginForm: document.getElementById('loginForm'),
             folderForm: document.getElementById('folderForm'),
-            fileForm: document.getElementById('fileForm'),
+            noteForm: document.getElementById('noteForm'),
             loginTitle: document.getElementById('loginTitle'),
             loginHint: document.getElementById('loginHint'),
             loginError: document.getElementById('loginError'),
@@ -857,14 +957,14 @@
             otp: document.getElementById('otp'),
             password: document.getElementById('password'),
             folderName: document.getElementById('folderName'),
-            fileName: document.getElementById('fileName'),
-            fileMime: document.getElementById('fileMime'),
-            fileSize: document.getElementById('fileSize')
+            noteTitle: document.getElementById('noteTitle'),
+            noteText: document.getElementById('noteText'),
+            noteMessageId: document.getElementById('noteMessageId'),
+            noteModalTitle: document.getElementById('noteModalTitle'),
+            universalPopup: document.getElementById('universalPopup'),
+            popupTitle: document.getElementById('popupTitle'),
+            popupContent: document.getElementById('popupContent')
         };
-
-        function saveState() {
-            localStorage.setItem(storageKey, JSON.stringify(state));
-        }
 
         function escapeHtml(value) {
             return String(value).replace(/[&<>"']/g, character => {
@@ -879,40 +979,37 @@
             });
         }
 
-        function formatBytes(bytes) {
-            if (bytes < 1024) {
-                return bytes + ' B';
-            }
-            if (bytes < 1048576) {
-                return (bytes / 1024).toFixed(1) + ' KB';
-            }
-            if (bytes < 1073741824) {
-                return (bytes / 1048576).toFixed(1) + ' MB';
-            }
-            return (bytes / 1073741824).toFixed(2) + ' GB';
+        function extractHashtags(text) {
+            const matches = text.match(/#[\w]+/g) || [];
+            return matches.map(tag => tag.substring(1).toLowerCase());
         }
 
-        function simpleHash(text) {
-            let h = 0;
-            for (let i = 0; i < text.length; i++) {
-                h = ((h << 5) - h) + text.charCodeAt(i);
-                h |= 0;
+        function getFolderFromText(text) {
+            const tags = extractHashtags(text);
+            if (tags.length > 0) {
+                const knownFolder = folders.find(folder => folder !== 'general' && tags.includes(folder));
+                if (knownFolder) return knownFolder;
+                return 'general';
             }
-            return Math.abs(h).toString(16).padStart(8, '0') + Date.now().toString(16);
+            return 'general';
         }
 
-        function getSelectedFolder() {
-            return state.folders.find(folder => folder.id === state.selected) || state.folders[0];
+        function getTitleAndBody(text) {
+            const lines = text.split('\n');
+            if (lines.length > 1) {
+                const title = lines[0].replace(/^#\w+\s*/, '');
+                const body = lines.slice(1).join('\n');
+                return { title, body };
+            }
+            return { title: '', body: text.replace(/^#\w+\s*/, '') };
         }
 
-        function closeSidebar() {
-            elements.sidebar.classList.remove('open');
-            elements.sidebarOverlay.classList.remove('open');
-        }
-
-        function openSidebar() {
-            elements.sidebar.classList.add('open');
-            elements.sidebarOverlay.classList.add('open');
+        function formatNoteText(title, text, folder) {
+            let folderTag = '';
+            if (folder && folder !== 'general') {
+                folderTag = '#' + folder + ' ';
+            }
+            return (title ? title + '\n' : '') + (text || '');
         }
 
         function showLoginError(message) {
@@ -926,7 +1023,6 @@
         }
 
         function setLoginStep(step) {
-            loginStep = step;
             clearLoginError();
             elements.apiId.classList.add('hidden');
             elements.apiHash.classList.add('hidden');
@@ -958,66 +1054,125 @@
             }
         }
 
+        async function initClient() {
+            const session = localStorage.getItem(sessionKey);
+            if (!session) {
+                showLoginState();
+                return;
+            }
+
+            const apiId = parseInt(localStorage.getItem(apiIdKey));
+            const apiHash = localStorage.getItem(apiHashKey);
+            if (!apiId || !apiHash) {
+                localStorage.removeItem(sessionKey);
+                showLoginState();
+                return;
+            }
+
+            try {
+                client = new TelegramClient(new StringSession(session), apiId, apiHash, { connectionRetries: 2 });
+                await client.connect();
+                currentUser = await client.getMe();
+                await loadMessages();
+                showWorkspace();
+            } catch (error) {
+                localStorage.removeItem(sessionKey);
+                showLoginState();
+                alert('Session expired or invalid. Please login again.');
+            }
+        }
+
+        function showLoginState() {
+            elements.emptyState.classList.remove('hidden');
+            elements.workspace.classList.add('hidden');
+        }
+
+        function showWorkspace() {
+            elements.emptyState.classList.add('hidden');
+            elements.workspace.classList.remove('hidden');
+            render();
+        }
+
+        async function loadMessages() {
+            if (!client || !currentUser) return;
+            const result = await client.getMessages('me', { limit: 100 });
+            messages = result.filter(msg => msg.message && !msg.media).map(msg => ({
+                id: msg.id,
+                text: msg.message,
+                date: msg.date
+            }));
+
+            const hashtags = new Set();
+            messages.forEach(msg => {
+                const tags = extractHashtags(msg.text);
+                tags.forEach(tag => hashtags.add(tag));
+            });
+
+            folders = ['general', ...Array.from(hashtags).filter(tag => tag !== 'general')];
+            if (!folders.includes(selectedFolder)) {
+                selectedFolder = 'general';
+            }
+            render();
+        }
+
         function renderFolders() {
-            elements.folderList.innerHTML = state.folders.map(folder => {
-                const active = folder.id === state.selected ? 'active' : '';
-                const count = folder.files.length ? `<span class="folder-count">${folder.files.length}</span>` : '';
+            elements.folderList.innerHTML = folders.map(folder => {
+                const active = folder === selectedFolder ? 'active' : '';
+                const count = messages.filter(msg => getFolderFromText(msg.text) === folder).length;
+                const countHtml = count ? `<span class="folder-count">${count}</span>` : '';
                 return `
-                    <button class="folder-item ${active}" type="button" data-folder-id="${folder.id}">
+                    <button class="folder-item ${active}" type="button" data-folder="${folder}">
                         <span class="folder-icon">
                             <i class="fa-solid fa-folder"></i>
                         </span>
-                        <span class="folder-name">${escapeHtml(folder.name)}</span>
-                        ${count}
+                        <span class="folder-name">${escapeHtml(folder.charAt(0).toUpperCase() + folder.slice(1))}</span>
+                        ${countHtml}
                     </button>
                 `;
             }).join('');
 
-            elements.folderList.querySelectorAll('[data-folder-id]').forEach(button => {
+            elements.folderList.querySelectorAll('[data-folder]').forEach(button => {
                 button.addEventListener('click', () => {
-                    state.selected = button.dataset.folderId;
-                    saveState();
+                    selectedFolder = button.dataset.folder;
                     render();
                     closeSidebar();
                 });
             });
 
-            const selectedFolder = getSelectedFolder();
-            elements.selection.textContent = selectedFolder ? selectedFolder.name : '';
+            elements.selection.textContent = selectedFolder.charAt(0).toUpperCase() + selectedFolder.slice(1);
         }
 
         function renderWorkspace() {
-            const folder = getSelectedFolder();
-            if (!folder) {
-                return;
-            }
+            const folderMessages = messages.filter(msg => getFolderFromText(msg.text) === selectedFolder);
 
-            state.selected = folder.id;
-            elements.folderTitle.textContent = folder.name;
-            elements.mobileTitle.textContent = folder.name;
-            elements.folderMeta.textContent = folder.files.length
-                ? `${folder.files.length} file${folder.files.length === 1 ? '' : 's'}`
+            elements.folderTitle.textContent = selectedFolder.charAt(0).toUpperCase() + selectedFolder.slice(1);
+            elements.mobileTitle.textContent = selectedFolder.charAt(0).toUpperCase() + selectedFolder.slice(1);
+            elements.folderMeta.textContent = folderMessages.length
+                ? `${folderMessages.length} item${folderMessages.length === 1 ? '' : 's'}`
                 : 'Empty';
 
-            if (!folder.files.length) {
+            if (!folderMessages.length) {
                 elements.items.innerHTML = `
                     <div class="empty-folder">
                         <i class="fa-regular fa-folder-open"></i>
-                        <div>No files in this folder.</div>
+                        <div>No saved messages in this folder.</div>
                     </div>
                 `;
                 return;
             }
 
-            elements.items.innerHTML = folder.files.map((file, index) => {
-                const meta = `td1:${JSON.stringify(file)}`;
+            elements.items.innerHTML = folderMessages.map(msg => {
+                const { title, body } = getTitleAndBody(msg.text);
                 return `
                     <article class="item">
-                        <div class="item-title">${escapeHtml(file.n)}</div>
-                        <div class="item-text">${escapeHtml(meta)}</div>
-                        <div class="item-meta">${escapeHtml(file.m)} · ${formatBytes(file.s)}</div>
+                        ${title ? `<div class="item-title">${escapeHtml(title)}</div>` : ''}
+                        <div class="item-text">${escapeHtml(body)}</div>
                         <div class="item-footer">
-                            <button class="delete-button" type="button" data-file-index="${index}">
+                            <button class="edit-button" type="button" data-message-id="${msg.id}">
+                                <i class="fa-solid fa-pen"></i>
+                                Edit
+                            </button>
+                            <button class="delete-button" type="button" data-message-id="${msg.id}">
                                 <i class="fa-solid fa-trash"></i>
                                 Delete
                             </button>
@@ -1026,102 +1181,222 @@
                 `;
             }).join('');
 
-            elements.items.querySelectorAll('[data-file-index]').forEach(button => {
+            elements.items.querySelectorAll('.edit-button').forEach(button => {
                 button.addEventListener('click', () => {
-                    folder.files.splice(Number(button.dataset.fileIndex), 1);
-                    saveState();
-                    render();
+                    const messageId = Number(button.dataset.messageId);
+                    const msg = messages.find(m => m.id === messageId);
+                    if (msg) {
+                        const { title, body } = getTitleAndBody(msg.text);
+                        elements.noteModalTitle.textContent = 'Edit note';
+                        elements.noteTitle.value = title;
+                        elements.noteText.value = body;
+                        elements.noteMessageId.value = messageId;
+                        elements.noteModal.showModal();
+                    }
+                });
+            });
+
+            elements.items.querySelectorAll('.delete-button').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const messageId = Number(button.dataset.messageId);
+                    if (confirm('Delete this message?')) {
+                        try {
+                            await client.deleteMessages('me', [messageId], { revoke: true });
+                            messages = messages.filter(m => m.id !== messageId);
+                            render();
+                        } catch (error) {
+                            alert('Failed to delete message: ' + error.message);
+                        }
+                    }
                 });
             });
         }
 
         function render() {
             renderFolders();
-            elements.emptyState.classList.toggle('hidden', state.connected);
-            elements.workspace.classList.toggle('hidden', !state.connected);
-            if (state.connected) {
-                renderWorkspace();
-            }
+            renderWorkspace();
         }
 
+        function closeSidebar() {
+            elements.sidebar.classList.remove('open');
+            elements.sidebarOverlay.classList.remove('open');
+        }
+
+        function openSidebar() {
+            elements.sidebar.classList.add('open');
+            elements.sidebarOverlay.classList.add('open');
+        }
+
+        function openGuidePopup() {
+            const guideHTML = `
+                <h3>Welcome to Kiraku Storage</h3>
+                <p>This app organizes your Telegram Saved Messages into folders using hashtags.</p>
+                <h3>Setup Instructions</h3>
+                <ul>
+                    <li>Go to <strong>my.telegram.org</strong> and log in with your Telegram account.</li>
+                    <li>Click on <strong>API development tools</strong> and fill out the form if required.</li>
+                    <li>You will receive an <strong>API ID</strong> and <strong>API Hash</strong>. Enter them in the login form.</li>
+                    <li>Enter your phone number in international format (e.g., +1234567890).</li>
+                    <li>Telegram will send a verification code. Enter it.</li>
+                    <li>If you have two-step verification enabled, enter your password.</li>
+                    <li>After login, your Saved Messages will be loaded and organized by hashtags.</li>
+                </ul>
+                <h3>How to Use</h3>
+                <ul>
+                    <li>Create a new folder by clicking the <strong>+</strong> button in the sidebar.</li>
+                    <li>The folder name becomes a hashtag (e.g., "Work" becomes #Work).</li>
+                    <li>Add a note by clicking <strong>Add note</strong>. The note is stored as a message in your Saved Messages.</li>
+                    <li>The first line becomes the title, and the rest becomes the body.</li>
+                    <li>Edit or delete notes directly from the interface. Changes are synced to Telegram.</li>
+                    <li>Click <strong>Logout</strong> to disconnect and remove the session.</li>
+                </ul>
+                <h3>Important Notes</h3>
+                <ul>
+                    <li>Your API credentials and session are stored only in your browser's local storage.</li>
+                    <li>Never share your API credentials or session with anyone.</li>
+                    <li>This app uses the GramJS library to interact with Telegram.</li>
+                </ul>
+            `;
+            elements.popupTitle.textContent = 'Guide';
+            elements.popupContent.innerHTML = guideHTML;
+            elements.universalPopup.style.display = 'flex';
+        }
+
+        function closeUniversalPopup() {
+            elements.universalPopup.style.display = 'none';
+        }
+
+        elements.guideButton.addEventListener('click', openGuidePopup);
+
         document.getElementById('connectButton').addEventListener('click', () => {
-            elements.apiId.value = state.apiId || '';
-            elements.apiHash.value = state.apiHash || '';
-            elements.phone.value = state.phone || '';
-            elements.otp.value = '';
-            elements.password.value = '';
+            clearLoginError();
+            const savedApiId = localStorage.getItem(apiIdKey);
+            const savedApiHash = localStorage.getItem(apiHashKey);
+            if (savedApiId) elements.apiId.value = savedApiId;
+            if (savedApiHash) elements.apiHash.value = savedApiHash;
             setLoginStep('credentials');
             elements.loginModal.showModal();
         });
 
         document.getElementById('cancelLogin').addEventListener('click', () => {
+            if (client) {
+                client.disconnect();
+                client = null;
+            }
             elements.loginModal.close();
         });
 
-        elements.loginForm.addEventListener('submit', event => {
+        elements.loginForm.addEventListener('submit', async event => {
             event.preventDefault();
             clearLoginError();
 
-            if (loginStep === 'credentials') {
+            if (elements.apiId.classList.contains('hidden') === false) {
                 const id = elements.apiId.value.trim();
                 const hash = elements.apiHash.value.trim();
                 if (!id || !hash) {
                     showLoginError('API ID and API Hash are required.');
                     return;
                 }
-                state.apiId = id;
-                state.apiHash = hash;
+                localStorage.setItem(apiIdKey, id);
+                localStorage.setItem(apiHashKey, hash);
                 setLoginStep('phone');
                 return;
             }
 
-            if (loginStep === 'phone') {
+            if (elements.phone.classList.contains('hidden') === false) {
                 const phone = elements.phone.value.trim();
                 if (!phone) {
                     showLoginError('Phone number is required.');
                     return;
                 }
-                state.phone = phone;
-                setLoginStep('otp');
+                phoneNumber = phone;
+
+                try {
+                    const apiId = parseInt(localStorage.getItem(apiIdKey));
+                    const apiHash = localStorage.getItem(apiHashKey);
+                    client = new TelegramClient(new StringSession(''), apiId, apiHash, { connectionRetries: 3 });
+                    await client.connect();
+
+                    const result = await client.invoke(new Api.auth.SendCode({
+                        phoneNumber,
+                        apiId,
+                        apiHash,
+                        settings: new Api.CodeSettings({})
+                    }));
+
+                    phoneCodeHash = result.phoneCodeHash;
+                    setLoginStep('otp');
+                } catch (error) {
+                    showLoginError('Failed to send code: ' + error.message);
+                }
                 return;
             }
 
-            if (loginStep === 'otp') {
+            if (elements.otp.classList.contains('hidden') === false) {
                 const code = elements.otp.value.trim();
                 if (!code) {
                     showLoginError('Login code is required.');
                     return;
                 }
-                if (code === '2fa') {
-                    setLoginStep('password');
-                    return;
+
+                try {
+                    await client.invoke(new Api.auth.SignIn({
+                        phoneNumber,
+                        phoneCodeHash,
+                        phoneCode: code
+                    }));
+
+                    const session = client.session.save();
+                    localStorage.setItem(sessionKey, session);
+                    currentUser = await client.getMe();
+                    await loadMessages();
+                    elements.loginModal.close();
+                    showWorkspace();
+                } catch (error) {
+                    if (error.message.includes('SESSION_PASSWORD_NEEDED')) {
+                        setLoginStep('password');
+                    } else {
+                        showLoginError('Login failed: ' + error.message);
+                    }
                 }
-                state.connected = true;
-                state.selected = state.selected || 'general';
-                saveState();
-                elements.loginModal.close();
-                render();
                 return;
             }
 
-            if (loginStep === 'password') {
-                const pwd = elements.password.value.trim();
-                if (!pwd) {
+            if (elements.password.classList.contains('hidden') === false) {
+                const password = elements.password.value;
+                if (!password) {
                     showLoginError('Cloud password is required.');
                     return;
                 }
-                state.connected = true;
-                state.selected = state.selected || 'general';
-                saveState();
-                elements.loginModal.close();
-                render();
+
+                try {
+                    const { computeCheck } = require('telegram/Password');
+                    const pwd = await client.invoke(new Api.account.GetPassword());
+                    const check = await computeCheck(pwd, password);
+                    await client.invoke(new Api.auth.CheckPassword({ password: check }));
+
+                    const session = client.session.save();
+                    localStorage.setItem(sessionKey, session);
+                    currentUser = await client.getMe();
+                    await loadMessages();
+                    elements.loginModal.close();
+                    showWorkspace();
+                } catch (error) {
+                    showLoginError('Password verification failed: ' + error.message);
+                }
             }
         });
 
-        document.getElementById('disconnectButton').addEventListener('click', () => {
-            state.connected = false;
-            saveState();
-            render();
+        document.getElementById('disconnectButton').addEventListener('click', async () => {
+            if (client) {
+                await client.disconnect();
+                client = null;
+            }
+            localStorage.removeItem(sessionKey);
+            messages = [];
+            folders = ['general'];
+            selectedFolder = 'general';
+            showLoginState();
         });
 
         document.getElementById('newFolderButton').addEventListener('click', () => {
@@ -1130,92 +1405,91 @@
             elements.folderName.focus();
         });
 
-        document.getElementById('addFileButton').addEventListener('click', () => {
-            elements.fileName.value = '';
-            elements.fileMime.value = '';
-            elements.fileSize.value = '';
-            elements.fileModal.showModal();
-            elements.fileName.focus();
+        document.getElementById('addNoteButton').addEventListener('click', () => {
+            elements.noteModalTitle.textContent = 'Add note';
+            elements.noteTitle.value = '';
+            elements.noteText.value = '';
+            elements.noteMessageId.value = '';
+            elements.noteModal.showModal();
+            elements.noteTitle.focus();
         });
 
         document.getElementById('cancelFolder').addEventListener('click', () => {
             elements.folderModal.close();
         });
 
-        document.getElementById('cancelFile').addEventListener('click', () => {
-            elements.fileModal.close();
+        document.getElementById('cancelNote').addEventListener('click', () => {
+            elements.noteModal.close();
         });
 
         elements.folderForm.addEventListener('submit', event => {
             event.preventDefault();
-            const name = elements.folderName.value.trim();
-            if (!name) {
+            const name = elements.folderName.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+            if (!name) return;
+            if (folders.includes(name)) {
+                alert('Folder already exists.');
                 return;
             }
-            const id = crypto.randomUUID();
-            state.folders.push({
-                id,
-                name,
-                path: name,
-                files: []
-            });
-            state.selected = id;
-            saveState();
+            folders.push(name);
+            selectedFolder = name;
             elements.folderModal.close();
             render();
         });
 
-        elements.fileForm.addEventListener('submit', event => {
+        elements.noteForm.addEventListener('submit', async event => {
             event.preventDefault();
-            const folder = getSelectedFolder();
-            const name = elements.fileName.value.trim();
-            const mime = elements.fileMime.value.trim();
-            const size = Number(elements.fileSize.value);
-            if (!folder || !name || !mime || !size) {
+            const title = elements.noteTitle.value.trim();
+            const text = elements.noteText.value.trim();
+            const messageId = elements.noteMessageId.value;
+
+            if (!text) {
+                alert('Text cannot be empty.');
                 return;
             }
-            const now = Date.now();
-            const file = {
-                id: crypto.randomUUID(),
-                n: name,
-                p: folder.path,
-                fid: folder.id,
-                m: mime,
-                s: size,
-                h: simpleHash(name + size + now),
-                ct: now,
-                mt: now
-            };
-            folder.files.unshift(file);
-            saveState();
-            elements.fileModal.close();
-            render();
+
+            const finalText = formatNoteText(title, text, selectedFolder);
+
+            try {
+                if (messageId) {
+                    await client.editMessage('me', {
+                        message: parseInt(messageId),
+                        text: finalText
+                    });
+                } else {
+                    await client.sendMessage('me', { message: finalText });
+                }
+
+                elements.noteModal.close();
+                await loadMessages();
+                render();
+            } catch (error) {
+                alert('Failed to save note: ' + error.message);
+            }
         });
 
         document.getElementById('clearSelection').addEventListener('click', () => {
-            state.selected = 'general';
-            saveState();
+            selectedFolder = 'general';
             render();
         });
 
         document.getElementById('accountButton').addEventListener('click', () => {
-            if (state.connected) {
-                alert('Session active\nPhone: ' + (state.phone || '—') + '\nAPI ID: ' + state.apiId);
+            if (currentUser) {
+                alert(`Logged in as ${currentUser.firstName || ''} ${currentUser.lastName || ''} (@${currentUser.username || 'no username'})`);
             } else {
                 alert('Not connected.');
             }
         });
 
         document.getElementById('settingsButton').addEventListener('click', () => {
-            alert('Credentials and file metadata are stored only in this browser.');
+            alert('Settings: API credentials are stored locally. Session is encrypted with GramJS.');
         });
 
         document.getElementById('devicesButton').addEventListener('click', () => {
-            alert('Device manager (beta).');
+            alert('Active session is stored in this browser.');
         });
 
         document.getElementById('quickMenuButton').addEventListener('click', () => {
-            alert('Quick access menu.');
+            alert('Quick access: select a folder from the list.');
         });
 
         elements.mobileMenu.addEventListener('click', openSidebar);
@@ -1227,7 +1501,7 @@
             }
         });
 
-        render();
+        initClient();
     </script>
 </body>
 </html>
