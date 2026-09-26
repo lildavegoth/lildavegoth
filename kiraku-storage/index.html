@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="dark">
+    <title>Kiraku Storage</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+    <div class="app">
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="sidebar-button" id="accountButton" type="button" aria-label="Account">
+                    <i class="fa-solid fa-user"></i>
+                </button>
+                <button class="sidebar-button" id="settingsButton" type="button" aria-label="Settings">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+                <button class="sidebar-button" id="devicesButton" type="button" aria-label="Devices">
+                    <i class="fa-solid fa-desktop"></i>
+                </button>
+                <button class="version-button" type="button">
+                    v4.0
+                    <span class="version-dot"></span>
+                </button>
+            </div>
+
+            <button class="new-folder-button" id="newFolderButton" type="button" aria-label="New folder">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+
+            <div class="quick-access">
+                <h2 class="section-title">Folders</h2>
+                <button class="quick-menu" id="quickMenuButton" type="button" aria-label="Quick access menu">
+                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                </button>
+            </div>
+
+            <div class="folder-list" id="folderList"></div>
+
+            <div class="sidebar-separator"></div>
+
+            <span class="example-label">Organize with hashtags</span>
+
+            <div class="category-title">
+                <h2 class="section-title">Example</h2>
+            </div>
+
+            <div class="example-list">
+                <div class="example-folder">
+                    <i class="fa-solid fa-folder"></i>
+                    <span>#General</span>
+                </div>
+                <div class="example-folder">
+                    <i class="fa-solid fa-folder"></i>
+                    <span>#Work</span>
+                </div>
+                <div class="example-folder">
+                    <i class="fa-solid fa-folder"></i>
+                    <span>#Personal</span>
+                </div>
+                <div class="example-folder">
+                    <i class="fa-solid fa-folder"></i>
+                    <span>#Ideas</span>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <span>Selected folder</span>
+                <button class="clear-selection" id="clearSelection" type="button" aria-label="Clear selection">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <span id="selection"></span>
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="mobile-header">
+                <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Open menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <span class="mobile-title" id="mobileTitle">Kiraku Storage</span>
+            </header>
+
+            <section class="empty-state" id="emptyState">
+                <div class="empty-card">
+                    <div class="logo">KS</div>
+                    <h1>Kiraku Storage</h1>
+                    <p>Advanced Saved Messages organizer using real Telegram Cloud.</p>
+                    <button class="primary-button" id="connectButton" type="button">
+                        <i class="fa-brands fa-telegram"></i>
+                        Connect Telegram
+                    </button>
+                    <button class="secondary-button" id="guideButton" type="button">
+                        <i class="fa-solid fa-circle-info"></i>
+                        Guide
+                    </button>
+                    <small>Enter your Telegram API credentials and phone number. We never store passwords or codes. Session is stored locally in your browser.</small>
+                </div>
+            </section>
+
+            <section class="workspace hidden" id="workspace">
+                <header class="workspace-header">
+                    <div class="workspace-title">
+                        <h1 id="folderTitle">General</h1>
+                        <p id="folderMeta">Loading...</p>
+                    </div>
+                    <div class="workspace-actions">
+                        <button class="primary-button" id="addNoteButton" type="button">
+                            <i class="fa-solid fa-plus"></i>
+                            Add note
+                        </button>
+                        <button class="secondary-button" id="disconnectButton" type="button">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            Logout
+                        </button>
+                    </div>
+                </header>
+                <div class="items" id="items"></div>
+            </section>
+        </main>
+    </div>
+
+    <dialog class="modal" id="loginModal">
+        <form id="loginForm">
+            <h2 id="loginTitle">API credentials</h2>
+            <div class="login-hint" id="loginHint">Enter your api_id and api_hash from my.telegram.org</div>
+            <div class="login-error hidden" id="loginError"></div>
+            <input class="field" id="apiId" type="number" placeholder="API ID" autocomplete="off">
+            <input class="field" id="apiHash" type="text" placeholder="API Hash" autocomplete="off">
+            <input class="field hidden" id="phone" type="tel" placeholder="Phone (+62812...)" autocomplete="off">
+            <input class="field hidden" id="otp" type="text" placeholder="Login code" autocomplete="off">
+            <input class="field hidden" id="password" type="password" placeholder="2FA cloud password" autocomplete="off">
+            <div class="modal-actions">
+                <button type="button" id="cancelLogin">Cancel</button>
+                <button class="primary-button" type="submit" id="loginSubmit">Continue</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog class="modal" id="folderModal">
+        <form id="folderForm">
+            <h2>New folder</h2>
+            <input class="field" id="folderName" maxlength="40" placeholder="Folder name" autocomplete="off" required>
+            <div class="modal-actions">
+                <button type="button" id="cancelFolder">Cancel</button>
+                <button class="primary-button" type="submit">Create</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog class="modal" id="noteModal">
+        <form id="noteForm">
+            <h2 id="noteModalTitle">Add note</h2>
+            <input class="field" id="noteTitle" maxlength="80" placeholder="Title" autocomplete="off">
+            <textarea class="field" id="noteText" maxlength="5000" placeholder="Text" required></textarea>
+            <input type="hidden" id="noteMessageId">
+            <div class="modal-actions">
+                <button type="button" id="cancelNote">Cancel</button>
+                <button class="primary-button" type="submit">Save</button>
+            </div>
+        </form>
+    </dialog>
+
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" id="closePopupButton" type="button">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="popup-body" id="popupContent"></div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
