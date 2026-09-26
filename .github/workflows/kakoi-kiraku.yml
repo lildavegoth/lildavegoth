@@ -790,8 +790,20 @@ jobs:
         working-directory: gramjs-src
         run: NODE_ENV=production npx webpack
 
-      - name: Copy bundle to repo
-        run: cp gramjs-src/browser/telegram.js telegram.js
+      - name: Copy bundle and add global shim
+        run: |
+          if ! grep -q "TelegramClient" gramjs-src/browser/telegram.js; then
+            echo "Build failed: TelegramClient not found in webpack output"
+            exit 1
+          fi
+          cp gramjs-src/browser/telegram.js telegram.js
+          cat >> telegram.js << 'SHIM'
+          ;(function(g){
+            if (!g.telegram) g.telegram = {};
+            if (!g.gramjs) g.gramjs = g.telegram;
+            if (!g.TelegramClient && g.telegram.TelegramClient) g.TelegramClient = g.telegram.TelegramClient;
+          })(typeof self !== "undefined" ? self : this);
+          SHIM
 
       - name: Commit and push
         run: |
