@@ -772,7 +772,7 @@
                     <i class="fa-solid fa-desktop"></i>
                 </button>
                 <button class="version-button" type="button">
-                    v3.3
+                    v3.2
                     <span class="version-dot"></span>
                 </button>
             </div>
@@ -1024,21 +1024,26 @@
         }
 
         function getTg() {
-            const tg = window.telegram || window.gramjs;
-            if (!tg || !tg.TelegramClient) {
-                const details = 'window.telegram=' + typeof window.telegram + ', window.gramjs=' + typeof window.gramjs;
-                throw new Error('Telegram library is not loaded (' + details + ').');
+            if (window.telegram && window.telegram.TelegramClient) return window.telegram;
+            if (window.gramjs && window.gramjs.TelegramClient) return window.gramjs;
+            if (window.TelegramClient) {
+                return {
+                    TelegramClient: window.TelegramClient,
+                    Api: window.Api,
+                    sessions: window.sessions || (window.telegram && window.telegram.sessions),
+                    password: window.password || (window.telegram && window.telegram.password)
+                };
             }
-            return tg;
+            throw new Error('Telegram library is not loaded.');
         }
 
         function loadScriptOnce(src) {
             return new Promise((resolve, reject) => {
                 const script = document.createElement('script');
-                script.src = src + '?v=' + Date.now();
+                script.src = src;
                 script.async = true;
                 script.onload = () => resolve();
-                script.onerror = () => reject(new Error('Network error loading ' + src));
+                script.onerror = () => reject(new Error('Failed to load ' + src));
                 document.head.appendChild(script);
             });
         }
@@ -1051,22 +1056,30 @@
                 return telegramLoadPromise;
             }
             telegramLoadPromise = (async () => {
-                const sources = ['../telegram.js', './telegram.js', '/telegram.js'];
+                const sources = [
+                    '../telegram.js',
+                    './telegram.js',
+                    '/telegram.js',
+                    'https://cdn.jsdelivr.net/npm/telegram@2.26.22/browser/telegram.js',
+                    'https://unpkg.com/telegram@2.26.22/browser/telegram.js'
+                ];
                 const tried = [];
                 for (const src of sources) {
                     try {
                         await loadScriptOnce(src);
-                        if ((window.telegram && window.telegram.TelegramClient) || (window.gramjs && window.gramjs.TelegramClient)) {
+                        if ((window.telegram && window.telegram.TelegramClient) ||
+                            (window.gramjs && window.gramjs.TelegramClient) ||
+                            window.TelegramClient) {
                             telegramLoaded = true;
                             return;
                         }
-                        tried.push(src + ' (loaded but no global)');
+                        tried.push(src + ' (no global)');
                     } catch (error) {
                         tried.push(src + ' (' + error.message + ')');
                     }
                 }
                 telegramLoadPromise = null;
-                throw new Error('Could not load telegram.js. Tried: ' + tried.join(' | ') + '. Make sure telegram.js is at the repo root and is not empty.');
+                throw new Error('Could not load telegram.js. Tried: ' + tried.join(' | '));
             })();
             return telegramLoadPromise;
         }
