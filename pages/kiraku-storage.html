@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="dark">
     <title>Kiraku Storage | lildavegoth</title>
-    <script src="../protections.js"></script>
-    <script src="../notification.cssjs"></script>
-    <link rel="stylesheet" href="../media.css">
-    <script src="../ui-icons.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <style>
         :root {
@@ -37,8 +33,7 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        html,
-        body {
+        html, body {
             width: 100%;
             min-height: 100%;
         }
@@ -51,9 +46,7 @@
             padding-bottom: 90px;
         }
 
-        button,
-        input,
-        textarea {
+        button, input, textarea {
             font: inherit;
         }
 
@@ -675,12 +668,8 @@
         }
 
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         @media (max-width: 760px) {
@@ -776,7 +765,7 @@
                     <i class="fa-solid fa-desktop"></i>
                 </button>
                 <button class="version-button" type="button">
-                    v3.2
+                    v4.0
                     <span class="version-dot"></span>
                 </button>
             </div>
@@ -930,21 +919,25 @@
         </div>
     </div>
 
-    <script>
-        const sessionKey = 'kiraku-session';
-        const apiIdKey = 'kiraku-api-id';
-        const apiHashKey = 'kiraku-api-hash';
+    <script type="module">
+        import { TelegramClient } from 'telegram'
+        import { StringSession } from 'telegram/sessions'
+        import { PromisedWebSockets } from 'telegram/extensions/PromisedWebSockets'
+        import { Api } from 'telegram'
+        import { computeCheck } from 'telegram/Password'
 
-        let client = null;
-        let currentUser = null;
-        let messages = [];
-        let folders = ['general'];
-        let selectedFolder = 'general';
-        let phoneNumber = '';
-        let phoneCodeHash = '';
-        let currentStep = 'credentials';
-        let telegramLoaded = false;
-        let telegramLoadPromise = null;
+        const SESSION_KEY = 'kiraku-session'
+        const API_ID_KEY = 'kiraku-api-id'
+        const API_HASH_KEY = 'kiraku-api-hash'
+
+        let client = null
+        let currentUser = null
+        let messages = []
+        let folders = ['general']
+        let selectedFolder = 'general'
+        let phoneNumber = ''
+        let phoneCodeHash = ''
+        let currentStep = 'credentials'
 
         const elements = {
             sidebar: document.getElementById('sidebar'),
@@ -980,7 +973,7 @@
             universalPopup: document.getElementById('universalPopup'),
             popupTitle: document.getElementById('popupTitle'),
             popupContent: document.getElementById('popupContent')
-        };
+        }
 
         function escapeHtml(value) {
             return String(value).replace(/[&<>"']/g, character => {
@@ -990,194 +983,143 @@
                     '>': '&gt;',
                     '"': '&quot;',
                     "'": '&#039;'
-                };
-                return entities[character];
-            });
+                }
+                return entities[character]
+            })
         }
 
         function extractHashtags(text) {
-            const matches = text.match(/#[\w]+/g) || [];
-            return matches.map(tag => tag.substring(1).toLowerCase());
+            const matches = text.match(/#[\w]+/g) || []
+            return matches.map(tag => tag.substring(1).toLowerCase())
         }
 
         function getFolderFromText(text) {
-            const tags = extractHashtags(text);
+            const tags = extractHashtags(text)
             if (tags.length > 0) {
-                const knownFolder = folders.find(folder => folder !== 'general' && tags.includes(folder));
-                if (knownFolder) return knownFolder;
+                const knownFolder = folders.find(folder => folder !== 'general' && tags.includes(folder))
+                if (knownFolder) return knownFolder
             }
-            return 'general';
+            return 'general'
         }
 
         function getTitleAndBody(text) {
-            const lines = text.split('\n');
+            const lines = text.split('\n')
             if (lines.length > 1) {
-                const title = lines[0].replace(/^#\w+\s*/, '');
-                const body = lines.slice(1).join('\n');
-                return { title, body };
+                const title = lines[0].replace(/^#\w+\s*/, '')
+                const body = lines.slice(1).join('\n')
+                return { title, body }
             }
-            return { title: '', body: text.replace(/^#\w+\s*/, '') };
+            return { title: '', body: text.replace(/^#\w+\s*/, '') }
         }
 
         function formatNoteText(title, text, folder) {
-            let folderTag = '';
+            let folderTag = ''
             if (folder && folder !== 'general') {
-                folderTag = '#' + folder + ' ';
+                folderTag = '#' + folder + ' '
             }
-            return (title ? title + '\n' : '') + folderTag + (text || '');
-        }
-
-        function getTg() {
-            if (window.telegram && window.telegram.TelegramClient) {
-                return window.telegram;
-            }
-            if (window.gramjs && window.gramjs.TelegramClient) {
-                return window.gramjs;
-            }
-            if (window.TelegramClient) {
-                return {
-                    TelegramClient: window.TelegramClient,
-                    Api: window.Api || {},
-                    sessions: window.sessions || {},
-                    password: window.password || {}
-                };
-            }
-            throw new Error('Telegram library is not loaded.');
-        }
-
-        function loadScriptOnce(src) {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = src;
-                script.async = true;
-                script.onload = () => resolve();
-                script.onerror = () => reject(new Error('Failed to load ' + src));
-                document.head.appendChild(script);
-            });
-        }
-
-        function loadTelegramScript() {
-            if (telegramLoaded) {
-                return Promise.resolve();
-            }
-            if (telegramLoadPromise) {
-                return telegramLoadPromise;
-            }
-            telegramLoadPromise = (async () => {
-                const sources = [
-                    '../telegram.js',
-                    './telegram.js',
-                    '/telegram.js',
-                    'telegram.js'
-                ];
-                const tried = [];
-                for (const src of sources) {
-                    try {
-                        await loadScriptOnce(src);
-                        if ((window.telegram && window.telegram.TelegramClient) ||
-                            (window.gramjs && window.gramjs.TelegramClient) ||
-                            window.TelegramClient) {
-                            telegramLoaded = true;
-                            return;
-                        }
-                        tried.push(src + ' (no global)');
-                    } catch (error) {
-                        tried.push(src + ' (' + error.message + ')');
-                    }
-                }
-                telegramLoadPromise = null;
-                throw new Error('Could not load telegram.js. Tried: ' + tried.join(' | '));
-            })();
-            return telegramLoadPromise;
+            return (title ? title + '\n' : '') + folderTag + (text || '')
         }
 
         function showLoginError(message) {
-            elements.loginError.textContent = message;
-            elements.loginError.classList.remove('hidden');
+            elements.loginError.textContent = message
+            elements.loginError.classList.remove('hidden')
         }
 
         function clearLoginError() {
-            elements.loginError.textContent = '';
-            elements.loginError.classList.add('hidden');
+            elements.loginError.textContent = ''
+            elements.loginError.classList.add('hidden')
         }
 
         function setLoginStep(step) {
-            currentStep = step;
-            clearLoginError();
-            elements.apiId.classList.add('hidden');
-            elements.apiHash.classList.add('hidden');
-            elements.phone.classList.add('hidden');
-            elements.otp.classList.add('hidden');
-            elements.password.classList.add('hidden');
+            currentStep = step
+            clearLoginError()
+            elements.apiId.classList.add('hidden')
+            elements.apiHash.classList.add('hidden')
+            elements.phone.classList.add('hidden')
+            elements.otp.classList.add('hidden')
+            elements.password.classList.add('hidden')
 
             if (step === 'credentials') {
-                elements.loginTitle.textContent = 'API credentials';
-                elements.loginHint.textContent = 'Enter your api_id and api_hash from my.telegram.org';
-                elements.apiId.classList.remove('hidden');
-                elements.apiHash.classList.remove('hidden');
-                elements.apiId.focus();
+                elements.loginTitle.textContent = 'API credentials'
+                elements.loginHint.textContent = 'Enter your api_id and api_hash from my.telegram.org'
+                elements.apiId.classList.remove('hidden')
+                elements.apiHash.classList.remove('hidden')
+                elements.apiId.focus()
             } else if (step === 'phone') {
-                elements.loginTitle.textContent = 'Phone number';
-                elements.loginHint.textContent = 'Enter the phone number linked to your Telegram account';
-                elements.phone.classList.remove('hidden');
-                elements.phone.focus();
+                elements.loginTitle.textContent = 'Phone number'
+                elements.loginHint.textContent = 'Enter the phone number linked to your Telegram account'
+                elements.phone.classList.remove('hidden')
+                elements.phone.focus()
             } else if (step === 'otp') {
-                elements.loginTitle.textContent = 'Login code';
-                elements.loginHint.textContent = 'Enter the code sent to your Telegram app';
-                elements.otp.classList.remove('hidden');
-                elements.otp.focus();
+                elements.loginTitle.textContent = 'Login code'
+                elements.loginHint.textContent = 'Enter the code sent to your Telegram app'
+                elements.otp.classList.remove('hidden')
+                elements.otp.focus()
             } else if (step === 'password') {
-                elements.loginTitle.textContent = 'Two-step verification';
-                elements.loginHint.textContent = 'Enter your Telegram cloud password (2FA)';
-                elements.password.classList.remove('hidden');
-                elements.password.focus();
+                elements.loginTitle.textContent = 'Two-step verification'
+                elements.loginHint.textContent = 'Enter your Telegram cloud password (2FA)'
+                elements.password.classList.remove('hidden')
+                elements.password.focus()
             }
         }
 
         function openLoginModal() {
             if (!elements.loginModal.open) {
-                elements.loginModal.showModal();
+                elements.loginModal.showModal()
             }
         }
 
         function showLoginState() {
-            elements.emptyState.classList.remove('hidden');
-            elements.workspace.classList.add('hidden');
+            elements.emptyState.classList.remove('hidden')
+            elements.workspace.classList.add('hidden')
         }
 
         function showWorkspace() {
-            elements.emptyState.classList.add('hidden');
-            elements.workspace.classList.remove('hidden');
-            render();
+            elements.emptyState.classList.add('hidden')
+            elements.workspace.classList.remove('hidden')
+            render()
+        }
+
+        async function createClient(apiId, apiHash, sessionString = '') {
+            const session = new StringSession(sessionString || '')
+            client = new TelegramClient(session, Number(apiId), apiHash, {
+                connectionRetries: 5,
+                useWSS: true,
+                networkSocket: PromisedWebSockets
+            })
+            await client.connect()
+            return client
         }
 
         async function loadMessages() {
-            if (!client || !currentUser) return;
-            const result = await client.getMessages('me', { limit: 100 });
-            messages = result.filter(msg => msg.message && !msg.media).map(msg => ({
-                id: msg.id,
-                text: msg.message,
-                date: msg.date
-            }));
+            if (!client) return
+            const result = await client.getMessages('me', { limit: 100 })
+            messages = result
+                .filter(msg => msg.message && !msg.media)
+                .map(msg => ({
+                    id: msg.id,
+                    text: msg.message,
+                    date: msg.date
+                }))
 
-            const hashtags = new Set();
+            const hashtags = new Set()
             messages.forEach(msg => {
-                const tags = extractHashtags(msg.text);
-                tags.forEach(tag => hashtags.add(tag));
-            });
+                const tags = extractHashtags(msg.text)
+                tags.forEach(tag => hashtags.add(tag))
+            })
 
-            folders = ['general', ...Array.from(hashtags).filter(tag => tag !== 'general')];
+            folders = ['general', ...Array.from(hashtags).filter(tag => tag !== 'general')]
             if (!folders.includes(selectedFolder)) {
-                selectedFolder = 'general';
+                selectedFolder = 'general'
             }
-            render();
+            render()
         }
 
         function renderFolders() {
             elements.folderList.innerHTML = folders.map(folder => {
-                const active = folder === selectedFolder ? 'active' : '';
-                const count = messages.filter(msg => getFolderFromText(msg.text) === folder).length;
-                const countHtml = count ? `<span class="folder-count">${count}</span>` : '';
+                const active = folder === selectedFolder ? 'active' : ''
+                const count = messages.filter(msg => getFolderFromText(msg.text) === folder).length
+                const countHtml = count ? `<span class="folder-count">${count}</span>` : ''
                 return `
                     <button class="folder-item ${active}" type="button" data-folder="${folder}">
                         <span class="folder-icon">
@@ -1186,28 +1128,28 @@
                         <span class="folder-name">${escapeHtml(folder.charAt(0).toUpperCase() + folder.slice(1))}</span>
                         ${countHtml}
                     </button>
-                `;
-            }).join('');
+                `
+            }).join('')
 
             elements.folderList.querySelectorAll('[data-folder]').forEach(button => {
                 button.addEventListener('click', () => {
-                    selectedFolder = button.dataset.folder;
-                    render();
-                    closeSidebar();
-                });
-            });
+                    selectedFolder = button.dataset.folder
+                    render()
+                    closeSidebar()
+                })
+            })
 
-            elements.selection.textContent = selectedFolder.charAt(0).toUpperCase() + selectedFolder.slice(1);
+            elements.selection.textContent = selectedFolder.charAt(0).toUpperCase() + selectedFolder.slice(1)
         }
 
         function renderWorkspace() {
-            const folderMessages = messages.filter(msg => getFolderFromText(msg.text) === selectedFolder);
+            const folderMessages = messages.filter(msg => getFolderFromText(msg.text) === selectedFolder)
 
-            elements.folderTitle.textContent = selectedFolder.charAt(0).toUpperCase() + selectedFolder.slice(1);
-            elements.mobileTitle.textContent = selectedFolder.charAt(0).toUpperCase() + selectedFolder.slice(1);
+            elements.folderTitle.textContent = selectedFolder.charAt(0).toUpperCase() + selectedFolder.slice(1)
+            elements.mobileTitle.textContent = selectedFolder.charAt(0).toUpperCase() + selectedFolder.slice(1)
             elements.folderMeta.textContent = folderMessages.length
                 ? `${folderMessages.length} item${folderMessages.length === 1 ? '' : 's'}`
-                : 'Empty';
+                : 'Empty'
 
             if (!folderMessages.length) {
                 elements.items.innerHTML = `
@@ -1215,12 +1157,12 @@
                         <i class="fa-regular fa-folder-open"></i>
                         <div>No saved messages in this folder.</div>
                     </div>
-                `;
-                return;
+                `
+                return
             }
 
             elements.items.innerHTML = folderMessages.map(msg => {
-                const { title, body } = getTitleAndBody(msg.text);
+                const { title, body } = getTitleAndBody(msg.text)
                 return `
                     <article class="item">
                         ${title ? `<div class="item-title">${escapeHtml(title)}</div>` : ''}
@@ -1236,53 +1178,53 @@
                             </button>
                         </div>
                     </article>
-                `;
-            }).join('');
+                `
+            }).join('')
 
             elements.items.querySelectorAll('.edit-button').forEach(button => {
                 button.addEventListener('click', () => {
-                    const messageId = Number(button.dataset.messageId);
-                    const msg = messages.find(m => m.id === messageId);
+                    const messageId = Number(button.dataset.messageId)
+                    const msg = messages.find(m => m.id === messageId)
                     if (msg) {
-                        const { title, body } = getTitleAndBody(msg.text);
-                        elements.noteModalTitle.textContent = 'Edit note';
-                        elements.noteTitle.value = title;
-                        elements.noteText.value = body;
-                        elements.noteMessageId.value = messageId;
-                        elements.noteModal.showModal();
+                        const { title, body } = getTitleAndBody(msg.text)
+                        elements.noteModalTitle.textContent = 'Edit note'
+                        elements.noteTitle.value = title
+                        elements.noteText.value = body
+                        elements.noteMessageId.value = messageId
+                        elements.noteModal.showModal()
                     }
-                });
-            });
+                })
+            })
 
             elements.items.querySelectorAll('.delete-button').forEach(button => {
                 button.addEventListener('click', async () => {
-                    const messageId = Number(button.dataset.messageId);
+                    const messageId = Number(button.dataset.messageId)
                     if (confirm('Delete this message?')) {
                         try {
-                            await client.deleteMessages('me', [messageId], { revoke: true });
-                            messages = messages.filter(m => m.id !== messageId);
-                            render();
+                            await client.deleteMessages('me', [messageId], { revoke: true })
+                            messages = messages.filter(m => m.id !== messageId)
+                            render()
                         } catch (error) {
-                            alert('Failed to delete message: ' + (error.message || error));
+                            alert('Failed to delete message: ' + (error.message || error))
                         }
                     }
-                });
-            });
+                })
+            })
         }
 
         function render() {
-            renderFolders();
-            renderWorkspace();
+            renderFolders()
+            renderWorkspace()
         }
 
         function closeSidebar() {
-            elements.sidebar.classList.remove('open');
-            elements.sidebarOverlay.classList.remove('open');
+            elements.sidebar.classList.remove('open')
+            elements.sidebarOverlay.classList.remove('open')
         }
 
         function openSidebar() {
-            elements.sidebar.classList.add('open');
-            elements.sidebarOverlay.classList.add('open');
+            elements.sidebar.classList.add('open')
+            elements.sidebarOverlay.classList.add('open')
         }
 
         function openGuidePopup() {
@@ -1313,315 +1255,277 @@
                     <li>Your API credentials and session are stored only in your browser.</li>
                     <li>Never share your API credentials or session with anyone.</li>
                 </ul>
-            `;
-            elements.popupTitle.textContent = 'Guide';
-            elements.popupContent.innerHTML = guideHTML;
-            elements.universalPopup.style.display = 'flex';
+            `
+            elements.popupTitle.textContent = 'Guide'
+            elements.popupContent.innerHTML = guideHTML
+            elements.universalPopup.style.display = 'flex'
         }
 
         function closeUniversalPopup() {
-            elements.universalPopup.style.display = 'none';
-        }
-
-        async function sendCodeRequest() {
-            const tg = getTg();
-            const apiId = parseInt(localStorage.getItem(apiIdKey));
-            const apiHash = localStorage.getItem(apiHashKey);
-            const session = new tg.sessions.StringSession('');
-
-            client = new tg.TelegramClient(session, apiId, apiHash, { connectionRetries: 3 });
-            await client.connect();
-
-            const result = await client.invoke(new tg.Api.auth.SendCode({
-                phoneNumber: phoneNumber,
-                apiId: apiId,
-                apiHash: apiHash,
-                settings: new tg.Api.CodeSettings({})
-            }));
-
-            phoneCodeHash = result.phoneCodeHash;
-        }
-
-        async function submitOtpCode(code) {
-            const tg = getTg();
-            await client.invoke(new tg.Api.auth.SignIn({
-                phoneNumber: phoneNumber,
-                phoneCodeHash: phoneCodeHash,
-                phoneCode: code
-            }));
-        }
-
-        async function submitTwoFactor(password) {
-            const tg = getTg();
-            const pwd = await client.invoke(new tg.Api.account.GetPassword());
-            const computeCheck = tg.password && tg.password.computeCheck ? tg.password.computeCheck : null;
-            if (!computeCheck) {
-                throw new Error('2FA helper not available in this Telegram bundle.');
-            }
-            const check = await computeCheck(pwd, password);
-            await client.invoke(new tg.Api.auth.CheckPassword({ password: check }));
+            elements.universalPopup.style.display = 'none'
         }
 
         async function afterLoginSuccess() {
-            const session = client.session.save();
-            localStorage.setItem(sessionKey, session);
-            currentUser = await client.getMe();
-            await loadMessages();
+            const session = client.session.save()
+            localStorage.setItem(SESSION_KEY, session)
+            currentUser = await client.getMe()
+            await loadMessages()
             if (elements.loginModal.open) {
-                elements.loginModal.close();
+                elements.loginModal.close()
             }
-            showWorkspace();
+            showWorkspace()
         }
 
         async function initClient() {
-            const session = localStorage.getItem(sessionKey);
-            if (!session) {
-                showLoginState();
-                return;
+            const apiId = localStorage.getItem(API_ID_KEY)
+            const apiHash = localStorage.getItem(API_HASH_KEY)
+            const session = localStorage.getItem(SESSION_KEY)
+
+            if (!apiId || !apiHash || !session) {
+                showLoginState()
+                return
             }
-            const apiId = parseInt(localStorage.getItem(apiIdKey));
-            const apiHash = localStorage.getItem(apiHashKey);
-            if (!apiId || !apiHash) {
-                localStorage.removeItem(sessionKey);
-                showLoginState();
-                return;
-            }
+
             try {
-                await loadTelegramScript();
-                const tg = getTg();
-                client = new tg.TelegramClient(new tg.sessions.StringSession(session), apiId, apiHash, { connectionRetries: 2 });
-                await client.connect();
-                currentUser = await client.getMe();
-                await loadMessages();
-                showWorkspace();
+                await createClient(apiId, apiHash, session)
+                currentUser = await client.getMe()
+                await loadMessages()
+                showWorkspace()
             } catch (error) {
-                localStorage.removeItem(sessionKey);
-                showLoginState();
+                localStorage.removeItem(SESSION_KEY)
+                showLoginState()
             }
         }
 
         document.getElementById('connectButton').addEventListener('click', () => {
-            clearLoginError();
-            const savedApiId = localStorage.getItem(apiIdKey);
-            const savedApiHash = localStorage.getItem(apiHashKey);
-            if (savedApiId) elements.apiId.value = savedApiId;
-            if (savedApiHash) elements.apiHash.value = savedApiHash;
-            setLoginStep('credentials');
-            openLoginModal();
-        });
+            clearLoginError()
+            const savedApiId = localStorage.getItem(API_ID_KEY)
+            const savedApiHash = localStorage.getItem(API_HASH_KEY)
+            if (savedApiId) elements.apiId.value = savedApiId
+            if (savedApiHash) elements.apiHash.value = savedApiHash
+            setLoginStep('credentials')
+            openLoginModal()
+        })
 
-        document.getElementById('guideButton').addEventListener('click', openGuidePopup);
-        document.getElementById('closePopupButton').addEventListener('click', closeUniversalPopup);
+        document.getElementById('guideButton').addEventListener('click', openGuidePopup)
+        document.getElementById('closePopupButton').addEventListener('click', closeUniversalPopup)
 
         document.getElementById('cancelLogin').addEventListener('click', () => {
-            if (client) {
-                try {
-                    client.disconnect();
-                } catch (error) {
-                }
-                client = null;
-            }
-            phoneCodeHash = '';
-            elements.loginModal.close();
-        });
+            phoneCodeHash = ''
+            elements.loginModal.close()
+        })
 
         elements.loginForm.addEventListener('submit', async event => {
-            event.preventDefault();
-            clearLoginError();
+            event.preventDefault()
+            clearLoginError()
 
             if (currentStep === 'credentials') {
-                const id = elements.apiId.value.trim();
-                const hash = elements.apiHash.value.trim();
+                const id = elements.apiId.value.trim()
+                const hash = elements.apiHash.value.trim()
                 if (!id || !hash) {
-                    showLoginError('API ID and API Hash are required.');
-                    return;
+                    showLoginError('API ID and API Hash are required.')
+                    return
                 }
-                localStorage.setItem(apiIdKey, id);
-                localStorage.setItem(apiHashKey, hash);
-                setLoginStep('phone');
-                return;
+                localStorage.setItem(API_ID_KEY, id)
+                localStorage.setItem(API_HASH_KEY, hash)
+                setLoginStep('phone')
+                return
             }
 
             if (currentStep === 'phone') {
-                const phone = elements.phone.value.trim();
+                const phone = elements.phone.value.trim()
                 if (!phone) {
-                    showLoginError('Phone number is required.');
-                    return;
+                    showLoginError('Phone number is required.')
+                    return
                 }
-                phoneNumber = phone;
-                elements.loginHint.textContent = 'Sending code... please wait.';
+                phoneNumber = phone
+                elements.loginHint.textContent = 'Sending code... please wait.'
                 try {
-                    await loadTelegramScript();
-                    await sendCodeRequest();
-                    setLoginStep('otp');
+                    const apiId = localStorage.getItem(API_ID_KEY)
+                    const apiHash = localStorage.getItem(API_HASH_KEY)
+                    await createClient(apiId, apiHash)
+                    const result = await client.invoke(new Api.auth.SendCode({
+                        phoneNumber: phone,
+                        apiId: Number(apiId),
+                        apiHash,
+                        settings: new Api.CodeSettings({})
+                    }))
+                    phoneCodeHash = result.phoneCodeHash
+                    setLoginStep('otp')
                 } catch (error) {
-                    const msg = error.errorMessage || error.message || String(error);
-                    showLoginError('Failed to send code: ' + msg);
-                    elements.loginHint.textContent = 'Enter the phone number linked to your Telegram account';
+                    const msg = error.errorMessage || error.message || String(error)
+                    showLoginError('Failed to send code: ' + msg)
+                    elements.loginHint.textContent = 'Enter the phone number linked to your Telegram account'
                 }
-                return;
+                return
             }
 
             if (currentStep === 'otp') {
-                const code = elements.otp.value.trim();
+                const code = elements.otp.value.trim()
                 if (!code) {
-                    showLoginError('Login code is required.');
-                    return;
+                    showLoginError('Login code is required.')
+                    return
                 }
-                elements.loginHint.textContent = 'Verifying code...';
+                elements.loginHint.textContent = 'Verifying code...'
                 try {
-                    await submitOtpCode(code);
-                    await afterLoginSuccess();
+                    await client.invoke(new Api.auth.SignIn({
+                        phoneNumber: phoneNumber,
+                        phoneCodeHash: phoneCodeHash,
+                        phoneCode: code
+                    }))
+                    await afterLoginSuccess()
                 } catch (error) {
-                    const msg = error.errorMessage || error.message || String(error);
-                    if (msg.indexOf('SESSION_PASSWORD_NEEDED') !== -1) {
-                        setLoginStep('password');
+                    const msg = error.errorMessage || error.message || String(error)
+                    if (msg.includes('SESSION_PASSWORD_NEEDED')) {
+                        setLoginStep('password')
                     } else {
-                        showLoginError('Login failed: ' + msg);
-                        elements.loginHint.textContent = 'Enter the code sent to your Telegram app';
+                        showLoginError('Login failed: ' + msg)
+                        elements.loginHint.textContent = 'Enter the code sent to your Telegram app'
                     }
                 }
-                return;
+                return
             }
 
             if (currentStep === 'password') {
-                const pwd = elements.password.value;
+                const pwd = elements.password.value
                 if (!pwd) {
-                    showLoginError('Cloud password is required.');
-                    return;
+                    showLoginError('Cloud password is required.')
+                    return
                 }
-                elements.loginHint.textContent = 'Verifying password...';
+                elements.loginHint.textContent = 'Verifying password...'
                 try {
-                    await submitTwoFactor(pwd);
-                    await afterLoginSuccess();
+                    const password = await client.invoke(new Api.account.GetPassword())
+                    const check = await computeCheck(password, pwd)
+                    await client.invoke(new Api.auth.CheckPassword({ password: check }))
+                    await afterLoginSuccess()
                 } catch (error) {
-                    const msg = error.errorMessage || error.message || String(error);
-                    showLoginError('Password failed: ' + msg);
-                    elements.loginHint.textContent = 'Enter your Telegram cloud password (2FA)';
+                    const msg = error.errorMessage || error.message || String(error)
+                    showLoginError('Password failed: ' + msg)
+                    elements.loginHint.textContent = 'Enter your Telegram cloud password (2FA)'
                 }
             }
-        });
+        })
 
         document.getElementById('disconnectButton').addEventListener('click', async () => {
             if (client) {
                 try {
-                    await client.disconnect();
-                } catch (error) {
-                }
-                client = null;
+                    await client.disconnect()
+                } catch (e) {}
+                client = null
             }
-            localStorage.removeItem(sessionKey);
-            messages = [];
-            folders = ['general'];
-            selectedFolder = 'general';
-            phoneCodeHash = '';
-            phoneNumber = '';
-            showLoginState();
-        });
+            localStorage.removeItem(SESSION_KEY)
+            messages = []
+            folders = ['general']
+            selectedFolder = 'general'
+            phoneCodeHash = ''
+            phoneNumber = ''
+            currentUser = null
+            showLoginState()
+        })
 
         document.getElementById('newFolderButton').addEventListener('click', () => {
-            elements.folderName.value = '';
-            elements.folderModal.showModal();
-            elements.folderName.focus();
-        });
+            elements.folderName.value = ''
+            elements.folderModal.showModal()
+            elements.folderName.focus()
+        })
 
         document.getElementById('addNoteButton').addEventListener('click', () => {
-            elements.noteModalTitle.textContent = 'Add note';
-            elements.noteTitle.value = '';
-            elements.noteText.value = '';
-            elements.noteMessageId.value = '';
-            elements.noteModal.showModal();
-            elements.noteTitle.focus();
-        });
+            elements.noteModalTitle.textContent = 'Add note'
+            elements.noteTitle.value = ''
+            elements.noteText.value = ''
+            elements.noteMessageId.value = ''
+            elements.noteModal.showModal()
+            elements.noteTitle.focus()
+        })
 
         document.getElementById('cancelFolder').addEventListener('click', () => {
-            elements.folderModal.close();
-        });
+            elements.folderModal.close()
+        })
 
         document.getElementById('cancelNote').addEventListener('click', () => {
-            elements.noteModal.close();
-        });
+            elements.noteModal.close()
+        })
 
         elements.folderForm.addEventListener('submit', event => {
-            event.preventDefault();
-            const name = elements.folderName.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-            if (!name) return;
+            event.preventDefault()
+            const name = elements.folderName.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '')
+            if (!name) return
             if (folders.includes(name)) {
-                alert('Folder already exists.');
-                return;
+                alert('Folder already exists.')
+                return
             }
-            folders.push(name);
-            selectedFolder = name;
-            elements.folderModal.close();
-            render();
-        });
+            folders.push(name)
+            selectedFolder = name
+            elements.folderModal.close()
+            render()
+        })
 
         elements.noteForm.addEventListener('submit', async event => {
-            event.preventDefault();
-            const title = elements.noteTitle.value.trim();
-            const text = elements.noteText.value.trim();
-            const messageId = elements.noteMessageId.value;
+            event.preventDefault()
+            const title = elements.noteTitle.value.trim()
+            const text = elements.noteText.value.trim()
+            const messageId = elements.noteMessageId.value
 
             if (!text) {
-                alert('Text cannot be empty.');
-                return;
+                alert('Text cannot be empty.')
+                return
             }
 
-            const finalText = formatNoteText(title, text, selectedFolder);
+            const finalText = formatNoteText(title, text, selectedFolder)
 
             try {
                 if (messageId) {
                     await client.editMessage('me', {
                         message: parseInt(messageId),
                         text: finalText
-                    });
+                    })
                 } else {
-                    await client.sendMessage('me', { message: finalText });
+                    await client.sendMessage('me', { message: finalText })
                 }
 
-                elements.noteModal.close();
-                await loadMessages();
-                render();
+                elements.noteModal.close()
+                await loadMessages()
+                render()
             } catch (error) {
-                alert('Failed to save note: ' + (error.message || error));
+                alert('Failed to save note: ' + (error.message || error))
             }
-        });
+        })
 
         document.getElementById('clearSelection').addEventListener('click', () => {
-            selectedFolder = 'general';
-            render();
-        });
+            selectedFolder = 'general'
+            render()
+        })
 
         document.getElementById('accountButton').addEventListener('click', () => {
             if (currentUser) {
-                alert('Logged in as ' + (currentUser.firstName || '') + ' ' + (currentUser.lastName || '') + ' (@' + (currentUser.username || 'no username') + ')');
+                alert('Logged in as ' + (currentUser.firstName || '') + ' ' + (currentUser.lastName || '') + ' (@' + (currentUser.username || 'no username') + ')')
             } else {
-                alert('Not connected.');
+                alert('Not connected.')
             }
-        });
+        })
 
         document.getElementById('settingsButton').addEventListener('click', () => {
-            alert('Settings: API credentials are stored locally. Session is encrypted with GramJS.');
-        });
+            alert('Settings: API credentials are stored locally. Session is stored in your browser.')
+        })
 
         document.getElementById('devicesButton').addEventListener('click', () => {
-            alert('Active session is stored in this browser.');
-        });
+            alert('Active session is stored in this browser.')
+        })
 
         document.getElementById('quickMenuButton').addEventListener('click', () => {
-            alert('Quick access: select a folder from the list.');
-        });
+            alert('Quick access: select a folder from the list.')
+        })
 
-        elements.mobileMenu.addEventListener('click', openSidebar);
-        elements.sidebarOverlay.addEventListener('click', closeSidebar);
+        elements.mobileMenu.addEventListener('click', openSidebar)
+        elements.sidebarOverlay.addEventListener('click', closeSidebar)
 
         window.addEventListener('resize', () => {
             if (window.innerWidth > 760) {
-                closeSidebar();
+                closeSidebar()
             }
-        });
+        })
 
-        initClient();
+        initClient()
     </script>
 </body>
 </html>
