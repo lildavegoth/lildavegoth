@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="color-scheme" content="dark">
-    <title>Cloud Storage</title>
+    <title>Cloud Storage • File Manager</title>
     <script src="../protections.js"></script>
     <script src="../notification.cssjs"></script>
     <link rel="stylesheet" href="../media.css">
     <script src="../ui-icons.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -54,8 +55,14 @@
 
         h1 {
             font-size: 28px;
-            margin-bottom: var(--spacing-md);
+            margin-bottom: var(--spacing-xs);
             color: var(--accent-color);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: var(--spacing-md);
         }
 
         .toolbar {
@@ -63,6 +70,7 @@
             gap: var(--spacing-sm);
             margin-bottom: var(--spacing-md);
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .btn {
@@ -74,10 +82,16 @@
             font-weight: 600;
             cursor: pointer;
             font-size: 14px;
+            white-space: nowrap;
         }
 
         .btn:hover {
             background: var(--accent-dark);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .btn-secondary {
@@ -86,15 +100,26 @@
             border: 1px solid var(--text-secondary);
         }
 
+        .btn-danger {
+            background: transparent;
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+        }
+
         .search-box {
             flex: 1;
-            min-width: 200px;
+            min-width: 180px;
             background: var(--bg-dark);
-            border: 1px solid var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.1);
             color: var(--text-primary);
             padding: 12px 16px;
             border-radius: var(--radius-small);
             font-size: 14px;
+            outline: none;
+        }
+
+        .search-box:focus {
+            border-color: var(--accent-color);
         }
 
         .table-wrap {
@@ -102,57 +127,64 @@
             background: var(--bg-card);
             border-radius: var(--radius-medium);
             padding: var(--spacing-sm);
+            backdrop-filter: blur(10px);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 700px;
         }
 
         th, td {
-            padding: 12px 16px;
+            padding: 14px 16px;
             text-align: left;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
 
         th {
             color: var(--accent-color);
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         td {
             color: var(--text-primary);
             font-size: 14px;
+            vertical-align: middle;
         }
 
-        tr:hover {
-            background: rgba(193, 252, 50, 0.05);
+        tr:hover td {
+            background: rgba(193, 252, 50, 0.04);
         }
 
         .type-badge {
             display: inline-block;
-            padding: 4px 10px;
+            padding: 4px 12px;
             border-radius: 20px;
             font-size: 12px;
-            background: var(--bg-dark);
+            font-weight: 500;
+            background: rgba(193, 252, 50, 0.12);
             color: var(--accent-color);
         }
 
         .actions {
             display: flex;
-            gap: 8px;
+            gap: 6px;
+            flex-wrap: wrap;
         }
 
         .action-btn {
             background: transparent;
-            border: 1px solid var(--text-secondary);
+            border: 1px solid rgba(255,255,255,0.15);
             color: var(--text-secondary);
-            padding: 6px 10px;
+            padding: 6px 12px;
             border-radius: 8px;
             cursor: pointer;
             font-size: 12px;
+            transition: all 0.15s;
         }
 
         .action-btn:hover {
@@ -160,9 +192,15 @@
             color: var(--accent-color);
         }
 
+        .action-btn.danger:hover {
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+
         .pagination {
             display: flex;
             justify-content: center;
+            align-items: center;
             gap: var(--spacing-sm);
             margin-top: var(--spacing-md);
         }
@@ -180,10 +218,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 100;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
             align-items: center;
             justify-content: center;
+            padding: 20px;
         }
 
         .modal.active {
@@ -194,76 +233,187 @@
             background: var(--bg-dark);
             padding: var(--spacing-lg);
             border-radius: var(--radius-medium);
-            max-width: 400px;
-            width: 90%;
+            max-width: 440px;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.08);
         }
 
         .modal-content h2 {
             margin-bottom: var(--spacing-sm);
             color: var(--accent-color);
+            font-size: 20px;
         }
 
-        .modal-content input, .modal-content textarea {
+        .modal-content label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            margin-top: 12px;
+        }
+
+        .modal-content input,
+        .modal-content textarea {
             width: 100%;
             background: var(--bg-black);
-            border: 1px solid var(--text-secondary);
+            border: 1px solid rgba(255,255,255,0.12);
             color: var(--text-primary);
-            padding: 12px;
+            padding: 12px 14px;
             border-radius: var(--radius-small);
-            margin-bottom: var(--spacing-sm);
             font-size: 14px;
+            outline: none;
             resize: none;
+        }
+
+        .modal-content input:focus,
+        .modal-content textarea:focus {
+            border-color: var(--accent-color);
         }
 
         .modal-actions {
             display: flex;
             gap: var(--spacing-sm);
             justify-content: flex-end;
+            margin-top: var(--spacing-md);
+        }
+
+        .status {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .status.error {
+            color: #ff6b6b;
+        }
+
+        .status.ok {
+            color: var(--accent-color);
+        }
+
+        .login-box {
+            max-width: 400px;
+            margin: 80px auto;
+            background: var(--bg-card);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-medium);
+            text-align: center;
+        }
+
+        .login-box h2 {
+            color: var(--accent-color);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .login-box p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .login-box input {
+            width: 100%;
+            background: var(--bg-black);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: var(--text-primary);
+            padding: 14px;
+            border-radius: var(--radius-small);
+            font-size: 16px;
+            margin-bottom: var(--spacing-sm);
+            text-align: center;
+            outline: none;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        a.source-link {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        a.source-link:hover {
+            text-decoration: underline;
+        }
+
+        .name-cell {
+            font-weight: 500;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .caption-cell {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-secondary);
+            font-size: 13px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Cloud Storage</h1>
-        <div class="toolbar">
-            <button class="btn" onclick="openUpload()">➕ Add/Upload</button>
-            <input type="text" class="search-box" id="searchInput" placeholder="Search files..." oninput="filterTable()">
-            <button class="btn btn-secondary" onclick="prevPage()">⬅️ Previous</button>
-            <button class="btn btn-secondary" onclick="nextPage()">Next ➡️</button>
+        <div id="loginScreen" class="login-box">
+            <h2>Cloud Storage</h2>
+            <p>Enter your Telegram ID to load your files, or open this page inside the Telegram Mini App.</p>
+            <input type="number" id="tgIdInput" placeholder="Your Telegram ID">
+            <button class="btn" style="width:100%" onclick="loginWithId()">Load My Files</button>
+            <p style="margin-top:16px;font-size:12px">Tip: open /cloud in the bot then use the web link from Mini App for automatic login.</p>
         </div>
-        <div class="table-wrap">
-            <table id="filesTable">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Caption</th>
-                        <th>Source</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <tr>
-                        <td colspan="6" class="empty">Connect via Telegram Mini App or load your files. Use /cloud in the bot to manage.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="pagination">
-            <span id="pageInfo">Page 1</span>
+
+        <div id="appScreen" class="hidden">
+            <h1>Cloud Storage</h1>
+            <div class="subtitle">File Manager • synced with your bot</div>
+            <div class="status" id="statusBar">Loading…</div>
+
+            <div class="toolbar">
+                <button class="btn" onclick="openUpload()">➕ Add / Upload Note</button>
+                <input type="text" class="search-box" id="searchInput" placeholder="Search name or caption…" oninput="onSearch()">
+                <button class="btn btn-secondary" id="prevBtn" onclick="prevPage()">⬅️ Previous</button>
+                <button class="btn btn-secondary" id="nextBtn" onclick="nextPage()">Next ➡️</button>
+                <button class="btn btn-secondary" onclick="loadFiles()">↻ Refresh</button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Caption</th>
+                            <th>Source</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="6" class="empty">Loading files…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination">
+                <span id="pageInfo">Page 1</span>
+            </div>
         </div>
     </div>
 
     <div class="modal" id="uploadModal">
         <div class="modal-content">
-            <h2>Upload Note</h2>
-            <input type="text" id="noteName" placeholder="Name">
-            <textarea id="noteCaption" rows="4" placeholder="Caption / Note content"></textarea>
-            <input type="text" id="noteSource" placeholder="Source Link (optional)">
+            <h2>Add Note</h2>
+            <label>Name (first line becomes name)</label>
+            <input type="text" id="noteName" placeholder="File name">
+            <label>Caption / Note content</label>
+            <textarea id="noteCaption" rows="4" placeholder="Write your note here…"></textarea>
+            <label>Source Link (optional, last line)</label>
+            <input type="text" id="noteSource" placeholder="https://…">
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button class="btn" onclick="saveNote()">Save</button>
+                <button class="btn btn-secondary" onclick="closeModals()">Cancel</button>
+                <button class="btn" id="saveNoteBtn" onclick="saveNote()">Save to Cloud</button>
             </div>
         </div>
     </div>
@@ -271,134 +421,287 @@
     <div class="modal" id="editModal">
         <div class="modal-content">
             <h2 id="editTitle">Edit</h2>
+            <label id="editLabel">Value</label>
             <input type="text" id="editValue" placeholder="">
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button class="btn" onclick="saveEdit()">Save</button>
+                <button class="btn btn-secondary" onclick="closeModals()">Cancel</button>
+                <button class="btn" id="saveEditBtn" onclick="saveEdit()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <h2>Delete File?</h2>
+            <p style="color:var(--text-secondary);font-size:14px;margin:12px 0" id="confirmText">This cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModals()">Cancel</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDelete()">Delete</button>
             </div>
         </div>
     </div>
 
     <script>
+        const SUPABASE_URL = (typeof process !== "undefined" && process.env && process.env.SUPABASE_URL) || (window.ENV && window.ENV.SUPABASE_URL) || "";
+        const SUPABASE_ANON_KEY = (typeof process !== "undefined" && process.env && process.env.SUPABASE_ANON_KEY) || (window.ENV && window.ENV.SUPABASE_ANON_KEY) || "";
+
+        const PAGE_SIZE = 20;
+        let supabase = null;
+        let userId = null;
         let currentPage = 0;
-        let allFiles = [];
+        let totalCount = 0;
+        let searchQuery = "";
         let editId = null;
         let editField = null;
+        let deleteId = null;
+        let searchTimer = null;
 
-        function openUpload() {
-            document.getElementById("uploadModal").classList.add("active");
+        function initSupabase() {
+            if (SUPABASE_URL.includes("YOUR_") || SUPABASE_ANON_KEY.includes("YOUR_")) {
+                setStatus("Replace YOUR_SUPABASE_URL and YOUR_SUPABASE_ANON_KEY in the HTML source.", true);
+                return false;
+            }
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            return true;
         }
 
-        function closeModal() {
-            document.getElementById("uploadModal").classList.remove("active");
-            document.getElementById("editModal").classList.remove("active");
+        function setStatus(msg, isError) {
+            const el = document.getElementById("statusBar");
+            el.textContent = msg;
+            el.className = "status" + (isError ? " error" : " ok");
         }
 
-        function saveNote() {
-            const name = document.getElementById("noteName").value.trim() || "Note";
-            const caption = document.getElementById("noteCaption").value.trim();
-            const source = document.getElementById("noteSource").value.trim();
-            allFiles.unshift({
-                id: Date.now(),
-                name,
-                type: "note",
-                caption,
-                source_link: source
-            });
-            renderTable();
-            closeModal();
-            document.getElementById("noteName").value = "";
-            document.getElementById("noteCaption").value = "";
-            document.getElementById("noteSource").value = "";
+        function detectTelegram() {
+            try {
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                    return window.Telegram.WebApp.initDataUnsafe.user.id;
+                }
+            } catch (e) {}
+            return null;
         }
 
-        function filterTable() {
-            renderTable();
+        function loginWithId() {
+            const val = document.getElementById("tgIdInput").value.trim();
+            if (!val || isNaN(val)) {
+                alert("Enter a valid Telegram ID");
+                return;
+            }
+            userId = parseInt(val, 10);
+            startApp();
+        }
+
+        function startApp() {
+            if (!initSupabase()) return;
+            document.getElementById("loginScreen").classList.add("hidden");
+            document.getElementById("appScreen").classList.remove("hidden");
+            loadFiles();
+        }
+
+        async function loadFiles() {
+            if (!supabase || !userId) return;
+            setStatus("Loading…");
+            let query = supabase
+                .from("cloud_files")
+                .select("*", { count: "exact" })
+                .eq("user_id", userId)
+                .order("created_at", { ascending: false })
+                .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
+
+            if (searchQuery) {
+                query = query.or(`name.ilike.%${searchQuery}%,caption.ilike.%${searchQuery}%`);
+            }
+
+            const { data, error, count } = await query;
+            if (error) {
+                setStatus("Failed to load: " + error.message, true);
+                document.getElementById("tableBody").innerHTML = '<tr><td colspan="6" class="empty">Error loading files</td></tr>';
+                return;
+            }
+
+            totalCount = count || 0;
+            const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+            if (currentPage >= totalPages) currentPage = Math.max(0, totalPages - 1);
+
+            renderTable(data || []);
+            document.getElementById("pageInfo").textContent = `Page ${currentPage + 1}/${totalPages} • ${totalCount} files`;
+            document.getElementById("prevBtn").disabled = currentPage <= 0;
+            document.getElementById("nextBtn").disabled = currentPage >= totalPages - 1;
+            setStatus(`Synced • ${totalCount} files`);
+        }
+
+        function renderTable(files) {
+            const tbody = document.getElementById("tableBody");
+            if (!files.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">No files found. Upload via the bot or add a note here.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = files.map((f, i) => {
+                const num = currentPage * PAGE_SIZE + i + 1;
+                const source = f.source_link
+                    ? `<a class="source-link" href="${esc(f.source_link)}" target="_blank" rel="noopener">Link</a>`
+                    : "-";
+                return `<tr>
+                    <td>${num}</td>
+                    <td class="name-cell" title="${esc(f.name || "")}">${esc(f.name || "Unnamed")}</td>
+                    <td><span class="type-badge">${esc(f.type || "")}</span></td>
+                    <td class="caption-cell" title="${esc(f.caption || "")}">${esc((f.caption || "").slice(0, 80))}</td>
+                    <td>${source}</td>
+                    <td class="actions">
+                        <button class="action-btn" onclick="callFile(${f.id})">Call</button>
+                        <button class="action-btn" onclick="openRename(${f.id}, '${escAttr(f.name || "")}')">Rename</button>
+                        <button class="action-btn" onclick="openSource(${f.id}, '${escAttr(f.source_link || "")}')">Source</button>
+                        <button class="action-btn danger" onclick="openDelete(${f.id}, '${escAttr(f.name || "")}')">Delete</button>
+                    </td>
+                </tr>`;
+            }).join("");
+        }
+
+        function esc(s) {
+            return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        function escAttr(s) {
+            return String(s || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        }
+
+        function onSearch() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                searchQuery = document.getElementById("searchInput").value.trim();
+                currentPage = 0;
+                loadFiles();
+            }, 350);
         }
 
         function prevPage() {
             if (currentPage > 0) {
                 currentPage--;
-                renderTable();
+                loadFiles();
             }
         }
 
         function nextPage() {
             currentPage++;
-            renderTable();
+            loadFiles();
         }
 
-        function renderTable() {
-            const search = document.getElementById("searchInput").value.toLowerCase();
-            let filtered = allFiles.filter(f =>
-                (f.name || "").toLowerCase().includes(search) ||
-                (f.caption || "").toLowerCase().includes(search)
-            );
-            const pageSize = 20;
-            const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-            if (currentPage >= totalPages) currentPage = totalPages - 1;
-            const start = currentPage * pageSize;
-            const pageFiles = filtered.slice(start, start + pageSize);
-            const tbody = document.getElementById("tableBody");
-            if (pageFiles.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="empty">No files found.</td></tr>';
-            } else {
-                tbody.innerHTML = pageFiles.map((f, i) => `
-                    <tr>
-                        <td>${start + i + 1}</td>
-                        <td>${f.name || "Unnamed"}</td>
-                        <td><span class="type-badge">${f.type}</span></td>
-                        <td>${(f.caption || "").slice(0, 60)}</td>
-                        <td>${f.source_link ? `<a href="${f.source_link}" target="_blank" style="color:var(--accent-color)">Link</a>` : "-"}</td>
-                        <td class="actions">
-                            <button class="action-btn" onclick="callFile(${f.id})">Call</button>
-                            <button class="action-btn" onclick="deleteFile(${f.id})">Delete</button>
-                            <button class="action-btn" onclick="renameFile(${f.id})">Rename</button>
-                            <button class="action-btn" onclick="editSource(${f.id})">Source</button>
-                        </td>
-                    </tr>
-                `).join("");
+        function openUpload() {
+            document.getElementById("noteName").value = "";
+            document.getElementById("noteCaption").value = "";
+            document.getElementById("noteSource").value = "";
+            document.getElementById("uploadModal").classList.add("active");
+        }
+
+        function closeModals() {
+            document.getElementById("uploadModal").classList.remove("active");
+            document.getElementById("editModal").classList.remove("active");
+            document.getElementById("confirmModal").classList.remove("active");
+        }
+
+        async function saveNote() {
+            const name = document.getElementById("noteName").value.trim() || "Note";
+            const caption = document.getElementById("noteCaption").value.trim();
+            const source = document.getElementById("noteSource").value.trim();
+            const btn = document.getElementById("saveNoteBtn");
+            btn.disabled = true;
+            const { error } = await supabase.from("cloud_files").insert({
+                user_id: userId,
+                name: name.slice(0, 100),
+                type: "note",
+                caption: caption,
+                source_link: source || null
+            });
+            btn.disabled = false;
+            if (error) {
+                setStatus("Upload failed: " + error.message, true);
+                return;
             }
-            document.getElementById("pageInfo").textContent = `Page ${currentPage + 1}/${totalPages} • ${filtered.length} files`;
+            closeModals();
+            currentPage = 0;
+            loadFiles();
+            setStatus("Note uploaded");
         }
 
-        function callFile(id) {
-            alert("Use the Telegram bot /cloud to Call/Send the file. This web view is for management preview.");
-        }
-
-        function deleteFile(id) {
-            allFiles = allFiles.filter(f => f.id !== id);
-            renderTable();
-        }
-
-        function renameFile(id) {
+        function openRename(id, current) {
             editId = id;
             editField = "name";
             document.getElementById("editTitle").textContent = "Rename File";
-            document.getElementById("editValue").value = allFiles.find(f => f.id === id)?.name || "";
+            document.getElementById("editLabel").textContent = "New name";
+            document.getElementById("editValue").value = current;
             document.getElementById("editModal").classList.add("active");
         }
 
-        function editSource(id) {
+        function openSource(id, current) {
             editId = id;
             editField = "source_link";
             document.getElementById("editTitle").textContent = "Edit Source Link";
-            document.getElementById("editValue").value = allFiles.find(f => f.id === id)?.source_link || "";
+            document.getElementById("editLabel").textContent = "Source URL (leave empty to clear)";
+            document.getElementById("editValue").value = current;
             document.getElementById("editModal").classList.add("active");
         }
 
-        function saveEdit() {
+        async function saveEdit() {
             const val = document.getElementById("editValue").value.trim();
-            const f = allFiles.find(f => f.id === editId);
-            if (f) {
-                if (editField === "name") f.name = val;
-                else f.source_link = val;
+            const btn = document.getElementById("saveEditBtn");
+            btn.disabled = true;
+            const payload = {};
+            payload[editField] = val || null;
+            const { error } = await supabase
+                .from("cloud_files")
+                .update(payload)
+                .eq("id", editId)
+                .eq("user_id", userId);
+            btn.disabled = false;
+            if (error) {
+                setStatus("Update failed: " + error.message, true);
+                return;
             }
-            closeModal();
-            renderTable();
+            closeModals();
+            loadFiles();
+            setStatus(editField === "name" ? "Renamed" : "Source updated");
         }
 
-        renderTable();
+        function openDelete(id, name) {
+            deleteId = id;
+            document.getElementById("confirmText").textContent = `Delete "${name}" from Cloud? This cannot be undone.`;
+            document.getElementById("confirmModal").classList.add("active");
+        }
+
+        async function confirmDelete() {
+            const btn = document.getElementById("confirmDeleteBtn");
+            btn.disabled = true;
+            const { error } = await supabase
+                .from("cloud_files")
+                .delete()
+                .eq("id", deleteId)
+                .eq("user_id", userId);
+            btn.disabled = false;
+            if (error) {
+                setStatus("Delete failed: " + error.message, true);
+                return;
+            }
+            closeModals();
+            loadFiles();
+            setStatus("File deleted");
+        }
+
+        function callFile(id) {
+            setStatus("Use the Telegram bot → /cloud → select the file → Call / Send. Web cannot deliver Telegram media.");
+        }
+
+        (function () {
+            const tgId = detectTelegram();
+            if (tgId) {
+                userId = tgId;
+                try {
+                    if (window.Telegram && window.Telegram.WebApp) {
+                        window.Telegram.WebApp.ready();
+                        window.Telegram.WebApp.expand();
+                    }
+                } catch (e) {}
+                startApp();
+            }
+        })();
     </script>
 </body>
 </html>
