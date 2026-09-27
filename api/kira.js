@@ -182,14 +182,17 @@ function buildHtml(text, entities) {
 }
 
 function extractSourceLink(caption) {
-    if (!caption) return { cleanCaption: "", sourceLink: "" };
+    if (!caption) return { cleanCaption: "", sourceLink: "", nameFromCaption: "" };
     const lines = caption.trim().split("\n");
+    let sourceLink = "";
     const last = lines[lines.length - 1].trim();
     if (last.startsWith("http://") || last.startsWith("https://")) {
+        sourceLink = last;
         lines.pop();
-        return { cleanCaption: lines.join("\n").trim(), sourceLink: last };
     }
-    return { cleanCaption: caption, sourceLink: "" };
+    const cleanCaption = lines.join("\n").trim();
+    const nameFromCaption = lines.length > 0 ? lines[0].trim().slice(0, 100) : "";
+    return { cleanCaption, sourceLink, nameFromCaption };
 }
 
 async function getCloudFiles(userId, page = 0, search = "") {
@@ -219,7 +222,7 @@ async function showCloudList(ctx, page = 0, search = "") {
         files.forEach((f, i) => {
             const num = page * CLOUD_PAGE_SIZE + i + 1;
             const typeIcon = f.type === "photo" ? "🖼" : f.type === "video" ? "🎬" : f.type === "audio" ? "🎵" : f.type === "note" ? "📝" : "📄";
-            text += `${num}. ${typeIcon} <a href="https://t.me/">${f.name || "Unnamed"}</a>\n`;
+            text += `${num}. ${typeIcon} ${f.name || "Unnamed"}\n`;
         });
     }
     text += `\nPage ${page + 1}/${totalPages} • ${total} files`;
@@ -1779,7 +1782,8 @@ bot.on("message", async (ctx, next) => {
         name = "Video Note";
     }
     if (!fileId) return next();
-    const { cleanCaption, sourceLink } = extractSourceLink(caption);
+    const { cleanCaption, sourceLink, nameFromCaption } = extractSourceLink(caption);
+    if (nameFromCaption) name = nameFromCaption;
     const { error } = await supabase.from("cloud_files").insert({
         user_id: ctx.from.id,
         name: name.slice(0, 100),
@@ -1837,8 +1841,8 @@ bot.on("message:text", async (ctx) => {
             return ctx.reply("Source link updated.");
         }
         if (pending.action === "upload") {
-            const { cleanCaption, sourceLink } = extractSourceLink(input);
-            const name = cleanCaption.slice(0, 50) || "Note";
+            const { cleanCaption, sourceLink, nameFromCaption } = extractSourceLink(input);
+            const name = (nameFromCaption || "Note").slice(0, 100);
             const { error } = await supabase.from("cloud_files").insert({
                 user_id: ctx.from.id,
                 name,
