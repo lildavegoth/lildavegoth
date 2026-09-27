@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Cloud Storage</title>
+    <script src="../protections.js"></script>
+    <script src="../notification.cssjs"></script>
+    <link rel="stylesheet" href="../media.css">
+    <script src="../ui-icons.js"></script>
+    <style>
+        :root {
+            --accent-color: #C1FC32;
+            --accent-dark: #9bc726;
+            --bg-black: #000000;
+            --bg-dark: #1a1a1a;
+            --bg-card: rgba(30, 30, 30, 0.7);
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --radius-small: 12px;
+            --radius-medium: 20px;
+            --radius-large: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 16px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 90px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            position: relative;
+            min-height: calc(100vh - 90px);
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: var(--spacing-md);
+            color: var(--accent-color);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            border-radius: var(--radius-small);
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: var(--accent-dark);
+        }
+
+        .btn-secondary {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            border: 1px solid var(--text-secondary);
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            background: var(--bg-dark);
+            border: 1px solid var(--bg-card);
+            color: var(--text-primary);
+            padding: 12px 16px;
+            border-radius: var(--radius-small);
+            font-size: 14px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        th {
+            color: var(--accent-color);
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        td {
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: rgba(193, 252, 50, 0.05);
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            background: var(--bg-dark);
+            color: var(--accent-color);
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: transparent;
+            border: 1px solid var(--text-secondary);
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .action-btn:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+        }
+
+        .empty {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-dark);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-medium);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal-content h2 {
+            margin-bottom: var(--spacing-sm);
+            color: var(--accent-color);
+        }
+
+        .modal-content input, .modal-content textarea {
+            width: 100%;
+            background: var(--bg-black);
+            border: 1px solid var(--text-secondary);
+            color: var(--text-primary);
+            padding: 12px;
+            border-radius: var(--radius-small);
+            margin-bottom: var(--spacing-sm);
+            font-size: 14px;
+            resize: none;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cloud Storage</h1>
+        <div class="toolbar">
+            <button class="btn" onclick="openUpload()">➕ Add/Upload</button>
+            <input type="text" class="search-box" id="searchInput" placeholder="Search files..." oninput="filterTable()">
+            <button class="btn btn-secondary" onclick="prevPage()">⬅️ Previous</button>
+            <button class="btn btn-secondary" onclick="nextPage()">Next ➡️</button>
+        </div>
+        <div class="table-wrap">
+            <table id="filesTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Caption</th>
+                        <th>Source</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="6" class="empty">Connect via Telegram Mini App or load your files. Use /cloud in the bot to manage.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination">
+            <span id="pageInfo">Page 1</span>
+        </div>
+    </div>
+
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <h2>Upload Note</h2>
+            <input type="text" id="noteName" placeholder="Name">
+            <textarea id="noteCaption" rows="4" placeholder="Caption / Note content"></textarea>
+            <input type="text" id="noteSource" placeholder="Source Link (optional)">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn" onclick="saveNote()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <h2 id="editTitle">Edit</h2>
+            <input type="text" id="editValue" placeholder="">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn" onclick="saveEdit()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 0;
+        let allFiles = [];
+        let editId = null;
+        let editField = null;
+
+        function openUpload() {
+            document.getElementById("uploadModal").classList.add("active");
+        }
+
+        function closeModal() {
+            document.getElementById("uploadModal").classList.remove("active");
+            document.getElementById("editModal").classList.remove("active");
+        }
+
+        function saveNote() {
+            const name = document.getElementById("noteName").value.trim() || "Note";
+            const caption = document.getElementById("noteCaption").value.trim();
+            const source = document.getElementById("noteSource").value.trim();
+            allFiles.unshift({
+                id: Date.now(),
+                name,
+                type: "note",
+                caption,
+                source_link: source
+            });
+            renderTable();
+            closeModal();
+            document.getElementById("noteName").value = "";
+            document.getElementById("noteCaption").value = "";
+            document.getElementById("noteSource").value = "";
+        }
+
+        function filterTable() {
+            renderTable();
+        }
+
+        function prevPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                renderTable();
+            }
+        }
+
+        function nextPage() {
+            currentPage++;
+            renderTable();
+        }
+
+        function renderTable() {
+            const search = document.getElementById("searchInput").value.toLowerCase();
+            let filtered = allFiles.filter(f =>
+                (f.name || "").toLowerCase().includes(search) ||
+                (f.caption || "").toLowerCase().includes(search)
+            );
+            const pageSize = 20;
+            const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+            if (currentPage >= totalPages) currentPage = totalPages - 1;
+            const start = currentPage * pageSize;
+            const pageFiles = filtered.slice(start, start + pageSize);
+            const tbody = document.getElementById("tableBody");
+            if (pageFiles.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">No files found.</td></tr>';
+            } else {
+                tbody.innerHTML = pageFiles.map((f, i) => `
+                    <tr>
+                        <td>${start + i + 1}</td>
+                        <td>${f.name || "Unnamed"}</td>
+                        <td><span class="type-badge">${f.type}</span></td>
+                        <td>${(f.caption || "").slice(0, 60)}</td>
+                        <td>${f.source_link ? `<a href="${f.source_link}" target="_blank" style="color:var(--accent-color)">Link</a>` : "-"}</td>
+                        <td class="actions">
+                            <button class="action-btn" onclick="callFile(${f.id})">Call</button>
+                            <button class="action-btn" onclick="deleteFile(${f.id})">Delete</button>
+                            <button class="action-btn" onclick="renameFile(${f.id})">Rename</button>
+                            <button class="action-btn" onclick="editSource(${f.id})">Source</button>
+                        </td>
+                    </tr>
+                `).join("");
+            }
+            document.getElementById("pageInfo").textContent = `Page ${currentPage + 1}/${totalPages} • ${filtered.length} files`;
+        }
+
+        function callFile(id) {
+            alert("Use the Telegram bot /cloud to Call/Send the file. This web view is for management preview.");
+        }
+
+        function deleteFile(id) {
+            allFiles = allFiles.filter(f => f.id !== id);
+            renderTable();
+        }
+
+        function renameFile(id) {
+            editId = id;
+            editField = "name";
+            document.getElementById("editTitle").textContent = "Rename File";
+            document.getElementById("editValue").value = allFiles.find(f => f.id === id)?.name || "";
+            document.getElementById("editModal").classList.add("active");
+        }
+
+        function editSource(id) {
+            editId = id;
+            editField = "source_link";
+            document.getElementById("editTitle").textContent = "Edit Source Link";
+            document.getElementById("editValue").value = allFiles.find(f => f.id === id)?.source_link || "";
+            document.getElementById("editModal").classList.add("active");
+        }
+
+        function saveEdit() {
+            const val = document.getElementById("editValue").value.trim();
+            const f = allFiles.find(f => f.id === editId);
+            if (f) {
+                if (editField === "name") f.name = val;
+                else f.source_link = val;
+            }
+            closeModal();
+            renderTable();
+        }
+
+        renderTable();
+    </script>
+</body>
+</html>
