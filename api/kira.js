@@ -137,6 +137,9 @@ const pendingConnectAction = new Map();
 const postButtons = new Map();
 const pendingKiraAction = new Map();
 const pendingImageEditAction = new Map();
+const cloudPages = new Map();
+const pendingCloudAction = new Map();
+const CLOUD_PAGE_SIZE = 20;
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "change-me-to-a-strong-random-string";
 
@@ -176,6 +179,65 @@ function buildHtml(text, entities) {
     }
     result += text.slice(lastPos).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     return result;
+}
+
+function extractSourceLink(caption) {
+    if (!caption) return { cleanCaption: "", sourceLink: "" };
+    const lines = caption.trim().split("\n");
+    const last = lines[lines.length - 1].trim();
+    if (last.startsWith("http://") || last.startsWith("https://")) {
+        lines.pop();
+        return { cleanCaption: lines.join("\n").trim(), sourceLink: last };
+    }
+    return { cleanCaption: caption, sourceLink: "" };
+}
+
+async function getCloudFiles(userId, page = 0, search = "") {
+    let query = supabase
+        .from("cloud_files")
+        .select("*", { count: "exact" })
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .range(page * CLOUD_PAGE_SIZE, (page + 1) * CLOUD_PAGE_SIZE - 1);
+    if (search) {
+        query = query.or(`name.ilike.%${search}%,caption.ilike.%${search}%`);
+    }
+    const { data, error, count } = await query;
+    if (error) return { files: [], total: 0 };
+    return { files: data || [], total: count || 0 };
+}
+
+async function showCloudList(ctx, page = 0, search = "") {
+    const userId = ctx.from.id;
+    const { files, total } = await getCloudFiles(userId, page, search);
+    const totalPages = Math.max(1, Math.ceil(total / CLOUD_PAGE_SIZE));
+    cloudPages.set(userId, { page, search, totalPages });
+    let text = search ? `Cloud Search: "${search}"\n\n` : "Your Cloud Storage\n\n";
+    if (files.length === 0) {
+        text += "No files found.";
+    } else {
+        files.forEach((f, i) => {
+            const num = page * CLOUD_PAGE_SIZE + i + 1;
+            const typeIcon = f.type === "photo" ? "🖼" : f.type === "video" ? "🎬" : f.type === "audio" ? "🎵" : f.type === "note" ? "📝" : "📄";
+            text += `${num}. ${typeIcon} <a href="https://t.me/">${f.name || "Unnamed"}</a>\n`;
+        });
+    }
+    text += `\nPage ${page + 1}/${totalPages} • ${total} files`;
+    const keyboard = [];
+    keyboard.push([{ text: "➕ Add/Upload", callback_data: "cloud_add" }]);
+    const nav = [];
+    if (page > 0) nav.push({ text: "⬅️ Previous", callback_data: `cloud_page_${page - 1}` });
+    if (page < totalPages - 1) nav.push({ text: "Next ➡️", callback_data: `cloud_page_${page + 1}` });
+    if (nav.length) keyboard.push(nav);
+    keyboard.push([{ text: "🔍 Search", callback_data: "cloud_search" }]);
+    if (search) keyboard.push([{ text: "Clear Search", callback_data: "cloud_clearsearch" }]);
+    const fileButtons = files.map((f) => [{ text: (f.name || "File").slice(0, 40), callback_data: `cloud_file_${f.id}` }]);
+    keyboard.push(...fileButtons.slice(0, 20));
+    await ctx.reply(text, {
+        parse_mode: "HTML",
+        reply_markup: { inline_keyboard: keyboard },
+        disable_web_page_preview: true,
+    });
 }
 
 async function isUnderMaintenance() {
@@ -544,6 +606,11 @@ bot.command("start", async (ctx) => {
 
 bot.command("ping", (ctx) => ctx.reply("pong"));
 
+bot.command("cloud", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+    await showCloudList(ctx, 0, "");
+});
+
 bot.command("cancel", async (ctx) => {
     let cancelled = false;
 
@@ -580,6 +647,11 @@ bot.command("cancel", async (ctx) => {
 
     if (pendingImageEditAction.has(ctx.from.id)) {
         pendingImageEditAction.delete(ctx.from.id);
+        cancelled = true;
+    }
+
+    if (pendingCloudAction.has(ctx.from.id)) {
+        pendingCloudAction.delete(ctx.from.id);
         cancelled = true;
     }
 
@@ -1251,6 +1323,140 @@ bot.callbackQuery(/^delete_mirror_(.+)$/, async (ctx) => {
     }
 });
 
+bot.callbackQuery("cloud_add", async (ctx) => {
+    await safeAnswerCallback(ctx);
+    pendingCloudAction.set(ctx.from.id, { action: "upload" });
+    await ctx.reply("Send me a photo, video, audio, document, voice or a text note to upload to Cloud.\nYou can put a Source Link as the last line of the caption.");
+});
+
+bot.callbackQuery("cloud_search", async (ctx) => {
+    await safeAnswerCallback(ctx);
+    pendingCloudAction.set(ctx.from.id, { action: "search" });
+    await ctx.reply("Send the keyword to search in file names and captions.");
+});
+
+bot.callbackQuery("cloud_clearsearch", async (ctx) => {
+    await safeAnswerCallback(ctx);
+    await ctx.deleteMessage();
+    await showCloudList(ctx, 0, "");
+});
+
+bot.callbackQuery(/^cloud_page_(\d+)$/, async (ctx) => {
+    await safeAnswerCallback(ctx);
+    const page = parseInt(ctx.match[1], 10);
+    const state = cloudPages.get(ctx.from.id) || { search: "" };
+    await ctx.deleteMessage();
+    await showCloudList(ctx, page, state.search || "");
+});
+
+bot.callbackQuery(/^cloud_file_(\d+)$/, async (ctx) => {
+    await safeAnswerCallback(ctx);
+    const fileId = parseInt(ctx.match[1], 10);
+    const { data: file, error } = await supabase
+        .from("cloud_files")
+        .select("*")
+        .eq("id", fileId)
+        .eq("user_id", ctx.from.id)
+        .single();
+    if (error || !file) {
+        return ctx.reply("File not found.");
+    }
+    const keyboard = {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "📥 Call / Send", callback_data: `cloud_call_${file.id}` }],
+                [{ text: "🗑 Delete", callback_data: `cloud_delete_${file.id}` }],
+                [{ text: "✏️ Rename", callback_data: `cloud_rename_${file.id}` }],
+                [{ text: "🔗 Source", callback_data: `cloud_source_${file.id}` }],
+                [{ text: "Back", callback_data: "cloud_back" }],
+            ],
+        },
+    };
+    let info = `File: ${file.name || "Unnamed"}\nType: ${file.type}\n`;
+    if (file.caption) info += `Caption: ${file.caption.slice(0, 200)}\n`;
+    if (file.source_link) info += `Source: ${file.source_link}\n`;
+    await ctx.reply(info, keyboard);
+});
+
+bot.callbackQuery("cloud_back", async (ctx) => {
+    await safeAnswerCallback(ctx);
+    await ctx.deleteMessage();
+    const state = cloudPages.get(ctx.from.id) || { page: 0, search: "" };
+    await showCloudList(ctx, state.page || 0, state.search || "");
+});
+
+bot.callbackQuery(/^cloud_call_(\d+)$/, async (ctx) => {
+    await safeAnswerCallback(ctx);
+    const id = parseInt(ctx.match[1], 10);
+    const { data: file, error } = await supabase
+        .from("cloud_files")
+        .select("*")
+        .eq("id", id)
+        .eq("user_id", ctx.from.id)
+        .single();
+    if (error || !file) {
+        return ctx.reply("File not found.");
+    }
+    const notice = "\n\n⚠️ Forward this message now. It will be deleted after 3 minutes.";
+    let sent;
+    try {
+        if (file.type === "note") {
+            sent = await ctx.reply((file.caption || "") + notice);
+        } else if (file.file_id) {
+            const caption = (file.caption || "") + notice;
+            if (file.type === "photo") {
+                sent = await ctx.replyWithPhoto(file.file_id, { caption });
+            } else if (file.type === "video") {
+                sent = await ctx.replyWithVideo(file.file_id, { caption });
+            } else if (file.type === "audio") {
+                sent = await ctx.replyWithAudio(file.file_id, { caption });
+            } else if (file.type === "voice") {
+                sent = await ctx.replyWithVoice(file.file_id, { caption });
+            } else {
+                sent = await ctx.replyWithDocument(file.file_id, { caption });
+            }
+        } else {
+            return ctx.reply("No file data.");
+        }
+        setTimeout(async () => {
+            try {
+                await ctx.api.deleteMessage(ctx.chat.id, sent.message_id);
+            } catch {}
+        }, 180000);
+    } catch (e) {
+        await ctx.reply("Failed to send file.");
+    }
+});
+
+bot.callbackQuery(/^cloud_delete_(\d+)$/, async (ctx) => {
+    await safeAnswerCallback(ctx);
+    const id = parseInt(ctx.match[1], 10);
+    const { error } = await supabase
+        .from("cloud_files")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", ctx.from.id);
+    if (error) {
+        return ctx.reply("Failed to delete.");
+    }
+    await ctx.deleteMessage();
+    await ctx.reply("File deleted from Cloud.");
+});
+
+bot.callbackQuery(/^cloud_rename_(\d+)$/, async (ctx) => {
+    await safeAnswerCallback(ctx);
+    const id = parseInt(ctx.match[1], 10);
+    pendingCloudAction.set(ctx.from.id, { action: "rename", fileId: id });
+    await ctx.reply("Send the new name for this file.");
+});
+
+bot.callbackQuery(/^cloud_source_(\d+)$/, async (ctx) => {
+    await safeAnswerCallback(ctx);
+    const id = parseInt(ctx.match[1], 10);
+    pendingCloudAction.set(ctx.from.id, { action: "source", fileId: id });
+    await ctx.reply("Send the new Source Link (or empty to clear).");
+});
+
 bot.command("imagesearch", async (ctx) => {
     const reply = ctx.message?.reply_to_message;
     if (!reply || (!reply.photo && !reply.sticker)) {
@@ -1521,6 +1727,75 @@ bot.on(":left_chat_member", async (ctx) => {
     } catch {}
 });
 
+bot.on("message", async (ctx, next) => {
+    if (!pendingCloudAction.has(ctx.from.id)) return next();
+    const pending = pendingCloudAction.get(ctx.from.id);
+    if (pending.action !== "upload") return next();
+    const msg = ctx.message;
+    if (!msg.photo && !msg.video && !msg.audio && !msg.document && !msg.voice && !msg.video_note) return next();
+    pendingCloudAction.delete(ctx.from.id);
+    let fileId = null;
+    let fileUniqueId = null;
+    let type = null;
+    let mimeType = null;
+    let name = "File";
+    let caption = msg.caption || "";
+    if (msg.photo) {
+        const last = msg.photo[msg.photo.length - 1];
+        fileId = last.file_id;
+        fileUniqueId = last.file_unique_id;
+        type = "photo";
+        name = "Photo";
+    } else if (msg.video) {
+        fileId = msg.video.file_id;
+        fileUniqueId = msg.video.file_unique_id;
+        type = "video";
+        mimeType = msg.video.mime_type || "";
+        name = msg.video.file_name || "Video";
+    } else if (msg.audio) {
+        fileId = msg.audio.file_id;
+        fileUniqueId = msg.audio.file_unique_id;
+        type = "audio";
+        mimeType = msg.audio.mime_type || "";
+        name = msg.audio.file_name || msg.audio.title || "Audio";
+    } else if (msg.voice) {
+        fileId = msg.voice.file_id;
+        fileUniqueId = msg.voice.file_unique_id;
+        type = "voice";
+        name = "Voice";
+    } else if (msg.document) {
+        fileId = msg.document.file_id;
+        fileUniqueId = msg.document.file_unique_id;
+        mimeType = msg.document.mime_type || "";
+        name = msg.document.file_name || "Document";
+        if (mimeType.startsWith("image/")) type = "photo";
+        else if (mimeType.startsWith("video/")) type = "video";
+        else if (mimeType.startsWith("audio/")) type = "audio";
+        else type = "document";
+    } else if (msg.video_note) {
+        fileId = msg.video_note.file_id;
+        fileUniqueId = msg.video_note.file_unique_id;
+        type = "video";
+        name = "Video Note";
+    }
+    if (!fileId) return next();
+    const { cleanCaption, sourceLink } = extractSourceLink(caption);
+    const { error } = await supabase.from("cloud_files").insert({
+        user_id: ctx.from.id,
+        name: name.slice(0, 100),
+        type,
+        file_id: fileId,
+        file_unique_id: fileUniqueId,
+        mime_type: mimeType,
+        caption: cleanCaption,
+        source_link: sourceLink || null,
+    });
+    if (error) {
+        return ctx.reply("Failed to upload to Cloud.");
+    }
+    return ctx.reply(`${type} uploaded to Cloud.`);
+});
+
 bot.on("message:text", async (ctx) => {
     const pk = pendingKey(ctx.chat.id, ctx.from.id);
     const jobKey = pendingRenames.get(pk);
@@ -1534,6 +1809,47 @@ bot.on("message:text", async (ctx) => {
             await startMirror(ctx, job.url, newName, job.destination);
             return;
         }
+    }
+    if (pendingCloudAction.has(ctx.from.id)) {
+        const pending = pendingCloudAction.get(ctx.from.id);
+        pendingCloudAction.delete(ctx.from.id);
+        const input = ctx.message.text.trim();
+        if (pending.action === "search") {
+            await showCloudList(ctx, 0, input);
+            return;
+        }
+        if (pending.action === "rename") {
+            const { error } = await supabase
+                .from("cloud_files")
+                .update({ name: input })
+                .eq("id", pending.fileId)
+                .eq("user_id", ctx.from.id);
+            if (error) return ctx.reply("Failed to rename.");
+            return ctx.reply("File renamed.");
+        }
+        if (pending.action === "source") {
+            const { error } = await supabase
+                .from("cloud_files")
+                .update({ source_link: input || null })
+                .eq("id", pending.fileId)
+                .eq("user_id", ctx.from.id);
+            if (error) return ctx.reply("Failed to update source.");
+            return ctx.reply("Source link updated.");
+        }
+        if (pending.action === "upload") {
+            const { cleanCaption, sourceLink } = extractSourceLink(input);
+            const name = cleanCaption.slice(0, 50) || "Note";
+            const { error } = await supabase.from("cloud_files").insert({
+                user_id: ctx.from.id,
+                name,
+                type: "note",
+                caption: cleanCaption,
+                source_link: sourceLink || null,
+            });
+            if (error) return ctx.reply("Failed to upload note.");
+            return ctx.reply("Note uploaded to Cloud.");
+        }
+        return;
     }
     if (pendingConnectAction.has(ctx.from.id)) {
         const action = pendingConnectAction.get(ctx.from.id);
