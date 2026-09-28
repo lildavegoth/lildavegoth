@@ -156,7 +156,7 @@
 
         .popup-header {
             padding: 16px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -344,7 +344,7 @@
             margin-bottom: 0.75rem;
             color: #d4d4d8;
             letter-spacing: -0.02em;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             padding-bottom: 0.25rem;
         }
 
@@ -363,12 +363,12 @@
         }
 
         .badge-status {
-            background: rgba(193,252,50,0.15);
+            background: rgba(193, 252, 50, 0.15);
             color: #C1FC32;
         }
 
         .badge-domain {
-            background: rgba(193,252,50,0.15);
+            background: rgba(193, 252, 50, 0.15);
             color: #C1FC32;
         }
 
@@ -405,7 +405,7 @@
             font-size: 1rem;
             font-weight: 600;
             color: #C1FC32;
-            background: rgba(193,252,50,0.1);
+            background: rgba(193, 252, 50, 0.1);
             padding: 11px 20px;
             border-radius: 999px;
             margin-right: 12px;
@@ -450,13 +450,13 @@
 
         .folder-list-item {
             padding: 14px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             cursor: pointer;
             transition: background-color 0.15s;
         }
 
         .folder-list-item:hover {
-            background: rgba(193,252,50,0.1);
+            background: rgba(193, 252, 50, 0.1);
         }
 
         .folder-option-btn {
@@ -1199,7 +1199,7 @@
                 html += `
                     <div class="series-input-row">
                         <input type="text" placeholder="Link" value="${val.replace(/"/g, '&quot;')}" oninput="updateSeriesValue(${i}, this.value)">
-                        <button class="series-open-btn" onclick="openSeriesInputUrl(this)" title="Open URL">
+                        <button type="button" class="series-open-btn" onclick="openSeriesInputUrl(this)" title="Open URL">
                             <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>`
@@ -1207,13 +1207,28 @@
             container.innerHTML = html
         }
 
+        function normalizeUrl(url) {
+            const trimmed = url.trim()
+            if (!trimmed) return ""
+            if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) return trimmed
+            return 'https://' + trimmed
+        }
+
         function openSeriesInputUrl(button) {
-            const row = button.parentElement
+            const row = button.closest('.series-input-row')
+            if (!row) return
             const input = row.querySelector('input')
-            const url = input.value.trim()
-            if (url) {
-                window.open(url, '_blank')
-            }
+            if (!input) return
+            const url = normalizeUrl(input.value)
+            if (!url) return
+            const link = document.createElement('a')
+            link.href = url
+            link.target = '_blank'
+            link.rel = 'noopener noreferrer'
+            link.style.display = 'none'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
         }
 
         function updateSeriesValue(index, value) {
