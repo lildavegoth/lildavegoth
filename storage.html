@@ -60,10 +60,6 @@
             transform: scale(0.97);
         }
 
-        .desktop-device .task-card:active {
-            transform: none;
-        }
-
         .pill-btn {
             padding: 11px 22px;
             border-radius: 9999px;
@@ -107,25 +103,6 @@
             font-size: 11px;
             font-weight: 600;
             border-radius: 9999px;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .badge-link {
-            cursor: pointer;
-        }
-
-        .task-title-link {
-            text-decoration: none;
-            color: inherit;
-            cursor: pointer;
-            display: block;
-            width: fit-content;
-            max-width: 100%;
-        }
-
-        .task-title-link:hover {
-            color: var(--accent-color);
         }
 
         .scroll-tabs {
@@ -225,6 +202,19 @@
         .form-textarea {
             resize: none;
             min-height: 70px;
+        }
+
+        .url-field-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .url-field-row .form-input {
+            flex: 1;
+            min-width: 0;
+            margin-bottom: 0;
         }
 
         .search-container {
@@ -421,6 +411,12 @@
 
         .scroll-top-btn:active {
             transform: scale(0.97);
+        }
+
+        @media (max-width: 768px) {
+            .scroll-top-btn {
+                display: none;
+            }
         }
 
         .task-counter {
@@ -729,28 +725,6 @@
             font-size: 14px;
             flex-shrink: 0;
         }
-
-        .open-link-btn {
-            width: 22px;
-            height: 22px;
-            border-radius: 6px;
-            border: none;
-            background-color: var(--accent-color);
-            color: #000000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 10px;
-            flex-shrink: 0;
-            margin-left: 2px;
-            vertical-align: middle;
-        }
-
-        .desktop-device .open-link-btn {
-            display: inline-flex;
-        }
     </style>
 </head>
 <body>
@@ -807,7 +781,12 @@
                 </div>
                 <div class="popup-body">
                     <input type="text" id="taskTitle" class="form-input" placeholder="Task title">
-                    <input type="text" id="taskDownloadUrl" class="form-input" placeholder="Download URL">
+                    <div class="url-field-row">
+                        <input type="text" id="taskDownloadUrl" class="form-input" placeholder="Download URL">
+                        <button type="button" class="series-open-btn" onclick="openInputUrl('taskDownloadUrl')" title="Open URL">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
                     <div class="mb-4">
                         <button id="folderSelectBtn" onclick="openFolderSelectPopup()" class="folder-selection-btn">
                             <span id="folderSelectBtnText">Select Folder</span>
@@ -831,7 +810,12 @@
                     </div>
 
                     <input type="text" id="taskStatus" class="form-input" placeholder="Status">
-                    <input type="text" id="taskSourceUrl" class="form-input" placeholder="Source URL">
+                    <div class="url-field-row">
+                        <input type="text" id="taskSourceUrl" class="form-input" placeholder="Source URL">
+                        <button type="button" class="series-open-btn" onclick="openInputUrl('taskSourceUrl')" title="Open URL">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
                     <textarea id="taskNotes" class="form-textarea" placeholder="Notes or description"></textarea>
                 </div>
                 <div class="popup-footer">
@@ -949,10 +933,6 @@
     </div>
 
     <script>
-        if (window.matchMedia('(hover: hover)').matches || window.matchMedia('(pointer: fine)').matches || !('ontouchstart' in window)) {
-            document.documentElement.classList.add('desktop-device');
-        }
-
         let tasks = JSON.parse(localStorage.getItem('tasks')) || []
         let categories = JSON.parse(localStorage.getItem('categories')) || ["All"]
         let currentTab = null
@@ -973,31 +953,6 @@
         function sortCategories() {
             const others = categories.filter(c => c !== "All").sort((a, b) => a.localeCompare(b))
             categories = ["All", ...others]
-        }
-
-        function escapeAttr(str) {
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-        }
-
-        function openUrl(url) {
-            if (!url) return
-            const link = document.createElement('a')
-            link.href = url
-            link.target = '_blank'
-            link.rel = 'noopener noreferrer'
-            link.style.display = 'none'
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-        }
-
-        function openUrlFromEl(el) {
-            openUrl(el.getAttribute('data-url'))
         }
 
         function renderTabs() {
@@ -1044,27 +999,32 @@
             }
         }
 
+        function openTaskLinkWithCheck(event, url, taskId) {
+            const card = document.getElementById(`task-${taskId}`)
+            if (card && card.dataset.longPressed === 'true') {
+                delete card.dataset.longPressed
+                return
+            }
+            if (url && url.trim()) window.open(url, '_blank')
+        }
+
         function renderTaskCard(task) {
             const checkedClass = task.checked ? 'bg-[rgba(193,252,50,0.15)] border-[rgba(193,252,50,0.3)]' : 'bg-zinc-900 border-zinc-800'
             const pinColor = task.priority ? "text-[#C1FC32]" : "text-zinc-500"
             const statusBadge = (task.status && task.status.trim() !== "") ? `<span class="badge badge-status">${task.status}</span>` : ""
-            const sourceBadge = (task.sourceUrl && task.sourceUrl.trim() !== "") ? `<a href="${escapeAttr(task.sourceUrl)}" target="_blank" rel="noopener noreferrer" class="badge badge-status badge-link">Source</a><button type="button" class="open-link-btn" data-url="${escapeAttr(task.sourceUrl)}" onclick="openUrlFromEl(this);event.stopImmediatePropagation()"><i class="fas fa-arrow-right"></i></button>` : ""
+            const sourceBadge = (task.sourceUrl && task.sourceUrl.trim() !== "") ? `<span onclick="event.stopPropagation(); window.open('${task.sourceUrl}', '_blank')" class="badge badge-status cursor-pointer">Source</span>` : ""
             const domainPill = task.url ? getDomainPill(task.url) : null
-            const domainBadge = domainPill ? `<a href="${escapeAttr(task.url)}" target="_blank" rel="noopener noreferrer" class="badge badge-domain badge-link">${domainPill}</a><button type="button" class="open-link-btn" data-url="${escapeAttr(task.url)}" onclick="openUrlFromEl(this);event.stopImmediatePropagation()"><i class="fas fa-arrow-right"></i></button>` : ""
+            const domainBadge = domainPill ? `<span class="badge badge-domain">${domainPill}</span>` : ""
             const notesHtml = (task.notes && task.notes.trim() !== "") ? `<div class="text-sm text-zinc-400 mt-2 notes-scrollable">${task.notes}</div>` : ""
-
-            const titleClass = task.checked ? 'line-through text-zinc-400' : 'font-medium text-white'
-            const titleHtml = task.url
-                ? `<a href="${escapeAttr(task.url)}" target="_blank" rel="noopener noreferrer" class="task-title-link ${titleClass} text-[17px] break-words">${task.title}</a>`
-                : `<span class="${titleClass} text-[17px] break-words">${task.title}</span>`
+            const safeUrl = task.url ? task.url.replace(/'/g, "\\'") : ''
 
             return `
                 <div id="task-${task.id}" data-id="${task.id}" class="task-card ${checkedClass} rounded-3xl p-4 border flex items-start gap-4">
                     <div onclick="toggleCheck(${task.id});event.stopImmediatePropagation()" class="w-6 h-6 rounded-2xl border-2 ${task.checked ? 'bg-[#C1FC32] border-[#C1FC32]' : 'border-zinc-600'} flex items-center justify-center cursor-pointer flex-shrink-0 mt-0.5">
                         ${task.checked ? '<i class="fa-solid fa-check text-black check-icon-small"></i>' : ''}
                     </div>
-                    <div class="flex-1 pt-0.5">
-                        ${titleHtml}
+                    <div class="flex-1 pt-0.5 ${task.url ? 'cursor-pointer' : ''}" onclick="openTaskLinkWithCheck(event, '${safeUrl}', ${task.id})">
+                        <div class="${task.checked ? 'line-through text-zinc-400' : 'font-medium text-white'} text-[17px] break-words">${task.title}</div>
                         ${notesHtml}
                         <div class="mt-3 flex items-center gap-2 flex-wrap">
                             ${statusBadge}
@@ -1095,33 +1055,33 @@
                                     null,
                                     task.url,
                                     function() {
-                                        card.dataset.longPressed = 'true'
-                                        setTimeout(() => delete card.dataset.longPressed, 500)
+                                        card.dataset.longPressed = 'true';
+                                        setTimeout(() => delete card.dataset.longPressed, 500);
                                     },
                                     function() {
-                                        navigator.clipboard.writeText(task.url)
-                                        window.showMessage('Download URL copied')
-                                        card.dataset.longPressed = 'true'
-                                        setTimeout(() => delete card.dataset.longPressed, 500)
+                                        navigator.clipboard.writeText(task.url);
+                                        window.showMessage('Download URL copied');
+                                        card.dataset.longPressed = 'true';
+                                        setTimeout(() => delete card.dataset.longPressed, 500);
                                     }
-                                )
+                                );
                             } else if (navigator.share) {
                                 navigator.share({
                                     url: task.url
                                 }).then(() => {
-                                    card.dataset.longPressed = 'true'
-                                    setTimeout(() => delete card.dataset.longPressed, 500)
+                                    card.dataset.longPressed = 'true';
+                                    setTimeout(() => delete card.dataset.longPressed, 500);
                                 }).catch(() => {
-                                    navigator.clipboard.writeText(task.url)
-                                    window.showMessage('Download URL copied')
-                                    card.dataset.longPressed = 'true'
-                                    setTimeout(() => delete card.dataset.longPressed, 500)
-                                })
+                                    navigator.clipboard.writeText(task.url);
+                                    window.showMessage('Download URL copied');
+                                    card.dataset.longPressed = 'true';
+                                    setTimeout(() => delete card.dataset.longPressed, 500);
+                                });
                             } else {
-                                navigator.clipboard.writeText(task.url)
-                                window.showMessage('Download URL copied')
-                                card.dataset.longPressed = 'true'
-                                setTimeout(() => delete card.dataset.longPressed, 500)
+                                navigator.clipboard.writeText(task.url);
+                                window.showMessage('Download URL copied');
+                                card.dataset.longPressed = 'true';
+                                setTimeout(() => delete card.dataset.longPressed, 500);
                             }
                         }
                     }, 500)
@@ -1133,6 +1093,12 @@
                 card.addEventListener('touchmove', clearTimer)
                 card.addEventListener('touchend', clearTimer)
                 card.addEventListener('touchcancel', clearTimer)
+                card._longPressCleanup = () => {
+                    card.removeEventListener('touchstart', touchStartHandler)
+                    card.removeEventListener('touchmove', clearTimer)
+                    card.removeEventListener('touchend', clearTimer)
+                    card.removeEventListener('touchcancel', clearTimer)
+                }
             })
         }
 
@@ -1312,7 +1278,29 @@
             if (!input) return
             const url = normalizeUrl(input.value)
             if (!url) return
-            openUrl(url)
+            const link = document.createElement('a')
+            link.href = url
+            link.target = '_blank'
+            link.rel = 'noopener noreferrer'
+            link.style.display = 'none'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+        }
+
+        function openInputUrl(inputId) {
+            const input = document.getElementById(inputId)
+            if (!input) return
+            const url = normalizeUrl(input.value)
+            if (!url) return
+            const link = document.createElement('a')
+            link.href = url
+            link.target = '_blank'
+            link.rel = 'noopener noreferrer'
+            link.style.display = 'none'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
         }
 
         function updateSeriesValue(index, value) {
@@ -1727,39 +1715,23 @@
         }
 
         (function attachScrollButton() {
-            var btn = document.getElementById('scrollTopBtn')
-            if (!btn) return
+            var btn = document.getElementById('scrollTopBtn');
+            if (!btn) return;
 
             function showHide() {
-                var top = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0
-                if (top > 300) {
-                    btn.classList.add('show')
-                } else {
-                    btn.classList.remove('show')
-                }
+                var top = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+                btn.classList.toggle('show', top > 300);
             }
-            window.addEventListener('scroll', showHide, { passive: true })
-            document.addEventListener('scroll', showHide, { passive: true })
+            window.addEventListener('scroll', showHide, { passive: true });
             btn.addEventListener('click', function() {
-                btn.classList.add('btnMDYE')
-                window.scrollTo({ top: 0, behavior: 'smooth' })
+                btn.classList.add('btnMDYE');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 btn.addEventListener('animationend', function() {
-                    btn.classList.remove('btnMDYE')
-                }, { once: true })
-            })
-            showHide()
-        })()
-
-        document.getElementById('tasks-container').addEventListener('click', function(e) {
-            const card = e.target.closest('.task-card')
-            if (card && card.dataset.longPressed === 'true') {
-                if (e.target.closest('a')) {
-                    e.preventDefault()
-                    e.stopPropagation()
-                }
-                delete card.dataset.longPressed
-            }
-        }, true)
+                    btn.classList.remove('btnMDYE');
+                }, { once: true });
+            });
+            showHide();
+        })();
 
         function initUI() {
             if (categories.length === 1 && categories[0] === "All") {
