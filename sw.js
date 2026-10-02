@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.7.4';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.7.5';
 const urlsToCache = [
     // Root
     '/',
@@ -26,6 +26,7 @@ const urlsToCache = [
     'pages/card-maker.html',
     'pages/code-comparator.html',
     'pages/color-detector.html',
+    'pages/color-palettes-vault.html',
     'pages/currency-converter.html',
     'pages/css-icons-displayer.html',
     'pages/dice-generator.html',
@@ -34,7 +35,7 @@ const urlsToCache = [
     'pages/encryptor.html',
     'pages/font-previewer.html',
     'pages/github-publisher.html',
-    'pages/heartopia-gcodes.html',
+    'pages/github-repo-manager.html',
     'pages/hiragana-learner.html',
     'pages/html-cleaner.html',
     'pages/html-editor.html',
@@ -46,9 +47,10 @@ const urlsToCache = [
     'pages/journal.html',
     'pages/kiraku-store.html',
     'pages/kiraku-store-updater.html',
-    'pages/links-vault.html',
     'pages/lyricure.html',
+    'pages/m4s-merger-converter.html',
     'pages/markdown-editor.html',
+    'pages/media-downloader.html',
     'pages/mockups-generator.html',
     'pages/movies-gallery.html',
     'pages/movies-player.html',
@@ -72,14 +74,17 @@ const urlsToCache = [
     'pages/svg-optimizer.html',
     'pages/svg-rasterizer.html',
     'pages/svg-to-datauri.html',
+    'pages/tabilist.html',
     'pages/text-based-life.html',
     'pages/timer-converter.html',
     'pages/tic-tac-toe.html',
     'pages/typing-game.html',
+    'pages/urls-vault.html',
     'pages/userscripts-gallery.html',
     'pages/wallet.html',
     'pages/watermark-applier.html',
     'pages/weather.html',
+    'pages/work-attendance.html',
     'pages/yaml-validator.html',
     'pages/youtube-thumbnail-grabber.html',
     // Articles
@@ -99,6 +104,7 @@ const urlsToCache = [
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/popup-pages.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/o-css-snippets.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/world-events.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/plugins/plugins.json',
     // Stories
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/easy_story_1.txt',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/easy_story_2.txt',
@@ -122,7 +128,8 @@ const STALE_WHILE_REVALIDATE_URLS = [
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/articles.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/pages.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/popup-pages.json',
-    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/world-events.json'
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/world-events.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/plugins/plugins.json'
 ];
 
 self.addEventListener('install', event => {
