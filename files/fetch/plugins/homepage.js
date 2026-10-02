@@ -1,3 +1,53 @@
+(function() {
+    var STORAGE_KEY = 'homepageNoteTitle';
+
+    function getHomepageTitle() {
+        return localStorage.getItem(STORAGE_KEY) || '';
+    }
+
+    function setHomepageTitle(title) {
+        if (title) {
+            localStorage.setItem(STORAGE_KEY, title);
+        } else {
+            localStorage.removeItem(STORAGE_KEY);
+        }
+    }
+
+    function findNoteByTitle(title) {
+        if (!title) return null;
+        var notes = window.NotesApp.getNotes();
+        var lower = title.trim().toLowerCase();
+        return notes.find(function(n) {
+            return n.title && n.title.trim().toLowerCase() === lower;
+        }) || null;
+    }
+
+    function openHomepageNote() {
+        var title = getHomepageTitle();
+        if (!title) return false;
+        var note = findNoteByTitle(title);
+        if (note) {
+            window.openNoteReadingMode(note.id);
+            return true;
+        }
+        return false;
+    }
+
+    function injectStyles() {
+        if (document.getElementById('homepagePluginStyles')) return;
+        var style = document.createElement('style');
+        style.id = 'homepagePluginStyles';
+        style.textContent =
+            '.homepage-card-input-wrap{display:flex;gap:8px;align-items:center;padding:0 0 4px 0;}' +
+            '.homepage-card-input{flex:1;padding:10px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:var(--text-primary);font-size:0.9rem;outline:none;}' +
+            '.homepage-card-input::placeholder{color:var(--text-secondary);}' +
+            '.homepage-card-save{padding:10px 16px;border:none;border-radius:12px;background:var(--accent-color);color:#000;font-weight:600;cursor:pointer;font-size:0.85rem;}' +
+            '.homepage-card-save:hover{background:var(--accent-hover,#d2ff62);}' +
+            '.homepage-card-clear{padding:10px 16px;border:1px solid rgba(255,255,255,0.15);border-radius:12px;background:transparent;color:var(--text-secondary);font-weight:600;cursor:pointer;font-size:0.85rem;}' +
+            '.homepage-card-clear:hover{color:var(--text-primary);background:rgba(255,255,255,0.06);}';
+        document.head.appendChild(style);
+    }
+
     function buildSettingsUI() {
         injectStyles();
         if (document.getElementById('homepagePluginSection')) return;
@@ -89,3 +139,27 @@
             settingsPage.appendChild(section);
         }
     }
+
+    var plugin = {
+        name: 'Homepage',
+        description: 'Open a specific note automatically when the app launches.',
+        version: '1.0',
+        init: function(app) {
+            buildSettingsUI();
+
+            app.on('app:ready', function() {
+                setTimeout(function() {
+                    openHomepageNote();
+                }, 350);
+            });
+        }
+    };
+
+    if (window.NotesApp) {
+        window.NotesApp.plugins.register(plugin);
+    } else {
+        window.addEventListener('DOMContentLoaded', function() {
+            window.NotesApp.plugins.register(plugin);
+        });
+    }
+})();
