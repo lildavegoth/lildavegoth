@@ -958,12 +958,12 @@
 
         .reading-mode-header {
             position: sticky;
-            top: -30px;
+            top: 0;
             z-index: 100;
             background-color: var(--bg-black);
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px 0;
+            padding: 16px 0;
         }
 
         .reading-mode-header .header-row {
@@ -2623,9 +2623,9 @@
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
     <div class="container">
         <section id="home-page" class="page-section active">
-            <button type="button" class="back-link fade-in" id="mainBackLink" style="margin-bottom: 12px; background: transparent; border: none; padding: 0; color: inherit; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+            <a href="../index.html" class="back-link fade-in" style="margin-bottom: 12px;">
                 <i class="fas fa-arrow-left"></i> Back to Home
-            </button>
+            </a>
             <div class="app home-app">
                 <aside class="home-sidebar" id="homeSidebar">
                     <div class="home-sidebar-actions">
@@ -3321,7 +3321,7 @@
         function enhanceWikiLinks(html) {
             return html.replace(/\[\[([^\]]+)\]\]/g, function(match, title) {
                 var escaped = title.replace(/'/g, "\\'");
-                return '<a class="wiki-link" onclick="openNoteByTitle(\'' + escaped + '\')" style="color:var(--accent-color);cursor:pointer;text-decoration:underline;">' + title + '</a>';
+                return '<a class="wiki-link" onclick="event.preventDefault(); event.stopPropagation(); openNoteByTitle(\'' + escaped + '\'); return false;" style="color:var(--accent-color);cursor:pointer;text-decoration:underline;">' + title + '</a>';
             });
         }
 
@@ -4120,6 +4120,7 @@
             html = enhanceWikiLinks(html);
             document.getElementById('readingContent').innerHTML = html;
             document.getElementById('readingMode').classList.add('active');
+            document.getElementById('readingMode').scrollTop = 0;
             document.body.style.overflow = 'hidden';
             enhanceReadingContent(document.getElementById('readingContent'));
         }
@@ -5573,7 +5574,7 @@
             });
             if (plugin) {
                 plugin.enabled = checked;
-                window.NotesApp.plugins.saveState();
+                window.NotesApp.plugins.saveStates();
                 window.showMessage('Plugin ' + (checked ? 'enabled' : 'disabled') + '. Reload to apply.');
             }
         }
@@ -5622,41 +5623,7 @@
         function setupReadingBackButton() {
             const btn = document.getElementById('readingBackBtn');
             if (!btn) return;
-            btn.onclick = null;
-            let pressTimer = null;
-            let longPressed = false;
-
-            function cancelTimer() {
-                if (pressTimer) {
-                    clearTimeout(pressTimer);
-                    pressTimer = null;
-                }
-            }
-
-            btn.addEventListener('pointerdown', function() {
-                longPressed = false;
-                cancelTimer();
-                pressTimer = setTimeout(function() {
-                    longPressed = true;
-                    jumpHomeFromReading();
-                }, 600);
-            });
-            btn.addEventListener('pointerup', cancelTimer);
-            btn.addEventListener('pointercancel', cancelTimer);
-            btn.addEventListener('pointerleave', cancelTimer);
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                cancelTimer();
-                if (longPressed) {
-                    longPressed = false;
-                    return;
-                }
-                goHomeFromReading();
-            });
-            btn.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-            });
+            setupLongPress(btn, jumpHomeFromReading, goHomeFromReading);
         }
 
         function setupPaginationButtons() {
@@ -5731,12 +5698,6 @@
                 closeSidebar();
                 switchPage('settings');
             });
-            document.getElementById('mainBackLink').addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (Date.now() < suppressBackLinkUntil) return;
-                window.location.href = '../index.html';
-            });
             document.getElementById('codeRunClose').addEventListener('click', closeCodeRun);
             document.getElementById('codeRunOverlay').addEventListener('click', (e) => {
                 if (e.target.id === 'codeRunOverlay') closeCodeRun();
@@ -5749,6 +5710,18 @@
                 document.getElementById('homeSidebar').classList.remove('open');
                 document.getElementById('sidebarBackdrop').classList.remove('active');
             });
+            document.addEventListener('click', function(e) {
+                var link = e.target.closest('.back-link');
+                if (!link) return;
+                var editorOpen = document.getElementById('noteEditorPage').classList.contains('active');
+                var readingOpen = document.getElementById('readingMode').classList.contains('active');
+                var popupEl = document.getElementById('universalPopup');
+                var popupOpen = popupEl && popupEl.style.display === 'flex';
+                if (editorOpen || readingOpen || popupOpen || Date.now() < suppressBackLinkUntil) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }, true);
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape' && document.getElementById('noteEditorPage').classList.contains('active')) closeNoteEditor();
                 if (e.key === 'Escape' && document.getElementById('folderWindow').classList.contains('active')) closeFolderWindow();
