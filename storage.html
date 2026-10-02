@@ -1441,8 +1441,8 @@
                     `).join('')}
                 </div>
                 <div class="confirm-buttons">
-                    <button class="confirm-btn cancel" id="optionsCancel">Cancel</button>
-                    <button class="confirm-btn confirm" id="optionsConfirm">${isBackup ? 'Backup All' : 'Restore All'}</button>
+                    <button class="confirm-btn cancel" id="optionsConfirmSelected">Confirm</button>
+                    <button class="confirm-btn confirm" id="optionsConfirmAll">${isBackup ? 'Backup All' : 'Restore All'}</button>
                 </div>
             `;
 
@@ -1464,8 +1464,7 @@
                 cb.addEventListener('change', saveSelection);
             });
 
-            document.getElementById('optionsCancel').onclick = closeUniversalPopup;
-            document.getElementById('optionsConfirm').onclick = () => {
+            document.getElementById('optionsConfirmSelected').onclick = () => {
                 const checked = Array.from(getCheckboxes()).filter(cb => cb.checked).map(cb => cb.value);
                 if (checked.length === 0) {
                     window.showMessage('Select at least one app', true);
@@ -1479,6 +1478,19 @@
                     downloadAndRestore(checked);
                 }
             };
+
+            document.getElementById('optionsConfirmAll').onclick = () => {
+                getCheckboxes().forEach(cb => { cb.checked = true; });
+                saveSelection();
+                const all = folders.slice();
+                closeUniversalPopup();
+                if (optionsMode === 'backup') {
+                    uploadBackup(all);
+                } else {
+                    downloadAndRestore(all);
+                }
+            };
+
             popup.style.display = 'flex';
         }
 
