@@ -729,6 +729,28 @@
             font-size: 14px;
             flex-shrink: 0;
         }
+
+        .open-link-btn {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            border: none;
+            background-color: var(--accent-color);
+            color: #000000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 10px;
+            flex-shrink: 0;
+            margin-left: 2px;
+            vertical-align: middle;
+        }
+
+        .desktop-device .open-link-btn {
+            display: inline-flex;
+        }
     </style>
 </head>
 <body>
@@ -1026,14 +1048,14 @@
             const checkedClass = task.checked ? 'bg-[rgba(193,252,50,0.15)] border-[rgba(193,252,50,0.3)]' : 'bg-zinc-900 border-zinc-800'
             const pinColor = task.priority ? "text-[#C1FC32]" : "text-zinc-500"
             const statusBadge = (task.status && task.status.trim() !== "") ? `<span class="badge badge-status">${task.status}</span>` : ""
-            const sourceBadge = (task.sourceUrl && task.sourceUrl.trim() !== "") ? `<span data-url="${escapeAttr(task.sourceUrl)}" onclick="openUrlFromEl(this);event.stopImmediatePropagation()" class="badge badge-status badge-link">Source</span>` : ""
+            const sourceBadge = (task.sourceUrl && task.sourceUrl.trim() !== "") ? `<a href="${escapeAttr(task.sourceUrl)}" target="_blank" rel="noopener noreferrer" class="badge badge-status badge-link">Source</a><button type="button" class="open-link-btn" data-url="${escapeAttr(task.sourceUrl)}" onclick="openUrlFromEl(this);event.stopImmediatePropagation()"><i class="fas fa-arrow-right"></i></button>` : ""
             const domainPill = task.url ? getDomainPill(task.url) : null
-            const domainBadge = domainPill ? `<span data-url="${escapeAttr(task.url)}" onclick="openUrlFromEl(this);event.stopImmediatePropagation()" class="badge badge-domain badge-link">${domainPill}</span>` : ""
+            const domainBadge = domainPill ? `<a href="${escapeAttr(task.url)}" target="_blank" rel="noopener noreferrer" class="badge badge-domain badge-link">${domainPill}</a><button type="button" class="open-link-btn" data-url="${escapeAttr(task.url)}" onclick="openUrlFromEl(this);event.stopImmediatePropagation()"><i class="fas fa-arrow-right"></i></button>` : ""
             const notesHtml = (task.notes && task.notes.trim() !== "") ? `<div class="text-sm text-zinc-400 mt-2 notes-scrollable">${task.notes}</div>` : ""
 
             const titleClass = task.checked ? 'line-through text-zinc-400' : 'font-medium text-white'
             const titleHtml = task.url
-                ? `<span data-url="${escapeAttr(task.url)}" onclick="openUrlFromEl(this);event.stopImmediatePropagation()" class="task-title-link ${titleClass} text-[17px] break-words">${task.title}</span>`
+                ? `<a href="${escapeAttr(task.url)}" target="_blank" rel="noopener noreferrer" class="task-title-link ${titleClass} text-[17px] break-words">${task.title}</a>`
                 : `<span class="${titleClass} text-[17px] break-words">${task.title}</span>`
 
             return `
@@ -1731,10 +1753,9 @@
         document.getElementById('tasks-container').addEventListener('click', function(e) {
             const card = e.target.closest('.task-card')
             if (card && card.dataset.longPressed === 'true') {
-                if (e.target.closest('.task-title-link, .badge-link')) {
+                if (e.target.closest('a')) {
                     e.preventDefault()
                     e.stopPropagation()
-                    e.stopImmediatePropagation()
                 }
                 delete card.dataset.longPressed
             }
