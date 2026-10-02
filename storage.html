@@ -1700,10 +1700,33 @@
                 .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
         }
 
-        async function authenticateDropbox() {
-            const session = crypto.randomUUID();
+        function generateSessionId() {
+            if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                try {
+                    return crypto.randomUUID();
+                } catch (e) {}
+            }
+            return 'sess-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15);
+        }
+
+        function openInNewTab(url) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                if (a.parentNode) a.parentNode.removeChild(a);
+            }, 1000);
+        }
+
+        function authenticateDropbox() {
+            const session = generateSessionId();
             sessionStorage.setItem('dropbox_poll_session', session);
-            window.open('/api/auth?dropbox_action=login&session=' + session, '_blank');
+            const url = window.location.origin + '/api/auth?dropbox_action=login&session=' + encodeURIComponent(session);
+            openInNewTab(url);
             pollForTokens(session);
         }
 
@@ -2334,6 +2357,10 @@
                     <div class="guide-box">
                         <p><strong>Restore on Any Device</strong></p>
                         <p style="font-size: 0.8rem;">Restore reads the app list directly from your Dropbox backup folder, so you can restore on a fresh device even without opening any apps first.</p>
+                    </div>
+                    <div class="guide-box">
+                        <p><strong>Login Tab Not Opening?</strong></p>
+                        <p style="font-size: 0.8rem;">If clicking Yes doesn't open a new tab, please allow popups for this site in your browser settings, then try again.</p>
                     </div>
                 </div>
             `;
