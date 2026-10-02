@@ -1033,6 +1033,8 @@
             padding-bottom: 100px;
             line-height: 1.8;
             font-size: 1.1rem;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .reading-content h1,
@@ -1183,8 +1185,7 @@
         .reading-content table {
             border-collapse: collapse;
             width: 100%;
-            min-width: max-content;
-            white-space: normal;
+            table-layout: fixed;
             border: none;
         }
 
@@ -1193,8 +1194,8 @@
             border: 1px solid var(--bg-card);
             padding: 8px 12px;
             text-align: left;
-            max-width: 26ch;
             word-break: break-word;
+            overflow-wrap: anywhere;
             white-space: normal;
             vertical-align: top;
         }
@@ -3044,6 +3045,7 @@
         let currentSearchTerm = '';
         let homePage = 0;
         let readingHistory = [];
+        let suppressBackLinkUntil = 0;
         const attachmentUrlCache = new Map();
 
         const turndownService = new TurndownService();
@@ -4186,6 +4188,7 @@
             readingHistory = [];
             document.getElementById('readingMode').classList.remove('active');
             document.body.style.overflow = 'auto';
+            suppressBackLinkUntil = Date.now() + 600;
             switchPage('home');
         }
 
@@ -4193,6 +4196,7 @@
             readingHistory = [];
             document.getElementById('readingMode').classList.remove('active');
             document.body.style.overflow = 'auto';
+            suppressBackLinkUntil = Date.now() + 600;
             switchPage('home');
         }
 
@@ -4764,6 +4768,7 @@
             if (document.getElementById('readingMode').classList.contains('active')) document.getElementById('readingMode').classList.remove('active');
             document.getElementById('noteEditorPage').classList.remove('active');
             document.body.style.overflow = 'auto';
+            suppressBackLinkUntil = Date.now() + 600;
             window.showMessage('Note saved!');
         }
 
@@ -5503,7 +5508,6 @@
                 document.getElementById('pluginsList').classList.remove('active');
                 return;
             }
-            var fileList = ['trash-bin.js', 'homepage.js'];
             try {
                 var resp = await fetch('../files/fetch/plugins/plugins.json');
                 if (resp.ok) {
@@ -5706,6 +5710,12 @@
                 document.getElementById('homeSidebar').classList.remove('open');
                 document.getElementById('sidebarBackdrop').classList.remove('active');
             });
+            document.addEventListener('click', function(e) {
+                if (Date.now() < suppressBackLinkUntil && e.target.closest('.back-link')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }, true);
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape' && document.getElementById('noteEditorPage').classList.contains('active')) closeNoteEditor();
                 if (e.key === 'Escape' && document.getElementById('folderWindow').classList.contains('active')) closeFolderWindow();
