@@ -1,7 +1,6 @@
 (function() {
     var overlayEl = null;
     var tablesData = [];
-    var editorOpen = false;
 
     function injectStyles() {
         if (document.getElementById('betterTableStyles')) return;
@@ -23,10 +22,10 @@
             '.bt-table-toolbar .bt-btn{padding:6px 12px;font-size:0.82rem;}' +
             '.bt-table-label{color:#a1a1a6;font-size:0.8rem;margin-right:auto;}' +
             '.bt-table-wrap{overflow-x:auto;}' +
-            '.bt-table{border-collapse:collapse;width:100%;min-width:max-content;}' +
-            '.bt-table th,.bt-table td{border:1px solid rgba(255,255,255,0.15);padding:8px 12px;text-align:left;min-width:60px;word-break:break-word;vertical-align:top;}' +
+            '.bt-table{border-collapse:collapse;width:100%;table-layout:fixed;}' +
+            '.bt-table th,.bt-table td{border:1px solid rgba(255,255,255,0.15);padding:8px 12px;text-align:left;word-break:break-word;overflow-wrap:anywhere;white-space:normal;vertical-align:top;}' +
             '.bt-table th{background:rgba(193,252,50,0.1);color:#C1FC32;font-weight:bold;}' +
-            '.bt-cell{outline:none;min-width:40px;cursor:text;}' +
+            '.bt-cell{outline:none;cursor:text;min-width:40px;}' +
             '.bt-cell:focus{background:rgba(193,252,50,0.08);}' +
             '.bt-empty{text-align:center;color:#a1a1a6;padding:60px 20px;font-size:1rem;line-height:1.6;}' +
             '.bt-close-btn{width:36px;height:36px;padding:0;justify-content:center;font-size:1.1rem;}' +
@@ -113,6 +112,7 @@
     }
 
     function renderTables() {
+        if (!overlayEl) return;
         var body = overlayEl.querySelector('#btBody');
         body.innerHTML = '';
 
@@ -280,12 +280,10 @@
         tablesData = parseTables(lines);
         renderTables();
         overlayEl.classList.add('active');
-        editorOpen = true;
     }
 
     function closeOverlay() {
         if (overlayEl) overlayEl.classList.remove('active');
-        editorOpen = false;
         tablesData = [];
     }
 
@@ -330,7 +328,6 @@
         init: function(app) {
             injectStyles();
             buildOverlay();
-
             app.registerToolbarButton({
                 icon: '<i class="fas fa-table"></i>',
                 tooltip: 'Table Editor',
