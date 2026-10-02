@@ -60,10 +60,8 @@
             transform: scale(0.97);
         }
 
-        @media (hover: hover) and (pointer: fine) {
-            .task-card:active {
-                transform: none;
-            }
+        .desktop-device .task-card:active {
+            transform: none;
         }
 
         .pill-btn {
@@ -109,15 +107,12 @@
             font-size: 11px;
             font-weight: 600;
             border-radius: 9999px;
+            text-decoration: none;
+            display: inline-block;
         }
 
         .badge-link {
             cursor: pointer;
-            pointer-events: auto;
-            position: relative;
-            z-index: 2;
-            user-select: none;
-            -webkit-user-select: none;
         }
 
         .scroll-tabs {
@@ -919,6 +914,10 @@
     </div>
 
     <script>
+        if (window.matchMedia('(hover: hover)').matches || window.matchMedia('(pointer: fine)').matches || !('ontouchstart' in window)) {
+            document.documentElement.classList.add('desktop-device');
+        }
+
         let tasks = JSON.parse(localStorage.getItem('tasks')) || []
         let categories = JSON.parse(localStorage.getItem('categories')) || ["All"]
         let currentTab = null
@@ -939,6 +938,15 @@
         function sortCategories() {
             const others = categories.filter(c => c !== "All").sort((a, b) => a.localeCompare(b))
             categories = ["All", ...others]
+        }
+
+        function escapeAttr(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
         }
 
         function renderTabs() {
@@ -991,24 +999,15 @@
                 delete card.dataset.longPressed
                 return
             }
-            if (url && url.trim()) window.open(url, '_blank')
-        }
-
-        function openTaskSourceLink(event, taskId) {
-            event.preventDefault()
-            event.stopPropagation()
-            const task = tasks.find(t => t.id === taskId)
-            if (task && task.sourceUrl && task.sourceUrl.trim() !== "") {
-                window.open(task.sourceUrl, '_blank')
-            }
-        }
-
-        function openTaskDownloadLink(event, taskId) {
-            event.preventDefault()
-            event.stopPropagation()
-            const task = tasks.find(t => t.id === taskId)
-            if (task && task.url && task.url.trim() !== "") {
-                window.open(task.url, '_blank')
+            if (url && url.trim()) {
+                const link = document.createElement('a')
+                link.href = url
+                link.target = '_blank'
+                link.rel = 'noopener noreferrer'
+                link.style.display = 'none'
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
             }
         }
 
@@ -1016,9 +1015,9 @@
             const checkedClass = task.checked ? 'bg-[rgba(193,252,50,0.15)] border-[rgba(193,252,50,0.3)]' : 'bg-zinc-900 border-zinc-800'
             const pinColor = task.priority ? "text-[#C1FC32]" : "text-zinc-500"
             const statusBadge = (task.status && task.status.trim() !== "") ? `<span class="badge badge-status">${task.status}</span>` : ""
-            const sourceBadge = (task.sourceUrl && task.sourceUrl.trim() !== "") ? `<span class="badge badge-status badge-link" onclick="openTaskSourceLink(event, ${task.id})">Source</span>` : ""
+            const sourceBadge = (task.sourceUrl && task.sourceUrl.trim() !== "") ? `<a href="${escapeAttr(task.sourceUrl)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="badge badge-status badge-link">Source</a>` : ""
             const domainPill = task.url ? getDomainPill(task.url) : null
-            const domainBadge = domainPill ? `<span class="badge badge-domain badge-link" onclick="openTaskDownloadLink(event, ${task.id})">${domainPill}</span>` : ""
+            const domainBadge = domainPill ? `<a href="${escapeAttr(task.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="badge badge-domain badge-link">${domainPill}</a>` : ""
             const notesHtml = (task.notes && task.notes.trim() !== "") ? `<div class="text-sm text-zinc-400 mt-2 notes-scrollable">${task.notes}</div>` : ""
             const safeUrl = task.url ? task.url.replace(/'/g, "\\'") : ''
 
