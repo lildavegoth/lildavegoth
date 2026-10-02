@@ -16,7 +16,6 @@
     <style>
         :root {
             --accent-color: #C1FC32;
-            --accent-dark: #9bc726;
             --bg-black: #000000;
             --bg-dark: #1a1a1a;
             --bg-card: rgba(30, 30, 30, 0.7);
@@ -2439,6 +2438,13 @@
             text-overflow: ellipsis;
         }
 
+        .home-note-pin-icon {
+            color: var(--accent-color);
+            font-size: 11px;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
         .home-note-preview {
             color: var(--text-secondary);
             font-size: 14px;
@@ -2446,7 +2452,7 @@
             white-space: pre-wrap;
             word-break: break-word;
             overflow: hidden;
-            max-height: 100px;
+            max-height: 147px;
             overflow-wrap: anywhere;
         }
 
@@ -2997,6 +3003,9 @@
             },
             getCurrentNoteId() {
                 return currentNoteId;
+            },
+            openNoteReadingMode(id) {
+                openNoteReadingMode(id);
             },
             registerToolbarButton(btn) {
                 const toolbar = document.getElementById('richToolbar');
@@ -3558,7 +3567,16 @@
                 folderMeta.textContent = folderNotes.length > 0 ? `${folderNotes.length} note${folderNotes.length > 1 ? 's' : ''}` : 'Empty';
             }
 
-            folderNotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+            if (currentHomeFolderId === null && !currentSearchTerm) {
+                folderNotes.sort((a, b) => {
+                    const aPinned = a.pinned ? 1 : 0;
+                    const bPinned = b.pinned ? 1 : 0;
+                    if (aPinned !== bPinned) return bPinned - aPinned;
+                    return new Date(b.date) - new Date(a.date);
+                });
+            } else {
+                folderNotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+            }
 
             const totalPages = Math.max(1, Math.ceil(folderNotes.length / HOME_PAGE_SIZE));
             if (homePage > totalPages - 1) homePage = totalPages - 1;
@@ -3577,9 +3595,10 @@
             itemsContainer.innerHTML = pageNotes.map(note => {
                 let preview = note.content || 'No content';
                 preview = preview.replace(/!\[.*?\]\(attachment:[^)]+\)/g, '');
-                if (preview.length > 200) preview = preview.substring(0, 200) + '...';
+                if (preview.length > 400) preview = preview.substring(0, 400) + '...';
+                const pinIcon = note.pinned ? '<i class="fas fa-thumbtack home-note-pin-icon"></i>' : '';
                 return `<div class="home-note-item" data-note-id="${note.id}" onclick="openNoteReadingMode(${note.id})" oncontextmenu="event.preventDefault(); showNoteContextMenu(${note.id}, event.clientX, event.clientY)">
-                    <div class="home-note-title">${note.title || 'Untitled'}</div>
+                    <div class="home-note-title">${pinIcon}${note.title || 'Untitled'}</div>
                     <div class="home-note-preview">${preview}</div>
                 </div>`;
             }).join('');
@@ -3673,12 +3692,19 @@
         }
 
         function showNoteContextMenu(noteId, x, y) {
+            const note = notesData.find(n => n.id === noteId);
+            if (!note) return;
             const menu = document.createElement('div');
             menu.style.cssText = 'position:fixed; z-index:1000001; background:#1c1c1c; border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:8px 0; min-width:160px;';
             menu.style.left = Math.min(x, window.innerWidth - 170) + 'px';
-            menu.style.top = Math.min(y, window.innerHeight - 200) + 'px';
+            menu.style.top = Math.min(y, window.innerHeight - 240) + 'px';
 
             const options = [{
+                    label: note.pinned ? 'Unpin' : 'Pin',
+                    icon: '<i class="fas fa-thumbtack"></i>',
+                    action: () => togglePinNote(noteId)
+                },
+                {
                     label: 'Rename',
                     icon: '<i class="fas fa-pencil-alt"></i>',
                     action: () => openRenameNotePopup(noteId)
@@ -3718,6 +3744,14 @@
                     document.removeEventListener('click', handler);
                 }
             });
+        }
+
+        function togglePinNote(noteId) {
+            const note = notesData.find(n => n.id === noteId);
+            if (!note) return;
+            note.pinned = !note.pinned;
+            saveNotesToStorage();
+            window.showMessage(note.pinned ? 'Note pinned' : 'Note unpinned');
         }
 
         function openRenameNotePopup(noteId) {
@@ -4014,7 +4048,8 @@
                 tags: [],
                 date: new Date().toISOString(),
                 folderId: null,
-                attachmentKeys: []
+                attachmentKeys: [],
+                pinned: false
             };
             notesData.unshift(newNote);
             await saveNotesToStorage();
@@ -5203,7 +5238,8 @@
                             tags: [],
                             date: new Date().toISOString(),
                             folderId: folderId,
-                            attachmentKeys: []
+                            attachmentKeys: [],
+                            pinned: false
                         });
                         processed++;
                         if (processed === total) {
@@ -5248,7 +5284,8 @@
                                     tags: [],
                                     date: new Date().toISOString(),
                                     folderId: targetFolderId,
-                                    attachmentKeys: []
+                                    attachmentKeys: [],
+                                    pinned: false
                                 });
                             };
 
@@ -5466,7 +5503,7 @@
                 document.getElementById('pluginsList').classList.remove('active');
                 return;
             }
-            var fileList = ['trash-bin.js'];
+            var fileList = ['trash-bin.js', 'homepage.js'];
             try {
                 var resp = await fetch('../files/fetch/plugins/plugins.json');
                 if (resp.ok) {
