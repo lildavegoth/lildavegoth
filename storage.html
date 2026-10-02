@@ -962,6 +962,22 @@
                 .replace(/>/g, '&gt;')
         }
 
+        function openUrl(url) {
+            if (!url) return
+            const link = document.createElement('a')
+            link.href = url
+            link.target = '_blank'
+            link.rel = 'noopener noreferrer'
+            link.style.display = 'none'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+        }
+
+        function openUrlFromEl(el) {
+            openUrl(el.getAttribute('data-url'))
+        }
+
         function renderTabs() {
             const container = document.getElementById("tabs-container")
             let html = ""
@@ -1010,14 +1026,14 @@
             const checkedClass = task.checked ? 'bg-[rgba(193,252,50,0.15)] border-[rgba(193,252,50,0.3)]' : 'bg-zinc-900 border-zinc-800'
             const pinColor = task.priority ? "text-[#C1FC32]" : "text-zinc-500"
             const statusBadge = (task.status && task.status.trim() !== "") ? `<span class="badge badge-status">${task.status}</span>` : ""
-            const sourceBadge = (task.sourceUrl && task.sourceUrl.trim() !== "") ? `<a href="${escapeAttr(task.sourceUrl)}" target="_blank" rel="noopener noreferrer" class="badge badge-status badge-link">Source</a>` : ""
+            const sourceBadge = (task.sourceUrl && task.sourceUrl.trim() !== "") ? `<span data-url="${escapeAttr(task.sourceUrl)}" onclick="openUrlFromEl(this);event.stopImmediatePropagation()" class="badge badge-status badge-link">Source</span>` : ""
             const domainPill = task.url ? getDomainPill(task.url) : null
-            const domainBadge = domainPill ? `<a href="${escapeAttr(task.url)}" target="_blank" rel="noopener noreferrer" class="badge badge-domain badge-link">${domainPill}</a>` : ""
+            const domainBadge = domainPill ? `<span data-url="${escapeAttr(task.url)}" onclick="openUrlFromEl(this);event.stopImmediatePropagation()" class="badge badge-domain badge-link">${domainPill}</span>` : ""
             const notesHtml = (task.notes && task.notes.trim() !== "") ? `<div class="text-sm text-zinc-400 mt-2 notes-scrollable">${task.notes}</div>` : ""
 
             const titleClass = task.checked ? 'line-through text-zinc-400' : 'font-medium text-white'
             const titleHtml = task.url
-                ? `<a href="${escapeAttr(task.url)}" target="_blank" rel="noopener noreferrer" class="task-title-link ${titleClass} text-[17px] break-words">${task.title}</a>`
+                ? `<span data-url="${escapeAttr(task.url)}" onclick="openUrlFromEl(this);event.stopImmediatePropagation()" class="task-title-link ${titleClass} text-[17px] break-words">${task.title}</span>`
                 : `<span class="${titleClass} text-[17px] break-words">${task.title}</span>`
 
             return `
@@ -1057,33 +1073,33 @@
                                     null,
                                     task.url,
                                     function() {
-                                        card.dataset.longPressed = 'true';
-                                        setTimeout(() => delete card.dataset.longPressed, 500);
+                                        card.dataset.longPressed = 'true'
+                                        setTimeout(() => delete card.dataset.longPressed, 500)
                                     },
                                     function() {
-                                        navigator.clipboard.writeText(task.url);
-                                        window.showMessage('Download URL copied');
-                                        card.dataset.longPressed = 'true';
-                                        setTimeout(() => delete card.dataset.longPressed, 500);
+                                        navigator.clipboard.writeText(task.url)
+                                        window.showMessage('Download URL copied')
+                                        card.dataset.longPressed = 'true'
+                                        setTimeout(() => delete card.dataset.longPressed, 500)
                                     }
-                                );
+                                )
                             } else if (navigator.share) {
                                 navigator.share({
                                     url: task.url
                                 }).then(() => {
-                                    card.dataset.longPressed = 'true';
-                                    setTimeout(() => delete card.dataset.longPressed, 500);
+                                    card.dataset.longPressed = 'true'
+                                    setTimeout(() => delete card.dataset.longPressed, 500)
                                 }).catch(() => {
-                                    navigator.clipboard.writeText(task.url);
-                                    window.showMessage('Download URL copied');
-                                    card.dataset.longPressed = 'true';
-                                    setTimeout(() => delete card.dataset.longPressed, 500);
-                                });
+                                    navigator.clipboard.writeText(task.url)
+                                    window.showMessage('Download URL copied')
+                                    card.dataset.longPressed = 'true'
+                                    setTimeout(() => delete card.dataset.longPressed, 500)
+                                })
                             } else {
-                                navigator.clipboard.writeText(task.url);
-                                window.showMessage('Download URL copied');
-                                card.dataset.longPressed = 'true';
-                                setTimeout(() => delete card.dataset.longPressed, 500);
+                                navigator.clipboard.writeText(task.url)
+                                window.showMessage('Download URL copied')
+                                card.dataset.longPressed = 'true'
+                                setTimeout(() => delete card.dataset.longPressed, 500)
                             }
                         }
                     }, 500)
@@ -1274,14 +1290,7 @@
             if (!input) return
             const url = normalizeUrl(input.value)
             if (!url) return
-            const link = document.createElement('a')
-            link.href = url
-            link.target = '_blank'
-            link.rel = 'noopener noreferrer'
-            link.style.display = 'none'
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
+            openUrl(url)
         }
 
         function updateSeriesValue(index, value) {
@@ -1696,34 +1705,40 @@
         }
 
         (function attachScrollButton() {
-            var btn = document.getElementById('scrollTopBtn');
-            if (!btn) return;
+            var btn = document.getElementById('scrollTopBtn')
+            if (!btn) return
 
             function showHide() {
-                var top = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-                btn.classList.toggle('show', top > 300);
+                var top = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0
+                if (top > 300) {
+                    btn.classList.add('show')
+                } else {
+                    btn.classList.remove('show')
+                }
             }
-            window.addEventListener('scroll', showHide, { passive: true });
+            window.addEventListener('scroll', showHide, { passive: true })
+            document.addEventListener('scroll', showHide, { passive: true })
             btn.addEventListener('click', function() {
-                btn.classList.add('btnMDYE');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                btn.classList.add('btnMDYE')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
                 btn.addEventListener('animationend', function() {
-                    btn.classList.remove('btnMDYE');
-                }, { once: true });
-            });
-            showHide();
-        })();
+                    btn.classList.remove('btnMDYE')
+                }, { once: true })
+            })
+            showHide()
+        })()
 
         document.getElementById('tasks-container').addEventListener('click', function(e) {
-            const card = e.target.closest('.task-card');
+            const card = e.target.closest('.task-card')
             if (card && card.dataset.longPressed === 'true') {
-                if (e.target.closest('a')) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                if (e.target.closest('.task-title-link, .badge-link')) {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    e.stopImmediatePropagation()
                 }
-                delete card.dataset.longPressed;
+                delete card.dataset.longPressed
             }
-        }, true);
+        }, true)
 
         function initUI() {
             if (categories.length === 1 && categories[0] === "All") {
