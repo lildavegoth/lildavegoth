@@ -1330,11 +1330,32 @@
             popup.style.display = 'flex';
         }
 
+        function showNoAppsPopup(mode) {
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            titleEl.textContent = mode === 'backup' ? 'Backup Options' : 'Restore Options';
+            contentEl.innerHTML = `
+                <div class="popup-message">No app data was found in your browser storage on this device.</div>
+                <div class="popup-message">Storage data is saved per-browser, so please open some apps on this device first to create data, then come back.</div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn cancel" id="noAppsReload">Reload Page</button>
+                    <button class="confirm-btn confirm" id="noAppsClose">Close</button>
+                </div>
+            `;
+            document.getElementById('noAppsReload').onclick = () => {
+                closeUniversalPopup();
+                location.reload();
+            };
+            document.getElementById('noAppsClose').onclick = closeUniversalPopup;
+            popup.style.display = 'flex';
+        }
+
         function showOptionsPopup(mode) {
             optionsMode = mode;
             const folders = getAvailableFolders();
             if (folders.length === 0) {
-                window.showMessage('No apps available', true);
+                showNoAppsPopup(mode);
                 return;
             }
             const saveKey = mode === 'backup' ? 'storageBackupSelectedApps' : 'storageRestoreSelectedApps';
@@ -2181,6 +2202,10 @@
                     <div class="guide-box">
                         <p><strong>Login Issue</strong></p>
                         <p style="font-size: 0.8rem;">If you're not connected to Dropbox and cannot sign in even after many times login, click Dropbox Sign Out button first then try login again.</p>
+                    </div>
+                    <div class="guide-box">
+                        <p><strong>No Apps on Desktop?</strong></p>
+                        <p style="font-size: 0.8rem;">Browser storage is saved per-browser and per-device. If you don't see any apps in the Backup/Restore list, open some apps on this device first to create data, then reload this page.</p>
                     </div>
                 </div>
             `;
