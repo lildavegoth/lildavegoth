@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Downloads Task | lildavegoth</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Storage | lildavegoth</title>
     <meta name="color-scheme" content="dark">
-    <script src="../protections.js"></script>
-    <script src="../notification.cssjs"></script>
-    <link rel="stylesheet" href="../media.css">
-    <script src="../ui-icons.js"></script>
+    <script src="protections.js"></script>
+    <script src="notification.cssjs"></script>
+    <link rel="stylesheet" href="media.css">
+    <script src="ui-icons.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -31,251 +32,186 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
         body {
             background-color: var(--bg-black);
             color: var(--text-primary);
             min-height: 100vh;
-            background-image:
-                radial-gradient(circle at 20% 80%, rgba(193, 252, 50, 0.05) 0%, transparent 20%),
-                radial-gradient(circle at 80% 20%, rgba(193, 252, 50, 0.03) 0%, transparent 20%);
             overflow-x: hidden;
-            padding-bottom: 60px;
+            padding: var(--spacing-md) var(--spacing-md) 100px var(--spacing-md);
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: var(--spacing-md);
+            padding: var(--spacing-xs);
         }
 
-        .task-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            gap: 15px;
+            flex-wrap: wrap;
         }
 
-        .task-card:active {
-            transform: scale(0.97);
+        .avatar {
+            width: 50px;
+            height: 50px;
+            background: #333;
+            background-size: cover;
+            background-position: center;
+            border-radius: 50%;
+            flex-shrink: 0;
         }
 
-        .pill-btn {
-            padding: 11px 22px;
-            border-radius: 9999px;
-            font-size: 14px;
-            font-weight: 600;
-            white-space: nowrap;
-            transition: all 0.3s ease;
-            border: 0px;
+        .user-section {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+            gap: 15px;
         }
 
-        .tab-pill {
-            padding: 10px 24px;
-            border-radius: 9999px;
-            font-size: 14px;
-            font-weight: 600;
-            white-space: nowrap;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: 0px;
+        .username {
+            font-size: 1.8rem;
+            font-weight: 700;
         }
 
-        .tab-active {
-            background-color: var(--accent-color);
-            color: #111827;
+        .app-header {
+            padding: var(--spacing-lg) 0;
+            margin-bottom: var(--spacing-md);
         }
 
-        .sort-button {
-            padding: 9px 20px;
-            border-radius: 9999px;
-            background: #1f1f1f;
-            border: 1px solid #333;
+        .app-name {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .tagline {
             color: var(--text-secondary);
-            font-size: 14px;
+            font-size: 1rem;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 40px;
+            border: none;
+            font-size: 1rem;
             font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        .badge {
-            padding: 4px 13px;
-            font-size: 11px;
-            font-weight: 600;
-            border-radius: 9999px;
-        }
-
-        .scroll-tabs {
-            scrollbar-width: none;
-        }
-
-        .scroll-tabs::-webkit-scrollbar {
-            display: none;
-        }
-
-        .popup-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 99999999;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.2s ease, visibility 0.2s ease;
-            pointer-events: none;
+            gap: 8px;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+            min-width: 120px;
         }
 
-        .popup-overlay.popup-visible {
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
+        .action-btn:active {
+            transform: scale(0.97);
         }
 
-        .popup-content {
-            background: #1f1f1f;
-            border-radius: var(--radius-large);
-            width: 90%;
-            max-width: 420px;
-            max-height: 75vh;
+        .btn-backup {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .btn-restore {
+            background: var(--bg-card);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .button-row {
             display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            transform: scale(0.95);
-            transition: transform 0.2s ease;
+            gap: 12px;
         }
 
-        .popup-visible .popup-content {
-            transform: scale(1);
-        }
-
-        .popup-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        .clear-all-btn {
+            width: 100%;
+            background: #ff4d4d;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 14px;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 600;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            flex-shrink: 0;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            margin-bottom: 0;
+            transition: transform 0.1s ease;
         }
 
-        .popup-body {
-            padding: 1rem 1.25rem 0 1.25rem;
-            overflow-y: auto;
-            flex: 1 1 auto;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        .clear-all-btn:active {
+            transform: scale(0.97);
+            background: rgba(255, 80, 80, 0.8);
         }
 
-        .popup-body::-webkit-scrollbar {
-            display: none;
-        }
-
-        .popup-footer {
-            padding: 1.25rem 1.25rem;
-            flex-shrink: 0;
-        }
-
-        .close-popup {
+        .settings-btn {
             background: transparent;
             border: none;
             color: var(--text-secondary);
-            font-size: 28px;
-            line-height: 1;
+            font-size: 1.8rem;
             cursor: pointer;
-        }
-
-        .form-input, .form-textarea {
-            width: 100%;
-            background: #2a2a2a;
-            border: 1px solid #444;
-            color: white;
-            padding: 12px 14px;
-            border-radius: 16px;
-            margin-bottom: 12px;
-            font-size: 15.5px;
-        }
-
-        .form-textarea {
-            resize: none;
-            min-height: 70px;
-        }
-
-        .url-field-row {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            transition: background 0.2s;
         }
 
-        .url-field-row .form-input {
-            flex: 1;
-            min-width: 0;
-            margin-bottom: 0;
+        .settings-btn:hover {
+            background: rgba(255,255,255,0.1);
         }
 
         .search-container {
-            margin-bottom: 20px;
+            position: relative;
+            margin-top: -5px;
+            margin-bottom: 19px;
+        }
+
+        .search-container > div {
             position: relative;
         }
 
-        .search-wrapper {
-            position: relative;
-        }
-
-        .search-input {
+        #globalSearch {
             width: 100%;
-            padding: 12px 80px 12px 16px;
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.05);
+            padding: 17px 44px 17px 16px;
+            border-radius: var(--radius-medium);
+            background: var(--bg-card);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--text-primary);
             font-size: 0.95rem;
             outline: none;
         }
 
-        .search-icon-wrapper {
+        #globalSearch:focus {
+            border-color: var(--accent-color);
+        }
+
+        .search-icon {
             position: absolute;
-            right: 17px;
+            right: 12px;
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-secondary);
             pointer-events: auto;
-        }
-
-        .search-icon {
-            color: var(--accent-color);
-        }
-
-        .filter-btn {
-            position: absolute;
-            right: 44px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
             cursor: pointer;
-            padding: 8px;
-            display: flex;
-            align-items: center;
-            transition: all 0.3s ease;
-            border-radius: 4px;
         }
 
-        .filter-btn i {
-            font-size: 1.05rem;
-        }
-
-        .filter-btn.active {
+        .search-icon i {
             color: var(--accent-color);
-        }
-
-        .filter-btn.active i {
-            color: var(--accent-color);
+            margin-right: 5px;
         }
 
         .search-suggestions {
@@ -289,32 +225,23 @@
             margin-top: 8px;
             max-height: 300px;
             overflow-y: auto;
-            z-index: 10000;
+            z-index: 1000;
             display: none;
             backdrop-filter: saturate(180%) blur(20px);
             -webkit-backdrop-filter: saturate(180%) blur(20px);
             -ms-overflow-style: none;
             scrollbar-width: none;
-            pointer-events: auto;
-            will-change: transform;
         }
 
         .search-suggestion-item {
             padding: 12px 16px;
             cursor: pointer;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            transition: background-color 0.15s ease;
-            pointer-events: auto;
-            user-select: none;
-            -webkit-user-select: none;
+            transition: all 0.2s ease;
         }
 
         .search-suggestion-item:hover {
             background: rgba(193, 252, 50, 0.1);
-        }
-
-        .search-suggestion-item:active {
-            background: rgba(193, 252, 50, 0.2);
         }
 
         .search-suggestion-item:last-child {
@@ -349,1405 +276,2271 @@
             display: none;
         }
 
-        .alpha-header {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-top: 1.5rem;
-            margin-bottom: 0.75rem;
-            color: #d4d4d8;
-            letter-spacing: -0.02em;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding-bottom: 0.25rem;
+        .folder-pills {
+            margin-bottom: 40px;
         }
 
-        .check-icon-small {
-            font-size: 0.65rem;
+        .items-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
         }
 
-        .clear-btn {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-
-        .clear-btn:hover {
-            background: rgba(239, 68, 68, 0.3);
-        }
-
-        .badge-status {
-            background: rgba(193, 252, 50, 0.15);
-            color: #C1FC32;
-        }
-
-        .badge-domain {
-            background: rgba(193, 252, 50, 0.15);
-            color: #C1FC32;
-        }
-
-        .scroll-top-btn {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            background: var(--accent-color);
-            color: black;
-            border: none;
-            border-radius: 999px;
-            padding: 6px 24px;
-            font-size: 20px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            z-index: 9999;
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-
-        .scroll-top-btn.show {
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
-        }
-
-        .scroll-top-btn:active {
-            transform: scale(0.97);
-        }
-
-        @media (max-width: 768px) {
-            .scroll-top-btn {
-                display: none;
-            }
-        }
-
-        .task-counter {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #C1FC32;
-            background: rgba(193, 252, 50, 0.1);
-            padding: 11px 20px;
-            border-radius: 999px;
-            margin-right: 12px;
-            line-height: 1;
-        }
-
-        .notes-scrollable {
-            max-height: 6rem;
-            overflow-y: auto;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-            word-break: break-word;
-            white-space: pre-wrap;
-        }
-
-        .notes-scrollable::-webkit-scrollbar {
+        #itemsCount, #folderPill {
             display: none;
         }
 
-        .task-card.checked {
-            opacity: 0.7;
+        .storage-container {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
         }
 
-        .folder-selection-btn {
-            background: #2a2a2a;
-            border: 1px solid #444;
-            color: white;
-            padding: 12px 14px;
-            border-radius: 16px;
-            font-size: 15.5px;
+        .storage-card {
+            position: relative;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-sm);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
             width: 100%;
-            text-align: left;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .tag-and-delete {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .storage-tag {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+        }
+
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 6px;
+            opacity: 0.7;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .delete-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            opacity: 1;
+        }
+
+        .storage-key {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin: 20px 0 12px;
+            padding-right: 50px;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+        }
+
+        .storage-value {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            max-height: 120px;
+            overflow-y: auto;
+            margin-bottom: var(--spacing-sm);
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .storage-value::-webkit-scrollbar {
+            display: none;
+        }
+
+        .card-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .due {
+            font-size: 0.95rem;
+            opacity: 0.8;
+        }
+
+        .progress {
+            width: 100%;
+            height: 10px;
+            background: #222;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            border-radius: 20px;
+        }
+
+        .pin-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 6px;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pin-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 1.0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .popup-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-popup {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
             cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .folder-list-popup .popup-content {
-            max-width: 340px;
+        .tools-grid {
+            padding: var(--spacing-md);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
-        .folder-list-item {
-            padding: 14px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        .confirm-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .confirm-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 40px;
+            border: none;
+            font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.15s;
+            transition: transform 0.1s ease;
         }
 
-        .folder-list-item:hover {
-            background: rgba(193, 252, 50, 0.1);
+        .confirm-btn.confirm {
+            background: var(--accent-color);
+            color: #000;
         }
 
-        .folder-option-btn {
-            display: block;
-            width: 100%;
-            padding: 14px 20px;
-            background: #1a1a1a;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            color: var(--text-primary);
-            font-size: 15px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: left;
+        .confirm-btn.cancel {
+            background: #333;
+            color: #fff;
+        }
+
+        .confirm-btn:active {
+            transform: scale(0.97);
+        }
+
+        .popup-message {
+            color: var(--text-secondary);
+            line-height: 1.5;
             margin-bottom: 8px;
         }
 
-        .folder-option-btn:hover {
-            background: rgba(193, 252, 50, 0.08);
-            border-color: rgba(193, 252, 50, 0.3);
+        .options-actions {
+            margin-bottom: 0;
         }
 
-        .folder-option-btn.active {
+        .options-actions .confirm-btn {
+            padding: 10px;
+            font-size: 0.9rem;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 40vh;
+            overflow-y: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .options-list::-webkit-scrollbar {
+            display: none;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 10px 16px;
+            border-radius: 14px;
+            cursor: pointer;
+        }
+
+        .option-item:hover {
+            background: rgba(193, 252, 50, 0.05);
+        }
+
+        .option-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            background: transparent;
+            cursor: pointer;
+            flex-shrink: 0;
+            position: relative;
+            transition: border-radius 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+            outline: none;
+        }
+
+        .option-checkbox:hover {
+            border-color: rgba(193, 252, 50, 0.6);
+        }
+
+        .option-checkbox:checked {
+            border-radius: 50%;
             background: var(--accent-color);
-            color: #000;
-            font-weight: 600;
             border-color: var(--accent-color);
         }
 
-        .flex { display: flex; }
-        .inline-flex { display: inline-flex; }
-        .block { display: block; }
-        .hidden { display: none !important; }
-        .overflow-x-auto { overflow-x: auto; }
-        .flex-shrink-0 { flex-shrink: 0; }
-        .flex-1 { flex: 1 1 0%; }
-        .items-center { align-items: center; }
-        .items-start { align-items: flex-start; }
-        .justify-center { justify-content: center; }
-        .justify-between { justify-content: space-between; }
-        .justify-end { justify-content: flex-end; }
-        .gap-2 { gap: 0.5rem; }
-        .gap-3 { gap: 0.75rem; }
-        .gap-4 { gap: 1rem; }
-        .flex-wrap { flex-wrap: wrap; }
-
-        .p-4 { padding: 1rem; }
-        .p-6 { padding: 1.5rem; }
-        .p-8 { padding: 2rem; }
-        .px-4 { padding-left: 1rem; padding-right: 1rem; }
-        .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
-        .py-20 { padding-top: 5rem; padding-bottom: 5rem; }
-        .pt-0\.5 { padding-top: 0.125rem; }
-        .mt-0\.5 { margin-top: 0.125rem; }
-        .mt-1 { margin-top: 0.25rem; }
-        .mt-2 { margin-top: 0.5rem; }
-        .mt-3 { margin-top: 0.75rem; }
-        .mt-5 { margin-top: 1.25rem; }
-        .mt-7 { margin-top: 1.75rem; }
-        .mt-8 { margin-top: 2rem; }
-        .mb-4 { margin-bottom: 1rem; }
-        .mb-6 { margin-bottom: 1.5rem; }
-        .mb-8 { margin-bottom: 2rem; }
-        .pb-4 { padding-bottom: 1rem; }
-
-        .w-6 { width: 1.5rem; }
-        .h-6 { height: 1.5rem; }
-        .w-full { width: 100%; }
-
-        .bg-\[\#C1FC32\] { background-color: #C1FC32; }
-        .bg-zinc-800 { background-color: #27272a; }
-        .bg-zinc-900 { background-color: #18181b; }
-        .bg-red-600 { background-color: #dc2626; }
-        .bg-\[rgba\(193\2c 252\2c 50\2c 0\.1\)\] { background-color: rgba(193, 252, 50, 0.1); }
-        .bg-\[rgba\(193\2c 252\2c 50\2c 0\.15\)\] { background-color: rgba(193, 252, 50, 0.15); }
-
-        .text-black { color: #000000; }
-        .text-white { color: #ffffff; }
-        .text-zinc-400 { color: #a1a1aa; }
-        .text-zinc-500 { color: #71717a; }
-        .text-\[\#C1FC32\] { color: #C1FC32; }
-
-        .border { border-width: 1px; border-style: solid; }
-        .border-2 { border-width: 2px; border-style: solid; }
-        .border-zinc-600 { border-color: #52525b; }
-        .border-zinc-700 { border-color: #3f3f46; }
-        .border-zinc-800 { border-color: #27272a; }
-        .border-\[\#C1FC32\] { border-color: #C1FC32; }
-        .border-\[rgba\(193\2c 252\2c 50\2c 0\.2\)\] { border-color: rgba(193, 252, 50, 0.2); }
-        .border-\[rgba\(193\2c 252\2c 50\2c 0\.3\)\] { border-color: rgba(193, 252, 50, 0.3); }
-
-        .rounded-3xl { border-radius: 1.5rem; }
-        .rounded-2xl { border-radius: 1rem; }
-        .rounded-\[20px\] { border-radius: 20px; }
-        .rounded-\[25px\] { border-radius: 25px; }
-        .rounded-full { border-radius: 9999px; }
-
-        .text-xl { font-size: 1.25rem; }
-        .text-sm { font-size: 0.875rem; }
-        .text-6xl { font-size: 3.75rem; }
-        .text-\[17px\] { font-size: 17px; }
-        .font-semibold { font-weight: 600; }
-        .font-medium { font-weight: 500; }
-        .text-center { text-align: center; }
-        .break-words { word-break: break-word; }
-        .line-through { text-decoration: line-through; }
-        .cursor-pointer { cursor: pointer; }
-        .whitespace-nowrap { white-space: nowrap; }
-
-        .space-y-4 > * + * {
-            margin-top: 1rem;
+        .option-checkbox::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #000;
+            transform: translate(-50%, -50%) scale(0);
+            transition: transform 0.25s ease;
         }
 
-        .pin-icon-small {
-            font-size: 1rem;
+        .option-checkbox:checked::after {
+            transform: translate(-50%, -50%) scale(1);
         }
 
-        .transition {
-            transition: all 0.2s ease;
+        .option-name {
+            font-size: 0.95rem;
+            font-weight: 500;
         }
 
-        .series-toggle-container {
-            margin-bottom: 12px;
-        }
-
-        .series-controls {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-
-        .series-controls-left {
-            font-size: 15.5px;
-            color: var(--text-primary);
-        }
-
-        .series-controls-right {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .series-toggle-btn {
-            width: 30px;
-            height: 30px;
-            border-radius: 8px;
-            border: none;
-            background-color: #7E50B5;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 14px;
-        }
-
-        .series-toggle-btn.active {
-            background-color: var(--accent-color);
-        }
-
-        .series-plus-btn,
-        .series-minus-btn {
-            width: 30px;
-            height: 30px;
-            border-radius: 8px;
-            border: none;
-            font-size: 18px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .series-plus-btn {
-            background-color: var(--accent-color);
-            color: #000000;
-        }
-
-        .series-minus-btn {
-            background-color: #C42833;
-            color: #ffffff;
-        }
-
-        .series-inputs-list {
+        .loading-spinner {
             display: flex;
             flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 0;
             gap: 14px;
         }
 
-        .series-input-row {
+        .loading-spinner .spinner-dot {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent-color);
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-spinner .loading-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .guide-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-medium);
+            padding: 16px;
+        }
+
+        .guide-box p {
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .guide-box small {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            display: block;
+            margin-top: 6px;
+        }
+
+        .cloud-status-line {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 4px;
+            font-size: 1.17em;
+            font-weight: bold;
         }
 
-        .series-input-wrapper {
-            position: relative;
-            flex: 1;
+        .cloud-status-text {
+            color: var(--text-primary);
         }
 
-        .series-input-wrapper input {
+        .cloud-status-connected {
+            color: var(--accent-color);
+        }
+
+        .cloud-status-date {
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+        }
+
+        #foldersPopup .popup-content {
+            max-width: 500px;
+        }
+
+        #folderSearch {
             width: 100%;
-            background: #2a2a2a;
-            border: 1px solid #444;
-            color: white;
-            padding: 10px 12px;
-            border-radius: 12px;
-            font-size: 14px;
+            padding: 14px 16px;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            margin-bottom: 16px;
         }
 
-        .series-input-number {
-            position: absolute;
-            top: -7px;
-            left: -7px;
-            background-color: #C42833;
-            color: #ffffff;
-            font-size: 11px;
-            font-weight: 700;
-            min-width: 20px;
-            height: 20px;
-            padding: 0 5px;
-            border-radius: 9999px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            line-height: 1;
-            z-index: 3;
-            box-shadow: none;
-            pointer-events: none;
+        #folderSearch:focus {
+            border-color: var(--accent-color);
         }
 
-        .series-open-btn {
-            width: 35px;
-            height: 35px;
-            border-radius: 8px;
-            border: none;
-            background-color: var(--accent-color);
-            color: #000000;
+        .folder-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            max-height: 50vh;
+            padding-right: 8px;
+            padding-bottom: 16px;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .folder-list::-webkit-scrollbar {
+            display: none;
+        }
+
+        .folder-card {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 16px 20px;
+            border-radius: 16px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 14px;
+            border: 1px solid transparent;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .folder-card:hover {
+            background: rgba(193, 252, 50, 0.05);
+            border-color: var(--accent-color);
+        }
+
+        .folder-card-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .folder-card-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .folder-card-count {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .folder-card-arrow {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+
+        .arrow-circle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: var(--accent-color);
+            border-radius: 10px;
             flex-shrink: 0;
+        }
+
+        .arrow-circle i {
+            color: #000;
+            font-size: 0.9rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .pagination-controls button {
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .pagination-controls button:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .page-number {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 600px) {
+            .folder-card {
+                padding: 14px 16px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="../index.html" class="back-link fade-in">
+        <a href="index.html" class="back-link fade-in">
             <i class="fas fa-arrow-left"></i> Back to Home
         </a>
 
-        <app-header>
-            <h1 class="username">Downloads Task</h1>
-            <p class="tagline">Manage and organize your downloads task for better downloads list and histories</p>
-        </app-header>
+        <header style="margin-bottom: 50px;" class="fade-in">
+            <div>
+                <h1 class="app-name">Storage</h1>
+                <p class="tagline">Access to all database on Kakoi Kiraku Home pages to clear specific pages data and backup or restore data for your account</p>
+            </div>
+        </header>
 
-        <div class="flex gap-3 mt-5">
-            <button onclick="showTaskPopup(false)" class="pill-btn flex-1 bg-[#C1FC32] text-black font-semibold">New Task</button>
-            <button onclick="showFolderPopup()" class="pill-btn flex-1 bg-zinc-800 text-white font-semibold">New Folder</button>
-        </div>
-        <div class="mt-3">
-            <button onclick="showClearAllPopup()" class="pill-btn w-full clear-btn font-semibold">Clear All</button>
-        </div>
-
-        <div class="mt-7">
-            <div class="flex gap-3 overflow-x-auto scroll-tabs pb-4" id="tabs-container"></div>
+        <div class="header">
+            <div class="user-section">
+                <div class="avatar" id="avatar"></div>
+                <div class="username" id="username">User</div>
+            </div>
+            <button id="settingsBtn" class="settings-btn" title="Settings">
+                <i class="fas fa-cog"></i>
+            </button>
         </div>
 
         <div class="search-container">
-            <div class="search-wrapper">
-                <input type="text" id="globalSearch" placeholder="Search tasks..." class="search-input">
-                <button class="filter-btn" id="filterBtn" onclick="toggleFilter()">
-                    <i class="fas fa-filter"></i>
-                </button>
-                <div class="search-icon-wrapper">
-                    <i onclick="performSearch()" class="fas fa-search search-icon"></i>
+            <div>
+                <input type="text" id="globalSearch" placeholder="Search keys or values...">
+                <div class="search-icon" id="searchIcon">
+                    <i class="fas fa-search"></i>
                 </div>
             </div>
             <div class="search-suggestions" id="searchSuggestions"></div>
         </div>
 
-        <div class="flex items-center justify-between mt-2 mb-4">
-            <span class="text-xl font-semibold">Tasks</span>
-            <div class="flex items-center">
-                <span id="folderTaskCount" class="task-counter">0</span>
-                <button onclick="toggleSort()" id="sortButton" class="sort-button">A-Z Sorted</button>
-            </div>
+        <div class="folder-pills" id="folders"></div>
+
+        <div class="items-info">
+            <div id="itemsCount">0 items | 0B</div>
+            <div class="folder-pill" id="folderPill">All</div>
         </div>
 
-        <div id="tasks-container" class="space-y-4"></div>
+        <div style="margin-top: -50px;" class="storage-container" id="storageContainer"></div>
 
-        <div id="universalPopup" class="popup-overlay">
-            <div class="popup-content">
-                <div class="popup-header">
-                    <h2 id="popupTitle" class="text-xl font-semibold">New Task</h2>
-                    <button class="close-popup" onclick="closeUniversalPopup()">×</button>
-                </div>
-                <div class="popup-body">
-                    <input type="text" id="taskTitle" class="form-input" placeholder="Task title">
-                    <div class="url-field-row">
-                        <input type="text" id="taskDownloadUrl" class="form-input" placeholder="Download URL">
-                        <button type="button" class="series-open-btn" onclick="openInputUrl('taskDownloadUrl')" title="Open URL">
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
-                    <div class="mb-4">
-                        <button id="folderSelectBtn" onclick="openFolderSelectPopup()" class="folder-selection-btn">
-                            <span id="folderSelectBtnText">Select Folder</span>
-                            <i class="fas fa-chevron-right text-zinc-500"></i>
-                        </button>
-                        <input type="hidden" id="taskCategoryValue" value="">
-                    </div>
+        <div id="paginationContainer"></div>
 
-                    <div class="series-toggle-container">
-                        <div class="series-controls">
-                            <span class="series-controls-left">Series</span>
-                            <div class="series-controls-right">
-                                <button id="seriesMinusBtn" class="series-minus-btn hidden" onclick="removeSeriesInput()">-</button>
-                                <button id="seriesPlusBtn" class="series-plus-btn hidden" onclick="addSeriesInput()">+</button>
-                                <button id="seriesToggleBtn" class="series-toggle-btn" onclick="toggleSeries()">
-                                    <i class="fas fa-close" style="color: white;"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div id="seriesInputsContainer" class="series-inputs-list hidden"></div>
-                    </div>
-
-                    <input type="text" id="taskStatus" class="form-input" placeholder="Status">
-                    <div class="url-field-row">
-                        <input type="text" id="taskSourceUrl" class="form-input" placeholder="Source URL">
-                        <button type="button" class="series-open-btn" onclick="openInputUrl('taskSourceUrl')" title="Open URL">
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
-                    <textarea id="taskNotes" class="form-textarea" placeholder="Notes or description"></textarea>
-                </div>
-                <div class="popup-footer">
-                    <div id="newActions" class="flex gap-3">
-                        <button onclick="saveTask()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold" style="border: 0px;">Create Task</button>
-                    </div>
-                    <div id="editActions" class="hidden flex gap-3">
-                        <button onclick="showDeletePopup()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium" style="border: 0px;">Delete</button>
-                        <button onclick="saveTask()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold" style="border: 0px;">Update</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="folderPopup" class="popup-overlay">
-            <div class="popup-content">
-                <div class="popup-header">
-                    <h2 class="text-xl font-semibold">New Folder</h2>
-                    <button class="close-popup" onclick="closeFolderPopup()">×</button>
-                </div>
-                <div class="p-6">
-                    <input type="text" id="folderName" class="form-input" placeholder="Folder name">
-                    <div class="flex gap-3 mt-8">
-                        <button onclick="createFolder()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold" style="border: 0px;">Create Folder</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="editFolderPopup" class="popup-overlay">
-            <div class="popup-content">
-                <div class="popup-header">
-                    <h2 class="text-xl font-semibold">Edit Folder</h2>
-                    <button class="close-popup" onclick="closeEditFolderPopup()">×</button>
-                </div>
-                <div class="p-6">
-                    <input type="text" id="editFolderName" class="form-input" placeholder="Folder name">
-                    <div class="flex gap-3 mt-8">
-                        <button onclick="showDeleteFolderPopup()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium" style="border: 0px;">Delete</button>
-                        <button onclick="renameFolder()" class="flex-1 py-4 rounded-3xl bg-[#C1FC32] text-black font-semibold" style="border: 0px;">Rename</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="deletePopup" class="popup-overlay">
-            <div class="popup-content">
-                <div class="popup-header">
-                    <h2 class="text-xl font-semibold">Confirm Delete</h2>
-                    <button class="close-popup" onclick="closeDeletePopup()">×</button>
-                </div>
-                <div class="p-8 text-center">
-                    <p class="text-zinc-400 mb-8">Delete this task permanently?</p>
-                    <div class="flex gap-3">
-                        <button onclick="confirmDelete()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium" style="border: 0px;">Delete</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="deleteFolderPopup" class="popup-overlay">
-            <div class="popup-content">
-                <div class="popup-header">
-                    <h2 class="text-xl font-semibold">Delete Folder</h2>
-                    <button class="close-popup" onclick="closeDeleteFolderPopup()">×</button>
-                </div>
-                <div class="p-8 text-center">
-                    <p class="text-zinc-400 mb-8">Delete this folder and all its tasks?</p>
-                    <div class="flex gap-3">
-                        <button onclick="confirmDeleteFolder()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium" style="border: 0px;">Delete</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="clearAllPopup" class="popup-overlay">
-            <div class="popup-content">
-                <div class="popup-header">
-                    <h2 class="text-xl font-semibold">Clear All Tasks</h2>
-                    <button class="close-popup" onclick="closeClearAllPopup()">×</button>
-                </div>
-                <div class="p-8 text-center">
-                    <p class="text-zinc-400 mb-8">Delete all tasks from all folders?</p>
-                    <div class="flex gap-3">
-                        <button onclick="confirmClearAll()" class="flex-1 py-4 rounded-3xl bg-red-600 text-white font-medium" style="border: 0px;">Clear All</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="folderSelectPopup" class="popup-overlay folder-list-popup">
-            <div class="popup-content">
-                <div class="popup-header">
-                    <h2 class="text-xl font-semibold">Select Folder</h2>
-                    <button class="close-popup" onclick="closeFolderSelectPopup()">×</button>
-                </div>
-                <div class="p-4" id="folderSelectList"></div>
-            </div>
-        </div>
-
-        <footer class="fade-in">
+        <footer>
             <div class="social-links">
                 <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
                 <a href="https://instagram.com/dave_goth"><span class="icon icon-instagram"></span></a>
             </div>
-            <p>© 2026 lildavegoth | Downloads Task</p>
+            <p>© 2026 lildavegoth | Storage</p>
             <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
                 Conveys the Idea of a Protected and Inspiring Space for Creative Expression.
             </p>
         </footer>
+    </div>
 
-        <button id="scrollTopBtn" class="scroll-top-btn">
-            <i class="fas fa-arrow-up"></i>
-        </button>
+    <div id="universalPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popupTitle"></h2>
+                <button class="close-popup" onclick="closeUniversalPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tools-grid" id="popupContent"></div>
+        </div>
+    </div>
+
+    <div id="foldersPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2>Folders</h2>
+                <button class="close-popup" onclick="closeFoldersPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="padding: 16px;">
+                <input type="text" id="folderSearch" placeholder="Search folders...">
+                <div class="folder-list" id="folderList"></div>
+            </div>
+        </div>
     </div>
 
     <script>
-        let tasks = JSON.parse(localStorage.getItem('tasks')) || []
-        let categories = JSON.parse(localStorage.getItem('categories')) || ["All"]
-        let currentTab = null
-        let currentSort = "az"
-        let editingId = null
-        let editingFolder = null
-        let filterActive = false
-        let selectedCategoryForTask = ""
-        let seriesEnabled = false
-        let seriesCount = 0
-        let currentSeriesValues = []
-
-        function saveData() {
-            localStorage.setItem('tasks', JSON.stringify(tasks))
-            localStorage.setItem('categories', JSON.stringify(categories))
+        async function saveFile(content, filename, mimeType) {
+            return new Promise((resolve) => {
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                window.showMessage('Backup saved locally');
+                resolve();
+            });
         }
 
-        function sortCategories() {
-            const others = categories.filter(c => c !== "All").sort((a, b) => a.localeCompare(b))
-            categories = ["All", ...others]
+        const folderDefinitions = [
+            { name: 'Account', keys: ['currentUser', 'profilePhoto', 'authToken', 'adminToken'] },
+            { name: 'AdBlock Checker', keys: ['abcReports'] },
+            { name: 'AI Chats', keys: ['chatHistory', 'chatAvatars'] },
+            { name: 'Articles Publisher', keys: ['pinnedSlugs'] },
+            { name: 'Authenticator', keys: ['authTotp'] },
+            { name: 'Browser Homepage', keys: ['weatherCity', 'deadlineDate', 'deadlineDesc', 'widgetDeadlineEnabled', 'kakoiQuickLinks', 'quickLinksPages', 'searchEngine', 'customBackgroundImage', 'searchAppsEnabled'] },
+            { name: 'Calculator', keys: ['calcHistory'] },
+            { name: 'Calendar', keys: ['monthPlans'] },
+            { name: 'Color Palettes Vault', keys: ['colorVault'] },
+            { name: 'Dictionary Manager', keys: ['userDictionary'] },
+            { name: 'Downloads Task', keys: ['categories', 'tasks'] },
+            { name: 'GitHub Repo Manager', keys: ['githubRepo'] },
+            { name: 'Heartopia Gift Codes', keys: ['hatoGiftCodes'] },
+            { name: 'Hiragana Learner', keys: ['hiraganaHistory', 'hiraganaLastCheckin', 'hiraganaScores', 'unlockedAchievements'] },
+            { name: 'Home', keys: ['lastPageState', 'pinnedAppsContainer', 'pinnedGamesContainer'] },
+            { name: 'Inertia', keys: ['startDate', 'scoreCounts', 'workoutsCards', 'workoutsHistory', 'checkins', 'userRole', 'medicCards', 'reminders', 'lastMonthKey', 'workoutStartDate', 'totalScore', 'totalPoints', 'checkinBonus', 'lastResetMonth'] },
+            { name: 'Journal', keys: ['dailyJournalContents'] },
+            { name: 'Links Vault', keys: ['bookmarksSaved'] },
+            { name: 'Lyricure', keys: ['lyricsCache'] },
+            { name: 'Movies Gallery', keys: ['mediaGalleryData'] },
+            { name: 'Multi Countdown', keys: ['countdownApp'] },
+            { name: 'Notes', keys: ['notesApp', 'recentNotes', 'pluginStates', 'trashFolders', 'pluginsEnabled', 'trashNotes'] },
+            { name: 'Pixel SVG Maker', keys: ['lastColorPSVG'] },
+            { name: 'Pocket Garden', keys: ['pocketGarden'] },
+            { name: 'Projects Task Manager', keys: ['projectFolders'] },
+            { name: 'Routine Quest', keys: ['routineGame'] },
+            { name: 'Subscription Manager', keys: ['subscriptionsManager'] },
+            { name: 'Text Based Life', keys: ['textFarm'] },
+            { name: 'UserScripts', keys: ['sidebar_utilities_settings'] },
+            { name: 'Voidgarden', keys: ['farmGameSave'] },
+            { name: 'Wallet Money Tracker', keys: ['moneyTrackerCards', 'moneyTrackerTransactions'] },
+            { name: 'Work Attendance', keys: ['firstWorkDate', 'profileAbout', 'salaryDeduction', 'employeeId', 'salaryArchives', 'attendanceRecords', 'perdaySalary', 'profileName'] }
+        ];
+
+        const excludedKeys = [
+            'giveaway_settings', 'giveaway_participants',
+            'giveawayParticipants', 'lastGiveawayWinner', 'giveawayData',
+            'showDescription', 'hideSettingsButton', 'showSearchBar', 'bodyPosition',
+            'showBanner', 'showQuickLinks', 'pinnedItems', 'app_hash_v2', 'app_salt_v2',
+            'dropbox_tokens', 'hideImportNote', 'hideSwipeIndicator', 'hintModeEnabled',
+            'hiraganaStars', 'hiraganaStreak', 'moneyTrackerCurrentCardId', 'showAllEntries',
+            'userName', 'lastPageState', 'giveaway_admins', 'openrouterAPIKey', 'showHeader',
+            'hideIcons', 'privacy-policy-notice-dismissed', 'loginPop', 'lastCloudBackupDate',
+            'backupFileSizes', 'vault_hash_v1', 'vault_salt_v1', 'secretVault',
+            'storageBackupSelectedApps', 'storageRestoreSelectedApps'
+        ];
+
+        const BACKUP_META_KEY = 'backupFileSizes';
+        const IMAGES_DB_NAME = 'journalImagesDB';
+        const IMAGES_STORE_NAME = 'images';
+
+        function openImagesDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(IMAGES_DB_NAME, 1);
+                request.onupgradeneeded = function(e) {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(IMAGES_STORE_NAME)) {
+                        db.createObjectStore(IMAGES_STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = function(e) { resolve(e.target.result); };
+                request.onerror = function(e) { reject(e.target.error); };
+            });
         }
 
-        function renderTabs() {
-            const container = document.getElementById("tabs-container")
-            let html = ""
-            const sorted = ["All", ...categories.filter(c => c !== "All").sort((a, b) => a.localeCompare(b))]
-            sorted.forEach(cat => {
-                const active = cat === currentTab ? "tab-active" : "bg-zinc-900 text-zinc-400"
-                html += `<button onclick="switchTab('${cat}')" ondblclick="editFolder('${cat}')" class="tab-pill ${active}">${cat}</button>`
-            })
-            container.innerHTML = html
+        const REDIRECT_URI = window.location.origin + window.location.pathname;
+
+        let currentFolder = 'All';
+        let pinnedItems = JSON.parse(localStorage.getItem('pinnedItems') || '[]');
+        let tempFolders = [];
+        let allPage = 0;
+        let optionsMode = null;
+
+        const avatarEl = document.getElementById('avatar');
+        const usernameEl = document.getElementById('username');
+
+        if (window.self !== window.top) {
+            const backLink = document.querySelector('.back-link');
+            if (backLink) backLink.style.display = 'none';
         }
 
-        function updateTaskCounter(count) {
-            document.getElementById("folderTaskCount").innerText = count
-        }
-
-        function getDomainPill(url) {
-            if (!url) return null
-            try {
-                const hostname = new URL(url).hostname.replace('www.', '')
-                if (hostname.includes('play.google.com')) return 'Play Store'
-                if (hostname.includes('mediafire.com')) return 'MediaFire'
-                if (hostname.includes('mega.nz')) return 'MEGA'
-                if (hostname.includes('drive.google.com')) return 'Google Drive'
-                if (hostname.includes('dropbox.com')) return 'Dropbox'
-                if (hostname.includes('github.com')) return 'GitHub'
-                if (hostname.includes('github.io')) return 'GitHub'
-                if (hostname.includes('sourceforge.net')) return 'SourceForge'
-                if (hostname.includes('apkmirror.com')) return 'APK Mirror'
-                if (hostname.includes('apkpure.com')) return 'APKPure'
-                if (hostname.includes('archive.org')) return 'Archive'
-                if (hostname.includes('youtu.be')) return 'YouTube'
-                if (hostname.includes('taptap.io')) return 'TapTap'
-                if (hostname.includes('coolrom.com.au')) return 'Coolrom'
-                if (hostname.includes('t.me')) return 'Telegram'
-                if (hostname.includes('1024terabox.com')) return 'Terabox'
-                if (hostname.includes('emuparadise.me')) return 'Emuparadise'
-                if (hostname.includes('rikka-ai.com')) return 'Rikka AI'
-                if (hostname.includes('itch.io')) return 'Itch'
-                return hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1)
-            } catch {
-                return 'External'
+        function updateUserDisplay() {
+            const currentUserRaw = localStorage.getItem('currentUser');
+            let displayName = 'User';
+            if (currentUserRaw) {
+                try {
+                    const currentUser = JSON.parse(currentUserRaw);
+                    if (currentUser.username && currentUser.username.trim()) {
+                        displayName = currentUser.username;
+                    }
+                } catch (e) {}
+            }
+            usernameEl.textContent = displayName;
+            const profilePhoto = localStorage.getItem('profilePhoto');
+            if (profilePhoto && profilePhoto.startsWith('data:image')) {
+                avatarEl.style.backgroundImage = `url(${profilePhoto})`;
+                avatarEl.style.backgroundSize = 'cover';
+                avatarEl.style.backgroundPosition = 'center';
+            } else {
+                avatarEl.style.backgroundImage = '';
+                avatarEl.style.backgroundColor = '#333';
             }
         }
 
-        function openTaskLinkWithCheck(event, url, taskId) {
-            const card = document.getElementById(`task-${taskId}`)
-            if (card && card.dataset.longPressed === 'true') {
-                delete card.dataset.longPressed
-                return
+        window.addEventListener('storage', function(event) {
+            if (event.key === 'currentUser' || event.key === 'profilePhoto') {
+                updateUserDisplay();
             }
-            if (url && url.trim()) window.open(url, '_blank')
+        });
+
+        function getFilteredKeys() {
+            let keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                let k = localStorage.key(i);
+                if (!excludedKeys.includes(k)) keys.push(k);
+            }
+            return keys;
         }
 
-        function renderTaskCard(task) {
-            const checkedClass = task.checked ? 'bg-[rgba(193,252,50,0.15)] border-[rgba(193,252,50,0.3)]' : 'bg-zinc-900 border-zinc-800'
-            const pinColor = task.priority ? "text-[#C1FC32]" : "text-zinc-500"
-            const statusBadge = (task.status && task.status.trim() !== "") ? `<span class="badge badge-status">${task.status}</span>` : ""
-            const sourceBadge = (task.sourceUrl && task.sourceUrl.trim() !== "") ? `<span onclick="event.stopPropagation(); window.open('${task.sourceUrl}', '_blank')" class="badge badge-status cursor-pointer">Source</span>` : ""
-            const domainPill = task.url ? getDomainPill(task.url) : null
-            const domainBadge = domainPill ? `<span class="badge badge-domain">${domainPill}</span>` : ""
-            const notesHtml = (task.notes && task.notes.trim() !== "") ? `<div class="text-sm text-zinc-400 mt-2 notes-scrollable">${task.notes}</div>` : ""
-            const safeUrl = task.url ? task.url.replace(/'/g, "\\'") : ''
+        function getFolderForKey(key) {
+            for (let def of folderDefinitions) {
+                if (def.keys.includes(key)) return def.name;
+            }
+            return 'Other';
+        }
 
-            return `
-                <div id="task-${task.id}" data-id="${task.id}" class="task-card ${checkedClass} rounded-3xl p-4 border flex items-start gap-4">
-                    <div onclick="toggleCheck(${task.id});event.stopImmediatePropagation()" class="w-6 h-6 rounded-2xl border-2 ${task.checked ? 'bg-[#C1FC32] border-[#C1FC32]' : 'border-zinc-600'} flex items-center justify-center cursor-pointer flex-shrink-0 mt-0.5">
-                        ${task.checked ? '<i class="fa-solid fa-check text-black check-icon-small"></i>' : ''}
-                    </div>
-                    <div class="flex-1 pt-0.5 ${task.url ? 'cursor-pointer' : ''}" onclick="openTaskLinkWithCheck(event, '${safeUrl}', ${task.id})">
-                        <div class="${task.checked ? 'line-through text-zinc-400' : 'font-medium text-white'} text-[17px] break-words">${task.title}</div>
-                        ${notesHtml}
-                        <div class="mt-3 flex items-center gap-2 flex-wrap">
-                            ${statusBadge}
-                            ${sourceBadge}
-                            ${domainBadge}
+        function getAvailableFolders() {
+            const allKeys = getFilteredKeys();
+            const folders = [];
+            folderDefinitions.forEach(def => {
+                if (allKeys.some(key => getFolderForKey(key) === def.name)) folders.push(def.name);
+            });
+            if (allKeys.some(key => getFolderForKey(key) === 'Other')) folders.push('Other');
+            return folders;
+        }
+
+        function savePinnedItems() {
+            localStorage.setItem('pinnedItems', JSON.stringify(pinnedItems));
+        }
+
+        function togglePin(key) {
+            if (pinnedItems.includes(key)) {
+                pinnedItems = pinnedItems.filter(item => item !== key);
+            } else {
+                pinnedItems.push(key);
+            }
+            savePinnedItems();
+            buildCards();
+        }
+
+        function isPinned(key) {
+            return pinnedItems.includes(key);
+        }
+
+        function buildFolders() {
+            const foldersEl = document.getElementById('folders');
+            if (foldersEl.children.length > 0) {
+                const btns = foldersEl.querySelectorAll('.folder-pill');
+                btns.forEach(btn => {
+                    if (btn.dataset.folder === currentFolder) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+                return;
+            }
+
+            function addFolderButton(name) {
+                const btn = document.createElement('button');
+                btn.className = 'folder-pill';
+                btn.dataset.folder = name;
+                if (name === currentFolder) btn.classList.add('active');
+                btn.textContent = name;
+                btn.onclick = () => {
+                    currentFolder = name;
+                    allPage = 0;
+                    buildFolders();
+                    buildCards();
+                };
+                foldersEl.appendChild(btn);
+            }
+
+            addFolderButton('All');
+            addFolderButton('Other');
+
+            tempFolders.forEach(folder => {
+                addFolderButton(folder);
+            });
+
+            const expandBtn = document.createElement('button');
+            expandBtn.className = 'folder-pill';
+            expandBtn.textContent = 'Expand';
+            expandBtn.onclick = openFoldersPopup;
+            foldersEl.appendChild(expandBtn);
+        }
+
+        function getTotalStorageSize() {
+            let total = 0;
+            for (let i = 0; i < localStorage.length; i++) {
+                let key = localStorage.key(i);
+                let value = localStorage.getItem(key);
+                total += key.length + value.length;
+            }
+            return total;
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + 'B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
+            return (bytes / 1048576).toFixed(1) + 'MB';
+        }
+
+        function buildCards() {
+            const search = document.getElementById('globalSearch').value.toLowerCase();
+            let allKeys = getFilteredKeys();
+            let filtered = allKeys.filter(key => {
+                if (currentFolder === 'All') return true;
+                if (currentFolder === 'Other') {
+                    return getFolderForKey(key) === 'Other';
+                }
+                return getFolderForKey(key) === currentFolder;
+            });
+            filtered = filtered.filter(key => {
+                let val = localStorage.getItem(key);
+                if (key === 'currentUser') {
+                    try {
+                        let user = JSON.parse(val);
+                        if (user && typeof user === 'object') {
+                            const { admin, ...cleanUser } = user;
+                            val = JSON.stringify(cleanUser);
+                        }
+                    } catch (e) {}
+                }
+                return key.toLowerCase().includes(search) || val.toLowerCase().includes(search);
+            });
+            filtered.sort((a, b) => {
+                if (isPinned(a) && !isPinned(b)) return -1;
+                if (!isPinned(a) && isPinned(b)) return 1;
+                return 0;
+            });
+
+            let displayKeys = filtered;
+            let totalPages = 1;
+            let page = 0;
+
+            if (currentFolder === 'All') {
+                totalPages = Math.ceil(filtered.length / 7) || 1;
+                if (allPage >= totalPages) allPage = totalPages - 1;
+                if (allPage < 0) allPage = 0;
+                page = allPage;
+                const start = page * 7;
+                displayKeys = filtered.slice(start, start + 7);
+            }
+
+            const container = document.getElementById('storageContainer');
+            container.innerHTML = '';
+            let totalSize = getTotalStorageSize();
+            const pill = document.getElementById('folderPill');
+            pill.textContent = currentFolder;
+            if (filtered.length === 0) {
+                pill.style.background = '#333';
+                pill.style.color = '#888';
+                let card = document.createElement('div');
+                card.className = 'storage-card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="tag-and-delete">
+                            <div class="storage-tag">Empty</div>
                         </div>
                     </div>
-                    <div class="flex-shrink-0 flex items-center gap-3 mt-1">
-                        <i onclick="showTaskPopup(true,${task.id});event.stopImmediatePropagation()" class="fa-solid fa-pencil-alt cursor-pointer text-zinc-400 hover:text-[#C1FC32] transition"></i>
-                        <i onclick="togglePriority(${task.id});event.stopImmediatePropagation()" class="fa-solid fa-thumbtack pin-icon-small cursor-pointer ${pinColor}"></i>
+                    <div class="storage-key">No items</div>
+                    <div class="storage-value">No data in this folder.</div>
+                    <div class="card-footer">
+                        <div class="due">Length: 0 — 0B</div>
+                        <div class="progress"><div class="progress-fill" style="width:0%"></div></div>
                     </div>
-                </div>`
-        }
-
-        function attachLongPressListeners() {
-            const cards = document.querySelectorAll('.task-card')
-            cards.forEach(card => {
-                let timer = null
-                const touchStartHandler = (e) => {
-                    timer = setTimeout(() => {
-                        const taskId = card.getAttribute('data-id')
-                        const task = tasks.find(t => t.id == taskId)
-                        if (task && task.url) {
-                            if (window.plugins && window.plugins.socialsharing) {
-                                window.plugins.socialsharing.share(
-                                    null,
-                                    null,
-                                    null,
-                                    task.url,
-                                    function() {
-                                        card.dataset.longPressed = 'true';
-                                        setTimeout(() => delete card.dataset.longPressed, 500);
-                                    },
-                                    function() {
-                                        navigator.clipboard.writeText(task.url);
-                                        window.showMessage('Download URL copied');
-                                        card.dataset.longPressed = 'true';
-                                        setTimeout(() => delete card.dataset.longPressed, 500);
+                `;
+                container.appendChild(card);
+            } else {
+                pill.style.background = 'var(--accent-color)';
+                pill.style.color = '#000';
+                displayKeys.forEach(key => {
+                    let rawValue = localStorage.getItem(key);
+                    let valueForDisplay = rawValue;
+                    let isJSON = false;
+                    let isBase64 = false;
+                    if (key === 'currentUser') {
+                        try {
+                            let userObj = JSON.parse(rawValue);
+                            if (userObj && typeof userObj === 'object') {
+                                const { admin, ...cleanUser } = userObj;
+                                valueForDisplay = JSON.stringify(cleanUser, null, 2);
+                                isJSON = true;
+                            }
+                        } catch (e) {}
+                    } else {
+                        if (typeof rawValue === 'string' && rawValue.length > 500 && rawValue.startsWith('data:image')) {
+                            valueForDisplay = '[Base64 Image] ' + rawValue.substring(0, 40) + '...';
+                            isBase64 = true;
+                        } else {
+                            try {
+                                let parsed = JSON.parse(rawValue);
+                                if (typeof parsed === 'object' && parsed !== null) {
+                                    valueForDisplay = JSON.stringify(parsed, null, 2);
+                                    if (valueForDisplay.length > 300) {
+                                        valueForDisplay = valueForDisplay.substring(0, 300) + '...';
                                     }
-                                );
-                            } else if (navigator.share) {
-                                navigator.share({
-                                    url: task.url
-                                }).then(() => {
-                                    card.dataset.longPressed = 'true';
-                                    setTimeout(() => delete card.dataset.longPressed, 500);
-                                }).catch(() => {
-                                    navigator.clipboard.writeText(task.url);
-                                    window.showMessage('Download URL copied');
-                                    card.dataset.longPressed = 'true';
-                                    setTimeout(() => delete card.dataset.longPressed, 500);
-                                });
-                            } else {
-                                navigator.clipboard.writeText(task.url);
-                                window.showMessage('Download URL copied');
-                                card.dataset.longPressed = 'true';
-                                setTimeout(() => delete card.dataset.longPressed, 500);
+                                    isJSON = true;
+                                }
+                            } catch {
+                                if (rawValue.length > 300) {
+                                    valueForDisplay = rawValue.substring(0, 300) + '...';
+                                } else {
+                                    valueForDisplay = rawValue;
+                                }
                             }
                         }
-                    }, 500)
-                }
-                const clearTimer = () => {
-                    if (timer) clearTimeout(timer)
-                }
-                card.addEventListener('touchstart', touchStartHandler, { passive: false })
-                card.addEventListener('touchmove', clearTimer)
-                card.addEventListener('touchend', clearTimer)
-                card.addEventListener('touchcancel', clearTimer)
-                card._longPressCleanup = () => {
-                    card.removeEventListener('touchstart', touchStartHandler)
-                    card.removeEventListener('touchmove', clearTimer)
-                    card.removeEventListener('touchend', clearTimer)
-                    card.removeEventListener('touchcancel', clearTimer)
-                }
-            })
-        }
-
-        function renderTasks() {
-            if (currentTab === null) {
-                document.getElementById("tasks-container").innerHTML = `<div class="py-20 text-center text-zinc-500"><i class="fa-solid fa-folder-open text-6xl mb-4 block"></i><p>Select a folder to view tasks</p></div>`
-                updateTaskCounter(0)
-                return
-            }
-            let filtered = currentTab === "All" ? tasks : tasks.filter(t => t.category === currentTab)
-            if (filterActive) {
-                filtered = filtered.filter(t => !t.checked)
-            }
-            let sorted = [...filtered].sort((a, b) => {
-                if (a.priority !== b.priority) return b.priority - a.priority
-                if (currentSort === "newest") return b.id - a.id
-                return a.title.localeCompare(b.title)
-            })
-            const container = document.getElementById("tasks-container")
-            updateTaskCounter(filtered.length)
-            if (sorted.length === 0) {
-                container.innerHTML = `<div class="py-20 text-center text-zinc-500"><i class="fa-solid fa-inbox text-6xl mb-4 block"></i><p>No tasks found</p></div>`
-                return
-            }
-            let html = ""
-            if (currentSort === "az" && currentTab !== "All") {
-                let currentLetter = ""
-                let hashShown = false
-                sorted.forEach(task => {
-                    let firstChar = task.title.charAt(0).toUpperCase()
-                    let displayLetter = /[0-9]/.test(firstChar) ? '#' : firstChar
-                    if (displayLetter === '#') {
-                        if (!hashShown) {
-                            hashShown = true
-                            html += `<div class="alpha-header">#</div>`
-                        }
-                    } else {
-                        if (displayLetter !== currentLetter) {
-                            currentLetter = displayLetter
-                            html += `<div class="alpha-header">${displayLetter}</div>`
-                        }
                     }
-                    html += renderTaskCard(task)
-                })
-            } else {
-                sorted.forEach(task => {
-                    html += renderTaskCard(task)
-                })
-            }
-            container.innerHTML = html
-            updateFilterButtonState()
-            attachLongPressListeners()
-        }
-
-        function switchTab(tab) {
-            currentTab = tab
-            renderTabs()
-            renderTasks()
-        }
-
-        function toggleCheck(id) {
-            const task = tasks.find(t => t.id === id)
-            task.checked = !task.checked
-            saveData()
-            renderTasks()
-        }
-
-        function togglePriority(id) {
-            const task = tasks.find(t => t.id === id)
-            task.priority = !task.priority
-            saveData()
-            renderTasks()
-        }
-
-        function updateFolderSelectBtn(category) {
-            selectedCategoryForTask = category
-            document.getElementById("taskCategoryValue").value = category
-            document.getElementById("folderSelectBtnText").textContent = category || "Select Folder"
-        }
-
-        function toggleSeries() {
-            seriesEnabled = !seriesEnabled
-            updateSeriesUI()
-        }
-
-        function addSeriesInput() {
-            if (seriesCount >= 24) return
-            seriesCount++
-            if (!currentSeriesValues) currentSeriesValues = []
-            currentSeriesValues.push("")
-            renderSeriesInputs()
-            updateSeriesButtonsVisibility()
-        }
-
-        function removeSeriesInput() {
-            if (seriesCount <= 0) return
-            seriesCount--
-            currentSeriesValues.pop()
-            renderSeriesInputs()
-            updateSeriesButtonsVisibility()
-        }
-
-        function updateSeriesUI() {
-            const toggleBtn = document.getElementById("seriesToggleBtn")
-            const minusBtn = document.getElementById("seriesMinusBtn")
-            const plusBtn = document.getElementById("seriesPlusBtn")
-            const inputsContainer = document.getElementById("seriesInputsContainer")
-
-            if (seriesEnabled) {
-                toggleBtn.innerHTML = '<i class="fas fa-check" style="color: #000000;"></i>'
-                toggleBtn.classList.add("active")
-                minusBtn.classList.remove("hidden")
-                plusBtn.classList.remove("hidden")
-                inputsContainer.classList.remove("hidden")
-                renderSeriesInputs()
-            } else {
-                toggleBtn.innerHTML = '<i class="fas fa-close" style="color: #ffffff;"></i>'
-                toggleBtn.classList.remove("active")
-                minusBtn.classList.add("hidden")
-                plusBtn.classList.add("hidden")
-                inputsContainer.classList.add("hidden")
-                inputsContainer.innerHTML = ""
-                seriesCount = 0
-                currentSeriesValues = []
-            }
-        }
-
-        function updateSeriesButtonsVisibility() {
-            const minusBtn = document.getElementById("seriesMinusBtn")
-            const plusBtn = document.getElementById("seriesPlusBtn")
-            if (!seriesEnabled) {
-                minusBtn.classList.add("hidden")
-                plusBtn.classList.add("hidden")
-                return
-            }
-            minusBtn.classList.remove("hidden")
-            plusBtn.classList.remove("hidden")
-            if (seriesCount >= 24) {
-                plusBtn.classList.add("hidden")
-            }
-        }
-
-        function renderSeriesInputs() {
-            const container = document.getElementById("seriesInputsContainer")
-            if (!seriesEnabled) {
-                container.innerHTML = ""
-                return
-            }
-            let html = ""
-            for (let i = 0; i < seriesCount; i++) {
-                const val = currentSeriesValues[i] || ""
-                html += `
-                    <div class="series-input-row">
-                        <div class="series-input-wrapper">
-                            <span class="series-input-number">${i + 1}</span>
-                            <input type="text" placeholder="Link" value="${val.replace(/"/g, '&quot;')}" oninput="updateSeriesValue(${i}, this.value)">
+                    if (!isJSON && !isBase64 && valueForDisplay.length > 300 && typeof valueForDisplay === 'string') {
+                        valueForDisplay = valueForDisplay.substring(0, 300) + '...';
+                    }
+                    let percent = rawValue.length ? Math.min(100, Math.round((rawValue.length / 500) * 100)) : 0;
+                    let itemSizeBytes = key.length + rawValue.length;
+                    let itemSizeFormatted = formatSize(itemSizeBytes);
+                    let card = document.createElement('div');
+                    card.className = 'storage-card';
+                    card.innerHTML = `
+                        <div class="card-header">
+                            <div class="tag-and-delete">
+                                <div class="storage-tag">${isBase64 ? 'Base64' : (isJSON ? 'JSON' : 'String')}</div>
+                                <button class="delete-btn" data-key="${key}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <button class="pin-btn" data-key="${key}" style="background:transparent; border:none; color:${isPinned(key) ? 'var(--accent-color)' : 'var(--text-secondary)'}; cursor:pointer; font-size:1.2rem; margin-top:2px;">
+                                <i class="fas fa-thumbtack"></i>
+                            </button>
                         </div>
-                        <button type="button" class="series-open-btn" onclick="openSeriesInputUrl(this)" title="Open URL">
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>`
-            }
-            container.innerHTML = html
-        }
-
-        function normalizeUrl(url) {
-            const trimmed = url.trim()
-            if (!trimmed) return ""
-            if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) return trimmed
-            return 'https://' + trimmed
-        }
-
-        function openSeriesInputUrl(button) {
-            const row = button.closest('.series-input-row')
-            if (!row) return
-            const input = row.querySelector('input')
-            if (!input) return
-            const url = normalizeUrl(input.value)
-            if (!url) return
-            const link = document.createElement('a')
-            link.href = url
-            link.target = '_blank'
-            link.rel = 'noopener noreferrer'
-            link.style.display = 'none'
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-        }
-
-        function openInputUrl(inputId) {
-            const input = document.getElementById(inputId)
-            if (!input) return
-            const url = normalizeUrl(input.value)
-            if (!url) return
-            const link = document.createElement('a')
-            link.href = url
-            link.target = '_blank'
-            link.rel = 'noopener noreferrer'
-            link.style.display = 'none'
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-        }
-
-        function updateSeriesValue(index, value) {
-            if (!currentSeriesValues) currentSeriesValues = []
-            while (currentSeriesValues.length <= index) {
-                currentSeriesValues.push("")
-            }
-            currentSeriesValues[index] = value
-        }
-
-        function showTaskPopup(isEdit, id = null) {
-            editingId = isEdit ? id : null
-            document.getElementById("popupTitle").textContent = isEdit ? "Edit Task" : "New Task"
-            document.getElementById("editActions").classList.toggle("hidden", !isEdit)
-            document.getElementById("newActions").classList.toggle("hidden", isEdit)
-
-            if (isEdit) {
-                const task = tasks.find(t => t.id === id)
-                document.getElementById("taskTitle").value = task.title
-                document.getElementById("taskDownloadUrl").value = task.url || ""
-                updateFolderSelectBtn(task.category)
-                document.getElementById("taskStatus").value = task.status || ""
-                document.getElementById("taskSourceUrl").value = task.sourceUrl || ""
-                document.getElementById("taskNotes").value = task.notes || ""
-
-                seriesEnabled = task.seriesEnabled || false
-                if (task.seriesInputs && Array.isArray(task.seriesInputs)) {
-                    currentSeriesValues = [...task.seriesInputs]
-                    seriesCount = currentSeriesValues.length
-                } else {
-                    currentSeriesValues = []
-                    seriesCount = 0
-                }
-            } else {
-                document.getElementById("taskTitle").value = ""
-                document.getElementById("taskDownloadUrl").value = ""
-                const defaultCat = categories.length > 1 ? categories[1] : "Anime"
-                updateFolderSelectBtn(defaultCat)
-                document.getElementById("taskStatus").value = ""
-                document.getElementById("taskSourceUrl").value = ""
-                document.getElementById("taskNotes").value = ""
-                seriesEnabled = false
-                seriesCount = 0
-                currentSeriesValues = []
-            }
-            updateSeriesUI()
-            document.getElementById("universalPopup").classList.add("popup-visible")
-        }
-
-        function saveTask() {
-            const title = document.getElementById("taskTitle").value.trim()
-            if (!title) return
-            const downloadUrl = document.getElementById("taskDownloadUrl").value.trim()
-            const category = document.getElementById("taskCategoryValue").value
-            const status = document.getElementById("taskStatus").value.trim()
-            const sourceUrl = document.getElementById("taskSourceUrl").value.trim()
-            const notes = document.getElementById("taskNotes").value.trim()
-
-            const seriesValues = []
-            if (seriesEnabled && seriesCount > 0) {
-                const inputs = document.querySelectorAll('#seriesInputsContainer input')
-                inputs.forEach(inp => seriesValues.push(inp.value.trim()))
+                        <div class="storage-key">${key.length > 50 ? key.substring(0, 50) + '...' : key}</div>
+                        <div class="storage-value">${valueForDisplay.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                        <div class="card-footer">
+                            <div class="due">Length: ${rawValue.length} — ${itemSizeFormatted}</div>
+                            <div class="progress"><div class="progress-fill" style="width:${percent}%"></div></div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                    if (isPinned(key)) {
+                        card.style.border = '2px solid var(--accent-color)';
+                    }
+                });
             }
 
-            if (editingId) {
-                const task = tasks.find(t => t.id === editingId)
-                task.title = title
-                task.url = downloadUrl
-                task.category = category
-                task.status = status
-                task.sourceUrl = sourceUrl
-                task.notes = notes
-                task.seriesEnabled = seriesEnabled
-                task.seriesInputs = seriesEnabled ? seriesValues : []
-                window.showMessage('Task updated successfully')
-            } else {
-                tasks.unshift({
-                    id: Date.now(),
-                    title: title,
-                    url: downloadUrl,
-                    category: category,
-                    status: status,
-                    sourceUrl: sourceUrl,
-                    notes: notes,
-                    checked: false,
-                    priority: false,
-                    seriesEnabled: seriesEnabled,
-                    seriesInputs: seriesEnabled ? seriesValues : []
-                })
-                window.showMessage('Task created successfully')
+            const paginationContainer = document.getElementById('paginationContainer');
+            paginationContainer.innerHTML = '';
+            if (currentFolder === 'All' && totalPages > 1) {
+                const pagDiv = document.createElement('div');
+                pagDiv.className = 'pagination-controls';
+                const prevBtn = document.createElement('button');
+                prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Previous';
+                prevBtn.disabled = page === 0;
+                prevBtn.onclick = () => {
+                    if (page > 0) {
+                        allPage--;
+                        buildCards();
+                    }
+                };
+                const pageLabel = document.createElement('span');
+                pageLabel.className = 'page-number';
+                pageLabel.textContent = `Page ${page + 1} of ${totalPages}`;
+                const nextBtn = document.createElement('button');
+                nextBtn.innerHTML = 'Next <i class="fas fa-chevron-right"></i>';
+                nextBtn.disabled = page >= totalPages - 1;
+                nextBtn.onclick = () => {
+                    if (page < totalPages - 1) {
+                        allPage++;
+                        buildCards();
+                    }
+                };
+                pagDiv.appendChild(prevBtn);
+                pagDiv.appendChild(pageLabel);
+                pagDiv.appendChild(nextBtn);
+                paginationContainer.appendChild(pagDiv);
             }
-            saveData()
-            closeUniversalPopup()
-            renderTasks()
+
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    let k = btn.dataset.key;
+                    showConfirmPopup('Delete', 'Delete this item?', () => {
+                        localStorage.removeItem(k);
+                        pinnedItems = pinnedItems.filter(item => item !== k);
+                        savePinnedItems();
+                        initialize();
+                        if (window.showMessage) window.showMessage('Deleted successfully');
+                    });
+                };
+            });
+            document.querySelectorAll('.pin-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    let k = btn.dataset.key;
+                    togglePin(k);
+                };
+            });
         }
 
-        function showFolderPopup() {
-            document.getElementById("folderName").value = ""
-            document.getElementById("folderPopup").classList.add("popup-visible")
-        }
+        document.getElementById('globalSearch').addEventListener('input', () => {
+            allPage = 0;
+            buildCards();
+        });
 
-        function createFolder() {
-            const name = document.getElementById("folderName").value.trim()
-            if (name && !categories.includes(name)) {
-                categories.push(name)
-                sortCategories()
-                renderTabs()
-                saveData()
-                window.showMessage('New folder added')
-            }
-            closeFolderPopup()
-        }
-
-        function closeFolderPopup() {
-            document.getElementById("folderPopup").classList.remove("popup-visible")
-        }
-
-        function editFolder(cat) {
-            if (cat === "All") return
-            editingFolder = cat
-            document.getElementById("editFolderName").value = cat
-            document.getElementById("editFolderPopup").classList.add("popup-visible")
-        }
-
-        function renameFolder() {
-            const newName = document.getElementById("editFolderName").value.trim()
-            if (!newName || newName === editingFolder || categories.includes(newName)) {
-                closeEditFolderPopup()
-                return
-            }
-            const oldName = editingFolder
-            categories = categories.map(c => c === oldName ? newName : c)
-            tasks.forEach(task => {
-                if (task.category === oldName) task.category = newName
-            })
-            sortCategories()
-            saveData()
-            renderTabs()
-            renderTasks()
-            window.showMessage('Folder renamed')
-            closeEditFolderPopup()
-        }
-
-        function showDeleteFolderPopup() {
-            document.getElementById("deleteFolderPopup").classList.add("popup-visible")
-        }
-
-        function confirmDeleteFolder() {
-            const oldName = editingFolder
-            tasks = tasks.filter(t => t.category !== oldName)
-            categories = categories.filter(c => c !== oldName)
-            if (currentTab === oldName) currentTab = null
-            sortCategories()
-            saveData()
-            renderTabs()
-            renderTasks()
-            window.showMessage('Folder deleted')
-            closeDeleteFolderPopup()
-            closeEditFolderPopup()
-        }
-
-        function closeDeleteFolderPopup() {
-            document.getElementById("deleteFolderPopup").classList.remove("popup-visible")
-        }
-
-        function closeEditFolderPopup() {
-            document.getElementById("editFolderPopup").classList.remove("popup-visible")
-        }
-
-        function showDeletePopup() {
-            document.getElementById("deletePopup").classList.add("popup-visible")
-        }
-
-        function confirmDelete() {
-            tasks = tasks.filter(t => t.id !== editingId)
-            saveData()
-            closeDeletePopup()
-            closeUniversalPopup()
-            renderTasks()
-            window.showMessage('Task deleted successfully')
-        }
-
-        function closeDeletePopup() {
-            document.getElementById("deletePopup").classList.remove("popup-visible")
+        function initialize() {
+            buildFolders();
+            buildCards();
+            updateUserDisplay();
         }
 
         function closeUniversalPopup() {
-            document.getElementById("universalPopup").classList.remove("popup-visible")
+            document.getElementById('universalPopup').style.display = 'none';
         }
 
-        function toggleSort() {
-            currentSort = currentSort === "newest" ? "az" : "newest"
-            document.getElementById("sortButton").textContent = currentSort === "newest" ? "Newest First" : "A-Z Sorted"
-            renderTasks()
+        function closeFoldersPopup() {
+            document.getElementById('foldersPopup').style.display = 'none';
         }
 
-        function toggleFilter() {
-            filterActive = !filterActive
-            renderTasks()
-            updateFilterButtonState()
+        function showConfirmPopup(title, message, onConfirm) {
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            titleEl.textContent = title;
+            contentEl.innerHTML = `
+                <div class="popup-message">${message}</div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn confirm" id="confirmYes">Yes</button>
+                    <button class="confirm-btn cancel" id="confirmNo">No</button>
+                </div>
+            `;
+            document.getElementById('confirmYes').onclick = () => {
+                closeUniversalPopup();
+                onConfirm();
+            };
+            document.getElementById('confirmNo').onclick = closeUniversalPopup;
+            popup.style.display = 'flex';
         }
 
-        function updateFilterButtonState() {
-            const btn = document.getElementById('filterBtn')
-            if (filterActive) {
-                btn.classList.add('active')
-            } else {
-                btn.classList.remove('active')
+        function showLoadingPopup(message) {
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            titleEl.textContent = 'Please Wait';
+            contentEl.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner-dot"></div>
+                    <div class="loading-text">${message}</div>
+                </div>
+            `;
+            popup.style.display = 'flex';
+        }
+
+        function showNoBackupsPopup() {
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            titleEl.textContent = 'Restore Options';
+            contentEl.innerHTML = `
+                <div class="popup-message">No backups were found in your Dropbox.</div>
+                <div class="popup-message">Please run a Cloud Backup first from a device that has app data, then try restoring again.</div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn cancel" id="noBackupsClose">Close</button>
+                </div>
+            `;
+            document.getElementById('noBackupsClose').onclick = closeUniversalPopup;
+            popup.style.display = 'flex';
+        }
+
+        function showNoAppsPopup() {
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            titleEl.textContent = 'Backup Options';
+            contentEl.innerHTML = `
+                <div class="popup-message">No app data was found in this browser.</div>
+                <div class="popup-message">Open some apps on this device first to create data, then come back to back it up.</div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn cancel" id="noAppsReload">Reload Page</button>
+                    <button class="confirm-btn confirm" id="noAppsClose">Close</button>
+                </div>
+            `;
+            document.getElementById('noAppsReload').onclick = () => {
+                closeUniversalPopup();
+                location.reload();
+            };
+            document.getElementById('noAppsClose').onclick = closeUniversalPopup;
+            popup.style.display = 'flex';
+        }
+
+        function renderOptionsPopup(mode, folders) {
+            optionsMode = mode;
+            const saveKey = mode === 'backup' ? 'storageBackupSelectedApps' : 'storageRestoreSelectedApps';
+            let savedSelected = [];
+            try {
+                savedSelected = JSON.parse(localStorage.getItem(saveKey) || '[]');
+            } catch (e) {
+                savedSelected = [];
             }
-        }
+            const availableNames = folders;
+            savedSelected = savedSelected.filter(name => availableNames.includes(name));
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            const isBackup = mode === 'backup';
+            titleEl.textContent = isBackup ? 'Backup Options' : 'Restore Options';
+            contentEl.innerHTML = `
+                <div class="popup-message">Select the apps you want to ${isBackup ? 'backup' : 'restore'}.</div>
+                <div class="button-row options-actions">
+                    <button class="confirm-btn cancel" id="optionsSelectAll">Select All</button>
+                    <button class="confirm-btn cancel" id="optionsUnselectAll">Unselect All</button>
+                </div>
+                <div class="options-list" id="optionsList">
+                    ${folders.map(name => `
+                        <label class="option-item">
+                            <input type="checkbox" class="option-checkbox" value="${name}" ${savedSelected.includes(name) ? 'checked' : ''}>
+                            <span class="option-name">${name}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn cancel" id="optionsConfirmSelected">Confirm</button>
+                    <button class="confirm-btn confirm" id="optionsConfirmAll">${isBackup ? 'Backup All' : 'Restore All'}</button>
+                </div>
+            `;
 
-        function openFolderSelectPopup() {
-            const listDiv = document.getElementById("folderSelectList")
-            const folders = categories.filter(c => c !== "All").sort((a, b) => a.localeCompare(b))
-            const current = selectedCategoryForTask
-            if (folders.length === 0) {
-                listDiv.innerHTML = `<div class="p-4 text-center text-zinc-500">No folders available</div>`
-            } else {
-                let html = ""
-                folders.forEach(folder => {
-                    const isActive = folder === current ? ' active' : ''
-                    html += `<button class="folder-option-btn${isActive}" onclick="selectFolder('${folder.replace(/'/g, "\\'")}')">${folder}</button>`
-                })
-                listDiv.innerHTML = html
-            }
-            document.getElementById("folderSelectPopup").classList.add("popup-visible")
-        }
+            const getCheckboxes = () => document.querySelectorAll('.option-checkbox');
+            const saveSelection = () => {
+                const checked = Array.from(getCheckboxes()).filter(cb => cb.checked).map(cb => cb.value);
+                localStorage.setItem(saveKey, JSON.stringify(checked));
+            };
 
-        function closeFolderSelectPopup() {
-            document.getElementById("folderSelectPopup").classList.remove("popup-visible")
-        }
-
-        function selectFolder(category) {
-            updateFolderSelectBtn(category)
-            closeFolderSelectPopup()
-        }
-
-        let searchTimeout
-        let suggestionHighlightTimer = null
-        const SUGGESTION_LIMIT = 8
-        const DEBOUNCE_DELAY = 150
-
-        function setupSearchDebounce() {
-            const searchInput = document.getElementById('globalSearch')
-            const suggestionsContainer = document.getElementById('searchSuggestions')
-
-            searchInput.addEventListener('input', function(event) {
-                event.stopPropagation()
-                clearTimeout(searchTimeout)
-                const value = this.value
-                searchTimeout = setTimeout(() => {
-                    showSearchSuggestions(value)
-                }, DEBOUNCE_DELAY)
-            }, { passive: true })
-
-            searchInput.addEventListener('keydown', function(event) {
-                if (event.key === 'Enter') {
-                    event.preventDefault()
-                    suggestionsContainer.style.display = 'none'
-                    performSearch()
-                }
-                if (event.key === 'Escape') {
-                    event.preventDefault()
-                    suggestionsContainer.style.display = 'none'
-                }
-            })
-
-            suggestionsContainer.addEventListener('click', handleSuggestionClick, { capture: false })
-
-            document.addEventListener('click', function(event) {
-                const isSearchInput = searchInput.contains(event.target)
-                const isSuggestionsContainer = suggestionsContainer.contains(event.target)
-                if (!isSearchInput && !isSuggestionsContainer) {
-                    hideSuggestions()
-                }
-            }, { capture: true })
-
-            searchInput.addEventListener('focus', function() {
-                if (this.value.trim()) {
-                    showSearchSuggestions(this.value)
-                }
-            }, { passive: true })
-        }
-
-        function handleSuggestionClick(event) {
-            const item = event.target.closest('.search-suggestion-item')
-            if (item && item.hasAttribute('data-id')) {
-                event.stopPropagation()
-                event.preventDefault()
-                selectSuggestion(item)
-            }
-        }
-
-        function showSearchSuggestions(term) {
-            const container = document.getElementById('searchSuggestions')
-            if (!term || !term.trim()) {
-                hideSuggestions()
-                return
-            }
-
-            const termLower = term.toLowerCase()
-            const matches = filterTasksBatch(termLower)
-            renderSuggestionsList(container, matches)
-            container.style.display = 'block'
-        }
-
-        function filterTasksBatch(termLower) {
-            const filtered = []
-            const maxItems = SUGGESTION_LIMIT
-            for (let i = 0; i < tasks.length && filtered.length < maxItems; i++) {
-                const task = tasks[i]
-                const titleMatch = task.title.toLowerCase().includes(termLower)
-                const statusMatch = task.status && task.status.toLowerCase().includes(termLower)
-                if (titleMatch || statusMatch) {
-                    filtered.push(task)
-                }
-            }
-            return filtered
-        }
-
-        function renderSuggestionsList(container, matches) {
-            if (matches.length === 0) {
-                container.innerHTML = `<div class="search-suggestion-item"><div class="suggestion-title">No results found</div><div class="suggestion-description">Try different keywords</div></div>`
-                return
-            }
-            const fragment = document.createDocumentFragment()
-            matches.slice(0, SUGGESTION_LIMIT).forEach(task => {
-                const div = document.createElement('div')
-                div.className = 'search-suggestion-item'
-                div.setAttribute('data-id', task.id)
-                div.setAttribute('role', 'option')
-                const titleDiv = document.createElement('div')
-                titleDiv.className = 'suggestion-title'
-                titleDiv.textContent = task.title
-                const descDiv = document.createElement('div')
-                descDiv.className = 'suggestion-description'
-                descDiv.textContent = `${task.status || 'No status'} • ${task.category}`
-                div.appendChild(titleDiv)
-                div.appendChild(descDiv)
-                fragment.appendChild(div)
-            })
-            container.innerHTML = ''
-            container.appendChild(fragment)
-        }
-
-        function hideSuggestions() {
-            const container = document.getElementById('searchSuggestions')
-            container.style.display = 'none'
-            container.innerHTML = ''
-        }
-
-        function selectSuggestion(item) {
-            const idAttr = item.getAttribute('data-id')
-            if (!idAttr) return
-            const id = Number(idAttr)
-            const task = tasks.find(t => t.id === id)
-            if (!task) return
-            document.getElementById('globalSearch').value = task.title
-            hideSuggestions()
-            if (currentTab !== task.category) {
-                currentTab = task.category
-                renderTabs()
-            }
-            renderTasks()
-            highlightTaskCard(id)
-        }
-
-        function highlightTaskCard(taskId) {
-            requestAnimationFrame(() => {
-                const card = document.getElementById(`task-${taskId}`)
-                if (card) {
-                    card.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                    clearTimeout(suggestionHighlightTimer)
-                    const originalColor = card.style.borderColor
-                    card.style.borderColor = '#C1FC32'
-                    card.style.transition = 'border-color 0.3s ease'
-                    suggestionHighlightTimer = setTimeout(() => {
-                        card.style.borderColor = originalColor
-                    }, 2500)
-                }
-            })
-        }
-
-        function performSearch() {
-            const term = document.getElementById('globalSearch').value.trim().toLowerCase()
-            if (!term) return
-            const matches = filterTasksBatch(term)
-            if (matches.length === 0) return
-            const firstTask = matches[0]
-            if (currentTab !== firstTask.category) {
-                currentTab = firstTask.category
-                renderTabs()
-            }
-            renderTasks()
-            highlightTaskCard(firstTask.id)
-        }
-
-        function showClearAllPopup() {
-            document.getElementById("clearAllPopup").classList.add("popup-visible")
-        }
-
-        function closeClearAllPopup() {
-            document.getElementById("clearAllPopup").classList.remove("popup-visible")
-        }
-
-        function confirmClearAll() {
-            tasks = []
-            saveData()
-            renderTasks()
-            closeClearAllPopup()
-            window.showMessage('All tasks cleared')
-        }
-
-        (function attachScrollButton() {
-            var btn = document.getElementById('scrollTopBtn');
-            if (!btn) return;
-
-            function showHide() {
-                var top = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-                btn.classList.toggle('show', top > 300);
-            }
-            window.addEventListener('scroll', showHide, { passive: true });
-            btn.addEventListener('click', function() {
-                btn.classList.add('btnMDYE');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                btn.addEventListener('animationend', function() {
-                    btn.classList.remove('btnMDYE');
-                }, { once: true });
+            document.getElementById('optionsSelectAll').onclick = () => {
+                getCheckboxes().forEach(cb => { cb.checked = true; });
+                saveSelection();
+            };
+            document.getElementById('optionsUnselectAll').onclick = () => {
+                getCheckboxes().forEach(cb => { cb.checked = false; });
+                saveSelection();
+            };
+            getCheckboxes().forEach(cb => {
+                cb.addEventListener('change', saveSelection);
             });
-            showHide();
-        })();
 
-        function initUI() {
-            if (categories.length === 1 && categories[0] === "All") {
-                categories = ["All"]
-            } else {
-                sortCategories()
-            }
-            renderTabs()
-            renderTasks()
-            setupSearchDebounce()
-            updateFilterButtonState()
-            updateFolderSelectBtn(categories.length > 1 ? categories[1] : "Anime")
+            document.getElementById('optionsConfirmSelected').onclick = () => {
+                const checked = Array.from(getCheckboxes()).filter(cb => cb.checked).map(cb => cb.value);
+                if (checked.length === 0) {
+                    window.showMessage('Select at least one app', true);
+                    return;
+                }
+                saveSelection();
+                closeUniversalPopup();
+                if (optionsMode === 'backup') {
+                    uploadBackup(checked);
+                } else {
+                    downloadAndRestore(checked);
+                }
+            };
+
+            document.getElementById('optionsConfirmAll').onclick = () => {
+                getCheckboxes().forEach(cb => { cb.checked = true; });
+                saveSelection();
+                const all = folders.slice();
+                closeUniversalPopup();
+                if (optionsMode === 'backup') {
+                    uploadBackup(all);
+                } else {
+                    downloadAndRestore(all);
+                }
+            };
+
+            popup.style.display = 'flex';
         }
 
-        window.onload = initUI
-        document.addEventListener('deviceready', initUI, false)
+        function showBackupOptionsPopup() {
+            const folders = getAvailableFolders();
+            if (folders.length === 0) {
+                showNoAppsPopup();
+                return;
+            }
+            renderOptionsPopup('backup', folders);
+        }
+
+        async function getDropboxBackupFolders(token) {
+            const folders = new Set();
+            let hasMore = true;
+            let cursor = null;
+            while (hasMore) {
+                const payload = cursor ? { cursor } : { path: '', recursive: true };
+                const resp = await fetch('https://api.dropboxapi.com/2/files/list_folder' + (cursor ? '/continue' : ''), {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!resp.ok) throw new Error('Failed to list backup folders');
+                const data = await resp.json();
+                for (const entry of data.entries) {
+                    if (entry['.tag'] !== 'file') continue;
+                    if (!entry.name.endsWith('.json')) continue;
+                    const pathDisplay = entry.path_display || entry.path_lower || '';
+                    const parts = pathDisplay.split('/').filter(Boolean);
+                    if (parts.length >= 2) {
+                        const folderName = parts[0];
+                        if (parts.length >= 3 && folderName.toLowerCase() === 'journal' && parts[1].toLowerCase() === 'images') {
+                            folders.add('Journal');
+                        } else {
+                            folders.add(folderName);
+                        }
+                    }
+                }
+                hasMore = data.has_more;
+                cursor = data.cursor;
+            }
+            return Array.from(folders).sort((a, b) => a.localeCompare(b));
+        }
+
+        async function showRestoreOptionsPopup() {
+            const token = await getValidAccessToken();
+            if (!token) {
+                showConfirmPopup('Dropbox', 'Not connected. Do you want to connect to your Dropbox first?', () => {
+                    authenticateDropbox();
+                });
+                return;
+            }
+            showLoadingPopup('Loading backups from Dropbox...');
+            try {
+                const folders = await getDropboxBackupFolders(token);
+                if (folders.length === 0) {
+                    showNoBackupsPopup();
+                    return;
+                }
+                renderOptionsPopup('restore', folders);
+            } catch (err) {
+                closeUniversalPopup();
+                window.showMessage('Error loading backups: ' + err.message, true);
+            }
+        }
+
+        function showLocalBackupOptions() {
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            titleEl.textContent = 'Local Backup';
+            contentEl.innerHTML = `
+                <div class="popup-message">Choose a backup format.</div>
+                <div class="button-row">
+                    <button class="confirm-btn cancel" id="localBackupSingle">Single JSON</button>
+                    <button class="confirm-btn confirm" id="localBackupZip">Folder ZIP</button>
+                </div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn cancel" id="localBackupCancel">Cancel</button>
+                </div>
+            `;
+            document.getElementById('localBackupSingle').onclick = () => {
+                closeUniversalPopup();
+                localBackup();
+            };
+            document.getElementById('localBackupZip').onclick = () => {
+                closeUniversalPopup();
+                localBackupZip();
+            };
+            document.getElementById('localBackupCancel').onclick = closeUniversalPopup;
+            popup.style.display = 'flex';
+        }
+
+        function showLocalRestoreOptions() {
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            titleEl.textContent = 'Local Restore';
+            contentEl.innerHTML = `
+                <div class="popup-message">Choose a restore format.</div>
+                <div class="button-row">
+                    <button class="confirm-btn cancel" id="localRestoreSingle">Single JSON</button>
+                    <button class="confirm-btn confirm" id="localRestoreZip">Folder ZIP</button>
+                </div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn cancel" id="localRestoreCancel">Cancel</button>
+                </div>
+            `;
+            document.getElementById('localRestoreSingle').onclick = () => {
+                closeUniversalPopup();
+                localRestore();
+            };
+            document.getElementById('localRestoreZip').onclick = () => {
+                closeUniversalPopup();
+                localRestoreZip();
+            };
+            document.getElementById('localRestoreCancel').onclick = closeUniversalPopup;
+            popup.style.display = 'flex';
+        }
+
+        const DROPBOX_CLIENT_ID = '5630n4t14l8r80h';
+        const DROPBOX_TOKEN_KEY = 'dropbox_tokens';
+
+        function getDropboxTokens() {
+            const t = localStorage.getItem(DROPBOX_TOKEN_KEY);
+            return t ? JSON.parse(t) : null;
+        }
+
+        function setDropboxTokens(tokens) {
+            localStorage.setItem(DROPBOX_TOKEN_KEY, JSON.stringify(tokens));
+        }
+
+        function clearDropboxTokens() {
+            localStorage.removeItem(DROPBOX_TOKEN_KEY);
+        }
+
+        async function pollForTokens(session) {
+            const maxAttempts = 120;
+            let attempts = 0;
+            const interval = setInterval(async () => {
+                attempts++;
+                if (attempts > maxAttempts) {
+                    clearInterval(interval);
+                    window.showMessage('Login timed out.', true);
+                    sessionStorage.removeItem('dropbox_poll_session');
+                    return;
+                }
+                try {
+                    const resp = await fetch('/api/auth?dropbox_action=tokens&session=' + session);
+                    const data = await resp.json();
+                    if (data.ready) {
+                        clearInterval(interval);
+                        sessionStorage.removeItem('dropbox_poll_session');
+                        setDropboxTokens(data.tokens);
+                        window.showMessage('Dropbox connected!');
+                    }
+                } catch (e) {}
+            }, 2000);
+        }
+
+        async function getValidAccessToken() {
+            let tokens = getDropboxTokens();
+            if (!tokens) return null;
+            if (tokens.expires_at && Date.now() < tokens.expires_at - 300000) {
+                return tokens.access_token;
+            }
+            if (tokens.refresh_token) {
+                try {
+                    const newTokens = await refreshAccessToken(tokens.refresh_token);
+                    setDropboxTokens(newTokens);
+                    return newTokens.access_token;
+                } catch (e) {
+                    clearDropboxTokens();
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        async function refreshAccessToken(refreshToken) {
+            const body = new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: refreshToken,
+                client_id: DROPBOX_CLIENT_ID,
+            });
+            const resp = await fetch('https://api.dropboxapi.com/oauth2/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body
+            });
+            if (!resp.ok) throw new Error('Refresh failed');
+            const data = await resp.json();
+            return {
+                access_token: data.access_token,
+                expires_at: Date.now() + data.expires_in * 1000,
+                refresh_token: refreshToken
+            };
+        }
+
+        function generateCodeVerifier() {
+            const array = new Uint32Array(32);
+            crypto.getRandomValues(array);
+            return base64URLEncode(array);
+        }
+
+        async function generateCodeChallenge(verifier) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(verifier);
+            const digest = await crypto.subtle.digest('SHA-256', data);
+            return base64URLEncode(new Uint8Array(digest));
+        }
+
+        function base64URLEncode(buffer) {
+            return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+
+        function generateSessionId() {
+            if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                try {
+                    return crypto.randomUUID();
+                } catch (e) {}
+            }
+            return 'sess-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15);
+        }
+
+        function openInNewTab(url) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                if (a.parentNode) a.parentNode.removeChild(a);
+            }, 1000);
+        }
+
+        function authenticateDropbox() {
+            const session = generateSessionId();
+            sessionStorage.setItem('dropbox_poll_session', session);
+            const url = window.location.origin + '/api/auth?dropbox_action=login&session=' + encodeURIComponent(session);
+            openInNewTab(url);
+            pollForTokens(session);
+        }
+
+        async function handleOAuthCode(code, verifier) {
+            try {
+                const body = new URLSearchParams({
+                    code: code,
+                    grant_type: 'authorization_code',
+                    client_id: DROPBOX_CLIENT_ID,
+                    redirect_uri: REDIRECT_URI,
+                    code_verifier: verifier
+                });
+                const resp = await fetch('https://api.dropboxapi.com/oauth2/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body
+                });
+                if (!resp.ok) throw new Error('Token exchange failed');
+                const data = await resp.json();
+                const tokens = {
+                    access_token: data.access_token,
+                    refresh_token: data.refresh_token,
+                    expires_at: Date.now() + data.expires_in * 1000
+                };
+                setDropboxTokens(tokens);
+                window.showMessage('Dropbox connected!');
+            } catch (err) {
+                window.showMessage('OAuth error: ' + err.message, true);
+            }
+        }
+
+        async function handleOAuthRedirect() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            const verifier = sessionStorage.getItem('code_verifier');
+            if (code && verifier) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                sessionStorage.removeItem('code_verifier');
+                await handleOAuthCode(code, verifier);
+                return;
+            }
+        }
+
+        async function uploadBackup(selectedFolders) {
+            const token = await getValidAccessToken();
+            if (!token) {
+                showConfirmPopup('Dropbox', 'Not connected. Do you want to connect to your Dropbox first?', () => {
+                    authenticateDropbox();
+                });
+                return;
+            }
+            const notif = window.createTimerNotification('Cloud Backup', 100);
+            const progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
+            const timeElement = notif.wrapper.querySelector('.timer-time-notif');
+            if (progressBar) progressBar.style.width = '0%';
+            if (timeElement) timeElement.textContent = '0%';
+            let progress = 0;
+            const interval = setInterval(() => {
+                if (progress < 90) {
+                    progress += Math.random() * 10 + 5;
+                    if (progress > 90) progress = 90;
+                    progressBar.style.width = progress + '%';
+                    timeElement.textContent = Math.floor(progress) + '%';
+                }
+            }, 300);
+            try {
+                let meta = {};
+                try {
+                    meta = JSON.parse(localStorage.getItem(BACKUP_META_KEY) || '{}');
+                } catch (e) {}
+                const keys = getFilteredKeys().filter(key => selectedFolders.includes(getFolderForKey(key)));
+                let uploadedCount = 0;
+                for (let i = 0; i < keys.length; i++) {
+                    const key = keys[i];
+                    const value = localStorage.getItem(key);
+                    if (value === null) continue;
+                    const folder = getFolderForKey(key);
+                    const path = `/${folder}/${key}.json`;
+                    const currentSize = value.length;
+                    if (meta[path] === currentSize) continue;
+                    const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Dropbox-API-Arg': JSON.stringify({ path: path, mode: 'overwrite' }),
+                            'Content-Type': 'application/octet-stream'
+                        },
+                        body: value
+                    });
+                    if (!resp.ok) {
+                        const errText = await resp.text();
+                        throw new Error(`Upload failed for ${key}: ${errText}`);
+                    }
+                    meta[path] = currentSize;
+                    uploadedCount++;
+                }
+                if (selectedFolders.includes('Journal')) {
+                    try {
+                        const db = await openImagesDB();
+                        const images = await new Promise((resolve, reject) => {
+                            const tx = db.transaction(IMAGES_STORE_NAME, 'readonly');
+                            const store = tx.objectStore(IMAGES_STORE_NAME);
+                            const req = store.getAll();
+                            req.onsuccess = () => resolve(req.result || []);
+                            req.onerror = () => reject(req.error);
+                        });
+                        for (const img of images) {
+                            const path = '/Journal/Images/' + img.id + '.json';
+                            const content = JSON.stringify(img);
+                            const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Dropbox-API-Arg': JSON.stringify({ path: path, mode: 'overwrite' }),
+                                    'Content-Type': 'application/octet-stream'
+                                },
+                                body: content
+                            });
+                            if (!resp.ok) {
+                                const errText = await resp.text();
+                                throw new Error(`Upload failed for image ${img.id}: ${errText}`);
+                            }
+                            meta[path] = content.length;
+                        }
+                    } catch (e) {
+                        throw new Error('Image upload failed: ' + e.message);
+                    }
+                }
+                localStorage.setItem(BACKUP_META_KEY, JSON.stringify(meta));
+                localStorage.setItem('lastCloudBackupDate', new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                clearInterval(interval);
+                progressBar.style.width = '100%';
+                timeElement.textContent = '100%';
+                setTimeout(() => notif.close(), 1500);
+                window.showMessage(`Backup complete. ${uploadedCount} files updated.`);
+            } catch (err) {
+                clearInterval(interval);
+                notif.close();
+                window.showMessage('Upload error: ' + err.message, true);
+            }
+        }
+
+        async function downloadAndRestore(selectedFolders) {
+            const token = await getValidAccessToken();
+            if (!token) {
+                showConfirmPopup('Dropbox', 'Not connected. Do you want to connect to your Dropbox first?', () => {
+                    authenticateDropbox();
+                });
+                return;
+            }
+            showConfirmPopup('Restore', 'Restore selected cloud data? Current data will be overwritten.', async () => {
+                const notif = window.createTimerNotification('Cloud Restore', 100);
+                const progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
+                const timeElement = notif.wrapper.querySelector('.timer-time-notif');
+                if (progressBar) progressBar.style.width = '0%';
+                if (timeElement) timeElement.textContent = '0%';
+                let progress = 0;
+                const interval = setInterval(() => {
+                    if (progress < 90) {
+                        progress += Math.random() * 10 + 5;
+                        if (progress > 90) progress = 90;
+                        progressBar.style.width = progress + '%';
+                        timeElement.textContent = Math.floor(progress) + '%';
+                    }
+                }, 300);
+                try {
+                    let allFiles = [];
+                    let hasMore = true;
+                    let cursor = null;
+                    while (hasMore) {
+                        const payload = cursor ? { cursor } : { path: '', recursive: true };
+                        const listResp = await fetch('https://api.dropboxapi.com/2/files/list_folder' + (cursor ? '/continue' : ''), {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        if (!listResp.ok) throw new Error('Failed to list backup files');
+                        const data = await listResp.json();
+                        const entries = data.entries.filter(e => e['.tag'] === 'file' && e.name.endsWith('.json'));
+                        allFiles = allFiles.concat(entries);
+                        hasMore = data.has_more;
+                        cursor = data.cursor;
+                    }
+                    const imageFiles = allFiles.filter(f => f.path_lower.startsWith('/journal/images/'));
+                    const dataFiles = allFiles.filter(f => !f.path_lower.startsWith('/journal/images/'));
+                    const dataToRestore = dataFiles.filter(f => {
+                        const pathDisplay = f.path_display || f.path_lower || '';
+                        const parts = pathDisplay.split('/').filter(Boolean);
+                        const folderName = parts[0] || '';
+                        return selectedFolders.includes(folderName);
+                    });
+                    const imagesToRestore = selectedFolders.includes('Journal') ? imageFiles : [];
+                    const totalToRestore = dataToRestore.length + imagesToRestore.length;
+                    if (totalToRestore === 0) {
+                        clearInterval(interval);
+                        notif.close();
+                        window.showMessage('No backup files found.', true);
+                        return;
+                    }
+                    for (let i = 0; i < dataToRestore.length; i++) {
+                        const file = dataToRestore[i];
+                        const key = file.name.replace(/\.json$/, '');
+                        const dlResp = await fetch('https://content.dropboxapi.com/2/files/download', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Dropbox-API-Arg': JSON.stringify({ path: file.path_lower })
+                            }
+                        });
+                        if (!dlResp.ok) throw new Error(`Download failed for ${key}`);
+                        const content = await dlResp.text();
+                        localStorage.setItem(key, content);
+                    }
+                    if (imagesToRestore.length > 0) {
+                        const db = await openImagesDB();
+                        const clearTx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
+                        clearTx.objectStore(IMAGES_STORE_NAME).clear();
+                        await new Promise((resolve, reject) => {
+                            clearTx.oncomplete = resolve;
+                            clearTx.onerror = reject;
+                        });
+                        const tx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
+                        const store = tx.objectStore(IMAGES_STORE_NAME);
+                        for (const file of imagesToRestore) {
+                            const dlResp = await fetch('https://content.dropboxapi.com/2/files/download', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Dropbox-API-Arg': JSON.stringify({ path: file.path_lower })
+                                }
+                            });
+                            if (!dlResp.ok) throw new Error(`Download failed for image ${file.name}`);
+                            const content = await dlResp.text();
+                            const imgData = JSON.parse(content);
+                            store.put(imgData);
+                        }
+                        await new Promise((resolve, reject) => {
+                            tx.oncomplete = resolve;
+                            tx.onerror = reject;
+                        });
+                    }
+                    clearInterval(interval);
+                    progressBar.style.width = '100%';
+                    timeElement.textContent = '100%';
+                    setTimeout(() => notif.close(), 1500);
+                    window.showMessage(`Restore complete! ${totalToRestore} items restored.`);
+                    initialize();
+                } catch (err) {
+                    clearInterval(interval);
+                    notif.close();
+                    window.showMessage('Restore error: ' + err.message, true);
+                }
+            });
+        }
+
+        function openFoldersPopup() {
+            const popup = document.getElementById('foldersPopup');
+            const searchInput = document.getElementById('folderSearch');
+            const listContainer = document.getElementById('folderList');
+            searchInput.value = '';
+            renderFolderList('');
+            popup.style.display = 'flex';
+
+            searchInput.oninput = function() {
+                renderFolderList(this.value.toLowerCase());
+            };
+        }
+
+        function renderFolderList(filterText) {
+            const listContainer = document.getElementById('folderList');
+            const allKeys = getFilteredKeys();
+            const folderCounts = {};
+            folderDefinitions.forEach(def => {
+                const count = allKeys.filter(key => getFolderForKey(key) === def.name).length;
+                if (count > 0) folderCounts[def.name] = count;
+            });
+
+            let folders = Object.keys(folderCounts);
+            if (filterText) {
+                folders = folders.filter(name => name.toLowerCase().includes(filterText));
+            }
+            folders.sort();
+
+            listContainer.innerHTML = folders.map(name => {
+                const count = folderCounts[name];
+                return `
+                    <div class="folder-card" data-folder="${name}">
+                        <div class="folder-card-left">
+                            <div class="folder-card-name">${name}</div>
+                            <div class="folder-card-count">${count} Data</div>
+                        </div>
+                        <span class="arrow-circle"><i class="fas fa-arrow-right"></i></span>
+                    </div>
+                `;
+            }).join('');
+
+            document.querySelectorAll('.folder-card').forEach(card => {
+                card.onclick = () => {
+                    const folderName = card.dataset.folder;
+                    if (!tempFolders.includes(folderName)) {
+                        tempFolders.push(folderName);
+                        const foldersEl = document.getElementById('folders');
+                        foldersEl.innerHTML = '';
+                    }
+                    currentFolder = folderName;
+                    allPage = 0;
+                    closeFoldersPopup();
+                    buildFolders();
+                    buildCards();
+                };
+            });
+        }
+
+        async function localBackup() {
+            const progress = startProgressNotification();
+            const backup = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!excludedKeys.includes(key)) backup[key] = localStorage.getItem(key);
+            }
+            try {
+                const db = await openImagesDB();
+                const images = await new Promise((resolve, reject) => {
+                    const tx = db.transaction(IMAGES_STORE_NAME, 'readonly');
+                    const store = tx.objectStore(IMAGES_STORE_NAME);
+                    const req = store.getAll();
+                    req.onsuccess = () => resolve(req.result || []);
+                    req.onerror = () => reject(req.error);
+                });
+                if (images.length > 0) {
+                    backup['__indexeddb_journal_images__'] = images;
+                }
+            } catch (e) {}
+            const json = JSON.stringify(backup, null, 2);
+            const filename = `kakoikiraku_local_backup_${new Date().toISOString().slice(0,10)}.json`;
+            const mimeType = 'application/json';
+            await saveFile(json, filename, mimeType);
+            progress.complete();
+        }
+
+        async function localBackupZip() {
+            if (typeof JSZip === 'undefined') {
+                window.showMessage('ZIP library not loaded', true);
+                return;
+            }
+            const progress = startProgressNotification();
+            const zip = new JSZip();
+            const keys = getFilteredKeys();
+            for (const key of keys) {
+                const value = localStorage.getItem(key);
+                if (value === null) continue;
+                const folder = getFolderForKey(key);
+                zip.file(`${folder}/${key}.json`, value);
+            }
+            try {
+                const db = await openImagesDB();
+                const images = await new Promise((resolve, reject) => {
+                    const tx = db.transaction(IMAGES_STORE_NAME, 'readonly');
+                    const store = tx.objectStore(IMAGES_STORE_NAME);
+                    const req = store.getAll();
+                    req.onsuccess = () => resolve(req.result || []);
+                    req.onerror = () => reject(req.error);
+                });
+                for (const img of images) {
+                    const dataUrl = img.data || img.image || img.src || img.url || img.dataUrl;
+                    if (!dataUrl || typeof dataUrl !== 'string' || dataUrl.indexOf(',') === -1) {
+                        zip.file(`Journal/Images/${img.id}.json`, JSON.stringify(img));
+                        continue;
+                    }
+                    const commaIdx = dataUrl.indexOf(',');
+                    const meta = dataUrl.substring(0, commaIdx);
+                    const base64 = dataUrl.substring(commaIdx + 1);
+                    const mimeMatch = meta.match(/data:([^;]+)/);
+                    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+                    let ext = 'png';
+                    if (mime.indexOf('jpeg') !== -1 || mime.indexOf('jpg') !== -1) ext = 'jpg';
+                    else if (mime.indexOf('gif') !== -1) ext = 'gif';
+                    else if (mime.indexOf('webp') !== -1) ext = 'webp';
+                    else if (mime.indexOf('svg') !== -1) ext = 'svg';
+                    try {
+                        const binary = atob(base64);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        zip.file(`Journal/Images/${img.id}.${ext}`, bytes);
+                    } catch (e) {
+                        zip.file(`Journal/Images/${img.id}.json`, JSON.stringify(img));
+                    }
+                }
+            } catch (e) {}
+            try {
+                const blob = await zip.generateAsync({ type: 'blob' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `kakoikiraku_local_backup_${new Date().toISOString().slice(0,10)}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                window.showMessage('Backup saved locally');
+            } catch (err) {
+                window.showMessage('ZIP creation failed', true);
+            }
+            progress.complete();
+        }
+
+        function localRestore() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        const imageData = data['__indexeddb_journal_images__'];
+                        if (imageData && Array.isArray(imageData)) {
+                            const db = await openImagesDB();
+                            const clearTx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
+                            clearTx.objectStore(IMAGES_STORE_NAME).clear();
+                            await new Promise((resolve, reject) => {
+                                clearTx.oncomplete = resolve;
+                                clearTx.onerror = reject;
+                            });
+                            const tx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
+                            const store = tx.objectStore(IMAGES_STORE_NAME);
+                            for (const item of imageData) {
+                                store.put(item);
+                            }
+                            await new Promise((resolve, reject) => {
+                                tx.oncomplete = resolve;
+                                tx.onerror = reject;
+                            });
+                            delete data['__indexeddb_journal_images__'];
+                        }
+                        showConfirmPopup('Local Restore', `Restore ${Object.keys(data).length} items? Current data will be overwritten.`, () => {
+                            for (const [key, value] of Object.entries(data)) {
+                                localStorage.setItem(key, value);
+                            }
+                            window.showMessage('Local restore complete');
+                            initialize();
+                        });
+                    } catch (err) {
+                        window.showMessage('Invalid backup file', true);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function localRestoreZip() {
+            if (typeof JSZip === 'undefined') {
+                window.showMessage('ZIP library not loaded', true);
+                return;
+            }
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.zip';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    const zip = await JSZip.loadAsync(file);
+                    const data = {};
+                    const imagesToRestore = [];
+                    const paths = Object.keys(zip.files);
+                    for (const path of paths) {
+                        if (zip.files[path].dir) continue;
+                        const lower = path.toLowerCase();
+                        if (lower.indexOf('journal/images/') === 0) {
+                            const baseName = path.split('/').pop();
+                            const id = baseName.replace(/\.[^.]+$/, '');
+                            const ext = baseName.split('.').pop().toLowerCase();
+                            if (ext === 'json') {
+                                const content = await zip.files[path].async('string');
+                                try {
+                                    imagesToRestore.push(JSON.parse(content));
+                                } catch (err) {}
+                            } else {
+                                const blob = await zip.files[path].async('blob');
+                                const dataUrl = await new Promise((resolve) => {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => resolve(reader.result);
+                                    reader.readAsDataURL(blob);
+                                });
+                                imagesToRestore.push({ id: id, data: dataUrl });
+                            }
+                        } else if (lower.endsWith('.json')) {
+                            const baseName = path.split('/').pop().replace(/\.json$/, '');
+                            const content = await zip.files[path].async('string');
+                            data[baseName] = content;
+                        }
+                    }
+                    if (imagesToRestore.length > 0) {
+                        const db = await openImagesDB();
+                        const clearTx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
+                        clearTx.objectStore(IMAGES_STORE_NAME).clear();
+                        await new Promise((resolve, reject) => {
+                            clearTx.oncomplete = resolve;
+                            clearTx.onerror = reject;
+                        });
+                        const tx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
+                        const store = tx.objectStore(IMAGES_STORE_NAME);
+                        for (const item of imagesToRestore) {
+                            store.put(item);
+                        }
+                        await new Promise((resolve, reject) => {
+                            tx.oncomplete = resolve;
+                            tx.onerror = reject;
+                        });
+                    }
+                    showConfirmPopup('Local Restore', `Restore ${Object.keys(data).length} items? Current data will be overwritten.`, () => {
+                        for (const [key, value] of Object.entries(data)) {
+                            localStorage.setItem(key, value);
+                        }
+                        window.showMessage('Local restore complete');
+                        initialize();
+                    });
+                } catch (err) {
+                    window.showMessage('Invalid ZIP file', true);
+                }
+            };
+            input.click();
+        }
+
+        async function deleteBackups() {
+            const token = await getValidAccessToken();
+            if (!token) {
+                showConfirmPopup('Dropbox', 'Not connected. Do you want to connect to your Dropbox first?', authenticateDropbox);
+                return;
+            }
+            showConfirmPopup('Delete Backups', 'Delete all backups in Dropbox folder? This cannot be undone.', async () => {
+                const progress = startProgressNotification();
+                try {
+                    let hasMore = true;
+                    let cursor = null;
+                    while (hasMore) {
+                        const listPayload = cursor ? { cursor } : { path: '', recursive: true };
+                        const listResp = await fetch('https://api.dropboxapi.com/2/files/list_folder' + (cursor ? '/continue' : ''), {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(listPayload)
+                        });
+                        if (!listResp.ok) throw new Error('Failed to list files');
+                        const data = await listResp.json();
+                        const entries = data.entries.filter(e => e['.tag'] === 'file');
+                        for (let entry of entries) {
+                            await fetch('https://api.dropboxapi.com/2/files/delete_v2', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ path: entry.path_lower })
+                            });
+                        }
+                        hasMore = data.has_more;
+                        cursor = data.cursor;
+                    }
+                    localStorage.removeItem(BACKUP_META_KEY);
+                    progress.complete();
+                    window.showMessage('All backups deleted. Creating a fresh backup...');
+                    await uploadBackup(getAvailableFolders());
+                } catch (err) {
+                    progress.error();
+                    window.showMessage('Delete backups error: ' + err.message, true);
+                }
+            });
+        }
+
+        function logoutDropbox() {
+            clearDropboxTokens();
+            window.showMessage('Dropbox disconnected');
+            closeUniversalPopup();
+            openSettingsPopup();
+        }
+
+        function openSettingsPopup() {
+            const popup = document.getElementById('universalPopup');
+            const title = document.getElementById('popupTitle');
+            const content = document.getElementById('popupContent');
+            const tokens = getDropboxTokens();
+            const isConnected = !!tokens;
+            const lastBackupDate = localStorage.getItem('lastCloudBackupDate') || '';
+
+            title.textContent = 'Settings';
+            content.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div class="cloud-status-line">
+                        <span class="cloud-status-text">Cloud — <span class="cloud-status-connected">${isConnected ? 'Connected' : 'Not connected'}</span></span>
+                        ${isConnected && lastBackupDate ? `<span class="cloud-status-date">${lastBackupDate}</span>` : ''}
+                    </div>
+                    <div class="button-row">
+                        <button class="action-btn btn-backup" id="popupCloudBackup"><i class="fas fa-cloud-upload-alt"></i> Backup</button>
+                        <button class="action-btn btn-restore" id="popupCloudRestore"><i class="fas fa-cloud-download-alt"></i> Restore</button>
+                    </div>
+                    <h3>Local</h3>
+                    <div class="button-row">
+                        <button class="action-btn btn-backup" id="popupLocalBackup"><i class="fas fa-download"></i> Backup</button>
+                        <button class="action-btn btn-restore" id="popupLocalRestore"><i class="fas fa-upload"></i> Restore</button>
+                    </div>
+                    <h3>Danger Zone</h3>
+                    <button class="clear-all-btn" id="popupResetAppData"><i class="fas fa-trash-alt"></i> Reset App Data</button>
+                    <button class="clear-all-btn" id="popupDeleteBackups"><i class="fas fa-trash"></i> Delete Backups</button>
+                    <button class="clear-all-btn" id="popupDropboxLogout"><i class="fas fa-sign-out" style="color:white;"></i> Dropbox Logout</button>
+                    <h3>Notes</h3>
+                    <div class="guide-box">
+                        <p><strong>Cloud Details</strong></p>
+                        <p style="font-size: 0.8rem;">Cloud Backups and Restore are using Dropbox Storage with OAuth app that i made myself (no third-party used except Dropbox), and nothing i collects or see from your Dropbox except Kakoi Kiraku folder.</p>
+                    </div>
+                    <div class="guide-box">
+                        <p><strong>Delete Backups</strong></p>
+                        <p style="font-size: 0.8rem;">Delete Backups button will clear all the backed up JSON files inside your Dropbox entirely.</p>
+                    </div>
+                    <div class="guide-box">
+                        <p><strong>Login Issue</strong></p>
+                        <p style="font-size: 0.8rem;">If you're not connected to Dropbox and cannot sign in even after many times login, click Dropbox Sign Out button first then try login again.</p>
+                    </div>
+                    <div class="guide-box">
+                        <p><strong>Restore on Any Device</strong></p>
+                        <p style="font-size: 0.8rem;">Restore reads the app list directly from your Dropbox backup folder, so you can restore on a fresh device even without opening any apps first.</p>
+                    </div>
+                    <div class="guide-box">
+                        <p><strong>Login Tab Not Opening?</strong></p>
+                        <p style="font-size: 0.8rem;">If clicking Yes doesn't open a new tab, please allow popups for this site in your browser settings, then try again.</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('popupCloudBackup').addEventListener('click', () => {
+                closeUniversalPopup();
+                showBackupOptionsPopup();
+            });
+            document.getElementById('popupCloudRestore').addEventListener('click', () => {
+                closeUniversalPopup();
+                showRestoreOptionsPopup();
+            });
+            document.getElementById('popupLocalBackup').addEventListener('click', () => {
+                closeUniversalPopup();
+                showLocalBackupOptions();
+            });
+            document.getElementById('popupLocalRestore').addEventListener('click', () => {
+                closeUniversalPopup();
+                showLocalRestoreOptions();
+            });
+            document.getElementById('popupResetAppData').addEventListener('click', () => {
+                closeUniversalPopup();
+                showConfirmPopup('Reset App Data', 'Clear all LocalStorage? This will clear all app data and log you out immediately. It cannot be undone.', () => {
+                    localStorage.clear();
+                    location.reload();
+                });
+            });
+            document.getElementById('popupDeleteBackups').addEventListener('click', () => {
+                closeUniversalPopup();
+                deleteBackups();
+            });
+            document.getElementById('popupDropboxLogout').addEventListener('click', () => {
+                showConfirmPopup('Dropbox Logout', 'Disconnect Dropbox OAuth? You will need to reconnect to use cloud features.', () => {
+                    logoutDropbox();
+                });
+            });
+            popup.style.display = 'flex';
+        }
+
+        function startProgressNotification() {
+            return {
+                complete: () => {},
+                error: () => {}
+            };
+        }
+
+        document.getElementById('settingsBtn').addEventListener('click', () => openSettingsPopup());
+
+        let searchTimeout;
+        function setupSearchDebounce() {
+            const searchInput = document.getElementById('globalSearch');
+            const suggestionsContainer = document.getElementById('searchSuggestions');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    showSearchSuggestions(this.value);
+                });
+                document.getElementById('searchIcon').addEventListener('click', function() {
+                    suggestionsContainer.style.display = 'none';
+                });
+                searchInput.addEventListener('keypress', function(event) {
+                    if (event.key === 'Enter') {
+                        suggestionsContainer.style.display = 'none';
+                    }
+                });
+                searchInput.addEventListener('focus', function() {
+                    if (this.value.trim()) {
+                        showSearchSuggestions(this.value);
+                    }
+                });
+                document.addEventListener('click', function(event) {
+                    if (!searchInput.contains(event.target) && !suggestionsContainer.contains(event.target)) {
+                        suggestionsContainer.style.display = 'none';
+                    }
+                });
+                suggestionsContainer.addEventListener('click', function(event) {
+                    const suggestionItem = event.target.closest('.search-suggestion-item');
+                    if (suggestionItem) {
+                        const key = suggestionItem.dataset.key;
+                        if (key) {
+                            searchInput.value = key;
+                            suggestionsContainer.style.display = 'none';
+                            const folder = getFolderForKey(key);
+                            if (folder !== currentFolder) {
+                                currentFolder = folder;
+                                allPage = 0;
+                                buildFolders();
+                                buildCards();
+                            } else {
+                                buildCards();
+                            }
+                            setTimeout(() => {
+                                const cards = document.querySelectorAll('.storage-card');
+                                for (let card of cards) {
+                                    const keyEl = card.querySelector('.storage-key');
+                                    if (keyEl && keyEl.textContent.trim() === (key.length > 50 ? key.substring(0, 50) + '...' : key)) {
+                                        card.style.borderColor = 'var(--accent-color)';
+                                        card.style.borderWidth = '2px';
+                                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        setTimeout(() => {
+                                            card.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                                            card.style.borderWidth = '1px';
+                                        }, 2000);
+                                        break;
+                                    }
+                                }
+                            }, 100);
+                        }
+                    }
+                });
+                document.addEventListener('keydown', function(event) {
+                    if (event.key === 'Escape' && suggestionsContainer.style.display === 'block') {
+                        suggestionsContainer.style.display = 'none';
+                    }
+                });
+            }
+        }
+
+        function showSearchSuggestions(searchTerm) {
+            const suggestionsContainer = document.getElementById('searchSuggestions');
+            if (!searchTerm.trim()) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            let allKeys = getFilteredKeys();
+            const term = searchTerm.toLowerCase();
+            const matches = allKeys.filter(key => {
+                let val = localStorage.getItem(key);
+                if (key === 'currentUser') {
+                    try {
+                        let user = JSON.parse(val);
+                        if (user && typeof user === 'object') {
+                            const { admin, ...cleanUser } = user;
+                            val = JSON.stringify(cleanUser);
+                        }
+                    } catch (e) {}
+                }
+                return key.toLowerCase().includes(term) || val.toLowerCase().includes(term);
+            }).slice(0, 7);
+            if (matches.length === 0) {
+                suggestionsContainer.innerHTML = `<div class="search-suggestion-item"><div class="suggestion-title">No results found</div><div class="suggestion-description">Try different keywords</div></div>`;
+            } else {
+                suggestionsContainer.innerHTML = matches.map(key => {
+                    const folder = getFolderForKey(key);
+                    let val = localStorage.getItem(key) || '';
+                    if (key === 'currentUser') {
+                        try {
+                            let user = JSON.parse(val);
+                            if (user && typeof user === 'object') {
+                                const { admin, ...cleanUser } = user;
+                                val = JSON.stringify(cleanUser);
+                            }
+                        } catch (e) {}
+                    }
+                    const snippet = val.length > 50 ? val.substring(0, 50) + '\u2026' : val;
+                    return `
+                        <div class="search-suggestion-item" data-key="${key}">
+                            <div class="suggestion-title">${key}</div>
+                            <div class="suggestion-description">${snippet}</div>
+                            <div class="suggestion-category">${folder}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            suggestionsContainer.style.display = 'block';
+        }
+
+        setupSearchDebounce();
+        initialize();
     </script>
 </body>
 </html>
