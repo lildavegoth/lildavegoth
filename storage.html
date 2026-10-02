@@ -12,7 +12,6 @@
     <style>
         :root {
             --accent-color: #C1FC32;
-            --accent-dark: #9bc726;
             --bg-black: #000000;
             --bg-dark: #1a1a1a;
             --bg-card: rgba(30, 30, 30, 0.7);
@@ -530,6 +529,48 @@
             margin-bottom: 8px;
         }
 
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 40vh;
+            overflow-y: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .options-list::-webkit-scrollbar {
+            display: none;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 12px 16px;
+            border-radius: 14px;
+            cursor: pointer;
+        }
+
+        .option-item:hover {
+            background: rgba(193, 252, 50, 0.05);
+        }
+
+        .option-checkbox {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .option-name {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
         .guide-box {
             background: rgba(255, 255, 255, 0.05);
             border-radius: var(--radius-medium);
@@ -868,6 +909,7 @@
         let pinnedItems = JSON.parse(localStorage.getItem('pinnedItems') || '[]');
         let tempFolders = [];
         let allPage = 0;
+        let optionsMode = null;
 
         const avatarEl = document.getElementById('avatar');
         const usernameEl = document.getElementById('username');
@@ -920,6 +962,16 @@
                 if (def.keys.includes(key)) return def.name;
             }
             return 'Other';
+        }
+
+        function getAvailableFolders() {
+            const allKeys = getFilteredKeys();
+            const folders = [];
+            folderDefinitions.forEach(def => {
+                if (allKeys.some(key => getFolderForKey(key) === def.name)) folders.push(def.name);
+            });
+            if (allKeys.some(key => getFolderForKey(key) === 'Other')) folders.push('Other');
+            return folders;
         }
 
         function savePinnedItems() {
@@ -1232,6 +1284,50 @@
             popup.style.display = 'flex';
         }
 
+        function showOptionsPopup(mode) {
+            optionsMode = mode;
+            const folders = getAvailableFolders();
+            if (folders.length === 0) {
+                window.showMessage('No apps available', true);
+                return;
+            }
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            const isBackup = mode === 'backup';
+            titleEl.textContent = isBackup ? 'Backup Options' : 'Restore Options';
+            contentEl.innerHTML = `
+                <div class="popup-message">Select the apps you want to ${isBackup ? 'backup' : 'restore'}.</div>
+                <div class="options-list" id="optionsList">
+                    ${folders.map(name => `
+                        <label class="option-item">
+                            <input type="checkbox" class="option-checkbox" value="${name}">
+                            <span class="option-name">${name}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn cancel" id="optionsCancel">Cancel</button>
+                    <button class="confirm-btn confirm" id="optionsConfirm">${isBackup ? 'Backup All' : 'Restore All'}</button>
+                </div>
+            `;
+            document.getElementById('optionsCancel').onclick = closeUniversalPopup;
+            document.getElementById('optionsConfirm').onclick = () => {
+                const checked = Array.from(document.querySelectorAll('.option-checkbox:checked')).map(cb => cb.value);
+                if (checked.length === 0) {
+                    window.showMessage('Select at least one app', true);
+                    return;
+                }
+                closeUniversalPopup();
+                if (optionsMode === 'backup') {
+                    uploadBackup(checked);
+                } else {
+                    downloadAndRestore(checked);
+                }
+            };
+            popup.style.display = 'flex';
+        }
+
         const DROPBOX_CLIENT_ID = '5630n4t14l8r80h';
         const DROPBOX_TOKEN_KEY = 'dropbox_tokens';
 
@@ -1247,7 +1343,7 @@
         function clearDropboxTokens() {
             localStorage.removeItem(DROPBOX_TOKEN_KEY);
         }
-        
+
         async function pollForTokens(session) {
             const maxAttempts = 120;
             let attempts = 0;
@@ -1376,7 +1472,7 @@
             }
         }
 
-        async function uploadBackup() {
+        async function uploadBackup(selectedFolders) {
             const token = await getValidAccessToken();
             if (!token) {
                 showConfirmPopup('Dropbox', 'Not connected. Do you want to connect to your Dropbox first?', () => {
@@ -1403,7 +1499,7 @@
                 try {
                     meta = JSON.parse(localStorage.getItem(BACKUP_META_KEY) || '{}');
                 } catch (e) {}
-                const keys = getFilteredKeys();
+                const keys = getFilteredKeys().filter(key => selectedFolders.includes(getFolderForKey(key)));
                 let uploadedCount = 0;
                 for (let i = 0; i < keys.length; i++) {
                     const key = keys[i];
@@ -1429,35 +1525,37 @@
                     meta[path] = currentSize;
                     uploadedCount++;
                 }
-                try {
-                    const db = await openImagesDB();
-                    const images = await new Promise((resolve, reject) => {
-                        const tx = db.transaction(IMAGES_STORE_NAME, 'readonly');
-                        const store = tx.objectStore(IMAGES_STORE_NAME);
-                        const req = store.getAll();
-                        req.onsuccess = () => resolve(req.result || []);
-                        req.onerror = () => reject(req.error);
-                    });
-                    for (const img of images) {
-                        const path = '/Journal/Images/' + img.id + '.json';
-                        const content = JSON.stringify(img);
-                        const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Dropbox-API-Arg': JSON.stringify({ path: path, mode: 'overwrite' }),
-                                'Content-Type': 'application/octet-stream'
-                            },
-                            body: content
+                if (selectedFolders.includes('Journal')) {
+                    try {
+                        const db = await openImagesDB();
+                        const images = await new Promise((resolve, reject) => {
+                            const tx = db.transaction(IMAGES_STORE_NAME, 'readonly');
+                            const store = tx.objectStore(IMAGES_STORE_NAME);
+                            const req = store.getAll();
+                            req.onsuccess = () => resolve(req.result || []);
+                            req.onerror = () => reject(req.error);
                         });
-                        if (!resp.ok) {
-                            const errText = await resp.text();
-                            throw new Error(`Upload failed for image ${img.id}: ${errText}`);
+                        for (const img of images) {
+                            const path = '/Journal/Images/' + img.id + '.json';
+                            const content = JSON.stringify(img);
+                            const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Dropbox-API-Arg': JSON.stringify({ path: path, mode: 'overwrite' }),
+                                    'Content-Type': 'application/octet-stream'
+                                },
+                                body: content
+                            });
+                            if (!resp.ok) {
+                                const errText = await resp.text();
+                                throw new Error(`Upload failed for image ${img.id}: ${errText}`);
+                            }
+                            meta[path] = content.length;
                         }
-                        meta[path] = content.length;
+                    } catch (e) {
+                        throw new Error('Image upload failed: ' + e.message);
                     }
-                } catch (e) {
-                    throw new Error('Image upload failed: ' + e.message);
                 }
                 localStorage.setItem(BACKUP_META_KEY, JSON.stringify(meta));
                 localStorage.setItem('lastCloudBackupDate', new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
@@ -1473,7 +1571,7 @@
             }
         }
 
-        async function downloadAndRestore() {
+        async function downloadAndRestore(selectedFolders) {
             const token = await getValidAccessToken();
             if (!token) {
                 showConfirmPopup('Dropbox', 'Not connected. Do you want to connect to your Dropbox first?', () => {
@@ -1481,7 +1579,7 @@
                 });
                 return;
             }
-            showConfirmPopup('Restore', 'Restore all cloud data? Current data will be overwritten.', async () => {
+            showConfirmPopup('Restore', 'Restore selected cloud data? Current data will be overwritten.', async () => {
                 const notif = window.createTimerNotification('Cloud Restore', 100);
                 const progressBar = notif.wrapper.querySelector('.timer-progress-bar-notif');
                 const timeElement = notif.wrapper.querySelector('.timer-time-notif');
@@ -1517,14 +1615,19 @@
                         hasMore = data.has_more;
                         cursor = data.cursor;
                     }
-                    if (allFiles.length === 0) {
+                    const imageFiles = allFiles.filter(f => f.path_lower.startsWith('/journal/images/'));
+                    const dataFiles = allFiles.filter(f => !f.path_lower.startsWith('/journal/images/'));
+                    const dataToRestore = dataFiles.filter(f => selectedFolders.includes(getFolderForKey(f.name.replace(/\.json$/, ''))));
+                    const imagesToRestore = selectedFolders.includes('Journal') ? imageFiles : [];
+                    const totalToRestore = dataToRestore.length + imagesToRestore.length;
+                    if (totalToRestore === 0) {
                         clearInterval(interval);
                         notif.close();
                         window.showMessage('No backup files found.', true);
                         return;
                     }
-                    for (let i = 0; i < allFiles.length; i++) {
-                        const file = allFiles[i];
+                    for (let i = 0; i < dataToRestore.length; i++) {
+                        const file = dataToRestore[i];
                         const key = file.name.replace(/\.json$/, '');
                         const dlResp = await fetch('https://content.dropboxapi.com/2/files/download', {
                             method: 'POST',
@@ -1537,8 +1640,7 @@
                         const content = await dlResp.text();
                         localStorage.setItem(key, content);
                     }
-                    const imageFiles = allFiles.filter(f => f.path_lower.startsWith('/journal/images/'));
-                    if (imageFiles.length > 0) {
+                    if (imagesToRestore.length > 0) {
                         const db = await openImagesDB();
                         const clearTx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
                         clearTx.objectStore(IMAGES_STORE_NAME).clear();
@@ -1548,7 +1650,7 @@
                         });
                         const tx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
                         const store = tx.objectStore(IMAGES_STORE_NAME);
-                        for (const file of imageFiles) {
+                        for (const file of imagesToRestore) {
                             const dlResp = await fetch('https://content.dropboxapi.com/2/files/download', {
                                 method: 'POST',
                                 headers: {
@@ -1570,7 +1672,7 @@
                     progressBar.style.width = '100%';
                     timeElement.textContent = '100%';
                     setTimeout(() => notif.close(), 1500);
-                    window.showMessage(`Restore complete! ${allFiles.length} items restored.`);
+                    window.showMessage(`Restore complete! ${totalToRestore} items restored.`);
                     initialize();
                 } catch (err) {
                     clearInterval(interval);
@@ -1752,7 +1854,7 @@
                     localStorage.removeItem(BACKUP_META_KEY);
                     progress.complete();
                     window.showMessage('All backups deleted. Creating a fresh backup...');
-                    await uploadBackup();
+                    await uploadBackup(getAvailableFolders());
                 } catch (err) {
                     progress.error();
                     window.showMessage('Delete backups error: ' + err.message, true);
@@ -1808,11 +1910,11 @@
             `;
             document.getElementById('popupCloudBackup').addEventListener('click', () => {
                 closeUniversalPopup();
-                uploadBackup();
+                showOptionsPopup('backup');
             });
             document.getElementById('popupCloudRestore').addEventListener('click', () => {
                 closeUniversalPopup();
-                downloadAndRestore();
+                showOptionsPopup('restore');
             });
             document.getElementById('popupLocalBackup').addEventListener('click', () => {
                 closeUniversalPopup();
