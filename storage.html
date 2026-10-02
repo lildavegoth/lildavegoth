@@ -9,6 +9,7 @@
     <script src="notification.cssjs"></script>
     <link rel="stylesheet" href="media.css">
     <script src="ui-icons.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --accent-color: #C1FC32;
@@ -947,6 +948,7 @@
                 request.onerror = function(e) { reject(e.target.error); };
             });
         }
+
         const REDIRECT_URI = window.location.origin + window.location.pathname;
 
         let currentFolder = 'All';
@@ -1403,6 +1405,60 @@
             popup.style.display = 'flex';
         }
 
+        function showLocalBackupOptions() {
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            titleEl.textContent = 'Local Backup';
+            contentEl.innerHTML = `
+                <div class="popup-message">Choose a backup format.</div>
+                <div class="button-row">
+                    <button class="confirm-btn cancel" id="localBackupSingle">Single JSON</button>
+                    <button class="confirm-btn confirm" id="localBackupZip">Folder ZIP</button>
+                </div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn cancel" id="localBackupCancel">Cancel</button>
+                </div>
+            `;
+            document.getElementById('localBackupSingle').onclick = () => {
+                closeUniversalPopup();
+                localBackup();
+            };
+            document.getElementById('localBackupZip').onclick = () => {
+                closeUniversalPopup();
+                localBackupZip();
+            };
+            document.getElementById('localBackupCancel').onclick = closeUniversalPopup;
+            popup.style.display = 'flex';
+        }
+
+        function showLocalRestoreOptions() {
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            titleEl.textContent = 'Local Restore';
+            contentEl.innerHTML = `
+                <div class="popup-message">Choose a restore format.</div>
+                <div class="button-row">
+                    <button class="confirm-btn cancel" id="localRestoreSingle">Single JSON</button>
+                    <button class="confirm-btn confirm" id="localRestoreZip">Folder ZIP</button>
+                </div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn cancel" id="localRestoreCancel">Cancel</button>
+                </div>
+            `;
+            document.getElementById('localRestoreSingle').onclick = () => {
+                closeUniversalPopup();
+                localRestore();
+            };
+            document.getElementById('localRestoreZip').onclick = () => {
+                closeUniversalPopup();
+                localRestoreZip();
+            };
+            document.getElementById('localRestoreCancel').onclick = closeUniversalPopup;
+            popup.style.display = 'flex';
+        }
+
         const DROPBOX_CLIENT_ID = '5630n4t14l8r80h';
         const DROPBOX_TOKEN_KEY = 'dropbox_tokens';
 
@@ -1842,6 +1898,72 @@
             progress.complete();
         }
 
+        async function localBackupZip() {
+            if (typeof JSZip === 'undefined') {
+                window.showMessage('ZIP library not loaded', true);
+                return;
+            }
+            const progress = startProgressNotification();
+            const zip = new JSZip();
+            const keys = getFilteredKeys();
+            for (const key of keys) {
+                const value = localStorage.getItem(key);
+                if (value === null) continue;
+                const folder = getFolderForKey(key);
+                zip.file(`${folder}/${key}.json`, value);
+            }
+            try {
+                const db = await openImagesDB();
+                const images = await new Promise((resolve, reject) => {
+                    const tx = db.transaction(IMAGES_STORE_NAME, 'readonly');
+                    const store = tx.objectStore(IMAGES_STORE_NAME);
+                    const req = store.getAll();
+                    req.onsuccess = () => resolve(req.result || []);
+                    req.onerror = () => reject(req.error);
+                });
+                for (const img of images) {
+                    const dataUrl = img.data || img.image || img.src || img.url || img.dataUrl;
+                    if (!dataUrl || typeof dataUrl !== 'string' || dataUrl.indexOf(',') === -1) {
+                        zip.file(`Journal/Images/${img.id}.json`, JSON.stringify(img));
+                        continue;
+                    }
+                    const commaIdx = dataUrl.indexOf(',');
+                    const meta = dataUrl.substring(0, commaIdx);
+                    const base64 = dataUrl.substring(commaIdx + 1);
+                    const mimeMatch = meta.match(/data:([^;]+)/);
+                    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+                    let ext = 'png';
+                    if (mime.indexOf('jpeg') !== -1 || mime.indexOf('jpg') !== -1) ext = 'jpg';
+                    else if (mime.indexOf('gif') !== -1) ext = 'gif';
+                    else if (mime.indexOf('webp') !== -1) ext = 'webp';
+                    else if (mime.indexOf('svg') !== -1) ext = 'svg';
+                    try {
+                        const binary = atob(base64);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        zip.file(`Journal/Images/${img.id}.${ext}`, bytes);
+                    } catch (e) {
+                        zip.file(`Journal/Images/${img.id}.json`, JSON.stringify(img));
+                    }
+                }
+            } catch (e) {}
+            try {
+                const blob = await zip.generateAsync({ type: 'blob' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `kakoikiraku_local_backup_${new Date().toISOString().slice(0,10)}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                window.showMessage('Backup saved locally');
+            } catch (err) {
+                window.showMessage('ZIP creation failed', true);
+            }
+            progress.complete();
+        }
+
         function localRestore() {
             const input = document.createElement('input');
             input.type = 'file';
@@ -1885,6 +2007,81 @@
                     }
                 };
                 reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function localRestoreZip() {
+            if (typeof JSZip === 'undefined') {
+                window.showMessage('ZIP library not loaded', true);
+                return;
+            }
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.zip';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    const zip = await JSZip.loadAsync(file);
+                    const data = {};
+                    const imagesToRestore = [];
+                    const paths = Object.keys(zip.files);
+                    for (const path of paths) {
+                        if (zip.files[path].dir) continue;
+                        const lower = path.toLowerCase();
+                        if (lower.indexOf('journal/images/') === 0) {
+                            const baseName = path.split('/').pop();
+                            const id = baseName.replace(/\.[^.]+$/, '');
+                            const ext = baseName.split('.').pop().toLowerCase();
+                            if (ext === 'json') {
+                                const content = await zip.files[path].async('string');
+                                try {
+                                    imagesToRestore.push(JSON.parse(content));
+                                } catch (err) {}
+                            } else {
+                                const blob = await zip.files[path].async('blob');
+                                const dataUrl = await new Promise((resolve) => {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => resolve(reader.result);
+                                    reader.readAsDataURL(blob);
+                                });
+                                imagesToRestore.push({ id: id, data: dataUrl });
+                            }
+                        } else if (lower.endsWith('.json')) {
+                            const baseName = path.split('/').pop().replace(/\.json$/, '');
+                            const content = await zip.files[path].async('string');
+                            data[baseName] = content;
+                        }
+                    }
+                    if (imagesToRestore.length > 0) {
+                        const db = await openImagesDB();
+                        const clearTx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
+                        clearTx.objectStore(IMAGES_STORE_NAME).clear();
+                        await new Promise((resolve, reject) => {
+                            clearTx.oncomplete = resolve;
+                            clearTx.onerror = reject;
+                        });
+                        const tx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
+                        const store = tx.objectStore(IMAGES_STORE_NAME);
+                        for (const item of imagesToRestore) {
+                            store.put(item);
+                        }
+                        await new Promise((resolve, reject) => {
+                            tx.oncomplete = resolve;
+                            tx.onerror = reject;
+                        });
+                    }
+                    showConfirmPopup('Local Restore', `Restore ${Object.keys(data).length} items? Current data will be overwritten.`, () => {
+                        for (const [key, value] of Object.entries(data)) {
+                            localStorage.setItem(key, value);
+                        }
+                        window.showMessage('Local restore complete');
+                        initialize();
+                    });
+                } catch (err) {
+                    window.showMessage('Invalid ZIP file', true);
+                }
             };
             input.click();
         }
@@ -1981,6 +2178,10 @@
                         <p><strong>Delete Backups</strong></p>
                         <p style="font-size: 0.8rem;">Delete Backups button will clear all the backed up JSON files inside your Dropbox entirely.</p>
                     </div>
+                    <div class="guide-box">
+                        <p><strong>Login Issue</strong></p>
+                        <p style="font-size: 0.8rem;">If you're not connected to Dropbox and cannot sign in even after many times login, click Dropbox Sign Out button first then try login again.</p>
+                    </div>
                 </div>
             `;
             document.getElementById('popupCloudBackup').addEventListener('click', () => {
@@ -1993,11 +2194,11 @@
             });
             document.getElementById('popupLocalBackup').addEventListener('click', () => {
                 closeUniversalPopup();
-                localBackup();
+                showLocalBackupOptions();
             });
             document.getElementById('popupLocalRestore').addEventListener('click', () => {
                 closeUniversalPopup();
-                localRestore();
+                showLocalRestoreOptions();
             });
             document.getElementById('popupResetAppData').addEventListener('click', () => {
                 closeUniversalPopup();
