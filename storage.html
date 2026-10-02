@@ -615,6 +615,35 @@
             font-weight: 500;
         }
 
+        .loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 0;
+            gap: 14px;
+        }
+
+        .loading-spinner .spinner-dot {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent-color);
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-spinner .loading-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         .guide-box {
             background: rgba(255, 255, 255, 0.05);
             border-radius: var(--radius-medium);
@@ -1330,14 +1359,44 @@
             popup.style.display = 'flex';
         }
 
-        function showNoAppsPopup(mode) {
+        function showLoadingPopup(message) {
             const popup = document.getElementById('universalPopup');
             const titleEl = document.getElementById('popupTitle');
             const contentEl = document.getElementById('popupContent');
-            titleEl.textContent = mode === 'backup' ? 'Backup Options' : 'Restore Options';
+            titleEl.textContent = 'Please Wait';
             contentEl.innerHTML = `
-                <div class="popup-message">No app data was found in your browser storage on this device.</div>
-                <div class="popup-message">Storage data is saved per-browser, so please open some apps on this device first to create data, then come back.</div>
+                <div class="loading-spinner">
+                    <div class="spinner-dot"></div>
+                    <div class="loading-text">${message}</div>
+                </div>
+            `;
+            popup.style.display = 'flex';
+        }
+
+        function showNoBackupsPopup() {
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            titleEl.textContent = 'Restore Options';
+            contentEl.innerHTML = `
+                <div class="popup-message">No backups were found in your Dropbox.</div>
+                <div class="popup-message">Please run a Cloud Backup first from a device that has app data, then try restoring again.</div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn cancel" id="noBackupsClose">Close</button>
+                </div>
+            `;
+            document.getElementById('noBackupsClose').onclick = closeUniversalPopup;
+            popup.style.display = 'flex';
+        }
+
+        function showNoAppsPopup() {
+            const popup = document.getElementById('universalPopup');
+            const titleEl = document.getElementById('popupTitle');
+            const contentEl = document.getElementById('popupContent');
+            titleEl.textContent = 'Backup Options';
+            contentEl.innerHTML = `
+                <div class="popup-message">No app data was found in this browser.</div>
+                <div class="popup-message">Open some apps on this device first to create data, then come back to back it up.</div>
                 <div class="confirm-buttons">
                     <button class="confirm-btn cancel" id="noAppsReload">Reload Page</button>
                     <button class="confirm-btn confirm" id="noAppsClose">Close</button>
@@ -1351,13 +1410,8 @@
             popup.style.display = 'flex';
         }
 
-        function showOptionsPopup(mode) {
+        function renderOptionsPopup(mode, folders) {
             optionsMode = mode;
-            const folders = getAvailableFolders();
-            if (folders.length === 0) {
-                showNoAppsPopup(mode);
-                return;
-            }
             const saveKey = mode === 'backup' ? 'storageBackupSelectedApps' : 'storageRestoreSelectedApps';
             let savedSelected = [];
             try {
@@ -1365,6 +1419,8 @@
             } catch (e) {
                 savedSelected = [];
             }
+            const availableNames = folders;
+            savedSelected = savedSelected.filter(name => availableNames.includes(name));
             const popup = document.getElementById('universalPopup');
             const titleEl = document.getElementById('popupTitle');
             const contentEl = document.getElementById('popupContent');
@@ -1424,6 +1480,73 @@
                 }
             };
             popup.style.display = 'flex';
+        }
+
+        function showBackupOptionsPopup() {
+            const folders = getAvailableFolders();
+            if (folders.length === 0) {
+                showNoAppsPopup();
+                return;
+            }
+            renderOptionsPopup('backup', folders);
+        }
+
+        async function getDropboxBackupFolders(token) {
+            const folders = new Set();
+            let hasMore = true;
+            let cursor = null;
+            while (hasMore) {
+                const payload = cursor ? { cursor } : { path: '', recursive: true };
+                const resp = await fetch('https://api.dropboxapi.com/2/files/list_folder' + (cursor ? '/continue' : ''), {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!resp.ok) throw new Error('Failed to list backup folders');
+                const data = await resp.json();
+                for (const entry of data.entries) {
+                    if (entry['.tag'] !== 'file') continue;
+                    if (!entry.name.endsWith('.json')) continue;
+                    const pathDisplay = entry.path_display || entry.path_lower || '';
+                    const parts = pathDisplay.split('/').filter(Boolean);
+                    if (parts.length >= 2) {
+                        const folderName = parts[0];
+                        if (parts.length >= 3 && folderName.toLowerCase() === 'journal' && parts[1].toLowerCase() === 'images') {
+                            folders.add('Journal');
+                        } else {
+                            folders.add(folderName);
+                        }
+                    }
+                }
+                hasMore = data.has_more;
+                cursor = data.cursor;
+            }
+            return Array.from(folders).sort((a, b) => a.localeCompare(b));
+        }
+
+        async function showRestoreOptionsPopup() {
+            const token = await getValidAccessToken();
+            if (!token) {
+                showConfirmPopup('Dropbox', 'Not connected. Do you want to connect to your Dropbox first?', () => {
+                    authenticateDropbox();
+                });
+                return;
+            }
+            showLoadingPopup('Loading backups from Dropbox...');
+            try {
+                const folders = await getDropboxBackupFolders(token);
+                if (folders.length === 0) {
+                    showNoBackupsPopup();
+                    return;
+                }
+                renderOptionsPopup('restore', folders);
+            } catch (err) {
+                closeUniversalPopup();
+                window.showMessage('Error loading backups: ' + err.message, true);
+            }
         }
 
         function showLocalBackupOptions() {
@@ -1769,7 +1892,12 @@
                     }
                     const imageFiles = allFiles.filter(f => f.path_lower.startsWith('/journal/images/'));
                     const dataFiles = allFiles.filter(f => !f.path_lower.startsWith('/journal/images/'));
-                    const dataToRestore = dataFiles.filter(f => selectedFolders.includes(getFolderForKey(f.name.replace(/\.json$/, ''))));
+                    const dataToRestore = dataFiles.filter(f => {
+                        const pathDisplay = f.path_display || f.path_lower || '';
+                        const parts = pathDisplay.split('/').filter(Boolean);
+                        const folderName = parts[0] || '';
+                        return selectedFolders.includes(folderName);
+                    });
                     const imagesToRestore = selectedFolders.includes('Journal') ? imageFiles : [];
                     const totalToRestore = dataToRestore.length + imagesToRestore.length;
                     if (totalToRestore === 0) {
@@ -2204,18 +2332,18 @@
                         <p style="font-size: 0.8rem;">If you're not connected to Dropbox and cannot sign in even after many times login, click Dropbox Sign Out button first then try login again.</p>
                     </div>
                     <div class="guide-box">
-                        <p><strong>No Apps on Desktop?</strong></p>
-                        <p style="font-size: 0.8rem;">Browser storage is saved per-browser and per-device. If you don't see any apps in the Backup/Restore list, open some apps on this device first to create data, then reload this page.</p>
+                        <p><strong>Restore on Any Device</strong></p>
+                        <p style="font-size: 0.8rem;">Restore reads the app list directly from your Dropbox backup folder, so you can restore on a fresh device even without opening any apps first.</p>
                     </div>
                 </div>
             `;
             document.getElementById('popupCloudBackup').addEventListener('click', () => {
                 closeUniversalPopup();
-                showOptionsPopup('backup');
+                showBackupOptionsPopup();
             });
             document.getElementById('popupCloudRestore').addEventListener('click', () => {
                 closeUniversalPopup();
-                showOptionsPopup('restore');
+                showRestoreOptionsPopup();
             });
             document.getElementById('popupLocalBackup').addEventListener('click', () => {
                 closeUniversalPopup();
