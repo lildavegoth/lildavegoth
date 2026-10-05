@@ -79,8 +79,24 @@
         data.totalTasksCompleted = (data.totalTasksCompleted || 0) + 1;
         while (data.xp >= maxXPForLevel(data.level)) {
             data.xp -= maxXPForLevel(data.level);
+            var group = Math.floor((data.level - 1) / 10);
             data.level += 1;
+            data.coins += 200 * (1 + group);
         }
+        saveGameData(data);
+        return data;
+    }
+
+    function revokeTaskReward() {
+        var data = getGameData();
+        data.xp -= XP_PER_TASK;
+        data.coins = Math.max(0, data.coins - COINS_PER_TASK);
+        data.totalTasksCompleted = Math.max(0, (data.totalTasksCompleted || 0) - 1);
+        while (data.xp < 0 && data.level > 1) {
+            data.level -= 1;
+            data.xp += maxXPForLevel(data.level);
+        }
+        if (data.xp < 0) data.xp = 0;
         saveGameData(data);
         return data;
     }
@@ -90,11 +106,11 @@
         var style = document.createElement('style');
         style.id = 'gamifyPluginStyles';
         style.textContent =
-            '.gamify-bar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--bg-black);border-bottom:1px solid rgba(255,255,255,0.05);}' +
+            '.gamify-bar{display:flex;align-items:center;gap:12px;padding:10px 0;background:var(--bg-black);border-bottom:1px solid rgba(255,255,255,0.05);box-sizing:border-box;}' +
+            '.gamify-bar[data-gamify-bar-editor]{max-width:900px;margin:0 auto;padding:10px 24px;}' +
             '.gamify-progress-wrap{flex:1;position:relative;height:10px;background:rgba(255,255,255,0.06);border-radius:20px;overflow:hidden;}' +
-            '.gamify-progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--accent-color),#9bc726);border-radius:20px;transition:width 0.5s ease;}' +
-            '.gamify-shimmer{position:absolute;top:0;left:-8px;width:3px;height:100%;background:rgba(255,255,255,0.9);border-radius:4px;box-shadow:0 0 8px rgba(255,255,255,0.7);animation:gamifyShimmer 2s linear infinite;pointer-events:none;z-index:2;}' +
-            '@keyframes gamifyShimmer{0%{left:-8px;}100%{left:calc(100% + 8px);}}' +
+            '.gamify-progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:var(--accent-color);border-radius:20px;transition:width 0.5s ease;}' +
+            '.gamify-dot{position:absolute;top:50%;width:8px;height:8px;border-radius:50%;background:var(--accent-color);transform:translate(-50%,-50%);left:-2%;z-index:2;transition:background 0.15s ease;pointer-events:none;}' +
             '.gamify-level-badge{background:var(--accent-color);color:#000;padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;}' +
             '.gamify-btn{background:rgba(30,30,30,0.9) !important;color:var(--text-secondary) !important;border:none !important;width:40px;height:40px;border-radius:var(--radius-small);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.3s ease;flex-shrink:0;}' +
             '.gamify-btn.active{background:var(--accent-color) !important;color:#000 !important;}' +
@@ -113,7 +129,7 @@
     function barHTML() {
         return '<div class="gamify-progress-wrap">' +
             '<div class="gamify-progress-fill"></div>' +
-            '<div class="gamify-shimmer"></div>' +
+            '<div class="gamify-dot"></div>' +
             '</div>' +
             '<div class="gamify-level-badge">Lv 1</div>';
     }
@@ -149,6 +165,34 @@
         if (fill) fill.style.width = percent + '%';
         var badge = bar.querySelector('.gamify-level-badge');
         if (badge) badge.textContent = 'Lv ' + data.level;
+        startDotAnimation(bar);
+    }
+
+    function startDotAnimation(bar) {
+        if (bar.__gamifyDotAnimating) return;
+        bar.__gamifyDotAnimating = true;
+        var dot = bar.querySelector('.gamify-dot');
+        var fill = bar.querySelector('.gamify-progress-fill');
+        if (!dot || !fill) return;
+        var pos = -2;
+        var lastTime = performance.now();
+        var speed = 20;
+        function tick(now) {
+            var dt = (now - lastTime) / 1000;
+            if (dt > 1) dt = 0.016;
+            lastTime = now;
+            pos += speed * dt;
+            if (pos > 102) pos = -2;
+            dot.style.left = pos + '%';
+            var fillPercent = parseFloat(fill.style.width) || 0;
+            if (pos >= 0 && pos <= fillPercent) {
+                dot.style.background = '#000000';
+            } else {
+                dot.style.background = 'var(--accent-color)';
+            }
+            requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
     }
 
     function updateGamifyBars(noteId) {
@@ -286,6 +330,8 @@
                     var line = lines[lineIndex];
                     if (line && line.indexOf('- [ ]') !== -1) {
                         grantTaskReward();
+                    } else if (line && line.indexOf('- [x]') !== -1) {
+                        revokeTaskReward();
                     }
                 }
             }
