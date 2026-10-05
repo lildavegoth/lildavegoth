@@ -70,7 +70,7 @@
             '.home-profile-btn:hover{background:#2a2a2a;}' +
             '.profile-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-black);z-index:1000002;display:none;flex-direction:column;overflow-y:auto;}' +
             '.profile-overlay.active{display:flex;}' +
-            '.profile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#111;border-bottom:1px solid rgba(255,255,255,0.1);position:sticky;top:0;z-index:10;}' +
+            '.profile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:transparent;border-bottom:none;position:sticky;top:0;z-index:10;}' +
             '.profile-title{color:var(--text-primary);font-weight:600;font-size:1.1rem;}' +
             '.profile-close{width:36px;height:36px;border-radius:50%;background:transparent;border:none;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;}' +
             '.profile-close:hover{background:rgba(255,255,255,0.08);color:var(--text-primary);}' +
@@ -79,7 +79,6 @@
             '.profile-avatar{width:120px;height:120px;border-radius:50%;background:var(--bg-card);border:2px solid var(--accent-color);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--text-secondary);margin-bottom:14px;}' +
             '.profile-avatar img{width:100%;height:100%;object-fit:cover;display:block;}' +
             '.profile-username{font-size:1.4rem;font-weight:700;color:var(--text-primary);margin-bottom:4px;}' +
-            '.profile-userid{font-size:0.85rem;color:var(--text-secondary);}' +
             '.profile-section{margin-bottom:20px;}' +
             '.profile-section-title{font-size:0.85rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;padding:0 4px;}' +
             '.profile-card{background:var(--bg-card);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-medium);padding:16px;}' +
@@ -89,7 +88,9 @@
             '.profile-label{color:var(--text-secondary);font-size:0.9rem;flex-shrink:0;}' +
             '.profile-value{color:var(--text-primary);font-size:0.95rem;font-weight:500;text-align:right;word-break:break-word;}' +
             '.profile-value.editable{cursor:pointer;color:var(--accent-color);}' +
-            '.profile-value.editable:hover{text-decoration:underline;}';
+            '.profile-value.editable:hover{text-decoration:underline;}' +
+            '.profile-overlay::-webkit-scrollbar{display:none;}' +
+            '.profile-overlay{-ms-overflow-style:none;scrollbar-width:none;}';
         document.head.appendChild(style);
     }
 
@@ -116,7 +117,6 @@
         var data = getProfileData();
         var user = getCurrentUser();
         var username = user.username || 'Unknown';
-        var userId = user.id || 'N/A';
         var photo = getProfilePhoto();
         var notesCount = (window.NotesApp.getNotes() || []).length;
         var notesSize = calculateNotesSize();
@@ -134,7 +134,6 @@
             '<div class="profile-top">' +
             '<div class="profile-avatar">' + avatarHTML + '</div>' +
             '<div class="profile-username">' + username + '</div>' +
-            '<div class="profile-userid">ID: ' + userId + '</div>' +
             '</div>' +
 
             '<div class="profile-section">' +
@@ -277,6 +276,40 @@
         }
     }
 
+    function wrapTogglePlugin() {
+        if (window.__profileToggleWrapped) return;
+        window.__profileToggleWrapped = true;
+
+        var originalToggle = window.togglePlugin;
+        if (typeof originalToggle !== 'function') return;
+
+        window.togglePlugin = function(name, checked) {
+            if (name === 'Profile' && !checked) {
+                document.getElementById('popupTitle').textContent = 'Disable Profile';
+                document.getElementById('popupBody').innerHTML =
+                    '<p>Disabling Profile will erase all your profile data (gender, age, first use date, and backup history). Continue?</p>' +
+                    '<div class="popup-buttons">' +
+                    '<button class="popup-btn secondary" id="profileDisableCancel">Cancel</button>' +
+                    '<button class="popup-btn danger" id="profileDisableConfirm">Disable</button>' +
+                    '</div>';
+                document.getElementById('universalPopup').style.display = 'flex';
+
+                document.getElementById('profileDisableCancel').addEventListener('click', function() {
+                    closeUniversalPopup();
+                    renderPluginList();
+                });
+
+                document.getElementById('profileDisableConfirm').addEventListener('click', function() {
+                    localStorage.removeItem(STORAGE_KEY);
+                    closeUniversalPopup();
+                    originalToggle.apply(window, [name, checked]);
+                });
+                return;
+            }
+            return originalToggle.apply(window, arguments);
+        };
+    }
+
     var plugin = {
         name: 'Profile',
         description: 'View your profile, notes stats, and personal info.',
@@ -285,6 +318,7 @@
             injectStyles();
             buildOverlay();
             wrapExports();
+            wrapTogglePlugin();
             injectSidebarButton();
             app.on('app:ready', function() {
                 setTimeout(injectSidebarButton, 200);
