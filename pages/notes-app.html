@@ -1261,39 +1261,54 @@
             margin: 2em 0;
         }
 
-        .reading-content .pdf-wrapper {
-            margin: 1rem 0;
-            border-radius: var(--radius-medium);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            overflow: hidden;
-            background: var(--bg-card);
-        }
-
-        .reading-content .pdf-wrapper .pdf-header {
+        .attachment-file-card {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 8px 12px;
-            background: rgba(0, 0, 0, 0.85);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
+            background: var(--bg-card);
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 16px;
+            margin: 1rem 0;
+            gap: 12px;
         }
 
-        .reading-content .pdf-wrapper .pdf-header i {
+        .attachment-file-name {
+            color: var(--text-primary);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .attachment-file-name i {
             color: var(--accent-color);
-            margin-right: 8px;
+            flex-shrink: 0;
         }
 
-        .reading-content .pdf-wrapper embed,
-        .reading-content .pdf-wrapper iframe {
-            width: 100%;
-            height: 600px;
-            display: block;
+        .attachment-download-btn {
+            color: var(--accent-color);
+            font-size: 1.2rem;
+            padding: 8px;
+            border-radius: var(--radius-small);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            flex-shrink: 0;
+            background: transparent;
             border: none;
-            background: #ffffff;
+            cursor: pointer;
+        }
+
+        .attachment-download-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
         }
 
         .code-block-wrapper {
@@ -1453,11 +1468,6 @@
 
             .reading-content h3 {
                 font-size: 1.3rem;
-            }
-
-            .reading-content .pdf-wrapper embed,
-            .reading-content .pdf-wrapper iframe {
-                height: 420px;
             }
         }
 
@@ -3607,6 +3617,18 @@
                                 noteItem.addEventListener('click', () => {
                                     openNoteReadingMode(note.id);
                                 });
+                                noteItem.addEventListener('contextmenu', (e) => {
+                                    e.preventDefault();
+                                    showNoteContextMenu(note.id, e.clientX, e.clientY);
+                                });
+                                noteItem.addEventListener('touchstart', (e) => {
+                                    longPressTimer = setTimeout(() => {
+                                        e.preventDefault();
+                                        showNoteContextMenu(note.id, e.touches[0].clientX, e.touches[0].clientY);
+                                    }, 600);
+                                });
+                                noteItem.addEventListener('touchend', () => clearTimeout(longPressTimer));
+                                noteItem.addEventListener('touchmove', () => clearTimeout(longPressTimer));
                                 folderList.appendChild(noteItem);
                             });
                         }
@@ -4387,15 +4409,18 @@
                 var src = img.getAttribute('src') || '';
                 if (!src) return;
                 var wrapper = document.createElement('div');
-                wrapper.className = 'pdf-wrapper';
-                var header = document.createElement('div');
-                header.className = 'pdf-header';
-                header.innerHTML = '<span><i class="fas fa-file-pdf"></i>' + alt + '</span><span>PDF Preview</span>';
-                var embed = document.createElement('embed');
-                embed.src = src;
-                embed.type = 'application/pdf';
-                wrapper.appendChild(header);
-                wrapper.appendChild(embed);
+                wrapper.className = 'attachment-file-card';
+                var nameSpan = document.createElement('span');
+                nameSpan.className = 'attachment-file-name';
+                nameSpan.innerHTML = '<i class="fas fa-file-pdf"></i> ' + alt;
+                var downloadBtn = document.createElement('a');
+                downloadBtn.className = 'attachment-download-btn';
+                downloadBtn.href = src;
+                downloadBtn.download = alt;
+                downloadBtn.title = 'Download';
+                downloadBtn.innerHTML = '<i class="fas fa-download"></i>';
+                wrapper.appendChild(nameSpan);
+                wrapper.appendChild(downloadBtn);
                 img.parentNode.replaceChild(wrapper, img);
             });
         }
@@ -4769,7 +4794,7 @@
             if (!window.matchMedia('(min-width: 720px)').matches) return;
             var images = container.querySelectorAll('img');
             images.forEach(function(img) {
-                if (img.closest('.video-wrapper') || img.closest('.media-container') || img.closest('.pdf-wrapper')) return;
+                if (img.closest('.video-wrapper') || img.closest('.media-container') || img.closest('.attachment-file-card')) return;
                 var wrapper = document.createElement('div');
                 wrapper.className = 'media-container';
                 img.parentNode.insertBefore(wrapper, img);
