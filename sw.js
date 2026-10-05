@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.7.5';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.7.6';
 const urlsToCache = [
     // Root
     '/',
@@ -164,6 +164,23 @@ self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
 
     const url = new URL(event.request.url);
+
+    if (url.pathname.includes('/files/fetch/plugins/')) {
+        event.respondWith(
+            fetch(event.request, { cache: 'no-store' })
+                .then(response => {
+                    if (response && response.status === 200) {
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME).then(cache => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    }
+                    return response;
+                })
+                .catch(() => caches.match(event.request))
+        );
+        return;
+    }
 
     const requestPath = url.origin + url.pathname;
 
