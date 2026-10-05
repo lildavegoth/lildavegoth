@@ -761,6 +761,15 @@
             }
         }
 
+        .plugins-search-container {
+            padding: 8px 0;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
         .empty-state {
             text-align: center;
             padding: var(--spacing-xl);
@@ -1252,6 +1261,41 @@
             margin: 2em 0;
         }
 
+        .reading-content .pdf-wrapper {
+            margin: 1rem 0;
+            border-radius: var(--radius-medium);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            background: var(--bg-card);
+        }
+
+        .reading-content .pdf-wrapper .pdf-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.85);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .reading-content .pdf-wrapper .pdf-header i {
+            color: var(--accent-color);
+            margin-right: 8px;
+        }
+
+        .reading-content .pdf-wrapper embed,
+        .reading-content .pdf-wrapper iframe {
+            width: 100%;
+            height: 600px;
+            display: block;
+            border: none;
+            background: #ffffff;
+        }
+
         .code-block-wrapper {
             background: var(--bg-card);
             border-radius: var(--radius-medium);
@@ -1409,6 +1453,11 @@
 
             .reading-content h3 {
                 font-size: 1.3rem;
+            }
+
+            .reading-content .pdf-wrapper embed,
+            .reading-content .pdf-wrapper iframe {
+                height: 420px;
             }
         }
 
@@ -2800,6 +2849,14 @@
             </div>
             <div class="plugins-list" id="pluginsList">
                 <div class="plugins-heading">Plugins</div>
+                <div class="plugins-search-container">
+                    <div class="home-search-input-wrapper">
+                        <input type="text" id="pluginsSearchInput" placeholder="Search plugins..." class="home-search-input">
+                        <div class="home-search-icon">
+                            <i class="fas fa-search" style="color: var(--accent-color);"></i>
+                        </div>
+                    </div>
+                </div>
                 <div id="pluginsContainer"></div>
                 <div class="empty-state" id="pluginsEmptyState" style="display: none;">
                     <i class="fas fa-puzzle-piece"></i>
@@ -2887,7 +2944,7 @@
             <button class="toolbar-btn" title="Insert Table" onclick="insertTable()"><i class="fas fa-table"></i></button>
             <button class="toolbar-btn" title="Word Count" onclick="countWords()"><i class="fas fa-font"></i></button>
         </div>
-        <input type="file" id="imageFileInput" accept="image/*,video/*,audio/*" style="display: none;">
+        <input type="file" id="imageFileInput" accept="image/*,video/*,audio/*,application/pdf" style="display: none;">
     </div>
 
     <div class="folder-window" id="folderWindow">
@@ -3702,9 +3759,14 @@
             const menu = document.createElement('div');
             menu.style.cssText = 'position:fixed; z-index:1000001; background:#1c1c1c; border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:8px 0; min-width:160px;';
             menu.style.left = Math.min(x, window.innerWidth - 170) + 'px';
-            menu.style.top = Math.min(y, window.innerHeight - 150) + 'px';
+            menu.style.top = Math.min(y, window.innerHeight - 190) + 'px';
 
             const options = [{
+                    label: 'New Note',
+                    icon: '<i class="fas fa-plus"></i>',
+                    action: () => createNewNoteInFolder(folderId)
+                },
+                {
                     label: 'Rename',
                     icon: '<i class="fas fa-pencil-alt"></i>',
                     action: () => openRenameFolderPopup(folderId)
@@ -3739,6 +3801,23 @@
                     document.removeEventListener('click', handler);
                 }
             });
+        }
+
+        async function createNewNoteInFolder(folderId) {
+            const id = Date.now();
+            const newNote = {
+                id: id,
+                title: '',
+                content: '',
+                tags: [],
+                date: new Date().toISOString(),
+                folderId: folderId,
+                attachmentKeys: [],
+                pinned: false
+            };
+            notesData.unshift(newNote);
+            await saveNotesToStorage();
+            openNoteEditor(id);
         }
 
         function showNoteContextMenu(noteId, x, y) {
@@ -4178,7 +4257,7 @@
                 return '![' + filename + '](attachment-by-name:' + encodeURIComponent(filename.trim()) + ')';
             });
 
-            result = result.replace(/!\[([^\]]*)\]\(([^):\/\\]+\.(?:png|jpe?g|gif|webp|svg|bmp|mp4|webm|ogg|mov|m4v|mp3|wav|m4a|aac|flac|avif|tiff?|ico))\)/gi, function(match, alt, filename) {
+            result = result.replace(/!\[([^\]]*)\]\(([^):\/\\]+\.(?:png|jpe?g|gif|webp|svg|bmp|mp4|webm|ogg|mov|m4v|mp3|wav|m4a|aac|flac|avif|tiff?|ico|pdf))\)/gi, function(match, alt, filename) {
                 return '![' + alt + '](attachment-by-name:' + encodeURIComponent(filename.trim()) + ')';
             });
 
@@ -4288,6 +4367,7 @@
             enhanceTables(container);
             enhanceTableCellMarkdown(container);
             enhanceCustomQuotes(container);
+            enhancePdfs(container);
             enhanceVideos(container);
             processCardListBlocksInContainer(container);
             setupCardListInteractions(container);
@@ -4296,6 +4376,28 @@
             applyMediaContainers(container);
             setupFullscreenPreviews();
             attachCheckboxListeners();
+        }
+
+        function enhancePdfs(container) {
+            var images = container.querySelectorAll('img');
+            images.forEach(function(img) {
+                var alt = img.getAttribute('alt') || '';
+                var isPdf = /\.pdf$/i.test(alt);
+                if (!isPdf) return;
+                var src = img.getAttribute('src') || '';
+                if (!src) return;
+                var wrapper = document.createElement('div');
+                wrapper.className = 'pdf-wrapper';
+                var header = document.createElement('div');
+                header.className = 'pdf-header';
+                header.innerHTML = '<span><i class="fas fa-file-pdf"></i>' + alt + '</span><span>PDF Preview</span>';
+                var embed = document.createElement('embed');
+                embed.src = src;
+                embed.type = 'application/pdf';
+                wrapper.appendChild(header);
+                wrapper.appendChild(embed);
+                img.parentNode.replaceChild(wrapper, img);
+            });
         }
 
         function replaceArrowsInTextNodes(element) {
@@ -4667,7 +4769,7 @@
             if (!window.matchMedia('(min-width: 720px)').matches) return;
             var images = container.querySelectorAll('img');
             images.forEach(function(img) {
-                if (img.closest('.video-wrapper') || img.closest('.media-container')) return;
+                if (img.closest('.video-wrapper') || img.closest('.media-container') || img.closest('.pdf-wrapper')) return;
                 var wrapper = document.createElement('div');
                 wrapper.className = 'media-container';
                 img.parentNode.insertBefore(wrapper, img);
@@ -5563,6 +5665,37 @@
             container.style.display = 'block';
         }
 
+        function setupPluginsSearch() {
+            var input = document.getElementById('pluginsSearchInput');
+            if (!input) return;
+            input.addEventListener('input', function() {
+                filterPlugins(this.value);
+            });
+        }
+
+        function filterPlugins(query) {
+            var container = document.getElementById('pluginsContainer');
+            if (!container) return;
+            var items = container.querySelectorAll('.plugin-item');
+            var q = (query || '').toLowerCase().trim();
+            var visible = 0;
+            items.forEach(function(item) {
+                var nameEl = item.querySelector('.plugin-name');
+                var name = nameEl ? nameEl.textContent.toLowerCase() : '';
+                var match = !q || name.indexOf(q) !== -1;
+                item.style.display = match ? 'flex' : 'none';
+                if (match) visible++;
+            });
+            var empty = document.getElementById('pluginsEmptyState');
+            if (empty && items.length > 0) {
+                if (visible === 0) {
+                    empty.style.display = 'block';
+                } else {
+                    empty.style.display = 'none';
+                }
+            }
+        }
+
         var editorSearchIndex = 0;
         var editorSearchMatches = [];
 
@@ -5775,6 +5908,10 @@
                     '</div>';
             }).join('');
             document.getElementById('pluginsList').classList.add('active');
+            var searchInput = document.getElementById('pluginsSearchInput');
+            if (searchInput && searchInput.value.trim()) {
+                filterPlugins(searchInput.value);
+            }
         }
 
         function togglePlugin(name, checked) {
@@ -5783,7 +5920,7 @@
             });
             if (plugin) {
                 plugin.enabled = checked;
-                window.NotesApp.plugins.saveStates();
+                window.NotesApp.plugins.saveEnabledStates();
                 window.showMessage('Plugin ' + (checked ? 'enabled' : 'disabled') + '. Reload to apply.');
             }
         }
@@ -5983,6 +6120,7 @@
             setupEditorSearch();
             setupPaginationButtons();
             setupReadingBackButton();
+            setupPluginsSearch();
         }
 
         async function confirmReset() {
