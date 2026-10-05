@@ -1292,23 +1292,24 @@
         }
 
         .attachment-download-btn {
-            color: var(--accent-color);
-            font-size: 1.2rem;
-            padding: 8px;
+            background: var(--accent-color);
+            color: #000000;
+            font-size: 1.1rem;
+            width: 40px;
+            height: 40px;
             border-radius: var(--radius-small);
             text-decoration: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.2s;
             flex-shrink: 0;
-            background: transparent;
             border: none;
             cursor: pointer;
+            transition: transform 0.15s ease;
         }
 
-        .attachment-download-btn:hover {
-            background: rgba(193, 252, 50, 0.1);
+        .attachment-download-btn:active {
+            transform: scale(0.9);
         }
 
         .code-block-wrapper {
@@ -2943,7 +2944,7 @@
             <button class="toolbar-btn" title="Quote" onclick="insertMarkdown('> ', '')"><i class="fas fa-quote-left"></i></button>
             <button class="toolbar-btn" title="Link" onclick="insertLink()"><i class="fas fa-link"></i></button>
             <button class="toolbar-btn" title="Code" onclick="insertMarkdown('`', '`')"><i class="fas fa-code"></i></button>
-            <button class="toolbar-btn" title="Image" onclick="attachImage()"><i class="fas fa-image"></i></button>
+            <button class="toolbar-btn" title="Attachment" onclick="attachImage()"><i class="fas fa-paperclip"></i></button>
             <div class="toolbar-divider"></div>
             <button class="toolbar-btn" title="Indent" onclick="indent()"><i class="fas fa-indent"></i></button>
             <button class="toolbar-btn" title="Outdent" onclick="outdent()"><i class="fas fa-outdent"></i></button>
@@ -2952,9 +2953,8 @@
             <button class="toolbar-btn" title="Redo" onclick="redo()"><i class="fas fa-redo"></i></button>
             <button class="toolbar-btn" title="Clear" onclick="clearText()"><i class="fas fa-eraser"></i></button>
             <button class="toolbar-btn" title="Insert Table" onclick="insertTable()"><i class="fas fa-table"></i></button>
-            <button class="toolbar-btn" title="Word Count" onclick="countWords()"><i class="fas fa-font"></i></button>
         </div>
-        <input type="file" id="imageFileInput" accept="image/*,video/*,audio/*,application/pdf" style="display: none;">
+        <input type="file" id="imageFileInput" style="display: none;">
     </div>
 
     <div class="folder-window" id="folderWindow">
@@ -4389,7 +4389,7 @@
             enhanceTables(container);
             enhanceTableCellMarkdown(container);
             enhanceCustomQuotes(container);
-            enhancePdfs(container);
+            enhanceAttachments(container);
             enhanceVideos(container);
             processCardListBlocksInContainer(container);
             setupCardListInteractions(container);
@@ -4400,25 +4400,65 @@
             attachCheckboxListeners();
         }
 
-        function enhancePdfs(container) {
+        function getFileIcon(filename) {
+            var ext = (filename.split('.').pop() || '').toLowerCase();
+            var map = {
+                'pdf': 'fa-file-pdf',
+                'doc': 'fa-file-word',
+                'docx': 'fa-file-word',
+                'xls': 'fa-file-excel',
+                'xlsx': 'fa-file-excel',
+                'ppt': 'fa-file-powerpoint',
+                'pptx': 'fa-file-powerpoint',
+                'txt': 'fa-file-alt',
+                'md': 'fa-file-alt',
+                'csv': 'fa-file-csv',
+                'zip': 'fa-file-archive',
+                'rar': 'fa-file-archive',
+                '7z': 'fa-file-archive',
+                'tar': 'fa-file-archive',
+                'gz': 'fa-file-archive',
+                'json': 'fa-file-code',
+                'js': 'fa-file-code',
+                'css': 'fa-file-code',
+                'html': 'fa-file-code',
+                'xml': 'fa-file-code',
+                'mp3': 'fa-file-audio',
+                'wav': 'fa-file-audio',
+                'mp4': 'fa-file-video',
+                'mov': 'fa-file-video'
+            };
+            return map[ext] || 'fa-file';
+        }
+
+        function enhanceAttachments(container) {
             var images = container.querySelectorAll('img');
             images.forEach(function(img) {
                 var alt = img.getAttribute('alt') || '';
-                var isPdf = /\.pdf$/i.test(alt);
-                if (!isPdf) return;
+                if (isMediaFilename(alt)) return;
                 var src = img.getAttribute('src') || '';
                 if (!src) return;
                 var wrapper = document.createElement('div');
                 wrapper.className = 'attachment-file-card';
                 var nameSpan = document.createElement('span');
                 nameSpan.className = 'attachment-file-name';
-                nameSpan.innerHTML = '<i class="fas fa-file-pdf"></i> ' + alt;
+                var iconClass = getFileIcon(alt);
+                nameSpan.innerHTML = '<i class="fas ' + iconClass + '"></i> ' + alt;
                 var downloadBtn = document.createElement('a');
                 downloadBtn.className = 'attachment-download-btn';
                 downloadBtn.href = src;
                 downloadBtn.download = alt;
                 downloadBtn.title = 'Download';
                 downloadBtn.innerHTML = '<i class="fas fa-download"></i>';
+                downloadBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    var a = document.createElement('a');
+                    a.href = src;
+                    a.download = alt;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                });
                 wrapper.appendChild(nameSpan);
                 wrapper.appendChild(downloadBtn);
                 img.parentNode.replaceChild(wrapper, img);
@@ -4915,7 +4955,6 @@
             const file = e.target.files[0];
             if (!file) return;
             const key = generateAttachmentKey();
-            const type = file.type || 'image/png';
             await dbPut('attachments', key, file);
             saveAttachmentName(key, file.name);
             const insertText = '![' + file.name + '](attachment:' + key + ')';
@@ -5091,10 +5130,16 @@
         }
 
         function insertLink() {
-            var url = prompt('Enter URL:');
-            if (!url) return;
-            var linkText = prompt('Enter link text:') || 'Link';
-            insertMarkdown('[' + linkText + '](' + url + ')', '');
+            var textarea = document.getElementById('editorContent');
+            var start = textarea.selectionStart;
+            var end = textarea.selectionEnd;
+            var text = textarea.value;
+            var insert = '[]()';
+            textarea.value = text.substring(0, start) + insert + text.substring(end);
+            textarea.selectionStart = start + 1;
+            textarea.selectionEnd = start + 1;
+            textarea.focus();
+            triggerAutoSave();
         }
 
         function insertTable() {
@@ -5948,13 +5993,6 @@
                 window.NotesApp.plugins.saveEnabledStates();
                 window.showMessage('Plugin ' + (checked ? 'enabled' : 'disabled') + '. Reload to apply.');
             }
-        }
-
-        function countWords() {
-            var textarea = document.getElementById('editorContent');
-            var text = textarea.value.trim();
-            var wordCount = text ? text.split(/\s+/).length : 0;
-            window.showMessage('Word count: ' + wordCount);
         }
 
         function setupLongPress(el, onLongPress, onShortPress) {
