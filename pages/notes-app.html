@@ -723,6 +723,40 @@
             color: var(--text-secondary);
         }
 
+        .plugins-sync-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-small);
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1rem;
+            flex-shrink: 0;
+            transition: background 0.3s ease;
+        }
+
+        .plugins-sync-btn:hover {
+            background: rgba(193, 252, 50, 0.1);
+        }
+
+        .plugins-sync-icon-spin {
+            animation: pluginsSyncSpin 1.2s linear infinite;
+        }
+
+        @keyframes pluginsSyncSpin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         .empty-state {
             text-align: center;
             padding: var(--spacing-xl);
@@ -2748,6 +2782,9 @@
                     <div class="settings-card-title">Plugins</div>
                     <div class="settings-card-desc">Enable to use plugins feature</div>
                 </div>
+                <button type="button" class="plugins-sync-btn" id="pluginsSyncBtn" aria-label="Sync plugins" title="Sync plugins">
+                    <i class="fas fa-sync" id="pluginsSyncIcon"></i>
+                </button>
                 <label class="toggle-switch">
                     <input type="checkbox" id="pluginsMasterToggle" onchange="togglePluginsMaster()">
                     <span class="toggle-slider"></span>
@@ -2900,6 +2937,18 @@
     <input type="file" id="importFolder" webkitdirectory directory multiple style="display: none;">
 
     <script>
+        if (typeof window.showMessage !== 'function') {
+            window.showMessage = function(msg) {
+                var el = document.createElement('div');
+                el.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#C1FC32;color:#000000;padding:12px 20px;border-radius:12px;font-weight:600;font-size:0.9rem;z-index:999999999;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,0.5);';
+                el.textContent = msg;
+                document.body.appendChild(el);
+                setTimeout(function() {
+                    if (el.parentNode) el.parentNode.removeChild(el);
+                }, 2500);
+            };
+        }
+
         window.NotesApp = {
             plugins: {
                 list: [],
@@ -4997,7 +5046,8 @@
             document.getElementById('popupBody').innerHTML =
                 '<button class="popup-btn primary" onclick="document.getElementById(\'importMdFiles\').click();" style="width:100%; margin-bottom:8px;"><i class="fas fa-file-import"></i> Import Markdown files</button>' +
                 '<button class="popup-btn primary" onclick="document.getElementById(\'importFolder\').click();" style="width:100%; margin-bottom:8px;"><i class="fas fa-folder-open"></i> Import Folder</button>' +
-                '<button class="popup-btn primary" onclick="exportAllMd(); closeUniversalPopup();" style="width:100%;"><i class="fas fa-file-export"></i> Export All as .md</button>';
+                '<button class="popup-btn primary" onclick="exportAllMd(); closeUniversalPopup();" style="width:100%; margin-bottom:8px;"><i class="fas fa-file-export"></i> Export All as Markdown</button>' +
+                '<button class="popup-btn primary" onclick="exportFolderAsZip(); closeUniversalPopup();" style="width:100%;"><i class="fas fa-file-archive"></i> Export as Folder zip</button>';
             document.getElementById('universalPopup').style.display = 'flex';
         }
 
@@ -5086,6 +5136,112 @@
             var a = document.createElement('a');
             a.href = url;
             a.download = 'notes-export.zip';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        async function exportFolderAsZip() {
+            if (notesData.length === 0 && foldersData.length === 0) {
+                window.showMessage('Nothing to export');
+                return;
+            }
+            var zip = new JSZip();
+            var attachmentsFolder = zip.folder('Attachments');
+            var nameMap = getAttachmentNameMap();
+            var usedNames = {};
+
+            function uniqueName(name) {
+                var base = name;
+                var counter = 1;
+                while (usedNames[name]) {
+                    var dot = base.lastIndexOf('.');
+                    if (dot > 0) {
+                        name = base.substring(0, dot) + ' (' + counter + ')' + base.substring(dot);
+                    } else {
+                        name = base + ' (' + counter + ')';
+                    }
+                    counter++;
+                }
+                usedNames[name] = true;
+                return name;
+            }
+
+            function sanitize(str) {
+                return String(str || '').replace(/[\\\/:*?"<>|]/g, '_').trim() || 'Untitled';
+            }
+
+            function buildFolderPath(folderId) {
+                var parts = [];
+                var current = folderId;
+                var safety = 0;
+                while (current !== null && current !== undefined && safety < 100) {
+                    var f = foldersData.find(function(x) {
+                        return x.id === current;
+                    });
+                    if (!f) break;
+                    parts.unshift(sanitize(f.name));
+                    current = f.parentId;
+                    safety++;
+                }
+                return parts;
+            }
+
+            var attachmentKeyToPath = {};
+
+            for (const note of notesData) {
+                var attRegex = /!\[.*?\]\(attachment:([a-zA-Z0-9]+)\)/g;
+                var m;
+                var noteContent = note.content || '';
+                while ((m = attRegex.exec(noteContent)) !== null) {
+                    var key = m[1];
+                    if (attachmentKeyToPath[key]) continue;
+                    var blob = await dbGet('attachments', key);
+                    if (blob) {
+                        var origName = nameMap[key] || key;
+                        var finalName = uniqueName(sanitize(origName));
+                        attachmentKeyToPath[key] = finalName;
+                        attachmentsFolder.file(finalName, blob);
+                    }
+                }
+            }
+
+            for (const note of notesData) {
+                var folderPath = note.folderId ? buildFolderPath(note.folderId) : [];
+                var targetFolder = zip;
+                for (const part of folderPath) {
+                    targetFolder = targetFolder.folder(part);
+                }
+                var noteContent = note.content || '';
+                noteContent = noteContent.replace(/!\[([^\]]*)\]\(attachment:([a-zA-Z0-9]+)\)/g, function(match, alt, key) {
+                    if (attachmentKeyToPath[key]) {
+                        return '![' + alt + '](Attachments/' + attachmentKeyToPath[key] + ')';
+                    }
+                    return match;
+                });
+                var filename = sanitize(note.title || 'Untitled') + '.md';
+                var existing = targetFolder.file(filename);
+                if (existing) {
+                    var base = filename.replace(/\.md$/i, '');
+                    var c = 2;
+                    while (targetFolder.file(base + ' (' + c + ').md')) c++;
+                    filename = base + ' (' + c + ').md';
+                }
+                targetFolder.file(filename, noteContent);
+            }
+
+            if (attachmentsFolder && Object.keys(attachmentKeyToPath).length === 0) {
+                zip.remove('Attachments');
+            }
+
+            var blob = await zip.generateAsync({
+                type: 'blob'
+            });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'notes-folder-export.zip';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -5529,9 +5685,45 @@
             localStorage.setItem('pluginsEnabled', masterEnabled);
             if (masterEnabled) {
                 document.getElementById('pluginsList').classList.add('active');
+                window.showMessage('Plugins enabled. Reload to apply.');
             } else {
                 document.getElementById('pluginsList').classList.remove('active');
+                window.showMessage('Plugins disabled. Reload to apply.');
             }
+        }
+
+        async function syncPlugins() {
+            var icon = document.getElementById('pluginsSyncIcon');
+            if (icon) {
+                icon.classList.remove('plugins-sync-icon-spin');
+                void icon.offsetWidth;
+                icon.classList.add('plugins-sync-icon-spin');
+            }
+            try {
+                var resp = await fetch('../files/fetch/plugins/plugins.json?t=' + Date.now());
+                if (!resp.ok) throw new Error('not ok');
+                var list = await resp.json();
+                if (!Array.isArray(list)) throw new Error('bad list');
+                window.NotesApp.plugins.list = [];
+                var base = '../files/fetch/plugins/';
+                var promises = list.map(function(file) {
+                    return new Promise(function(resolve) {
+                        var script = document.createElement('script');
+                        script.src = base + file + '?t=' + Date.now();
+                        script.onload = resolve;
+                        script.onerror = resolve;
+                        document.head.appendChild(script);
+                    });
+                });
+                await Promise.all(promises);
+                renderPluginList();
+                window.showMessage('Plugins synced');
+            } catch (e) {
+                window.showMessage('Failed to sync plugins');
+            }
+            setTimeout(function() {
+                if (icon) icon.classList.remove('plugins-sync-icon-spin');
+            }, 1200);
         }
 
         function renderPluginList() {
@@ -5689,6 +5881,7 @@
                 closeSidebar();
                 switchPage('settings');
             });
+            document.getElementById('pluginsSyncBtn').addEventListener('click', syncPlugins);
             document.getElementById('codeRunClose').addEventListener('click', closeCodeRun);
             document.getElementById('codeRunOverlay').addEventListener('click', (e) => {
                 if (e.target.id === 'codeRunOverlay') closeCodeRun();
