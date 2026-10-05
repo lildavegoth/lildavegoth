@@ -107,7 +107,6 @@
         style.id = 'gamifyPluginStyles';
         style.textContent =
             '.gamify-bar{display:flex;align-items:center;gap:12px;padding:10px 0;background:var(--bg-black);border-bottom:1px solid rgba(255,255,255,0.05);box-sizing:border-box;}' +
-            '.gamify-bar[data-gamify-bar-editor]{max-width:900px;margin:0 auto;padding:10px 24px;}' +
             '.gamify-progress-wrap{flex:1;position:relative;height:10px;background:rgba(255,255,255,0.06);border-radius:20px;overflow:hidden;}' +
             '.gamify-progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:var(--accent-color);border-radius:20px;transition:width 0.5s ease;}' +
             '.gamify-dot{position:absolute;top:50%;width:8px;height:8px;border-radius:50%;background:var(--accent-color);transform:translate(-50%,-50%);left:-2%;z-index:2;transition:background 0.15s ease;pointer-events:none;}' +
@@ -143,16 +142,6 @@
             readingBar.style.display = 'none';
             readingBar.innerHTML = barHTML();
             readingMeta.parentNode.insertBefore(readingBar, readingMeta.nextSibling);
-        }
-
-        var editorHeader = document.querySelector('.editor-header');
-        if (editorHeader && !document.querySelector('[data-gamify-bar-editor]')) {
-            var editorBar = document.createElement('div');
-            editorBar.className = 'gamify-bar';
-            editorBar.setAttribute('data-gamify-bar-editor', 'true');
-            editorBar.style.display = 'none';
-            editorBar.innerHTML = barHTML();
-            editorHeader.parentNode.insertBefore(editorBar, editorHeader.nextSibling);
         }
     }
 
@@ -199,12 +188,10 @@
         injectBars();
         var gamified = noteId && isNoteGamified(noteId);
         var readingBar = document.querySelector('[data-gamify-bar-reading]');
-        var editorBar = document.querySelector('[data-gamify-bar-editor]');
-        [readingBar, editorBar].forEach(function(bar) {
-            if (!bar) return;
-            bar.style.display = gamified ? 'flex' : 'none';
-            if (gamified) updateBar(bar);
-        });
+        if (readingBar) {
+            readingBar.style.display = gamified ? 'flex' : 'none';
+            if (gamified) updateBar(readingBar);
+        }
     }
 
     function injectGameButton() {
@@ -359,12 +346,7 @@
         var originalEditor = window.openNoteEditor;
         if (typeof originalEditor === 'function') {
             window.openNoteEditor = function(noteId) {
-                var result = originalEditor.apply(this, arguments);
-                setTimeout(function() {
-                    injectBars();
-                    updateGamifyBars(noteId);
-                }, 50);
-                return result;
+                return originalEditor.apply(this, arguments);
             };
         }
 
