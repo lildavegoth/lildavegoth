@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakoi-kiraku-app-v1.7.6';
+const CACHE_NAME = 'kakoi-kiraku-app-v1.7.7';
 const urlsToCache = [
     // Root
     '/',
@@ -104,7 +104,14 @@ const urlsToCache = [
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/popup-pages.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/o-css-snippets.json',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/world-events.json',
+    // Plugins
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/plugins/plugins.json',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/plugins/command-tools.js',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/plugins/gamify-notes.js',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/plugins/homepage.js',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/plugins/profile.js',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/plugins/trash-bin.js',
+    'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/plugins/word-counts.js',
     // Stories
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/easy_story_1.txt',
     'https://raw.githubusercontent.com/lildavegoth/lildavegoth/refs/heads/homepage/files/fetch/easy_story_2.txt',
