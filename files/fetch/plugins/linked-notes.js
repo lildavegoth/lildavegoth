@@ -15,13 +15,13 @@
             '.reading-folder.linked-notes-btn:hover{opacity:0.85;}' +
             '.linked-notes-backdrop{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:1000002;display:none;}' +
             '.linked-notes-backdrop.active{display:block;}' +
-            '.linked-notes-sidebar{position:fixed;top:0;right:0;width:min(340px,90vw);height:100vh;background:var(--bg-dark);border-left:1px solid rgba(255,255,255,0.08);z-index:1000003;display:flex;flex-direction:column;transform:translateX(105%);transition:transform 0.28s ease;}' +
+            '.linked-notes-sidebar{position:fixed;top:0;right:0;width:min(340px,90vw);height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;background:var(--bg-dark);border-left:1px solid rgba(255,255,255,0.08);z-index:1000003;display:flex;flex-direction:column;overflow:hidden;transform:translateX(105%);transition:transform 0.28s ease;}' +
             '.linked-notes-sidebar.open{transform:translateX(0);}' +
             '.linked-notes-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:10px;}' +
             '.linked-notes-title{font-size:1rem;font-weight:700;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
             '.linked-notes-close{width:34px;height:34px;border-radius:50%;background:transparent;border:none;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;flex-shrink:0;}' +
             '.linked-notes-close:hover{background:rgba(255,255,255,0.08);color:var(--text-primary);}' +
-            '.linked-notes-body{flex:1;overflow-y:auto;padding:10px 8px 40px;scrollbar-width:none;-ms-overflow-style:none;}' +
+            '.linked-notes-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:10px 8px 40px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none;-ms-overflow-style:none;}' +
             '.linked-notes-body::-webkit-scrollbar{display:none;}' +
             '.linked-notes-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;margin:2px 0;background:transparent;border:none;color:var(--text-primary);border-radius:10px;cursor:pointer;text-align:left;font-size:14px;box-sizing:border-box;}' +
             '.linked-notes-item:hover{background:rgba(255,255,255,0.06);}' +
