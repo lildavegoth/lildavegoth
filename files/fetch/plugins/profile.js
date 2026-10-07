@@ -52,6 +52,11 @@
         return count;
     }
 
+    function countTotalPlugins() {
+        var plugins = window.NotesApp.plugins.list || [];
+        return plugins.length;
+    }
+
     function formatDateTime(iso) {
         if (!iso || iso === 'N/A') return 'N/A';
         var d = new Date(iso);
@@ -142,7 +147,7 @@
             '<div class="profile-row"><span class="profile-label">Total Notes</span><span class="profile-value">' + notesCount + '</span></div>' +
             '<div class="profile-row"><span class="profile-label">Total Size</span><span class="profile-value">' + formatBytes(notesSize) + '</span></div>' +
             '<div class="profile-row"><span class="profile-label">First Used</span><span class="profile-value">' + formatDateTime(firstUse) + '</span></div>' +
-            '<div class="profile-row"><span class="profile-label">Plugins Enabled</span><span class="profile-value">' + enabledPlugins + '</span></div>' +
+            '<div class="profile-row"><span class="profile-label">Plugins Enabled</span><span class="profile-value">' + enabledPlugins + ' of ' + countTotalPlugins() + '</span></div>' +
             '<div class="profile-row"><span class="profile-label">Last Backup</span><span class="profile-value">' + formatDateTime(lastBackup) + '</span></div>' +
             '</div>' +
             '</div>' +
