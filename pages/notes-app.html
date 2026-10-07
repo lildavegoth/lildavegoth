@@ -1174,14 +1174,18 @@
         .reading-content a {
             color: var(--accent-color);
             text-decoration: none;
-        }
-
-        .reading-content .attachment-download-btn {
-            color: #000000;
+            border-bottom: 1px solid rgba(193, 252, 50, 0.4);
+            padding-bottom: 1px;
         }
 
         .reading-content a:hover {
             border-bottom-color: var(--accent-color);
+        }
+
+        .reading-content .attachment-download-btn {
+            color: #000000;
+            border-bottom: none;
+            padding-bottom: 0;
         }
 
         .reading-content img {
@@ -1265,6 +1269,41 @@
             color: var(--accent-color);
         }
 
+        .reading-content table.property-table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 0;
+            table-layout: auto;
+            border: none;
+            margin: 0.75rem 0;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .reading-content table.property-table tbody tr td {
+            border: none;
+            padding: 2px 8px;
+            text-align: left;
+            white-space: normal;
+            vertical-align: top;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            background: transparent;
+        }
+
+        .reading-content table.property-table tbody tr td:first-child {
+            width: 1%;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            font-weight: 500;
+            padding-left: 0;
+        }
+
+        .reading-content table.property-table tbody tr td:last-child {
+            color: var(--text-primary);
+            padding-right: 0;
+        }
+
         .reading-content hr {
             border: none;
             height: 1px;
@@ -1317,6 +1356,7 @@
             border: none;
             cursor: pointer;
             transition: transform 0.15s ease;
+            margin-right: -8px;
         }
 
         .attachment-download-btn:active {
@@ -3196,6 +3236,32 @@
             localStorage.setItem('attachmentNames', JSON.stringify(map));
         }
 
+        function escapeHtmlText(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function preprocessProperties(markdown) {
+            return markdown.replace(/^---\s*$[\r\n]+([\s\S]*?)[\r\n]+^---\s*$/gm, function(match, content) {
+                var lines = content.split('\n').map(function(l) {
+                    return l.trim();
+                }).filter(function(l) {
+                    return l !== '';
+                });
+                if (lines.length === 0) return match;
+                var allHaveColons = lines.every(function(l) {
+                    return l.indexOf(':') !== -1;
+                });
+                if (!allHaveColons) return match;
+                var rows = lines.map(function(line) {
+                    var idx = line.indexOf(':');
+                    var key = escapeHtmlText(line.substring(0, idx).trim());
+                    var val = escapeHtmlText(line.substring(idx + 1).trim());
+                    return '<tr><td>' + key + '</td><td>' + val + '</td></tr>';
+                }).join('');
+                return '\n\n<table class="property-table"><tbody>' + rows + '</tbody></table>\n\n';
+            });
+        }
+
         function openDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -4276,6 +4342,7 @@
             document.getElementById('readingDate').textContent = formatDate(note.date);
             document.getElementById('readingFolder').textContent = note.folderId ? getFolderName(note.folderId) : 'No Folder';
             let html = await replaceAttachmentRefs(note.content);
+            html = preprocessProperties(html);
             html = convertMarkdownToHTML(html);
             html = enhanceWikiLinks(html);
             document.getElementById('readingContent').innerHTML = html;
@@ -4588,6 +4655,7 @@
         function enhanceTables(container) {
             var tables = container.querySelectorAll('table');
             tables.forEach(function(table) {
+                if (table.classList.contains('property-table')) return;
                 var wrapper = document.createElement('div');
                 wrapper.className = 'table-wrapper';
                 var rows = table.querySelectorAll('tr');
@@ -4615,6 +4683,7 @@
         function enhanceTableCellMarkdown(container) {
             var cells = container.querySelectorAll('td, th');
             cells.forEach(function(cell) {
+                if (cell.closest('.property-table')) return;
                 var raw = cell.innerHTML.trim();
                 if (raw.includes('\\n')) {
                     raw = raw.replace(/\\n/g, '\n');
@@ -5145,10 +5214,11 @@
             var start = textarea.selectionStart;
             var end = textarea.selectionEnd;
             var text = textarea.value;
-            var insert = '[]()';
-            textarea.value = text.substring(0, start) + insert + text.substring(end);
-            textarea.selectionStart = start + 1;
-            textarea.selectionEnd = start + 1;
+            var selected = text.substring(start, end);
+            var insertText = '[' + selected + ']()';
+            textarea.value = text.substring(0, start) + insertText + text.substring(end);
+            var cursorPos = start + selected.length + 3;
+            textarea.selectionStart = textarea.selectionEnd = cursorPos;
             textarea.focus();
             triggerAutoSave();
         }
