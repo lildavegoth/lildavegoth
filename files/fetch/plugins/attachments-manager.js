@@ -304,15 +304,36 @@
             var content = note.content || '';
             var keysInNote = {};
             var m;
-            var re1 = /attachment:([a-zA-Z0-9]+)/g;
+
+            var re1 = /attachment:([a-zA-Z0-9_-]+)/g;
             while ((m = re1.exec(content)) !== null) {
                 keysInNote[m[1]] = true;
             }
-            var re2 = /attachment-by-name:([^)]+)/g;
+
+            var re2 = /attachment-by-name:([^)\s]+)/g;
             while ((m = re2.exec(content)) !== null) {
-                var decoded = decodeURIComponent(m[1]).toLowerCase();
+                var decoded = decodeURIComponent(m[1]).trim().toLowerCase();
                 if (byName[decoded]) keysInNote[byName[decoded]] = true;
             }
+
+            var re3 = /!\[[^\]]*\]\(([^):\/\\]+?\.[a-zA-Z0-9]+)\)/g;
+            while ((m = re3.exec(content)) !== null) {
+                var fname = decodeURIComponent(m[1]).trim().toLowerCase();
+                if (byName[fname]) keysInNote[byName[fname]] = true;
+            }
+
+            var re4 = /!\[\[([^\]]+)\]\]/g;
+            while ((m = re4.exec(content)) !== null) {
+                var wiki = decodeURIComponent(m[1]).trim().toLowerCase();
+                if (byName[wiki]) keysInNote[byName[wiki]] = true;
+            }
+
+            if (Array.isArray(note.attachmentKeys)) {
+                note.attachmentKeys.forEach(function(k) {
+                    if (k) keysInNote[k] = true;
+                });
+            }
+
             for (var key in keysInNote) {
                 counts[key] = (counts[key] || 0) + 1;
             }
