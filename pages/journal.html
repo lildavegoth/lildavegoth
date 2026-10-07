@@ -14,7 +14,6 @@
     <style>
         :root {
             --accent-color: #C1FC32;
-            --accent-dark: #9bc726;
             --bg-black: #000000;
             --bg-dark: #1a1a1a;
             --bg-card: rgba(30, 30, 30, 0.7);
@@ -64,6 +63,33 @@
         @keyframes weekFade {
             0% { opacity: 0.3; transform: translateX(5px); }
             100% { opacity: 1; transform: translateX(0); }
+        }
+        .month-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .month-bar span {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .calendar-open-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--accent-color);
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .calendar-open-btn:hover {
+            background: rgba(193, 252, 50, 0.15);
         }
         .weekdays {
             display: grid;
@@ -239,13 +265,12 @@
             gap: 6px;
             margin: 4px 0 8px 0;
         }
-
         .popup-mini-btn {
             background: rgba(255, 255, 255, 0.1);
             border: none;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
+            width: 26px;
+            height: 26px;
             color: var(--text-primary);
             display: flex;
             align-items: center;
@@ -253,9 +278,15 @@
             font-size: 14px;
             cursor: pointer;
             transition: background 0.2s;
+            flex-shrink: 0;
         }
         .popup-mini-btn:hover {
             background: rgba(255, 255, 255, 0.2);
+        }
+        .popup-mini-btn i {
+            color: var(--text-primary);
+            font-size: 14px;
+            line-height: 1;
         }
         .action-btn {
             border: none;
@@ -294,6 +325,10 @@
         @keyframes fadeOut {
             from { opacity: 1; }
             to { opacity: 0; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         .popup-overlay {
             position: fixed;
@@ -677,6 +712,75 @@
             padding: 0;
             overflow-y: auto;
         }
+        #calendarPopup .popup-content {
+            max-height: 80vh;
+            overflow: hidden;
+        }
+        .calendar-nav-btns {
+            display: flex;
+            gap: 8px;
+        }
+        .calendar-nav-btns button {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--text-primary);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .calendar-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+        }
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .calendar-weekdays div {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        .calendar-cell {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            background: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .calendar-cell.empty {
+            background: transparent;
+            cursor: default;
+        }
+        .calendar-cell.has-entry {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: 700;
+        }
+        .calendar-cell.selected {
+            border: 2px solid var(--text-primary);
+        }
     </style>
 </head>
 <body>
@@ -704,6 +808,12 @@
             <div class="search-suggestions" id="searchSuggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border-radius: var(--radius-medium); margin-top: 4px; padding: 8px 0; z-index: 1000; max-height: 300px; overflow-y: auto; border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);"></div>
         </div>
         <div style="margin-top: 10px;" class="week-strip" id="weekStrip">
+            <div class="month-bar">
+                <span id="monthLabel">Month</span>
+                <button class="calendar-open-btn" id="calendarOpenBtn">
+                    <i class="fas fa-calendar-days"></i>
+                </button>
+            </div>
             <div class="weekdays" id="weekdays"></div>
             <div class="date-circles" id="dateCircles"></div>
         </div>
@@ -738,6 +848,30 @@
             <div class="popup-tags" id="popupTags"></div>
             <textarea id="popupTextarea" class="popup-textarea" placeholder="Write your reflection..."></textarea>
             <input type="file" id="popupImageInput" accept="image/*" onchange="handleImageUpload(this)" style="display:none;">
+        </div>
+    </div>
+    <div id="calendarPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-content" style="max-width: 420px;">
+            <div class="popup-header">
+                <h2 id="calendarMonthTitle" style="font-size: 1.1rem;">Month</h2>
+                <div class="calendar-nav-btns">
+                    <button id="calendarPrevBtn"><i class="fas fa-chevron-left"></i></button>
+                    <button id="calendarNextBtn"><i class="fas fa-chevron-right"></i></button>
+                    <button onclick="closeCalendarPopup()"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="calendar-body">
+                <div class="calendar-weekdays">
+                    <div>S</div>
+                    <div>M</div>
+                    <div>T</div>
+                    <div>W</div>
+                    <div>T</div>
+                    <div>F</div>
+                    <div>S</div>
+                </div>
+                <div class="calendar-grid" id="calendarGrid"></div>
+            </div>
         </div>
     </div>
     <div id="confirmPopup" class="popup-overlay" style="display: none; z-index: 100000000;">
@@ -841,6 +975,9 @@
             let currentImageRefs = [];
             const day = today.getDay();
             currentWeekStart.setDate(today.getDate() - day);
+            const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            let calendarViewYear = today.getFullYear();
+            let calendarViewMonth = today.getMonth();
 
             function getUsername() {
                 const currentUser = JSON.parse(localStorage.getItem('currentUser'));
@@ -967,7 +1104,12 @@
             }
             updateWeekVisibility();
 
+            function updateMonthLabel() {
+                document.getElementById('monthLabel').textContent = MONTH_NAMES[currentWeekStart.getMonth()] + ' ' + currentWeekStart.getFullYear();
+            }
+
             function renderWeek() {
+                updateMonthLabel();
                 dateCircles.innerHTML = '';
                 for (let i = 0; i < 7; i++) {
                     const date = new Date(currentWeekStart);
@@ -1014,6 +1156,72 @@
                 if (touchEndX > touchStartX + 50) { currentWeekStart.setDate(currentWeekStart.getDate() - 7); renderWeek(); }
             });
 
+            function renderCalendar() {
+                document.getElementById('calendarMonthTitle').textContent = MONTH_NAMES[calendarViewMonth] + ' ' + calendarViewYear;
+                const grid = document.getElementById('calendarGrid');
+                grid.innerHTML = '';
+                const firstDay = new Date(calendarViewYear, calendarViewMonth, 1).getDay();
+                const daysInMonth = new Date(calendarViewYear, calendarViewMonth + 1, 0).getDate();
+                for (let i = 0; i < firstDay; i++) {
+                    const empty = document.createElement('div');
+                    empty.className = 'calendar-cell empty';
+                    grid.appendChild(empty);
+                }
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = calendarViewYear + '-' + String(calendarViewMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                    const cell = document.createElement('div');
+                    cell.className = 'calendar-cell';
+                    cell.textContent = d;
+                    if (dailyContents[dateStr] && (dailyContents[dateStr].additional || []).length > 0) {
+                        cell.classList.add('has-entry');
+                    }
+                    if (dateStr === todayStr) {
+                        cell.classList.add('selected');
+                    }
+                    cell.addEventListener('click', () => selectCalendarDate(dateStr));
+                    grid.appendChild(cell);
+                }
+            }
+
+            function selectCalendarDate(dateStr) {
+                const parts = dateStr.split('-');
+                const picked = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                currentWeekStart = new Date(picked);
+                currentWeekStart.setDate(picked.getDate() - picked.getDay());
+                renderWeek();
+                loadJournalForDate(dateStr);
+                closeCalendarPopup();
+            }
+
+            window.openCalendarPopup = function() {
+                calendarViewYear = currentWeekStart.getFullYear();
+                calendarViewMonth = currentWeekStart.getMonth();
+                renderCalendar();
+                document.getElementById('calendarPopup').style.display = 'flex';
+            };
+
+            window.closeCalendarPopup = function() {
+                document.getElementById('calendarPopup').style.display = 'none';
+            };
+
+            document.getElementById('calendarOpenBtn').addEventListener('click', openCalendarPopup);
+            document.getElementById('calendarPrevBtn').addEventListener('click', () => {
+                calendarViewMonth--;
+                if (calendarViewMonth < 0) {
+                    calendarViewMonth = 11;
+                    calendarViewYear--;
+                }
+                renderCalendar();
+            });
+            document.getElementById('calendarNextBtn').addEventListener('click', () => {
+                calendarViewMonth++;
+                if (calendarViewMonth > 11) {
+                    calendarViewMonth = 0;
+                    calendarViewYear++;
+                }
+                renderCalendar();
+            });
+
             function triggerBtnMDYE(btn) {
                 if (btn) {
                     btn.classList.remove('btnMDYE');
@@ -1050,7 +1258,7 @@
 
                 const shareBtn = document.createElement('button');
                 shareBtn.className = 'popup-mini-btn';
-                shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
+                shareBtn.innerHTML = '<i class="fas fa-share-nodes"></i>';
                 shareBtn.onclick = shareJournal;
                 container.appendChild(shareBtn);
 
