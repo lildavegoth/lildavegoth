@@ -445,6 +445,27 @@ function openNoteByTitle(title) {
     }
 }
 
+function updateLinkedNoteReferences(oldTitle, newTitle, excludeId) {
+    if (!oldTitle || !newTitle || oldTitle === newTitle) return 0;
+    var escaped = oldTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var regex = new RegExp('\\[\\[' + escaped + '\\]\\]', 'g');
+    var count = 0;
+    notesData.forEach(function(n) {
+        if (n.id === excludeId) return;
+        if (!n.content) return;
+        var matches = n.content.match(regex);
+        if (matches && matches.length > 0) {
+            n.content = n.content.replace(regex, '[[' + newTitle + ']]');
+            n.date = new Date().toISOString();
+            count++;
+        }
+    });
+    if (count > 0) {
+        window.showMessage('Updated ' + count + ' linked note' + (count !== 1 ? 's' : ''));
+    }
+    return count;
+}
+
 function enhanceWikiLinks(html) {
     return html.replace(/\[\[([^\]]+)\]\]/g, function(match, title) {
         var escaped = title.replace(/'/g, "\\'");
@@ -934,7 +955,12 @@ function confirmRenameNote(noteId) {
     const newTitle = document.getElementById('renameNoteInput').value.trim();
     const note = notesData.find(n => n.id === noteId);
     if (note) {
-        note.title = newTitle || 'Untitled';
+        var oldTitle = note.title || '';
+        var finalTitle = newTitle || 'Untitled';
+        note.title = finalTitle;
+        if (oldTitle && oldTitle !== finalTitle) {
+            updateLinkedNoteReferences(oldTitle, finalTitle, noteId);
+        }
         saveNotesToStorage();
         closeUniversalPopup();
         window.showMessage('Note renamed');
@@ -1013,11 +1039,6 @@ function showMoveFolderWindow(folderId) {
     moveWindow.style.pointerEvents = 'auto';
     moveWindow.style.zIndex = '100000001';
 
-    const possibleTargets = foldersData.filter(folder =>
-        folder.id !== folderId &&
-        !isDescendant(folder.id, folderId)
-    );
-
     moveWindow.innerHTML = `
         <div class="folder-window-header">
             <h3>Move Folder</h3>
@@ -1025,21 +1046,10 @@ function showMoveFolderWindow(folderId) {
                 <i class="fas fa-close"></i>
             </button>
         </div>
-
-        <div class="folder-window-content">
-            ${possibleTargets.map(folder => `
-                <div class="folder-window-item" data-folder-id="${folder.id}">
-                    <i class="fas fa-folder"></i>
-                    <span>${folder.name}</span>
-                </div>
-            `).join('')}
-
-            <div class="folder-window-item ${folderMoveTargetId === null ? 'selected' : ''}" data-folder-id="root">
-                <i class="fas fa-times"></i>
-                <span>No Folder (Root)</span>
-            </div>
+        <div class="folder-window-search">
+            <input type="text" id="folderMoveSearchInput" class="folder-window-search-input" placeholder="Search folders...">
         </div>
-
+        <div class="folder-window-content" id="folderMoveContent"></div>
         <div class="folder-window-actions">
             <button type="button" class="folder-window-btn secondary" onclick="closeMoveFolderWindow()">
                 Cancel
@@ -1052,15 +1062,55 @@ function showMoveFolderWindow(folderId) {
 
     document.body.appendChild(moveWindow);
 
-    moveWindow.querySelectorAll('.folder-window-item').forEach(item => {
-        item.addEventListener('click', function() {
-            moveWindow.querySelectorAll('.folder-window-item').forEach(i => i.classList.remove('selected'));
-            this.classList.add('selected');
-            folderMoveTargetId =
-                this.dataset.folderId === 'root' ?
-                null :
-                Number(this.dataset.folderId);
+    document.getElementById('folderMoveSearchInput').addEventListener('input', function() {
+        renderMoveFolderList(this.value);
+    });
+
+    renderMoveFolderList('');
+}
+
+function renderMoveFolderList(filterText) {
+    var container = document.getElementById('folderMoveContent');
+    if (!container) return;
+    var q = (filterText || '').toLowerCase();
+    container.innerHTML = '';
+
+    var possibleTargets = foldersData.filter(function(folder) {
+        return folder.id !== folderMoveId && !isDescendant(folder.id, folderMoveId);
+    });
+
+    var rootDiv = document.createElement('div');
+    rootDiv.className = 'folder-window-item' + (folderMoveTargetId === null ? ' selected' : '');
+    rootDiv.setAttribute('data-folder-id', 'root');
+    rootDiv.onclick = function() {
+        folderMoveTargetId = null;
+        document.querySelectorAll('#folderMoveContent .folder-window-item').forEach(function(i) {
+            i.classList.remove('selected');
         });
+        rootDiv.classList.add('selected');
+    };
+    rootDiv.innerHTML = '<i class="fas fa-times"></i><span>No Folder (Root)</span>';
+    container.appendChild(rootDiv);
+
+    possibleTargets.sort(function(a, b) {
+        return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+    });
+
+    possibleTargets.forEach(function(folder) {
+        if (q && !(folder.name || '').toLowerCase().includes(q)) return;
+        var div = document.createElement('div');
+        div.className = 'folder-window-item' + (folderMoveTargetId === folder.id ? ' selected' : '');
+        div.setAttribute('data-folder-id', String(folder.id));
+        var count = folder.noteCount || 0;
+        div.innerHTML = '<i class="fas fa-folder"></i><span>' + folder.name + '</span><span class="note-count">' + count + ' notes</span>';
+        div.onclick = function() {
+            folderMoveTargetId = folder.id;
+            document.querySelectorAll('#folderMoveContent .folder-window-item').forEach(function(i) {
+                i.classList.remove('selected');
+            });
+            div.classList.add('selected');
+        };
+        container.appendChild(div);
     });
 }
 
@@ -1615,6 +1665,18 @@ function enhanceTables(container) {
     });
 }
 
+function limitCellWords(cell) {
+    var text = cell.textContent.trim();
+    if (!text) return;
+    var words = text.split(/\s+/);
+    if (words.length <= 70) return;
+    var chunks = [];
+    for (var i = 0; i < words.length; i += 70) {
+        chunks.push(words.slice(i, i + 70).join(' '));
+    }
+    cell.innerHTML = chunks.join('<br>');
+}
+
 function enhanceTableCellMarkdown(container) {
     var cells = container.querySelectorAll('td, th');
     cells.forEach(function(cell) {
@@ -1624,6 +1686,7 @@ function enhanceTableCellMarkdown(container) {
             raw = raw.replace(/\\n/g, '\n');
             cell.innerHTML = marked.parse(raw);
         }
+        limitCellWords(cell);
     });
 }
 
@@ -1993,11 +2056,16 @@ function openNoteEditor(noteId) {
 async function saveCurrentNote() {
     var note = notesData.find(n => n.id === currentNoteId);
     if (note) {
-        note.title = document.getElementById('editorTitle').value;
+        var oldTitle = note.title || '';
+        var newTitle = document.getElementById('editorTitle').value;
+        note.title = newTitle;
         const newContent = document.getElementById('editorContent').value;
         await cleanupAttachments(note.id, newContent);
         note.content = newContent;
         note.date = new Date().toISOString();
+        if (oldTitle && newTitle && oldTitle !== newTitle) {
+            updateLinkedNoteReferences(oldTitle, newTitle, note.id);
+        }
         await saveNotesToStorage();
         NotesApp.emit('note:save', note);
     }
