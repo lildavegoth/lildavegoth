@@ -3339,15 +3339,11 @@ function applySuggestion(note) {
     var text = textarea.value;
     var after = text.substring(cursor);
 
-    var insertText;
-    if (suggestionTrigger.type === 'wiki') {
-        if (after.indexOf(']]') === 0) {
-            after = after.substring(2);
-        }
-        insertText = '[[' + note.title + ']]';
-    } else {
-        insertText = '@' + note.title;
+    if (after.indexOf(']]') === 0) {
+        after = after.substring(2);
     }
+
+    var insertText = '[[' + note.title + ']]';
 
     var before = text.substring(0, suggestionTrigger.start);
     textarea.value = before + insertText + after;
