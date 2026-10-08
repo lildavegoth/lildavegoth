@@ -1709,10 +1709,10 @@ function limitCellWords(cell) {
     var text = cell.textContent.trim();
     if (!text) return;
     var words = text.split(/\s+/);
-    if (words.length <= 45) return;
+    if (words.length <= 15) return;
     var chunks = [];
-    for (var i = 0; i < words.length; i += 45) {
-        chunks.push(words.slice(i, i + 45).join(' '));
+    for (var i = 0; i < words.length; i += 15) {
+        chunks.push(words.slice(i, i + 15).join(' '));
     }
     cell.innerHTML = chunks.join('<br>');
 }
