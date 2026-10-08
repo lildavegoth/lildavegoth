@@ -149,6 +149,11 @@ let readingHistory = [];
 let suppressBackLinkUntil = 0;
 const attachmentUrlCache = new Map();
 
+let suggestionEl = null;
+let suggestionResults = [];
+let suggestionIndex = 0;
+let suggestionTrigger = null;
+
 const turndownService = new TurndownService();
 
 function getAttachmentNameMap() {
@@ -316,6 +321,19 @@ function saveTrash() {
     localStorage.setItem('trashFolders', JSON.stringify(trashFolders));
 }
 
+function injectAppStyles() {
+    if (document.getElementById('notesAppInjectedStyles')) return;
+    var style = document.createElement('style');
+    style.id = 'notesAppInjectedStyles';
+    style.textContent =
+        '.folder-window-search{padding-top:var(--spacing-sm) !important;}' +
+        '.note-suggestions{position:fixed;background:var(--bg-card);border:1px solid rgba(255,255,255,0.15);border-radius:var(--radius-small);box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:10000002;max-height:220px;overflow-y:auto;min-width:180px;max-width:320px;display:none;padding:4px 0;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);scrollbar-width:none;-ms-overflow-style:none;}' +
+        '.note-suggestions::-webkit-scrollbar{display:none;}' +
+        '.note-suggestion-item{padding:8px 14px;cursor:pointer;color:var(--text-primary);font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+        '.note-suggestion-item:hover,.note-suggestion-item.active{background:rgba(193,252,50,0.15);color:var(--accent-color);}';
+    document.head.appendChild(style);
+}
+
 async function init() {
     await openDB();
     await migrateFromLocalStorage();
@@ -325,6 +343,7 @@ async function init() {
     renderNotes();
     renderFolders();
     initHomeUI();
+    injectAppStyles();
     setupEventListeners();
     setupHomeSearch();
     try {
@@ -448,14 +467,23 @@ function openNoteByTitle(title) {
 function updateLinkedNoteReferences(oldTitle, newTitle, excludeId) {
     if (!oldTitle || !newTitle || oldTitle === newTitle) return 0;
     var escaped = oldTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    var regex = new RegExp('\\[\\[' + escaped + '\\]\\]', 'g');
+    var wikiRegex = new RegExp('\\[\\[' + escaped + '\\]\\]', 'g');
+    var mentionRegex = new RegExp('(^|[\\s>])@' + escaped + '(?![A-Za-z0-9])', 'g');
     var count = 0;
     notesData.forEach(function(n) {
         if (n.id === excludeId) return;
         if (!n.content) return;
-        var matches = n.content.match(regex);
-        if (matches && matches.length > 0) {
-            n.content = n.content.replace(regex, '[[' + newTitle + ']]');
+        var updated = n.content;
+        if (wikiRegex.test(updated)) {
+            updated = updated.replace(new RegExp('\\[\\[' + escaped + '\\]\\]', 'g'), '[[' + newTitle + ']]');
+        }
+        if (mentionRegex.test(updated)) {
+            updated = updated.replace(new RegExp('(^|[\\s>])@' + escaped + '(?![A-Za-z0-9])', 'g'), function(m, prefix) {
+                return prefix + '@' + newTitle;
+            });
+        }
+        if (updated !== n.content) {
+            n.content = updated;
             n.date = new Date().toISOString();
             count++;
         }
@@ -467,10 +495,22 @@ function updateLinkedNoteReferences(oldTitle, newTitle, excludeId) {
 }
 
 function enhanceWikiLinks(html) {
-    return html.replace(/\[\[([^\]]+)\]\]/g, function(match, title) {
+    html = html.replace(/\[\[([^\]]+)\]\]/g, function(match, title) {
         var escaped = title.replace(/'/g, "\\'");
         return '<a class="wiki-link" onclick="event.preventDefault(); event.stopPropagation(); openNoteByTitle(\'' + escaped + '\'); return false;" style="color:var(--accent-color);cursor:pointer;text-decoration:underline;">' + title + '</a>';
     });
+    notesData.forEach(function(note) {
+        if (!note.title) return;
+        var title = note.title.trim();
+        if (!title) return;
+        var escapedRegex = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        var regex = new RegExp('(^|[\\s>])@(' + escapedRegex + ')(?![A-Za-z0-9])', 'g');
+        html = html.replace(regex, function(match, prefix, matched) {
+            var titleEscaped = matched.replace(/'/g, "\\'");
+            return prefix + '<a class="wiki-link" onclick="event.preventDefault(); event.stopPropagation(); openNoteByTitle(\'' + titleEscaped + '\'); return false;" style="color:var(--accent-color);cursor:pointer;text-decoration:underline;">@' + matched + '</a>';
+        });
+    });
+    return html;
 }
 
 function fadeHomeView(el) {
@@ -1669,10 +1709,10 @@ function limitCellWords(cell) {
     var text = cell.textContent.trim();
     if (!text) return;
     var words = text.split(/\s+/);
-    if (words.length <= 70) return;
+    if (words.length <= 45) return;
     var chunks = [];
-    for (var i = 0; i < words.length; i += 70) {
-        chunks.push(words.slice(i, i + 70).join(' '));
+    for (var i = 0; i < words.length; i += 45) {
+        chunks.push(words.slice(i, i + 45).join(' '));
     }
     cell.innerHTML = chunks.join('<br>');
 }
@@ -3157,6 +3197,223 @@ function setupPaginationButtons() {
     });
 }
 
+function getCaretCoordinates(textarea, position) {
+    var div = document.createElement('div');
+    var style = window.getComputedStyle(textarea);
+    var props = ['boxSizing', 'width', 'height', 'overflowX', 'overflowY',
+        'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+        'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+        'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch', 'fontSize',
+        'lineHeight', 'fontFamily', 'textAlign', 'textTransform',
+        'textIndent', 'letterSpacing', 'wordSpacing'];
+    props.forEach(function(p) {
+        div.style[p] = style[p];
+    });
+    div.style.position = 'absolute';
+    div.style.visibility = 'hidden';
+    div.style.top = '0';
+    div.style.left = '0';
+    div.style.whiteSpace = 'pre-wrap';
+    div.style.wordWrap = 'break-word';
+    div.textContent = textarea.value.substring(0, position);
+    var span = document.createElement('span');
+    span.textContent = '\u200b';
+    div.appendChild(span);
+    document.body.appendChild(div);
+    var result = {
+        top: span.offsetTop,
+        left: span.offsetLeft
+    };
+    document.body.removeChild(div);
+    return result;
+}
+
+function getActiveTrigger(textarea) {
+    var cursor = textarea.selectionStart;
+    var text = textarea.value;
+    var before = text.substring(0, cursor);
+
+    var wikiStart = before.lastIndexOf('[[');
+    if (wikiStart !== -1) {
+        var afterBracket = before.substring(wikiStart + 2);
+        if (afterBracket.indexOf(']]') === -1 &&
+            afterBracket.indexOf('\n') === -1 &&
+            afterBracket.indexOf('[') === -1 &&
+            afterBracket.indexOf(']') === -1) {
+            if (afterBracket.length > 0) {
+                return { type: 'wiki', start: wikiStart, query: afterBracket };
+            }
+        }
+    }
+
+    var atIndex = before.lastIndexOf('@');
+    if (atIndex !== -1) {
+        if (atIndex === 0 || /\s/.test(before.charAt(atIndex - 1))) {
+            var afterAt = before.substring(atIndex + 1);
+            if (afterAt.length > 0 &&
+                afterAt.indexOf('\n') === -1 &&
+                afterAt.indexOf('@') === -1 &&
+                afterAt.indexOf('[') === -1 &&
+                afterAt.indexOf(']') === -1) {
+                return { type: 'mention', start: atIndex, query: afterAt };
+            }
+        }
+    }
+
+    return null;
+}
+
+function hideSuggestions() {
+    if (suggestionEl) suggestionEl.style.display = 'none';
+    suggestionTrigger = null;
+    suggestionResults = [];
+    suggestionIndex = 0;
+}
+
+function showSuggestions(results, trigger, textarea) {
+    if (!suggestionEl) {
+        suggestionEl = document.createElement('div');
+        suggestionEl.className = 'note-suggestions';
+        document.body.appendChild(suggestionEl);
+    }
+    suggestionResults = results;
+    suggestionIndex = 0;
+    suggestionTrigger = trigger;
+
+    suggestionEl.innerHTML = results.map(function(note, idx) {
+        return '<div class="note-suggestion-item' + (idx === 0 ? ' active' : '') + '" data-index="' + idx + '">' +
+            escapeHtmlText(note.title || 'Untitled') +
+            '</div>';
+    }).join('');
+
+    suggestionEl.style.display = 'block';
+    suggestionEl.style.visibility = 'hidden';
+
+    var coords = getCaretCoordinates(textarea, textarea.selectionStart);
+    var rect = textarea.getBoundingClientRect();
+    var lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 20;
+
+    var top = rect.top + coords.top - textarea.scrollTop + lineHeight + 4;
+    var left = rect.left + coords.left;
+
+    suggestionEl.style.visibility = 'visible';
+
+    var width = suggestionEl.offsetWidth;
+    var height = suggestionEl.offsetHeight;
+    if (left + width > window.innerWidth - 10) {
+        left = window.innerWidth - width - 10;
+    }
+    if (left < 10) left = 10;
+    if (top + height > window.innerHeight - 10) {
+        top = rect.top + coords.top - textarea.scrollTop - height - 4;
+    }
+    if (top < 10) top = 10;
+
+    suggestionEl.style.top = top + 'px';
+    suggestionEl.style.left = left + 'px';
+
+    suggestionEl.querySelectorAll('.note-suggestion-item').forEach(function(item) {
+        item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            var idx = parseInt(item.dataset.index);
+            applySuggestion(suggestionResults[idx]);
+        });
+    });
+}
+
+function updateSuggestionHighlight() {
+    if (!suggestionEl) return;
+    suggestionEl.querySelectorAll('.note-suggestion-item').forEach(function(item, idx) {
+        item.classList.toggle('active', idx === suggestionIndex);
+    });
+    var active = suggestionEl.querySelector('.note-suggestion-item.active');
+    if (active && active.scrollIntoView) {
+        active.scrollIntoView({ block: 'nearest' });
+    }
+}
+
+function applySuggestion(note) {
+    if (!suggestionTrigger || !note) return;
+    var textarea = document.getElementById('editorContent');
+    var cursor = textarea.selectionStart;
+    var text = textarea.value;
+    var after = text.substring(cursor);
+
+    var insertText;
+    if (suggestionTrigger.type === 'wiki') {
+        if (after.indexOf(']]') === 0) {
+            after = after.substring(2);
+        }
+        insertText = '[[' + note.title + ']]';
+    } else {
+        insertText = '@' + note.title;
+    }
+
+    var before = text.substring(0, suggestionTrigger.start);
+    textarea.value = before + insertText + after;
+    var newPos = suggestionTrigger.start + insertText.length;
+    textarea.selectionStart = textarea.selectionEnd = newPos;
+    textarea.focus();
+
+    hideSuggestions();
+    triggerAutoSave();
+}
+
+function checkForSuggestions() {
+    var textarea = document.getElementById('editorContent');
+    if (!textarea) return;
+    var trigger = getActiveTrigger(textarea);
+    if (!trigger) {
+        hideSuggestions();
+        return;
+    }
+    var lowerQuery = trigger.query.toLowerCase();
+    var results = notesData.filter(function(n) {
+        return n.title && n.title.toLowerCase().indexOf(lowerQuery) === 0;
+    }).slice(0, 8);
+    if (results.length === 0) {
+        hideSuggestions();
+        return;
+    }
+    showSuggestions(results, trigger, textarea);
+}
+
+function setupSuggestionListeners() {
+    var textarea = document.getElementById('editorContent');
+    if (!textarea) return;
+    textarea.addEventListener('input', checkForSuggestions);
+    textarea.addEventListener('blur', function() {
+        setTimeout(hideSuggestions, 150);
+    });
+    textarea.addEventListener('scroll', function() {
+        if (suggestionEl && suggestionEl.style.display === 'block') {
+            checkForSuggestions();
+        }
+    });
+    textarea.addEventListener('keydown', function(e) {
+        if (!suggestionEl || suggestionEl.style.display === 'none') return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            suggestionIndex = (suggestionIndex + 1) % suggestionResults.length;
+            updateSuggestionHighlight();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            suggestionIndex = (suggestionIndex - 1 + suggestionResults.length) % suggestionResults.length;
+            updateSuggestionHighlight();
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            applySuggestion(suggestionResults[suggestionIndex]);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            hideSuggestions();
+        }
+    }, true);
+}
+
 function setupEventListeners() {
     document.getElementById('backToHome').addEventListener('click', closeNoteEditor);
     document.getElementById('saveNote').addEventListener('click', () => {
@@ -3260,6 +3517,7 @@ function setupEventListeners() {
     setupPaginationButtons();
     setupReadingBackButton();
     setupPluginsSearch();
+    setupSuggestionListeners();
 }
 
 async function confirmReset() {
