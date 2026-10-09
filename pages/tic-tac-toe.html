@@ -91,7 +91,7 @@
 
         .mode-btn {
             flex: 1;
-            padding: 12px;
+            padding: 12px 6px;
             border: none;
             background: transparent;
             color: var(--text-secondary);
@@ -202,14 +202,14 @@
         <a href="../index.html" class="back-link fade-in">
             <i class="fas fa-arrow-left"></i> Back to Home
         </a>
-        
+
         <app-header class="fade-in">
             <div>
                 <h1 class="username">Tic-Tac-Toe</h1>
                 <p class="tagline">Play a classic Tic-Tac-Toe against AI or a friend</p>
             </div>
         </app-header>
-        
+
         <div class="header">
             <div class="timer" id="timer">00:00</div>
             <div class="wins">Wins: <span id="winCount">0</span></div>
@@ -218,6 +218,7 @@
         <div class="mode-selector" id="modeSelector">
             <button class="mode-btn active" data-mode="ai">AI</button>
             <button class="mode-btn" data-mode="2p">2 Players</button>
+            <button class="mode-btn" data-mode="infinite">Infinite</button>
         </div>
 
         <div class="difficulty" id="difficulty">
@@ -240,7 +241,7 @@
 
         <div class="guide" id="guide" style="margin-top: 15px;">Tap any square to start playing as X</div>
         <button id="restart" class="restart-btn">Restart Game</button>
-        
+
         <footer>
             <div class="social-links">
                 <a href="https://twitter.com/lildavegoth"><span class="icon icon-twitter"></span></a>
@@ -262,6 +263,7 @@
         let difficulty = "easy"
         let gameMode = "ai"
         let playerWins = 0
+        let moveHistory = { X: [], O: [] }
 
         const cells = document.querySelectorAll(".cell")
         const timerEl = document.getElementById("timer")
@@ -274,6 +276,28 @@
 
         const xSVG = `<svg width="88" height="88" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="18" x2="82" y2="82" stroke="currentColor" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/><line x1="82" y1="18" x2="18" y2="82" stroke="currentColor" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></svg>`
         const oSVG = `<svg width="88" height="88" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="33" stroke="currentColor" stroke-width="15" fill="none"/></svg>`
+
+        const soundSources = {
+            click: "../files/fetch/sounds/click.mp3",
+            win: "../files/fetch/sounds/win.mp3",
+            draw: "../files/fetch/sounds/draw.mp3",
+            restart: "../files/fetch/sounds/restart.mp3"
+        }
+
+        const sounds = {}
+
+        for (const key in soundSources) {
+            const audio = new Audio(soundSources[key])
+            audio.volume = 0.6
+            sounds[key] = audio
+        }
+
+        function playSound(name) {
+            const audio = sounds[name]
+            if (!audio) return
+            audio.currentTime = 0
+            audio.play().catch(() => {})
+        }
 
         function loadWins() {
             const saved = localStorage.getItem("ticTacToePlayerWins")
@@ -317,6 +341,7 @@
 
         function resetGame() {
             boardState = Array(9).fill(null)
+            moveHistory = { X: [], O: [] }
             currentPlayer = "X"
             gameActive = true
             seconds = 0
@@ -331,7 +356,7 @@
         }
 
         function checkWin(player) {
-            const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
+            const wins = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]]
             return wins.some(combo => combo.every(i => boardState[i] === player))
         }
 
@@ -339,17 +364,27 @@
             return boardState.every(cell => cell !== null)
         }
 
+        function clearCell(index) {
+            boardState[index] = null
+            const cell = cells[index]
+            cell.innerHTML = ""
+            cell.classList.remove("x", "o", "disabled")
+        }
+
         function makeMove(index, player) {
             boardState[index] = player
+            moveHistory[player].push(index)
             const cell = cells[index]
             cell.classList.add(player.toLowerCase())
             cell.classList.add("disabled")
             cell.innerHTML = player === "X" ? xSVG : oSVG
+            playSound("click")
 
             if (checkWin(player)) {
                 gameActive = false
                 stopTimer()
                 restartBtn.style.display = "block"
+                playSound("win")
                 if (gameMode === "ai") {
                     if (player === "X") {
                         playerWins++
@@ -375,20 +410,28 @@
                 gameActive = false
                 stopTimer()
                 restartBtn.style.display = "block"
+                playSound("draw")
                 window.showMessage("Draw Game")
                 guideEl.textContent = "It's a draw!"
                 return true
             }
+
+            if (gameMode === "infinite" && moveHistory[player].length > 2) {
+                const oldest = moveHistory[player].shift()
+                clearCell(oldest)
+                playSound("restart")
+            }
+
             return false
         }
 
         function aiEasy() {
-            const empty = boardState.map((v,i) => v === null ? i : null).filter(v => v !== null)
+            const empty = boardState.map((v, i) => v === null ? i : null).filter(v => v !== null)
             return empty[Math.floor(Math.random() * empty.length)]
         }
 
         function aiMedium() {
-            const empty = boardState.map((v,i) => v === null ? i : null).filter(v => v !== null)
+            const empty = boardState.map((v, i) => v === null ? i : null).filter(v => v !== null)
             for (let i of empty) {
                 boardState[i] = "O"
                 if (checkWin("O")) {
@@ -478,12 +521,10 @@
                 return
             }
 
-            const index = parseInt(e.target.dataset.index)
+            const index = parseInt(e.currentTarget.dataset.index)
             if (isNaN(index)) return
             if (boardState[index]) return
-
             if (gameMode === "ai" && currentPlayer !== "X") return
-            if (gameMode === "2p" && currentPlayer !== "X" && currentPlayer !== "O") return
 
             if (seconds === 0) {
                 startTimer()
@@ -506,10 +547,11 @@
 
         diffButtons.forEach(btn => {
             btn.addEventListener("click", () => {
-                if (gameMode === "2p") return
+                if (gameMode !== "ai") return
                 diffButtons.forEach(b => b.classList.remove("active"))
                 btn.classList.add("active")
                 difficulty = btn.dataset.diff
+                playSound("click")
                 resetGame()
             })
         })
@@ -519,11 +561,8 @@
                 modeButtons.forEach(b => b.classList.remove("active"))
                 btn.classList.add("active")
                 gameMode = btn.dataset.mode
-                if (gameMode === "2p") {
-                    difficultyContainer.style.display = "none"
-                } else {
-                    difficultyContainer.style.display = "flex"
-                }
+                difficultyContainer.style.display = gameMode === "ai" ? "flex" : "none"
+                playSound("click")
                 resetGame()
             })
         })
@@ -532,7 +571,10 @@
             cell.addEventListener("click", handleCellClick)
         })
 
-        restartBtn.addEventListener("click", resetGame)
+        restartBtn.addEventListener("click", () => {
+            playSound("restart")
+            resetGame()
+        })
 
         window.onload = () => {
             loadWins()
