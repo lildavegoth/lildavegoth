@@ -1,5 +1,5 @@
 ---
-title: "AxionAOSP"
+title: "AxionAOSP Bug Notes"
 date: "2026-09-28"
 image: ""
 author: "lildavegoth"
