@@ -14,3 +14,4 @@ Android 17 by [Muichir09](htts://t.me/Muichir09) with Stock Kernel
 - device bootloop while using these modules (always use and install Bootloop Protection module!):
     - PowerSaverPro by [MEOWna](https://t.me/TempMeow)
     - Audio Compatibility Patch & Audio Modification Library by [Rei Ryuki](https://t.me/reiryuki)
+- Double Tap to Wake is dead
