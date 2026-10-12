@@ -1,5 +1,5 @@
 ---
-title: "Project Infinity X"
+title: "Project Infinity X Bug Notes"
 date: "2026-10-12"
 image: ""
 author: "lildavegoth"
