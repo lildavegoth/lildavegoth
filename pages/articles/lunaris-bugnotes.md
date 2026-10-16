@@ -15,6 +15,7 @@ Android 16 by [NothingHere03](https://t.me/NothingHere03) with [Beast-KSUN-20260
 ![System Icons Popup Bug](images/lunaris-bugnotes-system-icons-popup-not-center.webp)
 - limit charging is not like version 3.8 (in current version it's only limit the ampere to 1mA and not really stop the charging like in 3.8), i thought this was a bug and will be fixed soon (but after this update, i guess they really changed the system of limit charging to this method which is not goot
 - Dynamic Island text is truncated when screen recording (restart system ui to fix)
+- Dynamic Island menu gone in Singularity Statusbar Settings randomly and never coming back
 - Dynamic Bar crashing system ui. sometimes, if there's a clipboard in Dynamic Bar overlay, it will make your screen untouchable and the system ui will be crash after a few seconds
 - device freezed after closing or go to home screen sometimes
 
