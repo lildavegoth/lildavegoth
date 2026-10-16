@@ -964,6 +964,27 @@
         const IMAGES_DB_NAME = 'journalImagesDB';
         const IMAGES_STORE_NAME = 'images';
 
+        const IDB_REGISTRY = [
+            {
+                name: 'NotesAppDB',
+                version: 3,
+                folder: 'Notes',
+                stores: [
+                    { name: 'notes', keyPath: 'id' },
+                    { name: 'folders', keyPath: 'id' },
+                    { name: 'attachments', keyPath: null }
+                ]
+            },
+            {
+                name: 'AttachmentsManagerDB',
+                version: 1,
+                folder: 'Notes',
+                stores: [
+                    { name: 'trash', keyPath: 'id' }
+                ]
+            }
+        ];
+
         function openImagesDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(IMAGES_DB_NAME, 1);
@@ -976,6 +997,159 @@
                 request.onsuccess = function(e) { resolve(e.target.result); };
                 request.onerror = function(e) { reject(e.target.error); };
             });
+        }
+
+        function openIDB(entry) {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(entry.name, entry.version);
+                req.onupgradeneeded = function(e) {
+                    const db = e.target.result;
+                    for (const s of entry.stores) {
+                        if (!db.objectStoreNames.contains(s.name)) {
+                            if (s.keyPath) {
+                                db.createObjectStore(s.name, { keyPath: s.keyPath });
+                            } else {
+                                db.createObjectStore(s.name);
+                            }
+                        }
+                    }
+                };
+                req.onsuccess = function(e) { resolve(e.target.result); };
+                req.onerror = function(e) { reject(e.target.error); };
+            });
+        }
+
+        function serializeIDBValue(v) {
+            if (v && (v instanceof Blob || v instanceof File)) {
+                return new Promise(function(resolve) {
+                    const reader = new FileReader();
+                    reader.onload = function() {
+                        resolve({
+                            __idbType: 'blob',
+                            mime: v.type || 'application/octet-stream',
+                            dataUrl: reader.result
+                        });
+                    };
+                    reader.onerror = function() {
+                        resolve(null);
+                    };
+                    reader.readAsDataURL(v);
+                });
+            }
+            return Promise.resolve(v);
+        }
+
+        function deserializeIDBValue(v) {
+            if (v && typeof v === 'object' && v.__idbType === 'blob' && typeof v.dataUrl === 'string') {
+                try {
+                    const comma = v.dataUrl.indexOf(',');
+                    const b64 = v.dataUrl.substring(comma + 1);
+                    const binary = atob(b64);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    return new Blob([bytes], { type: v.mime || 'application/octet-stream' });
+                } catch (e) {
+                    return null;
+                }
+            }
+            return v;
+        }
+
+        function dumpStore(db, storeName) {
+            if (!db.objectStoreNames.contains(storeName)) return Promise.resolve(null);
+            return new Promise(function(resolve, reject) {
+                const tx = db.transaction(storeName, 'readonly');
+                const store = tx.objectStore(storeName);
+                const keysReq = store.getAllKeys();
+                const valsReq = store.getAll();
+                let keysDone = false;
+                let valsDone = false;
+                let keys = null;
+                let vals = null;
+                let inline = !!store.keyPath;
+                function check() {
+                    if (keysDone && valsDone) resolve({ keys: keys, vals: vals, inline: inline });
+                }
+                keysReq.onsuccess = function() { keys = keysReq.result || []; keysDone = true; check(); };
+                valsReq.onsuccess = function() { vals = valsReq.result || []; valsDone = true; check(); };
+                tx.onerror = function() { reject(tx.error); };
+            }).then(async function(raw) {
+                if (!raw) return null;
+                const out = [];
+                for (let i = 0; i < raw.vals.length; i++) {
+                    const serialized = await serializeIDBValue(raw.vals[i]);
+                    out.push({
+                        key: raw.inline ? null : raw.keys[i],
+                        value: serialized
+                    });
+                }
+                return out;
+            });
+        }
+
+        async function dumpIDB(entry) {
+            try {
+                const db = await openIDB(entry);
+                const result = {};
+                for (const s of entry.stores) {
+                    const records = await dumpStore(db, s.name);
+                    if (records) result[s.name] = records;
+                }
+                db.close();
+                return result;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function restoreStore(db, storeName, records) {
+            if (!db.objectStoreNames.contains(storeName)) return Promise.resolve();
+            const prepared = [];
+            for (const rec of records) {
+                prepared.push({ key: rec.key, value: deserializeIDBValue(rec.value) });
+            }
+            return new Promise(function(resolve, reject) {
+                const tx = db.transaction(storeName, 'readwrite');
+                const store = tx.objectStore(storeName);
+                store.clear();
+                for (const rec of prepared) {
+                    if (rec.value === null) continue;
+                    try {
+                        if (rec.key === null || rec.key === undefined) {
+                            store.put(rec.value);
+                        } else {
+                            store.put(rec.value, rec.key);
+                        }
+                    } catch (e) {}
+                }
+                tx.oncomplete = resolve;
+                tx.onerror = function() { reject(tx.error); };
+            });
+        }
+
+        async function restoreIDB(entry, dump) {
+            if (!dump) return;
+            try {
+                const db = await openIDB(entry);
+                for (const s of entry.stores) {
+                    if (!dump[s.name]) continue;
+                    await restoreStore(db, s.name, dump[s.name]);
+                }
+                db.close();
+            } catch (e) {}
+        }
+
+        async function detectIDBFolders() {
+            const folders = new Set();
+            try {
+                if (!indexedDB.databases) return folders;
+                const dbs = await indexedDB.databases();
+                const names = dbs.map(d => d.name);
+                for (const entry of IDB_REGISTRY) {
+                    if (names.includes(entry.name)) folders.add(entry.folder);
+                }
+            } catch (e) {}
+            return folders;
         }
 
         const REDIRECT_URI = window.location.origin + window.location.pathname;
@@ -1494,8 +1668,13 @@
             popup.style.display = 'flex';
         }
 
-        function showBackupOptionsPopup() {
+        async function showBackupOptionsPopup() {
             const folders = getAvailableFolders();
+            const idbFolders = await detectIDBFolders();
+            idbFolders.forEach(f => {
+                if (!folders.includes(f)) folders.push(f);
+            });
+            folders.sort((a, b) => a.localeCompare(b));
             if (folders.length === 0) {
                 showNoAppsPopup();
                 return;
@@ -1835,6 +2014,31 @@
                     meta[path] = currentSize;
                     uploadedCount++;
                 }
+                for (const entry of IDB_REGISTRY) {
+                    if (!selectedFolders.includes(entry.folder)) continue;
+                    const dump = await dumpIDB(entry);
+                    if (!dump) continue;
+                    for (const s of entry.stores) {
+                        if (!dump[s.name]) continue;
+                        const path = `/${entry.folder}/IndexedDB/${entry.name}/${s.name}.json`;
+                        const content = JSON.stringify(dump[s.name]);
+                        const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Dropbox-API-Arg': JSON.stringify({ path: path, mode: 'overwrite' }),
+                                'Content-Type': 'application/octet-stream'
+                            },
+                            body: content
+                        });
+                        if (!resp.ok) {
+                            const errText = await resp.text();
+                            throw new Error(`Upload failed for ${entry.name}/${s.name}: ${errText}`);
+                        }
+                        meta[path] = content.length;
+                        uploadedCount++;
+                    }
+                }
                 if (selectedFolders.includes('Journal')) {
                     try {
                         const db = await openImagesDB();
@@ -1926,7 +2130,8 @@
                         cursor = data.cursor;
                     }
                     const imageFiles = allFiles.filter(f => f.path_lower.startsWith('/journal/images/'));
-                    const dataFiles = allFiles.filter(f => !f.path_lower.startsWith('/journal/images/'));
+                    const idbFiles = allFiles.filter(f => /\/indexeddb\//i.test(f.path_lower));
+                    const dataFiles = allFiles.filter(f => !f.path_lower.startsWith('/journal/images/') && !/\/indexeddb\//i.test(f.path_lower));
                     const dataToRestore = dataFiles.filter(f => {
                         const pathDisplay = f.path_display || f.path_lower || '';
                         const parts = pathDisplay.split('/').filter(Boolean);
@@ -1934,7 +2139,12 @@
                         return selectedFolders.includes(folderName);
                     });
                     const imagesToRestore = selectedFolders.includes('Journal') ? imageFiles : [];
-                    const totalToRestore = dataToRestore.length + imagesToRestore.length;
+                    const selectedLower = selectedFolders.map(s => s.toLowerCase());
+                    const idbFilesToRestore = idbFiles.filter(f => {
+                        const parts = f.path_lower.split('/').filter(Boolean);
+                        return parts.length >= 1 && selectedLower.includes(parts[0]);
+                    });
+                    const totalToRestore = dataToRestore.length + imagesToRestore.length + idbFilesToRestore.length;
                     if (totalToRestore === 0) {
                         clearInterval(interval);
                         notif.close();
@@ -1982,6 +2192,32 @@
                             tx.oncomplete = resolve;
                             tx.onerror = reject;
                         });
+                    }
+                    const idbDumps = {};
+                    for (const file of idbFilesToRestore) {
+                        const parts = file.path_lower.split('/').filter(Boolean);
+                        if (parts.length < 4) continue;
+                        const dbName = parts[2];
+                        const storeName = parts[3].replace(/\.json$/, '');
+                        const dlResp = await fetch('https://content.dropboxapi.com/2/files/download', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Dropbox-API-Arg': JSON.stringify({ path: file.path_lower })
+                            }
+                        });
+                        if (!dlResp.ok) throw new Error(`Download failed for ${file.path_lower}`);
+                        const content = await dlResp.text();
+                        try {
+                            if (!idbDumps[dbName.toLowerCase()]) idbDumps[dbName.toLowerCase()] = {};
+                            idbDumps[dbName.toLowerCase()][storeName] = JSON.parse(content);
+                        } catch (e) {}
+                    }
+                    for (const entry of IDB_REGISTRY) {
+                        const dump = idbDumps[entry.name.toLowerCase()];
+                        if (dump) {
+                            await restoreIDB(entry, dump);
+                        }
                     }
                     clearInterval(interval);
                     progressBar.style.width = '100%';
@@ -2062,6 +2298,14 @@
                 const key = localStorage.key(i);
                 if (!excludedKeys.includes(key)) backup[key] = localStorage.getItem(key);
             }
+            const idbDumps = {};
+            for (const entry of IDB_REGISTRY) {
+                const dump = await dumpIDB(entry);
+                if (dump) idbDumps[entry.name] = dump;
+            }
+            if (Object.keys(idbDumps).length > 0) {
+                backup['__indexeddb__'] = idbDumps;
+            }
             try {
                 const db = await openImagesDB();
                 const images = await new Promise((resolve, reject) => {
@@ -2095,6 +2339,14 @@
                 if (value === null) continue;
                 const folder = getFolderForKey(key);
                 zip.file(`${folder}/${key}.json`, value);
+            }
+            for (const entry of IDB_REGISTRY) {
+                const dump = await dumpIDB(entry);
+                if (!dump) continue;
+                for (const s of entry.stores) {
+                    if (!dump[s.name]) continue;
+                    zip.file(`_IndexedDB/${entry.name}/${s.name}.json`, JSON.stringify(dump[s.name]));
+                }
             }
             try {
                 const db = await openImagesDB();
@@ -2159,8 +2411,9 @@
                 reader.onload = async (event) => {
                     try {
                         const data = JSON.parse(event.target.result);
-                        const imageData = data['__indexeddb_journal_images__'];
-                        if (imageData && Array.isArray(imageData)) {
+                        const legacyImages = data['__indexeddb_journal_images__'];
+                        const idbDumps = data['__indexeddb__'];
+                        if (legacyImages && Array.isArray(legacyImages)) {
                             const db = await openImagesDB();
                             const clearTx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
                             clearTx.objectStore(IMAGES_STORE_NAME).clear();
@@ -2170,7 +2423,7 @@
                             });
                             const tx = db.transaction(IMAGES_STORE_NAME, 'readwrite');
                             const store = tx.objectStore(IMAGES_STORE_NAME);
-                            for (const item of imageData) {
+                            for (const item of legacyImages) {
                                 store.put(item);
                             }
                             await new Promise((resolve, reject) => {
@@ -2178,6 +2431,14 @@
                                 tx.onerror = reject;
                             });
                             delete data['__indexeddb_journal_images__'];
+                        }
+                        delete data['__indexeddb__'];
+                        if (idbDumps) {
+                            for (const entry of IDB_REGISTRY) {
+                                if (idbDumps[entry.name]) {
+                                    await restoreIDB(entry, idbDumps[entry.name]);
+                                }
+                            }
                         }
                         showConfirmPopup('Local Restore', `Restore ${Object.keys(data).length} items? Current data will be overwritten.`, () => {
                             for (const [key, value] of Object.entries(data)) {
@@ -2210,9 +2471,22 @@
                     const zip = await JSZip.loadAsync(file);
                     const data = {};
                     const imagesToRestore = [];
+                    const idbDumps = {};
+                    const idbPathRegex = /^_IndexedDB\/([^/]+)\/([^/]+)\.json$/i;
                     const paths = Object.keys(zip.files);
                     for (const path of paths) {
                         if (zip.files[path].dir) continue;
+                        const idbMatch = path.match(idbPathRegex);
+                        if (idbMatch) {
+                            const dbName = idbMatch[1];
+                            const storeName = idbMatch[2];
+                            const content = await zip.files[path].async('string');
+                            try {
+                                if (!idbDumps[dbName]) idbDumps[dbName] = {};
+                                idbDumps[dbName][storeName] = JSON.parse(content);
+                            } catch (e) {}
+                            continue;
+                        }
                         const lower = path.toLowerCase();
                         if (lower.indexOf('journal/images/') === 0) {
                             const baseName = path.split('/').pop();
@@ -2255,6 +2529,12 @@
                             tx.oncomplete = resolve;
                             tx.onerror = reject;
                         });
+                    }
+                    for (const entry of IDB_REGISTRY) {
+                        const dump = idbDumps[entry.name];
+                        if (dump) {
+                            await restoreIDB(entry, dump);
+                        }
                     }
                     showConfirmPopup('Local Restore', `Restore ${Object.keys(data).length} items? Current data will be overwritten.`, () => {
                         for (const [key, value] of Object.entries(data)) {
