@@ -18,6 +18,8 @@ Android 16 by [NothingHere03](https://t.me/NothingHere03) with [Beast-KSUN-20260
 - Dynamic Island menu gone in Singularity Statusbar Settings randomly and never coming back
 - Dynamic Bar crashing system ui. sometimes, if there's a clipboard in Dynamic Bar overlay, it will make your screen untouchable and the system ui will be crash after a few seconds
 - device freezed after closing or go to home screen sometimes
+- even if this option already disabled, the feature still active
+!Wake Screen for Notifications](images/lunaris-bugnotes-notification-wake-screen.webp)
 
 ---
 
