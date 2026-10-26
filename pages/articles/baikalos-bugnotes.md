@@ -8,7 +8,7 @@ description: "BaikalOS Bug Notes"
 categories: ""
 hidden: true
 ---
-# [BaikalOS 16 Dev](https://sourceforge.net/projects/baikalos/files/surya/BaikalOS-16-surya-DEV-20260618-01.zip/download) →
+# [BaikalOS 16.2 Dev](https://sourceforge.net/projects/baikalos/files/surya/BaikalOS-16-surya-DEV-20260618-01.zip/download) →
 Android 16 by svasiliev22 with Stock Kernel
 - display of Minimized Notification in Lockscreen is kinda buggy
 ![BaikalOS Notification Bug](images/baikalos-bugnotes-notification-lockscreen-bug.webp)
