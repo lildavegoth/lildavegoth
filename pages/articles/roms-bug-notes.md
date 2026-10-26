@@ -18,6 +18,7 @@ You must take note that this Bug Notes list are only contains ROMs that i person
 ^^^aosp1hide^^^
 # AOSP →
 - [AsionAOSP](https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=axionaosp-bugnotes)
+- [BaikalOS](https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=baikalos-bugnotes)
 - [Lunaris AOSP](https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=lunaris-bugnotes)
 - [Nusantara](https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=nusantara-bugnotes)
 - [Project Infinity X](https://kakoi-kiraku-home.vercel.app/pages/articles/article-page.html?slug=project-infinity-x-bugnotes)
