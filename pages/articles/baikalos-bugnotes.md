@@ -14,3 +14,5 @@ Android 16 by svasiliev22 with Stock Kernel
 ![BaikalOS Notification Bug](images/baikalos-bugnotes-notification-lockscreen-bug.webp)
 - Search Bar in app drawer is kinda buggy if you set it to the bottom and not top (default)
 ![BaikalOS Search Bar Buggy](images/baikalos-bugnotes-searchbar-bug.mp4)
+- ibisPaint X storage permission is kinda buggy or something
+![ibisPaint X Buggy Storage Permission](images/baikalos-bugnotes-ibispaintx-bug.webp)
