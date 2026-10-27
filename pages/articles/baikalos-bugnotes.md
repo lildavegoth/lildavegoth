@@ -16,3 +16,4 @@ Android 16 by svasiliev22 with Stock Kernel
 ![BaikalOS Search Bar Buggy](images/baikalos-bugnotes-searchbar-bug.mp4)
 - ibisPaint X storage permission is kinda buggy or something
 ![ibisPaint X Buggy Storage Permission](images/baikalos-bugnotes-ibispaintx-bug.webp)
+- some games causing device blank and freezed that restored from app backup (DataBackup, but i don't know if this also happen in Swift Backup or not) and device needs to be restart to fix this (can happend again even after restart)
